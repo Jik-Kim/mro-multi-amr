@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>MRO Fleet 관제</title>
+<style>body{font-family:sans-serif;margin:20px}table{border-collapse:collapse}td,th{border:1px solid #999;padding:4px 8px}button{margin:2px}</style></head>
+<body>
+<h2>자재 요청 (S3)</h2>
+<form id="req">작업자 <select name="worker_id"><option>W1</option><option>W2</option></select>
+구역 <select name="bay"><option>A</option><option>B</option><option>C</option></select>
+<button>요청</button> <span id="req_msg"></span></form>
+<h2>로봇 상태 (≤ 2 s 갱신, 뷰어)</h2>
+<table id="st"><tr><th>로봇</th><th>상태</th><th>배터리</th><th>위치</th><th>미션</th><th>작업자</th><th>E-STOP</th><th>종료</th><th>개입 기록</th></tr></table>
+<script>
+const post=(u,d)=>fetch(u,{method:'POST',body:new URLSearchParams(d)}).then(r=>r.json());
+document.getElementById('req').onsubmit=e=>{e.preventDefault();post('/request',new FormData(e.target)).then(j=>req_msg.textContent=j.message)};
+const cmd=(ns,c)=>post('/command',{robot_ns:ns,command:c});
+const intv=(ns,k)=>post('/intervention',{robot_ns:ns,kind:k});
+setInterval(()=>fetch('/status').then(r=>r.json()).then(s=>{const t=document.getElementById('st');while(t.rows.length>1)t.deleteRow(1);
+for(const [ns,r] of Object.entries(s)){const tr=t.insertRow();tr.innerHTML=`<td>${ns}</td><td>${r.state}</td><td>${(r.battery*100).toFixed(0)}%</td><td>${r.x.toFixed(2)}, ${r.y.toFixed(2)}</td><td>${r.mission}</td><td>${r.worker}</td><td>${r.estop?'⛔':''}</td>
+<td><button onclick="cmd('${ns}','RETURN')">작업 종료 → 복귀</button></td>
+<td><button onclick="intv('${ns}','REPAIR')">재페어링</button><button onclick="intv('${ns}','MANUAL_MOVE')">수동이동</button><button onclick="intv('${ns}','RESTART')">재시작</button></td>`}}),1000);
+</script></body></html>

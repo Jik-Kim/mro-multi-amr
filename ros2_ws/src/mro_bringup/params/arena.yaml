@@ -1,0 +1,17 @@
+# 아레나 구역 정의 (BRD v3.0 3.1). 좌표는 새 맵 작성 후 RViz Publish Point 로 채운다 — 전부 [팀 입력 필요]
+arena:
+  map: auto_map.yaml
+  bays:                       # Z-04. ArUco DICT_4X4_50
+    A: {aruco_id: 1, waypoint: [0.0, 0.0, 0.0]}     # x, y, yaw(rad)
+    B: {aruco_id: 2, waypoint: [0.0, 0.0, 0.0]}
+    C: {aruco_id: 3, waypoint: [0.0, 0.0, 0.0]}
+  waiting_zone:               # Z-05 합류 지점 (로봇별로 살짝 다른 정차 위치)
+    robot3: [0.0, 0.0, 0.0]
+    robot4: [0.0, 0.0, 0.0]
+  semaphore_zones:            # zone_semaphore 와 ID 일치
+    Z-08: {polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}
+    Z-05: {polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}
+  keep_out:                   # KOZ — Nav2 keepout filter 마스크 + 바닥 ArUco(10~)
+    - {id: KOZ-1, aruco_id: 10, polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}
+  bay_dwell_s: 5.0
+  t_lim_s: 120.0

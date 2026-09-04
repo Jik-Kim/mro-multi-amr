@@ -1,0 +1,6 @@
+# 운영자 명령 (BR-T10, 반영 ≤ 2 s). 9/4 결정: 관제는 단순 뷰어 — 정지·재개 제외, 작업 종료→복귀(RETURN)만
+string robot_ns
+string command          # RETURN 만 유효 (STOP/RESUME 은 거부)
+---
+bool ok
+string message

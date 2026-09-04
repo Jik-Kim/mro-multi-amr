@@ -1,0 +1,7 @@
+# 관제 UI → fleet_manager. 접수 표시 ≤ 2 s (BR-T05)
+string worker_id
+string bay
+---
+bool accepted
+string mission_id
+string message

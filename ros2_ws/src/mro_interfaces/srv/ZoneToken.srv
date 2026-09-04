@@ -1,0 +1,7 @@
+# 구역 세마포어. 로봇은 Z-08(상단 통로)·Z-05(대기공간 전방) 진입 전에 토큰을 요청한다 (E-3)
+string robot_ns
+string zone_id          # Z-08 | Z-05
+bool acquire            # true=획득 요청, false=반납
+---
+bool granted
+string holder           # 현재 보유 로봇 (거절 시 참고)

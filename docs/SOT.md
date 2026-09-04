@@ -1,0 +1,40 @@
+# Source of Truth
+
+> 상태: 골격 생성 시점 (2026-09-04). BRD v3.0 12.1 결정 사항을 코드 기준으로 옮김
+> 갱신: 확정 결정이 생길 때마다 PM 이 갱신. 회의록 원문은 Notion
+
+## 목표
+
+BRD v3.0 Phase 1 — 9단계 시나리오(S1~S9)와 예외 흐름(E-1~E-6)을 AMR 2대 / 작업자(인형+RC카) 2 / 웹캠 2 로 실증하고 수락 기준 AC-01~13 을 측정한다.
+
+## 확정 사항
+
+| 항목 | 결정 |
+|---|---|
+| 로봇 | TurtleBot4 Standard ×2, 네임스페이스 `/robot3`, `/robot4`. 로봇당 제어 PC 1대에서 localization·nav2·온보드 노드 |
+| 네트워크 | **`ROS_DOMAIN_ID=3` 통일** (PC·로봇 전부). Discovery Server 는 로봇별(ID 3 = robot3 `192.168.108.103`, ID 4 = robot4 `[IP 확인 필요]`). 웹캠·관제 PC 는 두 서버에 동시 접속. 역할별 값은 `docs/setup.md` |
+| 작업자 | 스케일 인형(≤40 cm, 십자형) + 원격 조종 RC카 ×2. **복장은 작업별 2종**(worker_a / worker_b). 동일 작업복·실제 사람은 Phase 2 |
+| 식별 | 웹캠1 외형 등록(복장 클래스 + HSV 히스토그램) → AMR 재식별 게이트. 미달 시 추종 금지 + 명시 페어링 폴백. 착용 태그 불허 |
+| 창고 | 베이 A/B/C 에 ArUco(DICT_4X4_50, ID 1/2/3) — 도착 판정 근거. KOZ 는 지도 keep-out + 바닥 ArUco(ID 10~) 이중화 |
+| 웹캠2 | 재탐지 방위 힌트 + KPI 계측 전용. **안전·회피에 쓰지 않는다.** 장애물 costmap 주입은 Phase 2 |
+| 안전 | `safety_watchdog`(/scan 전방 0.3 m → 정지) 가 인지·웹캠·네트워크와 독립. TS-14 결함 주입으로 검증 |
+| 관제 범위 | **단순 뷰어 + 작업 종료→복귀 명령만** (9/4 회의, BR-T10 축소). 운영자 정지·재개 없음 — 정지는 온보드·물리 E-stop 전담 |
+| 파라미터 | 추종거리 0.5 m, 최소 이격 0.3 m, v_max 0.3 m/s, Lost 1.0 s, Standby 30 s, 베이 체류 5 s, T_lim 120 s — `mro_bringup/params` `[팀 가정]` |
+| 통신 | 로봇 Discovery Server 경유. nav2 launch 는 `ROS_SUPER_CLIENT=False`. 카메라 구독자는 로봇당 검출 노드 1개 |
+| 코드 기반 | Kn1_mini 4노드 이관(파일 헤더 `[이관]`). 신규 노드: safety_watchdog, fleet_manager, zone_semaphore, aruco_detector, webcam_hint, kpi_logger, return_dock, control_ui |
+| 일정 (강사 고정) | 9/7(월) 오전 스케줄 발표 · 9/8(화) 09:30 설계도 산출물 제출, 14:00 리뷰 · 9/8 오후~9/9 오전 코드 리뷰 · **통합 2일 = 9/9(수)~9/10(목)** · 9/11(금) 09:30 SDD 제출, 오후 최종 시연. 따라서 설계·준비 9/5~9/6, 구현 9/7~9/8, 단위 테스트 9/8 저녁. 상세는 Google Sheets 스케줄러 |
+
+## 확정 노드·토픽
+
+`docs/interfaces.md` 가 기준. 실제 정의는 `ros2_ws/src/mro_interfaces`.
+
+## 미결 (BRD 12.2)
+
+| ID | 질문 | 결정권자 | 시점 |
+|---|---|---|---|
+| Q-13 | 재식별 신뢰도 임계값(`reid_threshold`)·폴백 UI | 인지+관제 | 설계 착수 전 |
+| Q-14 | T_lim 120 s — 새 아레나 동선 실측 후 | 주행 | 시험 전 |
+| Q-15 | KOZ 위치·마커 형식 | 팀 | 시험 전 |
+| Q-16 | 추종 90 % / IPH 1.0 완화 승인 | PM | 문서 승인 시 |
+| Q-17 | RC카 조종 숙련 기준(0.3 ±0.1 m/s, 경로 반복 오차 ≤0.2 m) | 팀 | 시험 전 |
+| Q-18 | TB4 2대 동시 운용 Discovery 부하 검증 결과 | 주행 | 9/6 |

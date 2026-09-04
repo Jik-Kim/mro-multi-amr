@@ -1,0 +1,8 @@
+# amr_detection_node / aruco_detector_node 파라미터 (TODO: 노드가 declare_parameter 로 읽도록 전환)
+/**:
+  ros__parameters:
+    detect_conf: 0.5
+    max_core_gap_mm: 150
+    sync_slop_s: 0.1
+    reid_threshold: 0.6        # Q-13 [팀 확정 필요]
+    marker_size_m: 0.10

@@ -1,0 +1,37 @@
+# Architecture
+
+## 배치 (PC 3~4대 + 로봇 2대, 모두 로봇 Discovery Server 경유)
+
+```text
+[웹캠 PC]  webcam_register(웹캠1) ─ /webcam1/worker_descriptor ─▶ [관제 PC] fleet_manager ─ /robotN/mission/assigned ─▶ [로봇 제어 PC N]
+           webcam_hint(웹캠2)     ─ /webcam2/target_hint ────────────────────────────────────────────────────▶ follow_target
+           kpi_logger            ◀─ 모든 상태·미션·개입 토픽                       zone_semaphore ◀─ /fleet/zone_token ─ shuttle_mission
+                                                                                   control_ui(:5000) ─ /fleet/request_mission, /fleet/operator_command
+```
+
+## 로봇 1대 내부 (namespace /robotN)
+
+```text
+oakd rgb+depth ─▶ amr_detection ─ target/map_point, target/visible, target/paired ─▶ follow_target ─ goToPose / cmd_vel ─▶ Nav2 ─▶ Create3
+               └▶ aruco_detector ─ aruco/id, aruco/distance ─▶ shuttle_mission ─ goToPose, undock ─▶ Nav2
+/scan ─▶ safety_watchdog ─ safety/estop, cmd_vel(0) ──────────────────────────────────────────────▶ (모든 노드가 estop 을 존중)
+mission/assigned ─▶ shuttle_mission ─ shuttle/arrived ─▶ follow_target           mission/finish ─▶ return_dock ─ dock
+```
+
+## 시나리오 ↔ 노드
+
+| 단계 | 노드 | 트리거 → 결과 |
+|---|---|---|
+| S1 등록 | webcam_register → fleet_manager | 서술자 발행 → 작업자-로봇 배정 |
+| S2 준비 | fleet_manager → shuttle_mission | (등록 완료) → undock, READY |
+| S3 요청 | control_ui → fleet_manager | RequestMission → Mission(ASSIGNED) |
+| S4 셔틀 | shuttle_mission (+zone_semaphore, aruco_detector) | 베이 waypoint → ArUco 확인 → 체류 → Z-05 → shuttle/arrived |
+| S5 합류 | amr_detection(reid) → follow_target | target/paired → APPROACH |
+| S6~S8 추종 | follow_target (+webcam_hint) | FOLLOWING / Lost → 힌트 방향 탐색 / STANDBY |
+| E-4 정지 | safety_watchdog | /scan → estop, cmd_vel 0 |
+| S9 종료 | control_ui → fleet_manager → return_dock | RETURN → mission/finish → dock |
+
+## 계층 원칙
+
+- `core/` 는 ROS·장치 비의존 순수 함수(재식별, 거리 보정, 호모그래피, standoff 계산, DB). `nodes/` 가 메시지 변환과 호출 순서만 담당.
+- 안전은 온보드(safety_watchdog + Nav2 costmap). 웹캠·관제·재식별은 "더 잘 하게" 할 뿐 "안 부딪히게" 하는 데 관여하지 않는다.

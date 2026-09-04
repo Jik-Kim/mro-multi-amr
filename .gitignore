@@ -1,0 +1,16 @@
+# ROS2 build
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+__pycache__/
+*.pyc
+# 데이터 (Google Drive 로) — 모델(.pt)·맵·호모그래피 json 은 커밋한다
+datasets/
+captures/
+*.bag
+*.mp4
+*.db
+*.csv
+!ros2_ws/src/**/config/*.csv
+docs/feedback.local.md
+.vscode/
