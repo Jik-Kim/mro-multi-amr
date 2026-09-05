@@ -2,7 +2,8 @@
 
 ## mro_interfaces [PM 김병직]
 - [x] msg/srv 8종 정의
-- [ ] `WorkerDescriptor.color_hist` bin 수 합의 → interfaces.md
+- [x] **계약 v1.0 확정 (9/5)** — `docs/interfaces.md`. 구역 ID 를 실제 아레나에 맞게 `P1`·`DOCK` 로 정정, 확정 값 6건 명시, 파라미터 단일 출처 지정
+- [x] `WorkerDescriptor.color_hist` — H16×S8=128, `reid.hsv_hist()` 공유 호출로 확정
 
 ## mro_perception [인지 — 정정인, 민범진]
 - [ ] 인형 2종 제작(9/5) → 데이터 수집·라벨링(9/6) → `models/worker.pt` 학습 (9/6 밤 시작, 9/7 완료)

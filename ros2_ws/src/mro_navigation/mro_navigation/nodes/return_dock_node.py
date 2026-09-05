@@ -16,7 +16,7 @@ from std_msgs.msg import Bool, String
 from turtlebot4_navigation.turtlebot4_navigator import TurtleBot4Navigator
 from mro_interfaces.srv import ZoneToken
 
-DOCK_ZONE = 'Z-03'
+DOCK_ZONE = 'DOCK'
 TOKEN_RETRY_S = 2.0          # 토큰 거절 시 재요청 주기
 # 도크 중심 간 0.9 m (실측 2026-09-05). 좌우 여유가 각 0.45 m 뿐이라 approach 경유 + IR 차폐를 전제로 한다.
 

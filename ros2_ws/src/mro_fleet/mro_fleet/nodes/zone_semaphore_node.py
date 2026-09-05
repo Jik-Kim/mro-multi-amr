@@ -9,8 +9,12 @@ import rclpy
 from rclpy.node import Node
 from mro_interfaces.srv import ZoneToken
 
-# Z-08 상단 통로 · Z-05 대기공간 전방 · Z-09 작업공간 개구부 · Z-03 도크 구역(복귀 시 한 대씩)
-ZONES = ['Z-08', 'Z-05', 'Z-09', 'Z-03']   # bringup/params/arena.yaml 과 일치시킬 것
+# 9/5 실측 아레나 기준으로 정정. 구역은 둘뿐이다 — 로봇끼리만 경합하는 곳에만 토큰을 둔다.
+#   P1   : 도크 ↔ 창고 병목(0.79 m). S4 왕 · S10 복 두 번 통과 → E-3 교착
+#   DOCK : 도크 구역. 복귀 시 한 번에 한 대만 진입 → E-7 순차 도킹
+# 추종 경로(중앙 복도 → 작업공간, 0.88 m)에는 토큰을 두지 않는다 —
+#   토큰을 기다리며 멈추면 작업자를 놓친다. 두 쌍의 출발을 엇갈리게 해서 회피한다.
+ZONES = ['P1', 'DOCK']   # bringup/params/arena.yaml 의 semaphore_zones 와 ID 일치
 HOLD_TIMEOUT = 60.0           # s, BRD 5.3 '교착 자동 해결' 판정 시간 [팀 가정]
 
 
