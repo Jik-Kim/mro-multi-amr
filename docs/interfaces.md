@@ -43,7 +43,7 @@ TB4 기본 토픽: `oakd/rgb/image_raw/compressed`, `oakd/stereo/image_raw/compr
 
 | ID | 의미 |
 |---|---|
-| 1 / 2 / 3 | 베이 A / B / C (10 cm, 베이 안쪽 벽, 높이 ≈ 20 cm) |
+| 1 / 2 / 3 | 베이 A / B / C (10 cm, **선반 뒤 벽면 높이 20 cm** = 카메라 광축. 바닥 부착 금지 — 가까워지면 시야 아래로 사라진다). 무광 인쇄, 흰 여백 한 칸 이상 |
 | 10~19 | *(예약)* KOZ 바닥 마커 — Phase 2. Phase 1 에서는 쓰지 않는다 |
 
 ## QoS

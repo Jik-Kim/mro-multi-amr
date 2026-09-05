@@ -12,6 +12,12 @@ arena:
     robot3: [0.0, 0.0, 0.0]
     robot4: [0.0, 0.0, 0.0]
   dock_zone:                  # Z-03 — 복귀 시 한 번에 한 대만 진입 (S10, Create3 도크 IR 간섭 회피)
+    # ★ 맵 좌표계의 핵심. 맵 원점은 SLAM 작성 시점의 단일 기준점이고, 도크는 그 맵 안의 '좌표값'이다.
+    #   로봇은 기동 시 자신의 pose 값으로 초기 pose 를 설정한다(shuttle_mission_node.dock_pose).
+    #   각자 (0,0) 으로 초기화하면 두 map 프레임의 원점이 달라져 세마포어·waypoint 가 전부 어긋난다.
+    pose:                     # 도킹 상태의 로봇 pose [x, y, yaw_rad] — RViz 로 실측해 기입 [팀 입력 필요]
+      robot3: [0.0, 0.0, 0.0]
+      robot4: [0.0, 0.0, 0.0]
     spacing_m: 0.9            # 도크 중심 간 실측 거리 (2026-09-05, ±5 cm). 여유가 없어 approach 경유 필수
     divider: true             # 도크 사이에 아레나 MDF 판 1장을 슬롯에 세워 IR 차폐 [팀 확정]
     approach:                 # 자기 도크 정면 접근 지점. 여기서 dock() 호출 — 멀리서 부르면 옆 도크로 갈 수 있다

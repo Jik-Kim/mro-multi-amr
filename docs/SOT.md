@@ -12,8 +12,9 @@ BRD v3.0 Phase 1 — 10단계 시나리오(S1~S10)와 예외 흐름(E-1~E-7)을 
 | 항목 | 결정 |
 |---|---|
 | 로봇 | TurtleBot4 Standard ×2, 네임스페이스 `/robot3`, `/robot4`. 로봇당 제어 PC 1대에서 localization·nav2·온보드 노드 |
+| **맵 좌표계** | **9/5 결정.** 맵 원점은 SLAM 작성 시점의 **단일 기준점**으로 고정한다. 각 도크의 map 좌표는 `arena.yaml` 의 `dock_zone.pose` 에 상수로 두고, 로봇은 기동 시 **자신의 도크 좌표값**으로 초기 pose 를 설정한다(`shuttle_mission_node.dock_pose`). 각자 (0,0) 으로 초기화하면 두 map 프레임의 원점이 물리적으로 다른 점이 되어 세마포어 폴리곤·waypoint·FleetStatus 가 전부 어긋난다 — **1대로 시험할 때는 드러나지 않는다** |
 | 네트워크 | **`ROS_DOMAIN_ID=3` 통일** (PC·로봇 전부). Discovery Server 는 로봇별(ID 3 = robot3 `192.168.108.103`, ID 4 = robot4 `[IP 확인 필요]`). 웹캠·관제 PC 는 두 서버에 동시 접속. 역할별 값은 `docs/setup.md` |
-| 작업자 | 스케일 인형(≤40 cm, 십자형) + 원격 조종 RC카 ×2. **복장은 작업별 2종**(worker_a / worker_b). 동일 작업복·실제 사람은 Phase 2 |
+| 작업자 | **원통 3단 인형 300 mm ×2**(회전 대칭 → 360° 실루엣 동일, bbox 폭 일정) + 원격 조종 RC카 ×2. **복장은 작업별 2종**(worker_a 파랑·세로줄 / worker_b 주황·가로줄). **식별 편향 방지: 하의·머리 동일, 상의 휘도 맞춤, 같은 프린터, 상의 벨크로 탈부착**(바꿔 달아 재시험하면 R-B9 반박). 상세 치수는 SDD HW-09. 동일 작업복·실제 사람은 Phase 2 |
 | 식별 | 웹캠1 외형 등록(복장 클래스 + HSV 히스토그램) → AMR 재식별 게이트. 미달 시 추종 금지 + 명시 페어링 폴백. 착용 태그 불허 |
 | 창고 | 베이 A/B/C 에 ArUco(DICT_4X4_50, ID 1/2/3) — 도착 판정 근거. **KOZ 는 Phase 1 제외(9/5)**, ID 10~ 는 예약만 |
 | 웹캠2 | 재탐지 방위 힌트 + KPI 계측 전용. **안전·회피에 쓰지 않는다.** 장애물 costmap 주입은 Phase 2. 계측 범위는 작업공간 |
@@ -25,6 +26,7 @@ BRD v3.0 Phase 1 — 10단계 시나리오(S1~S10)와 예외 흐름(E-1~E-7)을 
 | 파라미터 | 추종거리 0.5 m, 최소 이격 0.3 m, v_max 0.3 m/s, Lost 1.0 s, Standby 30 s, 베이 체류 5 s, T_lim 120 s — `mro_bringup/params` `[팀 가정]` |
 | 통신 | 로봇 Discovery Server 경유. nav2 launch 는 `ROS_SUPER_CLIENT=False`. 카메라 구독자는 로봇당 검출 노드 1개 |
 | PC 구성 | **웹캠1·웹캠2 를 각각 다른 PC 로 분리 (9/5 결정).** 총 5대: PC-W1·PC-W2·PC-F(관제, kpi_logger 포함)·PC-R3·PC-R4. 웹캠 PC 는 주로 발행만 하므로 `ROS_SUPER_CLIENT=False` |
+| **통신 대안** | **NR-07 (9/5 신설).** 2서버 동시 접속이 프로젝트의 단일 실패 지점이라 계획 B 를 문서화했다. **9/6 안에 ⓪ 문서대로 2서버 시험 → ① 멀티캐스트(설정 변경 0) → ② 단일 서버(PC-F, 로봇 RPi 설정 변경 필요 — 가장 침습적) → ③ 로봇 1대로 범위 축소** 순서로 시도하고 결론을 낸다 |
 | 코드 기반 | Kn1_mini 4노드 이관(파일 헤더 `[이관]`). 신규 노드: safety_watchdog, fleet_manager, zone_semaphore, aruco_detector, webcam_hint, kpi_logger, return_dock, control_ui |
 | 일정 (강사 고정) | 9/7(월) 오전 스케줄 발표 · 9/8(화) 09:30 설계도 산출물 제출, 14:00 리뷰 · 9/8 오후~9/9 오전 코드 리뷰 · **통합 2일 = 9/9(수)~9/10(목)** · 9/11(금) 09:30 SDD 제출, 오후 최종 시연. 따라서 설계·준비 9/5~9/6, 구현 9/7~9/8, 단위 테스트 9/8 저녁. 상세는 Google Sheets 스케줄러 |
 

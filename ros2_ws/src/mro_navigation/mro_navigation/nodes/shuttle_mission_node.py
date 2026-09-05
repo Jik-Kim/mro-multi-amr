@@ -40,7 +40,12 @@ GOAL_X = None                          # (x, y, yaw_deg). 웹캠 좌표가 없�
 WEBCAM_POINT_TOPIC = 'webcam/car_map_point'   # 팀원 웹캠 노드가 호모그래피로 낸 차 위치 (map)
 WEBCAM_POINT_MAX_AGE_S = 30.0          # 이보다 오래된 웹캠 좌표는 무시
 WEBCAM_STANDOFF_M = 1.5                # 웹캠 좌표 앞 몇 m 를 목표로 (오차 ±30 cm 감안해 넉넉히)
-USE_DOCK_INIT = True                   # 도크 = 맵 (0,0) NORTH
+# 9/5: 로봇 2대가 각자 도크에서 (0,0) 으로 초기화하면 두 map 프레임의 원점이 물리적으로 다른 점이 되어
+#   구역 세마포어 폴리곤·waypoint·FleetStatus 가 전부 어긋난다. 1대로 시험할 때는 드러나지 않는다.
+#   → 맵 원점은 SLAM 작성 시점의 단일 기준점으로 고정하고, 로봇은 **자신의 도크 map 좌표**로 초기화한다.
+USE_DOCK_INIT = True                   # 도킹 상태에서 아래 DOCK_POSE 로 초기 pose 설정
+DOCK_POSE = None                       # (x, y, yaw_rad). None 이면 ROS2 파라미터 dock_pose 에서 읽는다
+                                       # 값은 mro_bringup/params/arena.yaml 의 dock_zone.pose.<robot_ns> [팀 입력 필요]
 NAV_TIMEOUT_S = 120.0
 
 
@@ -77,15 +82,31 @@ class GotoGoal(Node):
         rclpy.spin_until_future_complete(self, fut, timeout_sec=3.0)
         return fut.result() is not None and fut.result().current_state.label == 'active'
 
+    def dock_pose(self):
+        """자신의 도크의 map 좌표 (x, y, yaw). 두 로봇이 같은 맵 좌표계를 쓰게 하는 핵심."""
+        if DOCK_POSE is not None:
+            return DOCK_POSE
+        p = self.get_parameter_or('dock_pose', None)
+        v = list(p.value) if p is not None and p.value else []
+        if len(v) == 3:
+            return float(v[0]), float(v[1]), float(v[2])
+        self.get_logger().error(
+            'dock_pose 파라미터가 없다 — (0,0,0) 으로 대체한다. '
+            '로봇 2대를 동시에 쓰면 맵 좌표계가 어긋난다. arena.yaml 의 dock_zone.pose 를 채울 것')
+        return 0.0, 0.0, 0.0
+
     def run_sequence(self):
         self.state = 'INIT'
         if USE_DOCK_INIT:
             if not self.navigator.getDockedStatus():
                 self.get_logger().info('초기자세 설정을 위해 도킹')
                 self.navigator.dock()
-            self.navigator.setInitialPose(
-                self.navigator.getPoseStamped([0.0, 0.0], TurtleBot4Directions.NORTH))
-            self.get_logger().info('초기자세 (0,0) NORTH 전송')
+            x, y, yaw = self.dock_pose()
+            pose = self.navigator.getPoseStamped([x, y], TurtleBot4Directions.NORTH)
+            pose.pose.orientation.z = math.sin(yaw / 2.0)
+            pose.pose.orientation.w = math.cos(yaw / 2.0)
+            self.navigator.setInitialPose(pose)
+            self.get_logger().info(f'초기자세 ({x:.2f}, {y:.2f}, {math.degrees(yaw):.0f}°) 전송 — 자신의 도크 map 좌표')
         while not self.nav2_ready():
             self.get_logger().warn('Nav2(bt_navigator) 미준비 — 복구 스크립트 Step 1 후 자동 진행')
             time.sleep(5.0)
