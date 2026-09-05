@@ -6,7 +6,8 @@
 | `mro_perception` | 정정인, 민범진 [인지] | `nodes/amr_detection_node.py`(이관), `nodes/aruco_detector_node.py`, `core/reid.py`, `core/depth_distance.py`(이관), `core/target_utils.py`(이관), `models/` | OAK-D 로 작업자 검출·거리·map 좌표, 재식별 게이트, ArUco |
 | `mro_webcam` | 한세교, 김학민 [웹캠] | `nodes/webcam_register_node.py`(이관), `nodes/webcam_hint_node.py`, `nodes/kpi_logger_node.py`, `core/homography.py`(이관), `config/*.json` | 등록·힌트·계측. 안전에 관여하지 않음 |
 | `mro_navigation` | 박병후, 이시율 [주행] | `nodes/shuttle_mission_node.py`(이관), `nodes/follow_target_node.py`(이관), `nodes/safety_watchdog_node.py`, `nodes/return_dock_node.py` | 셔틀·추종·정지·복귀 |
-| `mro_fleet` | 김민준 [관제] | `nodes/fleet_manager_node.py`, `nodes/zone_semaphore_node.py`, `nodes/control_ui_node.py`, `core/db.py`, `config/schema.sql`, `templates/index.html` | 미션·상태·세마포어·UI·DB |
+| `mro_fleet/nodes/zone_semaphore_node.py` **(예외)** | 박병후, 이시율 [주행] | 이 파일 1개만 | **구역 토큰(Z-05/08/09/03).** 패키지는 `mro_fleet` 이지만 구역 좌표·통행 규칙이 주행 소관이라 소유권만 주행에 둔다. 관제는 이 파일을 수정하지 않는다 |
+| `mro_fleet` | 김민준 [관제] | `nodes/fleet_manager_node.py`, `nodes/control_ui_node.py`, `core/db.py`, `config/schema.sql`, `templates/index.html` | 미션·상태·UI·DB (**세마포어 제외** — 위 예외 행) |
 | `mro_bringup` | PM 김병직 | `launch/*.launch.py`, `params/*.yaml`, `maps/` | PC 역할별 실행, 로봇별 파라미터, 아레나 좌표 |
 
 `core/` 는 ROS 비의존이므로 단위 테스트 대상이다. `nodes/` 는 실물·토픽 테스트 대상이다.

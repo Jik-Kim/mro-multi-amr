@@ -19,7 +19,7 @@
 | **김병직** (PM) | `docs/`, `mro_interfaces`, `mro_bringup` | 계약·통합·리뷰·일정 |
 | **정정인, 민범진** [인지] | `mro_perception` | 인형 데이터·YOLO, OAK-D 검출·재식별 게이트, ArUco |
 | **한세교, 김학민** [웹캠] | `mro_webcam` | 웹캠1 등록, 웹캠2 힌트, 호모그래피, KPI 로거 |
-| **박병후, 이시율** [주행] | `mro_navigation` | 셔틀, 추종·재탐지·Standby, safety_watchdog, 복귀 |
-| **김민준** [관제] | `mro_fleet` | DB, fleet_manager, 구역 세마포어, 관제 UI |
+| **박병후, 이시율** [주행] | `mro_navigation`, `mro_fleet/zone_semaphore` | 아레나·맵, 2대 운용, 셔틀, 추종·재탐지·Standby, safety_watchdog, 복귀, **구역 세마포어** |
+| **김민준** [관제] | `mro_fleet` (세마포어 제외) | DB, fleet_manager, 관제 UI |
 
 세부 결정과 미결 사항은 `docs/SOT.md`, 요구사항 원본은 BRD v3.0 (Kn1_proj/MRO_Multi-AMR_BRD_v3.0.md).

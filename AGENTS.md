@@ -7,6 +7,7 @@
 - 작업 전에 `docs/SOT.md` 와 `git status` 를 확인한다. 통신 계약은 `docs/interfaces.md`, 실행 절차는 `docs/setup.md`.
 - 요구사항의 근거는 BRD v3.0 (3장 시나리오 S1~S10 / E-1~E-7, 9장 AC, 10장 TS). 문서와 코드가 충돌하면 SOT 를 우선하고 충돌 사실을 알린다.
 - 다른 담당의 패키지를 수정하지 않는다. 필요하면 `docs/issues.md` 에 이슈로 남기고 담당에게 알린다.
+- **예외 1건:** `mro_fleet/nodes/zone_semaphore_node.py` 는 패키지 소유(관제)와 무관하게 **주행 담당**이 관리한다 (`docs/responsibilities.md`).
 
 ## 작업 범위
 
