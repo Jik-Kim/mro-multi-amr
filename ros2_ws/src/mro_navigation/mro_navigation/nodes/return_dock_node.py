@@ -18,6 +18,7 @@ from mro_interfaces.srv import ZoneToken
 
 DOCK_ZONE = 'Z-03'
 TOKEN_RETRY_S = 2.0          # 토큰 거절 시 재요청 주기
+# 도크 중심 간 0.9 m (실측 2026-09-05). 좌우 여유가 각 0.45 m 뿐이라 approach 경유 + IR 차폐를 전제로 한다.
 
 
 class ReturnDock(Node):
@@ -26,7 +27,8 @@ class ReturnDock(Node):
         self.declare_parameter('dock_retry', 2)
         self.declare_parameter('t_ret_s', 180.0)
         # TODO([주행]): arena.yaml 의 dock_zone.holding / dock_zone.approach[robot_ns] 를 파라미터로 읽어
-        #               홀딩 포인트·도크 접근 지점으로 goToPose 한다. 지금은 dock() 직행.
+        #   ① 토큰 대기 중에는 holding 으로, ② 토큰 획득 후 자기 도크 정면 approach 로 goToPose 한 뒤 dock() 을 부른다.
+        #   도크 간격이 0.9 m(실측) 뿐이라 멀리서 dock() 을 부르면 옆 도크로 향할 수 있다 — approach 경유는 선택이 아니라 필수.
         self.flag = False
         self.ns = self.get_namespace().rstrip('/') or '/robot3'
         self.create_subscription(Bool, 'mission/finish', self.cb, 10)
