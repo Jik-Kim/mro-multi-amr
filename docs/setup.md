@@ -19,7 +19,7 @@ echo $ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT
 
 | PC | `ROS_DOMAIN_ID` | `ROS_DISCOVERY_SERVER` | `ROS_SUPER_CLIENT` |
 |---|---|---|---|
-| **offboard 단일 서버 채택 시 (1순위)** | `3` | **모든 PC 동일:** `;<PC-F IP>:11811` | nav2 터미널만 `False`, 웹캠 PC 는 `False` |
+| **offboard 단일 서버 채택 시 (1순위)** | `3` | **모든 PC 동일:** `;192.168.108.41:11811` | nav2 터미널만 `False`, 웹캠 PC 는 `False` |
 | *(대안 ② 2서버 동시 접속 시)* robot3 제어 PC | `3` | `;;;192.168.108.103:11811;` | `True` (nav2 터미널만 `False`) |
 | *(대안 ②)* robot4 제어 PC | `3` | `;;;;<robot4 IP>:11811;` `[IP 확인 필요]` | `True` (nav2 터미널만 `False`) |
 | *(대안 ②)* 웹캠 PC ×2 · 관제 PC | `3` | `;;;192.168.108.103:11811;<robot4 IP>:11811;` | 웹캠 `False`, 관제 `True` |
@@ -34,6 +34,7 @@ echo $ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT
 Kn1_mini 에서 Nav2 lifecycle 이 자꾸 멈춘 원인이 **RPi 의 디스커버리 부담**이었다. 로봇 2대·PC 5대가 되면 그 부하가 두 배다.
 서버를 노트북 한 대로 옮기면 RPi 는 클라이언트로만 남고, **2서버 동시 접속 문제도 함께 사라진다.**
 
+**PC-F = `192.168.108.41`** (Wi-Fi `turtle08`, 고정 설정 완료 9/5. 게이트웨이 `.1`, DNS `168.126.63.1/2`). **공유기 예약은 아직 없다** — 강사에게 `.41` 예약 또는 DHCP 제외 요청할 것.
 **서버 ID 는 1 로 통일한다** — `turtlebot4-setup` 의 Offboard 기본값이 1 이라 도구와 싸우지 않는다.
 
 **① PC-F 에서 서버 실행** (플래그는 `fastdds discovery --help` 로 버전 확인)
@@ -43,7 +44,7 @@ fastdds discovery -i 1 -l 0.0.0.0 -p 11811
 
 **② 모든 PC 의 환경 변수** — `/etc/turtlebot4_discovery/setup.bash` 수정
 ```bash
-export ROS_DISCOVERY_SERVER=";<PC-F IP>:11811"
+export ROS_DISCOVERY_SERVER=";192.168.108.41:11811"
 ```
 세미콜론 위치가 서버 ID 다. **ID 1 이면 앞에 세미콜론 하나** (기존 `;;;IP:11811;` 은 ID 3). **로봇 서버는 PC 목록에서 뺀다** — 넣으면 다시 RPi 에 부하가 간다.
 
@@ -53,7 +54,7 @@ export ROS_DISCOVERY_SERVER=";<PC-F IP>:11811"
 |---|---|
 | Enabled | **True 그대로** (False 면 멀티캐스트로 바뀐다) |
 | Onboard Server - Port / Server ID | 11811 / **3 그대로** (robot4 는 4) |
-| **Offboard Server - IP** | **PC-F 의 IP** ← 이것만 채운다. 비어 있으면 offboard 미사용 |
+| **Offboard Server - IP** | **`192.168.108.41`** ← 이것만 채운다. 비어 있으면 offboard 미사용 |
 | Offboard Server - Port / Server ID | 11811 / **1 그대로** |
 
 Save → 재부팅. **되돌리기:** Offboard IP 를 비우고 Save 하면 원래대로.
