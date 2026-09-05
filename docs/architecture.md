@@ -29,7 +29,8 @@ mission/assigned ─▶ shuttle_mission ─ shuttle/arrived ─▶ follow_target
 | S5 합류 | amr_detection(reid) → follow_target | target/paired → APPROACH |
 | S6~S8 추종 | follow_target (+webcam_hint) | FOLLOWING / Lost → 힌트 방향 탐색 / STANDBY |
 | E-4 정지 | safety_watchdog | /scan → estop, cmd_vel 0 |
-| S9 종료 | control_ui → fleet_manager → return_dock | RETURN → mission/finish → dock |
+| S9 종료 발행 | control_ui → fleet_manager | RETURN / RETURN_ALL → mission/finish → follow_target 즉시 추종 중단 |
+| S10 순차 복귀 | return_dock (+zone_semaphore) | Z-09·Z-05·Z-08 통과 → **Z-03 도크 토큰 1대씩** → dock (실패 시 2회 재시도) → 토큰 반납 |
 
 ## 계층 원칙
 

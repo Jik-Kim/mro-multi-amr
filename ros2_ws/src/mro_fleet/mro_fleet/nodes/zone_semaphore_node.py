@@ -1,4 +1,4 @@
-"""구역 세마포어 — 협소 구역을 한 번에 한 대만 점유 (E-3 / BR-T09 / R-09).
+"""구역 세마포어 — 협소 구역을 한 번에 한 대만 점유 (E-3 교착, E-7 도크 경합 / BR-T09, BR-T31 / R-09).
 
 서비스 /fleet/zone_token: acquire=True 면 비어 있을 때만 granted. 먼저 요청한 로봇 우선(FIFO 대기열).
 보유 로봇이 HOLD_TIMEOUT 안에 반납하지 않으면 강제 회수하고 이벤트 기록 (교착 자동 해결률 K-06 산출 근거).
@@ -9,7 +9,8 @@ import rclpy
 from rclpy.node import Node
 from mro_interfaces.srv import ZoneToken
 
-ZONES = ['Z-08', 'Z-05']      # bringup/params/arena.yaml 과 일치시킬 것
+# Z-08 상단 통로 · Z-05 대기공간 전방 · Z-09 작업공간 개구부 · Z-03 도크 구역(복귀 시 한 대씩)
+ZONES = ['Z-08', 'Z-05', 'Z-09', 'Z-03']   # bringup/params/arena.yaml 과 일치시킬 것
 HOLD_TIMEOUT = 60.0           # s, BRD 5.3 '교착 자동 해결' 판정 시간 [팀 가정]
 
 

@@ -12,8 +12,8 @@
 | `msg/TargetHint` | 웹캠2 → 대상 map 좌표 | 안전 판단 금지 |
 | `msg/Intervention` | 개입 이벤트 | `SAFETY_POLICY` 는 개입으로 계상하지 않음 (BRD 5.3) |
 | `srv/RequestMission` | UI → fleet | 접수 ≤ 2 s |
-| `srv/ZoneToken` | 로봇 → zone_semaphore | acquire/release, FIFO |
-| `srv/OperatorCommand` | UI → fleet | **RETURN 만** (작업 종료→복귀). 정지·재개는 9/4 결정으로 제외 |
+| `srv/ZoneToken` | 로봇 → zone_semaphore | acquire/release, FIFO. 구역: **Z-05, Z-08, Z-09(개구부), Z-03(도크)** |
+| `srv/OperatorCommand` | UI → fleet | **RETURN**(해당 로봇) / **RETURN_ALL**(전체) 만. 정지·재개는 9/4 결정으로 제외 |
 
 ## 토픽 계약
 
@@ -27,8 +27,8 @@
 | `/fleet/status` | fleet_manager | control_ui, kpi_logger | FleetStatus | 1 Hz |
 | `/fleet/intervention` | control_ui | kpi_logger, fleet_manager | Intervention | 운영자 버튼 |
 | `mission/assigned` | fleet_manager | shuttle_mission | Mission | S3→S4 트리거 |
-| `mission/finish` | fleet_manager | return_dock, follow_target | Bool | S9 |
-| `shuttle/status` | shuttle_mission, return_dock | fleet_manager, kpi_logger | String | READY/SHUTTLE/AT_BAY/WAITING/DOCKING/DOCKED |
+| `mission/finish` | fleet_manager | return_dock, **follow_target** | Bool | S9 종료 시퀀스. follow_target 은 이걸 받으면 **즉시 페어링 해제·추종 중단**(≤ 1 s), return_dock 은 복귀 시작 |
+| `shuttle/status` | shuttle_mission, return_dock | fleet_manager, kpi_logger | String | READY/SHUTTLE/AT_BAY/WAITING/**RETURNING/DOCK_WAIT/DOCKING/DOCKED/FAILED** |
 | `shuttle/arrived` | shuttle_mission | follow_target | Bool | Z-05 도착 (구 goto_goal/arrived) |
 | `target/map_point`, `target/visible`, `target/image` | amr_detection | follow_target | PointStamped, Bool, Image | Kn1_mini 계약 유지 |
 | `target/paired`, `target/worker_id` | amr_detection | follow_target, fleet_manager | Bool, String | 재식별 게이트 통과 |

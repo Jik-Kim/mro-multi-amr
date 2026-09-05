@@ -102,13 +102,16 @@ class FleetManager(Node):
         if req.robot_ns not in self.robot:
             res.ok, res.message = False, '알 수 없는 로봇'
             return res
-        if req.command != 'RETURN':
+        if req.command not in ('RETURN', 'RETURN_ALL'):
             # 9/4 결정: 관제는 단순 뷰어. 정지는 온보드 safety_watchdog·물리 E-stop 전담
-            res.ok, res.message = False, f'{req.command} 는 지원하지 않음 (RETURN 만 허용)'
+            res.ok, res.message = False, f'{req.command} 는 지원하지 않음 (RETURN / RETURN_ALL 만 허용)'
             return res
-        self.db.event(req.robot_ns, 'OPERATOR', req.command)
-        self.pub_finish[req.robot_ns].publish(Bool(data=True))
-        res.ok, res.message = True, f'{req.robot_ns} 작업 종료 → 복귀 전달'
+        # S9 종료 시퀀스 발행. 두 대가 동시에 복귀해도 Z-09·Z-03 구역 토큰이 순서를 만든다 (S10, BR-T31)
+        targets = list(ROBOTS) if req.command == 'RETURN_ALL' else [req.robot_ns]
+        for ns in targets:
+            self.db.event(ns, 'OPERATOR', req.command)
+            self.pub_finish[ns].publish(Bool(data=True))
+        res.ok, res.message = True, f"{', '.join(targets)} 작업 종료 → 복귀 전달"
         return res
 
 

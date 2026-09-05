@@ -7,6 +7,7 @@
 구역 <select name="bay"><option>A</option><option>B</option><option>C</option></select>
 <button>요청</button> <span id="req_msg"></span></form>
 <h2>로봇 상태 (≤ 2 s 갱신, 뷰어)</h2>
+<p><button onclick="cmd('','RETURN_ALL')">전체 작업 종료 → 순차 복귀</button> <span style="color:#666">두 대가 동시에 복귀해도 도크 구역은 한 대씩 진입합니다 (S10)</span></p>
 <table id="st"><tr><th>로봇</th><th>상태</th><th>배터리</th><th>위치</th><th>미션</th><th>작업자</th><th>E-STOP</th><th>종료</th><th>개입 기록</th></tr></table>
 <script>
 const post=(u,d)=>fetch(u,{method:'POST',body:new URLSearchParams(d)}).then(r=>r.json());

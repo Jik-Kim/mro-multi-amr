@@ -26,12 +26,15 @@
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중
 - [x] `safety_watchdog_node.py`: /scan → estop, cmd_vel 0
 - [ ] `safety_watchdog_node.py`: Nav2 goal cancel (액션 클라이언트), TS-14 결함 주입 검증
-- [x] `return_dock_node.py`: 초안
+- [x] `return_dock_node.py`: Z-03 도크 토큰 + 재시도 2회 복귀 로직
+- [ ] `return_dock_node.py`: arena.yaml 의 홀딩 포인트·도크 접근 지점으로 goToPose (지금은 dock 직행)
+- [ ] `follow_target_node.py`: `mission/finish` 구독 → 즉시 페어링 해제·goal 취소 (≤ 1 s, FR-30)
 
 ## mro_fleet [관제]
 - [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `zone_semaphore_node.py`, `control_ui_node.py` + `templates/index.html`
 - [ ] `fleet_manager_node.py`: yaw 계산, 미션 상태 전이 구독(shuttle/status → Mission state)
-- [ ] `control_ui`: 페어링 폴백(명시 페어링) 버튼, 작업 종료 버튼
+- [x] `control_ui`: 작업자별/전체 종료 버튼, `fleet_manager` RETURN_ALL
+- [ ] `control_ui`: 페어링 폴백(명시 페어링) 버튼
 
 ## mro_bringup [PM]
 - [x] robot / webcam_pc / fleet_pc launch, params 골격

@@ -8,10 +8,19 @@ arena:
   waiting_zone:               # Z-05 합류 지점 (로봇별로 살짝 다른 정차 위치)
     robot3: [0.0, 0.0, 0.0]
     robot4: [0.0, 0.0, 0.0]
-  semaphore_zones:            # zone_semaphore 와 ID 일치
-    Z-08: {polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}
-    Z-05: {polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}
+  dock_zone:                  # Z-03 — 복귀 시 한 번에 한 대만 진입 (S10, Create3 도크 IR 간섭 회피)
+    approach:                 # 도크 앞 접근 지점
+      robot3: [0.0, 0.0, 0.0]
+      robot4: [0.0, 0.0, 0.0]
+    holding: [0.0, 0.0, 0.0]  # 후행 로봇 대기 위치. 도크에서 ≥ 1.5 m [팀 확정]
+  semaphore_zones:            # zone_semaphore ZONES 와 ID 일치
+    Z-08: {polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}   # 상단 통로
+    Z-05: {polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}   # 대기공간 전방
+    Z-09: {polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}   # 작업공간 개구부 — 2대 동시 통과 불가
+    Z-03: {polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}   # 도크 구역
   keep_out:                   # KOZ — Nav2 keepout filter 마스크 + 바닥 ArUco(10~)
     - {id: KOZ-1, aruco_id: 10, polygon: [[0, 0], [0, 0], [0, 0], [0, 0]]}
   bay_dwell_s: 5.0
   t_lim_s: 120.0
+  t_ret_s: 180.0              # 종료 발행 → 도킹 완료 제한시간 [팀 가정]
+  dock_retry: 2               # 도킹 실패 시 재시도 횟수
