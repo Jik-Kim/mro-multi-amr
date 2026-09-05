@@ -1,8 +1,11 @@
 # Architecture
 
-## 배치 (PC 5대 + 로봇 2대, 모두 로봇 Discovery Server 경유)
+## 배치 (PC 5대 + 로봇 2대, PC-F 단일 offboard Discovery Server 경유)
 
 PC-W1(웹캠1) · PC-W2(웹캠2) · PC-F(관제) · PC-R3 · PC-R4. 웹캠 PC 분리는 9/5 결정.
+디스커버리는 PC-F `192.168.108.41:11811` (서버 ID 1) 한 곳만 쓴다. 로봇 온보드 서버(ID 3·4)는
+남겨두되 PC 의 `ROS_DISCOVERY_SERVER` 에 넣지 않는다 — 절차는 `docs/setup.md`, 그림은
+`docs/diagrams/step1_deployment.svg`.
 
 ```text
 [PC-W1] webcam_register(웹캠1) ─ /webcam1/worker_descriptor ─▶ [PC-F] fleet_manager ─ /robotN/mission/assigned ─▶ [PC-R3 / PC-R4]
@@ -39,3 +42,7 @@ mission/assigned ─▶ shuttle_mission ─ shuttle/arrived ─▶ follow_target
 
 - `core/` 는 ROS·장치 비의존 순수 함수(재식별, 거리 보정, 호모그래피, standoff 계산, DB). `nodes/` 가 메시지 변환과 호출 순서만 담당.
 - 안전은 온보드(safety_watchdog + Nav2 costmap). 웹캠·관제·재식별은 "더 잘 하게" 할 뿐 "안 부딪히게" 하는 데 관여하지 않는다.
+
+## 그림
+
+설계도 3장은 `docs/diagrams/` 에 있다 (STEP 1 배치 · STEP 2 Nav2 교환 · STEP 3 시나리오). 이 문서의 내용이 바뀌면 `python3 tools/build_diagrams.py` 로 다시 만든다.
