@@ -19,10 +19,10 @@ echo $ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT
 
 | PC | `ROS_DOMAIN_ID` | `ROS_DISCOVERY_SERVER` | `ROS_SUPER_CLIENT` |
 |---|---|---|---|
-| robot3 제어 PC | `3` | `;;;192.168.108.103:11811;` | `True` (nav2 터미널만 `False`) |
-| robot4 제어 PC | `3` | `;;;;<robot4 IP>:11811;` `[IP 확인 필요]` | `True` (nav2 터미널만 `False`) |
-| 웹캠 PC ×2 (PC-W1, PC-W2) | `3` | `;;;192.168.108.103:11811;<robot4 IP>:11811;` | `False` (주로 발행만) |
-| 관제 PC (PC-F) | `3` | `;;;192.168.108.103:11811;<robot4 IP>:11811;` | `True` |
+| **offboard 단일 서버 채택 시 (1순위)** | `3` | **모든 PC 동일:** `;<PC-F IP>:11811` | nav2 터미널만 `False`, 웹캠 PC 는 `False` |
+| *(대안 ② 2서버 동시 접속 시)* robot3 제어 PC | `3` | `;;;192.168.108.103:11811;` | `True` (nav2 터미널만 `False`) |
+| *(대안 ②)* robot4 제어 PC | `3` | `;;;;<robot4 IP>:11811;` `[IP 확인 필요]` | `True` (nav2 터미널만 `False`) |
+| *(대안 ②)* 웹캠 PC ×2 · 관제 PC | `3` | `;;;192.168.108.103:11811;<robot4 IP>:11811;` | 웹캠 `False`, 관제 `True` |
 
 값이 다르면 `source /etc/turtlebot4_discovery/setup.bash`. 이 파일은 PC 마다 한 번 위 표대로 맞춘다 (`turtlebot4_setup` 의 discovery 설정 스크립트에 서버 ID·IP 를 넣거나 파일을 직접 편집).
 `ROS_SUPER_CLIENT` 는 setup.bash 가 대화형 터미널에서만 `True` 로 주므로, launch 를 스크립트로 띄우면 `False` 가 된다 — nav2 외 노드는 `True` 가 필요하니 주의.
@@ -34,18 +34,31 @@ echo $ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT
 Kn1_mini 에서 Nav2 lifecycle 이 자꾸 멈춘 원인이 **RPi 의 디스커버리 부담**이었다. 로봇 2대·PC 5대가 되면 그 부하가 두 배다.
 서버를 노트북 한 대로 옮기면 RPi 는 클라이언트로만 남고, **2서버 동시 접속 문제도 함께 사라진다.**
 
+**서버 ID 는 1 로 통일한다** — `turtlebot4-setup` 의 Offboard 기본값이 1 이라 도구와 싸우지 않는다.
+
 **① PC-F 에서 서버 실행** (플래그는 `fastdds discovery --help` 로 버전 확인)
 ```bash
-fastdds discovery -i 0 -l 0.0.0.0 -p 11811
+fastdds discovery -i 1 -l 0.0.0.0 -p 11811
 ```
 
 **② 모든 PC 의 환경 변수** — `/etc/turtlebot4_discovery/setup.bash` 수정
 ```bash
-export ROS_DISCOVERY_SERVER="<PC-F IP>:11811"
+export ROS_DISCOVERY_SERVER=";<PC-F IP>:11811"
 ```
-세미콜론 위치가 서버 ID 다. **ID 0 이면 앞에 세미콜론이 없다** (기존 `;;;IP:11811;` 은 ID 3).
+세미콜론 위치가 서버 ID 다. **ID 1 이면 앞에 세미콜론 하나** (기존 `;;;IP:11811;` 은 ID 3). **로봇 서버는 PC 목록에서 뺀다** — 넣으면 다시 RPi 에 부하가 간다.
 
-**③ 로봇 2대** — RPi 에서 `turtlebot4-setup` → Discovery Server 항목 → **onboard 에서 offboard 로 변경**, 서버 IP 를 PC-F, 포트 11811, 서버 ID 0. 적용 후 재부팅. 파일을 직접 고치기보다 이 도구를 쓴다.
+**③ 로봇 2대** — RPi 에서 `turtlebot4-setup` → Discovery Server 메뉴. 이 메뉴는 "onboard **또는** offboard" 가 아니라 **"onboard + offboard 둘 다"** 구조라, 로봇 노드가 자기 서버와 PC-F 서버 양쪽에 등록된다.
+
+| 항목 | 값 |
+|---|---|
+| Enabled | **True 그대로** (False 면 멀티캐스트로 바뀐다) |
+| Onboard Server - Port / Server ID | 11811 / **3 그대로** (robot4 는 4) |
+| **Offboard Server - IP** | **PC-F 의 IP** ← 이것만 채운다. 비어 있으면 offboard 미사용 |
+| Offboard Server - Port / Server ID | 11811 / **1 그대로** |
+
+Save → 재부팅. **되돌리기:** Offboard IP 를 비우고 Save 하면 원래대로.
+
+부하가 줄어드는 이유: PC 들이 더 이상 RPi 서버를 보지 않는다. RPi 서버에는 로봇 자신의 노드만 남고, 로봇 노드와 PC 노드는 PC-F 를 통해 서로를 찾는다.
 
 **지켜야 할 것 (NR-08)**
 - **PC-F 의 IP 를 고정한다.** DHCP 로 바뀌면 전부 한 번에 끊긴다
