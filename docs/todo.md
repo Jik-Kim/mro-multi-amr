@@ -23,7 +23,7 @@
 ## mro_navigation [주행 — 박병후, 이시율]
 - [ ] 아레나 재구성 + SLAM 맵 (9/5), `params/arena.yaml` 좌표 입력
 - [ ] **`dock_zone.pose` · `robotN.yaml` `dock_pose` 실측 기입** — 맵 좌표계 통일의 전제 (I-013)
-- [ ] **NR-07 통신 대안 결론** (9/6) — ⓪ 2서버 → ① 멀티캐스트 → ② 단일 서버 → ③ 범위 축소 (I-014)
+- [x] **통신 구성 완료 (9/5)** — offboard 단일 서버 PC-F `192.168.108.41` ID 1. 로봇 2대·PC 5대 전부 접속 확인. 남은 것: 공유기 예약 요청
 - [ ] TB4 2대 동시 운용 검증 (9/6) → SOT Q-18
 - [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → Z-05, zone_token, `shuttle/arrived`
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중
