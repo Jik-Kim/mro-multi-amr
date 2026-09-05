@@ -23,9 +23,11 @@ setup(
     entry_points={
         'console_scripts': [
             'webcam_register_node = mro_webcam.nodes.webcam_register_node:main',
-        'webcam_hint_node = mro_webcam.nodes.webcam_hint_node:main',
-        'kpi_logger_node = mro_webcam.nodes.kpi_logger_node:main',
-        'calibrate_homography = mro_webcam.core.homography:main',
+            'webcam_hint_node = mro_webcam.nodes.webcam_hint_node:main',
+            'webcam2 = mro_webcam.nodes.webcam2:main',
+            'webcam2_subscriber = mro_webcam.nodes.webcam2_subscriber:main',
+            'kpi_logger_node = mro_webcam.nodes.kpi_logger_node:main',
+            'calibrate_homography = mro_webcam.core.homography:main',
         ],
     },
 )
