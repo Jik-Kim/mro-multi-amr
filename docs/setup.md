@@ -29,6 +29,30 @@ echo $ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT
 
 **2대 동시 접속은 미검증이다** (SOT Q-18, 9/6). 두 서버에 동시에 붙는 웹캠·관제 PC 에서 양쪽 로봇 토픽이 다 보이는지가 첫 확인 항목이다.
 
+## Discovery Server 구성 — **offboard 단일 서버 (1순위, 9/6 결정 예정)**
+
+Kn1_mini 에서 Nav2 lifecycle 이 자꾸 멈춘 원인이 **RPi 의 디스커버리 부담**이었다. 로봇 2대·PC 5대가 되면 그 부하가 두 배다.
+서버를 노트북 한 대로 옮기면 RPi 는 클라이언트로만 남고, **2서버 동시 접속 문제도 함께 사라진다.**
+
+**① PC-F 에서 서버 실행** (플래그는 `fastdds discovery --help` 로 버전 확인)
+```bash
+fastdds discovery -i 0 -l 0.0.0.0 -p 11811
+```
+
+**② 모든 PC 의 환경 변수** — `/etc/turtlebot4_discovery/setup.bash` 수정
+```bash
+export ROS_DISCOVERY_SERVER="<PC-F IP>:11811"
+```
+세미콜론 위치가 서버 ID 다. **ID 0 이면 앞에 세미콜론이 없다** (기존 `;;;IP:11811;` 은 ID 3).
+
+**③ 로봇 2대** — RPi 에서 `turtlebot4-setup` → Discovery Server 항목 → **onboard 에서 offboard 로 변경**, 서버 IP 를 PC-F, 포트 11811, 서버 ID 0. 적용 후 재부팅. 파일을 직접 고치기보다 이 도구를 쓴다.
+
+**지켜야 할 것 (NR-08)**
+- **PC-F 의 IP 를 고정한다.** DHCP 로 바뀌면 전부 한 번에 끊긴다
+- **PC-F 서버를 먼저 띄우고 로봇을 켠다.** 부팅 순서가 중요하다
+- PC-F 가 단일 실패 지점이 된다. 시연 중 그 PC 에서 다른 작업을 하지 않는다
+- **변경 전 원래 설정을 기록**한다. 로봇이 다른 조와 공용이면 되돌리는 절차까지 준비할 것
+
 ## 네트워크 고정값
 
 | 항목 | 값 |
