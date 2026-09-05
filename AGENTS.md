@@ -31,6 +31,39 @@
 - 함수 하나는 하나의 책임. 변경 가능한 실행 값은 ROS2 파라미터로. 주석·TODO 는 한국어.
 - 카메라 토픽 구독자는 로봇당 검출 노드 1개만 (RPi Discovery 부하). 모니터링은 `target/image` 재발행을 본다.
 
+## 커밋 · 브랜치 · PR
+
+study-project 에서 쓰던 규칙을 그대로 이어간다.
+
+**커밋 메시지** — `타입: 한국어 요약` (요약 60자 이내, 마침표 없음)
+
+| 타입 | 쓰는 곳 |
+|---|---|
+| `feat` | 기능·노드·런치 추가 |
+| `fix` | 동작이 틀린 것을 고침 |
+| `docs` | 문서·주석만 바뀜 (`docs/`, BRD·SDD 인용, README) |
+| `refactor` | 동작은 그대로, 구조·이름만 바꿈 |
+| `test` | 단위 테스트 추가·수정 |
+| `chore` | 빌드·설정·`.gitignore`·도구 스크립트 |
+| `merge` | 브랜치 통합·충돌 해결 |
+
+```
+feat: 구역 세마포어 FIFO 대기열과 60초 강제 회수 추가
+docs: P1 병목 실측 0.79 m 반영 (SOT, issues, arena.yaml)
+fix: 도킹 실패 시 DOCK 토큰이 반납되지 않던 문제
+```
+
+- 한 커밋은 한 가지 일만 담는다. 코드와 문서가 **같이 바뀌어야 하는 계약 변경**만 예외로
+  한 커밋에 넣고, 이때는 `feat` 또는 `fix` 를 쓴다 (`docs & feat:` 처럼 붙여 쓰지 않는다).
+- 본문에는 **왜 바꿨는지**를 적는다. 무엇을 바꿨는지는 diff 가 이미 말해준다.
+
+**브랜치** — `feature/<주제>` · `fix/<주제>` · `docs/<주제>` (예: `feature/zone-semaphore`)
+
+- `main` 에 직접 밀지 않는다. 브랜치에서 작업하고 PR 로 합친다.
+- PR 제목도 커밋 규칙과 같은 형식. 본문에 바뀐 범위와 검증한 내용을 적는다.
+- 리뷰어는 `docs/responsibilities.md` 의 담당을 따른다. 계약(`mro_interfaces`, `docs/interfaces.md`)이
+  바뀌는 PR 은 PM 리뷰가 필수다.
+
 ## 문서 동기화
 
 - 패키지 구조·기술 방향·확정 파라미터가 바뀌면 `docs/SOT.md`. 계약이 바뀌면 `docs/interfaces.md` 와 `mro_interfaces` 를 함께.
