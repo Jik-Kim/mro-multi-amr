@@ -1,4 +1,4 @@
-"""ArUco 마커 검출 — 베이(A/B/C) 도착 확정과 KOZ 물리 마커. BRD v3.0 S4 / BR-T06 / BR-T19.
+"""ArUco 마커 검출 — 베이(A/B/C) 도착 확정. BRD v3.0 S4 / BR-T06.
 
 입력: oakd/rgb/image_raw/compressed
 출력: aruco/id (Int32, 검출된 마커 ID, 없으면 -1), aruco/distance (Float32, m, 마커 한 변 길이 기준 추정)
@@ -11,7 +11,7 @@ from sensor_msgs.msg import CompressedImage, CameraInfo
 from std_msgs.msg import Int32, Float32
 
 MARKER_SIZE_M = 0.10          # 베이 마커 한 변 (BRD 3.2 파라미터). TODO: 파라미터화
-DICT = cv2.aruco.DICT_4X4_50  # ID 체계: A=1, B=2, C=3, KOZ=10~ (docs/interfaces.md)
+DICT = cv2.aruco.DICT_4X4_50  # ID 체계: A=1, B=2, C=3. ID 10~ 는 KOZ 용 예약(Phase 2, 미사용)
 
 
 class ArucoDetector(Node):

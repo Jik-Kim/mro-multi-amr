@@ -18,7 +18,7 @@ setup(
     zip_safe=True,
     maintainer='Kim Byeongjik',
     maintainer_email='jungji0913@khu.ac.kr',
-    description='AMR 온보드 인지: OAK-D 작업자 검출·거리 보정·재식별 게이트, ArUco 베이/KOZ 마커 검출',
+    description='AMR 온보드 인지: OAK-D 작업자 검출·거리 보정·재식별 게이트, ArUco 베이 마커 검출',
     license='MIT',
     entry_points={
         'console_scripts': [

@@ -44,7 +44,7 @@ TB4 기본 토픽: `oakd/rgb/image_raw/compressed`, `oakd/stereo/image_raw/compr
 | ID | 의미 |
 |---|---|
 | 1 / 2 / 3 | 베이 A / B / C (10 cm, 베이 안쪽 벽, 높이 ≈ 20 cm) |
-| 10~19 | KOZ 바닥 마커 |
+| 10~19 | *(예약)* KOZ 바닥 마커 — Phase 2. Phase 1 에서는 쓰지 않는다 |
 
 ## QoS
 

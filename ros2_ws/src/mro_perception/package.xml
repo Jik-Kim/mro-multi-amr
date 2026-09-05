@@ -3,7 +3,7 @@
 <package format="3">
   <name>mro_perception</name>
   <version>0.1.0</version>
-  <description>AMR 온보드 인지: OAK-D 작업자 검출·거리 보정·재식별 게이트, ArUco 베이/KOZ 마커 검출</description>
+  <description>AMR 온보드 인지: OAK-D 작업자 검출·거리 보정·재식별 게이트, ArUco 베이 마커 검출</description>
   <maintainer email="jungji0913@khu.ac.kr">Kim Byeongjik</maintainer>
   <license>MIT</license>
   <exec_depend>rclpy</exec_depend>
