@@ -21,7 +21,8 @@ echo $ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT
 |---|---|---|---|
 | robot3 제어 PC | `3` | `;;;192.168.108.103:11811;` | `True` (nav2 터미널만 `False`) |
 | robot4 제어 PC | `3` | `;;;;<robot4 IP>:11811;` `[IP 확인 필요]` | `True` (nav2 터미널만 `False`) |
-| 웹캠 PC · 관제 PC (두 로봇을 다 봐야 함) | `3` | `;;;192.168.108.103:11811;<robot4 IP>:11811;` | `True` |
+| 웹캠 PC ×2 (PC-W1, PC-W2) | `3` | `;;;192.168.108.103:11811;<robot4 IP>:11811;` | `False` (주로 발행만) |
+| 관제 PC (PC-F) | `3` | `;;;192.168.108.103:11811;<robot4 IP>:11811;` | `True` |
 
 값이 다르면 `source /etc/turtlebot4_discovery/setup.bash`. 이 파일은 PC 마다 한 번 위 표대로 맞춘다 (`turtlebot4_setup` 의 discovery 설정 스크립트에 서버 ID·IP 를 넣거나 파일을 직접 편집).
 `ROS_SUPER_CLIENT` 는 setup.bash 가 대화형 터미널에서만 `True` 로 주므로, launch 를 스크립트로 띄우면 `False` 가 된다 — nav2 외 노드는 `True` 가 필요하니 주의.
@@ -55,17 +56,24 @@ ros2 launch mro_bringup robot.launch.py namespace:=/robot3
 
 두 번째 로봇은 다른 PC 에서 `/robot4` 로 동일하게. **Nav2 launch 는 로봇당 한 PC 에서만** (`controller_server` 중복 = `/cmd_vel` 퍼블리셔 2개).
 
-## 웹캠 PC
+## 웹캠 PC — **2대로 분리 (9/5 변경)**
 
 ```bash
-ros2 launch mro_bringup webcam_pc.launch.py
+# PC-W1 (관제센터 시야)
+ros2 launch mro_bringup webcam1_pc.launch.py
 ```
-호모그래피는 새 아레나에서 반드시 재캘리브레이션 (`mro_webcam/config/README.md`).
+```bash
+# PC-W2 (작업공간·병목·더미 시야)
+ros2 launch mro_bringup webcam2_pc.launch.py
+```
+호모그래피는 PC 별로 자기 json 을 쓴다 (`homography_cam1.json` / `homography_cam2.json`). 새 아레나에서 반드시 재캘리브레이션 (`mro_webcam/config/README.md`).
+
+웹캠 PC 는 주로 **발행만** 하므로 `ROS_SUPER_CLIENT=False` 로 띄워 디스커버리 부하를 줄인다. 띄운 뒤 `/webcam1/worker_descriptor`, `/webcam2/target_hint` 가 로봇·관제에서 보이는지 확인할 것.
 
 ## 관제 PC
 
 ```bash
-ros2 launch mro_bringup fleet_pc.launch.py     # http://localhost:5000
+ros2 launch mro_bringup fleet_pc.launch.py     # http://localhost:5000, kpi_logger 포함
 ```
 
 ## 안 될 때

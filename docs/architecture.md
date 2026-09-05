@@ -1,12 +1,15 @@
 # Architecture
 
-## 배치 (PC 3~4대 + 로봇 2대, 모두 로봇 Discovery Server 경유)
+## 배치 (PC 5대 + 로봇 2대, 모두 로봇 Discovery Server 경유)
+
+PC-W1(웹캠1) · PC-W2(웹캠2) · PC-F(관제) · PC-R3 · PC-R4. 웹캠 PC 분리는 9/5 결정.
 
 ```text
-[웹캠 PC]  webcam_register(웹캠1) ─ /webcam1/worker_descriptor ─▶ [관제 PC] fleet_manager ─ /robotN/mission/assigned ─▶ [로봇 제어 PC N]
-           webcam_hint(웹캠2)     ─ /webcam2/target_hint ────────────────────────────────────────────────────▶ follow_target
-           kpi_logger            ◀─ 모든 상태·미션·개입 토픽                       zone_semaphore ◀─ /fleet/zone_token ─ shuttle_mission
-                                                                                   control_ui(:5000) ─ /fleet/request_mission, /fleet/operator_command
+[PC-W1] webcam_register(웹캠1) ─ /webcam1/worker_descriptor ─▶ [PC-F] fleet_manager ─ /robotN/mission/assigned ─▶ [PC-R3 / PC-R4]
+[PC-W2] webcam_hint(웹캠2)     ─ /webcam2/target_hint ─────────────────────────────────────────────────────▶ follow_target
+                                        [PC-F] kpi_logger ◀─ 상태·미션·개입 토픽
+                                        [PC-F] zone_semaphore ◀─ /fleet/zone_token ─ shuttle_mission, return_dock
+                                        [PC-F] control_ui(:5000) ─ /fleet/request_mission, /fleet/operator_command
 ```
 
 ## 로봇 1대 내부 (namespace /robotN)
