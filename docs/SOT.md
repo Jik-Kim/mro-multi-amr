@@ -27,7 +27,7 @@ BRD v3.0 Phase 1 — 10단계 시나리오(S1~S10)와 예외 흐름(E-1~E-7)을 
 | 통신 | 로봇 Discovery Server 경유. nav2 launch 는 `ROS_SUPER_CLIENT=False`. 카메라 구독자는 로봇당 검출 노드 1개 |
 | PC 구성 | **웹캠1·웹캠2 를 각각 다른 PC 로 분리 (9/5 결정).** 총 5대: PC-W1·PC-W2·PC-F(관제, kpi_logger 포함)·PC-R3·PC-R4. 웹캠 PC 는 주로 발행만 하므로 `ROS_SUPER_CLIENT=False` |
 | **통신 구성** | **NR-07/08 (9/5).** 통신이 단일 실패 지점이라 순서를 정해뒀다. **① offboard 단일 Discovery Server(권장, 강사 안내 방식)** — `turtlebot4-setup` 에서 로봇을 onboard → offboard 로 바꿔 PC-F 서버 하나를 가리키게 한다. RPi 가 디스커버리 부담에서 빠지고 2서버 동시 접속 문제가 사라진다 → ② 2서버 동시 접속 → ③ 멀티캐스트 → ④ 로봇 1대로 축소. **9/6 결론.** 전제: PC-F IP 고정, 서버 먼저 기동, 원래 설정 기록·복원 절차 |
-| 코드 기반 | Kn1_mini 4노드 이관(파일 헤더 `[이관]`). 신규 노드: safety_watchdog, fleet_manager, zone_semaphore, aruco_detector, webcam_hint, kpi_logger, return_dock, control_ui |
+| 코드 기반 | Kn1_mini 4노드 이관(파일 헤더 `[이관]`). 신규 노드: safety_watchdog, fleet_manager, zone_semaphore, aruco_detector, webcam_hint, webcam2, webcam2_subscriber, kpi_logger, return_dock, control_ui. webcam2 마커 캘리브레이션 도구 포함 |
 | 일정 (강사 고정) | 9/7(월) 오전 스케줄 발표 · 9/8(화) 09:30 설계도 산출물 제출, 14:00 리뷰 · 9/8 오후~9/9 오전 코드 리뷰 · **통합 2일 = 9/9(수)~9/10(목)** · 9/11(금) 09:30 SDD 제출, 오후 최종 시연. 따라서 설계·준비 9/5~9/6, 구현 9/7~9/8, 단위 테스트 9/8 저녁. 상세는 Google Sheets 스케줄러 |
 
 ## 확정 노드·토픽
