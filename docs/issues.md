@@ -27,6 +27,7 @@
 | [I-021](#i-021) | 중 | **열림** | 관제 김민준 | 개입 이벤트가 DB(events)에 기록되지 않는다 (FR-28) |
 | [I-022](#i-022) | 상 | **열림** | 웹캠 한세교·김학민 | KPI 리포트의 지표가 AC 정의와 다르다 (AC-05·K-04·AC-13) |
 | [I-023](#i-023) | 상 | **열림** | 웹캠·관제 김학민·김민준 | 배송 판정(AC-08)이 CSV 에 남지 않는다 |
+| [I-024](#i-024) | 상 | **열림** | 주행 박병후·이시율 | `shuttle/status` 발행자가 없어 배송 성공률이 구조적으로 0 % |
 
 ## 해결된 이슈
 
@@ -266,3 +267,14 @@
 
 - **내용·재현** — `missions.result`(`SUCCESS`/`FAIL_TLIM`)는 `fleet_manager` 가 **SQLite 에만** 쓴다. `Mission.msg` 에는 `result`·`lead_time_s` 가 없어 `/fleet/mission` 을 받는 `kpi_logger` CSV 에는 판정이 남지 않는다. 그래서 `kpi_report.py` 는 **`Mission.DONE` 도달 여부**로 성공률을 세는데, ① T_lim 을 넘겨 도착한 미션도 결국 DONE 이 되므로 성공으로 계상되고 ② **끝내 도착하지 못한 미션은 CSV 에 흔적이 없어 분모에서 빠진다**(스윕 타이머는 DB 만 갱신한다). 대조에서 리포트 **50.0 %**, 참값 **0.0 %** 가 나왔다. 실제보다 **좋게** 나오는 방향이다. 리드타임도 `DONE − ASSIGNED`(요청→도킹 완료)라 K-05 의 정의(요청→**대기공간 도착**)와 다르다 — 대조에서 400 s vs 150 s.
 - **조치·남은 것** — **계약은 늘리지 않는다 (9/6 PM 결정).** `Mission.msg` 에 필드를 더하면 8명이 재빌드해야 한다. `kpi_logger` 와 DB 가 **같은 PC-F** 에 있으므로(`fleet_pc.launch.py`) `tools/kpi_report.py` 가 `~/mro_fleet.db` 의 `missions` 를 직접 읽어 `result` 로 AC-08 을, `waiting_at − created_at` 으로 K-05 리드타임을 낸다. CSV 는 그대로 두고 DB 경로를 인자로 받는다. **TS-07 배송 20회를 9/9 에 미리 빼므로 이것이 I-022 보다 먼저다.**
+
+### I-024
+
+**`shuttle/status` 발행자가 없어 배송 성공률이 구조적으로 0 %**
+
+`mro_navigation` · 심각도 상 · 담당 주행 박병후·이시율 · 등록 2026-09-06 (PM)
+
+- **내용·재현** — `shuttle_mission_node.py` 는 `shuttle/arrived`(Bool)만 발행하고 **`shuttle/status` 발행자가 없다.** 헤더 주석의 `TODO([주행]) ③` 로만 남아 있다. 그런데 `fleet_manager` 가 대기공간 도착을 아는 유일한 경로가 `{ns}/shuttle/status == 'WAITING'` 이고, 그것이 `db.mark_waiting()` 을 부르는 유일한 호출부다. `return_dock` 도 같은 토픽을 쓰지만 RETURNING/DOCK_WAIT/DOCKING/DOCKED/FAILED 만 낸다 — `WAITING` 은 아무도 내지 않는다.
+  **결과:** 모든 미션의 `missions.result` 가 NULL 로 남다가 `_expire_overdue_missions` 스윕이 T_lim(120 s) 뒤 전부 `FAIL_TLIM` 으로 확정한다. **AC-08 배송 성공률이 0 % 로 고정된다.** `Mission` 상태 전이(SHUTTLE·AT_BAY·WAITING)도 전혀 기록되지 않아 K-05 리드타임과 KPI CSV 의 미션 시계열이 함께 빈다.
+  **TS-07 배송 20회를 9/9 에 미리 빼므로 그날 바로 드러난다.**
+- **조치·남은 것** — `shuttle_mission` 이 계약 4절의 값(`READY / SHUTTLE / AT_BAY / WAITING / FAILED`)을 상태가 바뀔 때 발행한다. **`WAITING` 은 대기공간 waypoint 도착이 확정된 시점에 한 번** 낸다 — 이 시각이 K-05 리드타임의 끝이자 AC-08 판정 기준점이다. `shuttle/arrived` 는 `follow_target` 용이라 그대로 두고 별개로 낸다.
