@@ -3,7 +3,7 @@
 ## 한 줄 정의
 
 정비사(스케일 인형+RC카)가 관제센터에서 자재를 요청하면 AMR(TurtleBot4 ×2)이 창고에서 가져와 합류 지점에서 만나고,
-작업 위치까지 따라다니며, 두 대가 사람 개입 없이 공존한다. — **BRD v3.0 Phase 1 (S1~S10)**
+작업 위치까지 따라다니며, 두 대가 사람 개입 없이 공존한다. — **BRD v3.1 Phase 1 (S1~S10)**
 
 ## 기술 방향
 
@@ -22,4 +22,4 @@
 | **박병후, 이시율** [주행] | `mro_navigation`, `mro_fleet/zone_semaphore` | 아레나·맵, 2대 운용, 셔틀, 추종·재탐지·Standby, safety_watchdog, 복귀, **구역 세마포어** |
 | **김민준** [관제] | `mro_fleet` (세마포어 제외) | DB, fleet_manager, 관제 UI |
 
-세부 결정과 미결 사항은 `docs/SOT.md`, 요구사항 원본은 BRD v3.0 (Kn1_proj/MRO_Multi-AMR_BRD_v3.0.md).
+세부 결정과 미결 사항은 `docs/SOT.md`, 요구사항 원본은 BRD v3.1 (`Kn1_proj/MRO_Multi-AMR_BRD_v3.1.md`), 설계는 SDD v0.4 (`Kn1_proj/MRO_Multi-AMR_SDD_v0.4.md`).
