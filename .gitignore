@@ -7,6 +7,7 @@ __pycache__/
 # 데이터 (Google Drive 로) — 모델(.pt)·맵·호모그래피 json 은 커밋한다
 datasets/
 captures/
+ros2_ws/src/mro_webcam/config/WebCam2_*/
 *.bag
 *.mp4
 *.db
