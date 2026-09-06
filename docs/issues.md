@@ -157,7 +157,7 @@
 `mro_bringup` · 심각도 중 · 담당 주행 박병후·이시율 · 등록 2026-09-05 (PM)
 
 - **내용·재현** — 웹캠 PC 분리(9/5)로 PC 5대 + 로봇 2대. Kn1_mini 에서 PC 2대·로봇 1대로도 lifecycle 멈춤이 있었음
-- **조치·남은 것** — 서버를 PC-F 로 옮겨 RPi 부하가 구조적으로 사라짐(I-014). 웹캠 PC 는 `ROS_SUPER_CLIENT=False` 유지
+- **조치·남은 것** — 서버를 PC-F 로 옮겨 RPi 부하가 구조적으로 사라짐(I-014). 웹캠 PC 는 `ROS_SUPER_CLIENT=False` 유지. **2대 동시 부하 실측 확인 (9/6, 주행):** 네임스페이스 격리 정상(`/robot3/*`·`/robot4/*` 누락 없이 동시 수신) · `odom` 20.08 / 20.01 Hz(std dev 0.023 / 0.028 s, Create3 권장 20 Hz 유지) · OAK-D preview 6.0 / 5.1 Hz 동시 스트리밍 · 2대 PC 에서 각각 `cmd_vel` 조종 시 지연 없음 · RPi CPU 4코어 21~31 %(Kn1_mini 의 100 % 폭주 재현 없음) · **Nav2 2벌 동시 구동 확인 — lifecycle 노드 14종(amcl·map_server·bt_navigator·controller_server·planner_server·behavior_server·smoother_server·velocity_smoother·waypoint_follower·collision_monitor·docking_server·route_server·global_costmap·local_costmap)이 양쪽에 모두 존재하고 `/robot4/bt_navigator/get_state` 가 `active` 응답.** Kn1_mini 의 lifecycle 멈춤은 재현되지 않았다
 
 ### I-012
 
