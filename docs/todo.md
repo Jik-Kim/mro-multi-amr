@@ -5,12 +5,12 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 27/68 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
+**전체 27/69 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
-| mro_perception [인지 — 정정인, 민범진] | 1/9 | `█░░░░░░░░░` | — |
+| mro_perception [인지 — 정정인, 민범진] | 1/10 | `█░░░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 5/14 | `████░░░░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 10/26 | `████░░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 6/10 | `██████░░░░` | — |
@@ -36,6 +36,7 @@
 - [ ] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) · 마감 9/7
 - [ ] `amr_detection_node.py`: `DETECT_CLASS` → worker_a/b, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9
 - [ ] `amr_detection_node.py`: **`target/distance` 발행 (FR-29)** — 추종거리 판정의 기준값. kpi_logger 는 이미 구독 중이라 이것만 붙으면 AC-05 가 측정된다 · 마감 9/8
+- [ ] **TS-U05 줄자 대조** — `target/distance` 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오차 < 기준의 1/3). 이게 없으면 AC-05 를 그 값으로 채점할 근거가 없다 · 마감 9/8
 - [ ] `amr_detection_node.py`: 모듈 상수 → ROS2 파라미터 (`config/perception.yaml`) · 마감 9/8
 - [x] `aruco_detector_node.py`: 검출·거리 초안 · 마감 9/7
 - [ ] `aruco_detector_node.py`: solvePnP 자세, 마커 ID 필터 · 마감 9/8
