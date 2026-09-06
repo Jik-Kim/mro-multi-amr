@@ -37,9 +37,16 @@ DEFAULT_JSON = os.path.join(HERE, '..', '..', 'config', 'WebCam1', 'homography_c
 
 # --------------------------------------------------------------- 사용 함수
 def load_homography(path=DEFAULT_JSON):
-    with open(path) as f:
+    """새 `homography`와 기존 `H` JSON 키를 모두 지원한다."""
+    with open(path, encoding='utf-8') as f:
         d = json.load(f)
-    return np.array(d['H'], dtype=np.float64)
+    matrix_data = d.get('homography', d.get('H'))
+    if matrix_data is None:
+        raise KeyError("JSON에 'homography' 또는 'H' 행렬이 없습니다.")
+    matrix = np.array(matrix_data, dtype=np.float64)
+    if matrix.shape != (3, 3) or not np.isfinite(matrix).all():
+        raise ValueError('Homography는 유한한 수로 된 3x3 행렬이어야 합니다.')
+    return matrix
 
 
 def pixel_to_map(H, u, v):
