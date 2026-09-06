@@ -1,6 +1,6 @@
-# Interfaces — 계약 v1.7 (2026-09-06)
+# Interfaces — 계약 v1.8 (2026-09-06)
 
-> v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했다(v1.7).
+> v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐다**(v1.8).
 > 토픽·메시지·서비스 정의는 v1.0 그대로이므로 구현에 영향 없다.
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
@@ -104,8 +104,8 @@
 | `arena.yaml` | 베이 waypoint·ArUco ID, 대기공간, `dock_zone`(pose·approach·holding), `passages`, `semaphore_zones` 폴리곤, `homography_marks`, `t_lim_s`·`t_ret_s`·`dock_retry` | 박병후·이시율 |
 | `robot3.yaml` / `robot4.yaml` | `dock_pose`, `follow_standoff_m` 0.5, `min_separation_m` 0.3, `v_max` 0.3, `reid_threshold`, `bay_dwell_s` 5, `t_lim_s` 120, `t_ret_s` 180, `dock_retry` 2 | 박병후·이시율 |
 | `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m` | 정정인·민범진 |
-| `mro_webcam/config/WebCam1/homography_cam1.json` | 웹캠1 호모그래피 행렬 | 한세교·김학민 |
-| `mro_webcam/config/WebCam2/homography_cam2.json` | 웹캠2 호모그래피 행렬·대응점·재투영 오차 | 한세교·김학민 |
+| `mro_webcam/config/WebCam1/homography_cam1.json` | **쓰지 않는다 (9/6 결정)** — 웹캠1 은 작업자 출발(등록)만 인식하고 map 좌표를 내지 않는다. 파일은 Kn1_mini 잔재이며 `webcam_register` 가 좌표를 쓰면 안 된다 | 한세교·김학민 |
+| `mro_webcam/config/WebCam2/homography_cam2.json` | 웹캠2 호모그래피 행렬·대응점·재투영 오차. 기준점 원본은 같은 폴더 `marker_coordinates.json` (로봇 AMCL 로 실측, PR #9 — RMSE 2.8 cm) | 한세교·김학민 |
 | `mro_webcam/config/webcam.yaml` | `process_hz` 10, `capture_fps` **장치 상한**(웹캠1 = 25), `on_time_s` 0.3, `off_time_s` 0.5, `register_s` 1.0, `hint_valid_s` 2.0 | 한세교·김학민 |
 
 **`dock_pose` 는 `arena.yaml` 의 `dock_zone.pose.<robot>` 과 같은 값이어야 한다.** 두 곳이 어긋나면 맵 좌표계가 깨진다.

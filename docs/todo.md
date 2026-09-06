@@ -5,21 +5,16 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 33/79 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
+**전체 37/80 완료** (█████████░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
-| mro_perception [인지 — 정정인, 민범진] | 1/11 | `█░░░░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 5/14 | `████░░░░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 15/32 | `█████░░░░░` | — |
+| mro_perception [인지 — 정정인, 민범진] | 3/12 | `██░░░░░░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 6/14 | `████░░░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 16/32 | `█████░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 7/13 | `█████░░░░░` | — |
 | mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
-
-**오늘 마감 2건**
-
-- mro_perception — 인형 2종 제작 → 데이터 수집·라벨링 (상하의 전체, 9/6 결정)
-- mro_webcam — 새 아레나 호모그래피 cam1/cam2 캘리브레이션 (I-002) — 맵은 9/5 에 나왔다
 
 > 이 표는 `python3 tools/todo_stats.py` 가 체크박스를 세어 다시 쓴다. 손으로 고치지 않는다.
 
@@ -31,8 +26,9 @@
 - [x] `WorkerDescriptor.color_hist` — H16×S8=128, `reid.hsv_hist()` 공유 호출로 확정 · 마감 9/6
 
 ## mro_perception [인지 — 정정인, 민범진]
-- [ ] 인형 2종 제작 → 데이터 수집·라벨링 (상하의 전체, 9/6 결정) · 마감 9/6
-- [ ] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) · 마감 9/7
+- [x] 인형 2종 제작 (상하의 전체, 9/6 결정) · 마감 9/6
+- [x] 데이터 수집·라벨링 (9/6 완료) · 마감 9/6
+- [ ] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) — **9/6 밤 학습 중** · 마감 9/7
 - [ ] `amr_detection_node.py`: `DETECT_CLASS` → worker_a/b, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9
 - [ ] `amr_detection_node.py`: **`target/distance` 발행 (FR-29)** — 추종거리 판정의 기준값. kpi_logger 는 이미 구독 중이라 이것만 붙으면 AC-05 가 측정된다 · 마감 9/8
 - [ ] **TS-U05 줄자 대조** — `target/distance` 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오차 < 기준의 1/3). 이게 없으면 AC-05 를 그 값으로 채점할 근거가 없다 · 마감 9/8
@@ -44,7 +40,7 @@
 - [ ] `reid_threshold` 확정 — 같은/다른 인형 유사도 분포를 그려 결정 (SOT Q-13). 추출 영역이 인형 전체라 다른 인형끼리도 0.5 안팎에서 시작한다 · 마감 9/8
 
 ## mro_webcam [웹캠 — 한세교, 김학민]
-- [ ] **새 아레나 호모그래피 cam1/cam2 캘리브레이션 (I-002)** — 맵은 9/5 에 나왔다 · 마감 9/6
+- [x] **새 아레나 호모그래피 (I-002)** — cam2 완료 (PR #9, AMCL 기준점 13개, RMSE 2.8 cm). **cam1 은 하지 않는다 (9/6)** — 웹캠1 은 등록만, map 좌표 없음 · 마감 9/6
 - [x] `webcam2.py` USB 캡처 + `calibrate_cam2_markers.py` 마커 캘리브레이션 도구 (PR #2) · 마감 9/6
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [ ] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) · 마감 9/8
@@ -74,7 +70,7 @@
 - [x] TB4 2대 동시 운용 검증 (9/6) — 네임스페이스 격리 · `odom` 20 Hz · OAK-D 동시 스트리밍 · RPi CPU 21~31 % · **Nav2 2벌 동시 `active`** 확인 (I-011) · 마감 9/6
 - [x] **좌표 보정 3건 (I-001 PM 검증)** — holding ≥1.5m(1.52m), bays 전부 DOCK 폴리곤 밖, P1 폴리곤이 통로를 완전히 가로지르도록 재실측 (9/6) · 마감 9/7
 - [x] 베이 B·C waypoint 확정 실측 (9/6, x=-0.78 로 통일) · 마감 9/7
-- [ ] `arena.yaml` `homography_marks` — 웹캠(한세교)이 SLAM 좌표 기반 캘리브레이션(PR #9)으로 처리 중. **완료 처리는 웹캠 쪽에서 한다** (I-002) · 마감 9/7
+- [x] `arena.yaml` `homography_marks` — cam2 기준점은 `mro_webcam/config/WebCam2/marker_coordinates.json` 이 원본(PR #9), cam1 은 불필요(9/6). arena.yaml 에는 복사하지 않는다 · 마감 9/7
 - [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` · 마감 9/7
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8

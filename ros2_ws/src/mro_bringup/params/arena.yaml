@@ -33,8 +33,8 @@ arena:
   # KOZ(접근 금지 구역)와 가상 차선은 **Phase 2 로 이관 (9/5)** — 축소 아레나에 항공기 상당물이 없다.
   # 되살릴 때는 keep_out / virtual_lane 키를 여기에 추가하고 Nav2 keepout 마스크를 함께 만든다.
   homography_marks:           # 십자 테이프 — 웹캠1·2 캘리브레이션 기준점. map 좌표를 함께 적어 재캘리브레이션을 반복 가능하게
-    cam1: []                  # [[u_desc, x, y], ...] 형식은 docs/interfaces.md
-    cam2: []
+    cam1: []                  # 쓰지 않는다 (9/6) — 웹캠1 은 등록만, map 좌표 없음
+    cam2: []                  # 원본은 mro_webcam/config/WebCam2/marker_coordinates.json (PR #9, AMCL 실측). 여기에 복사하지 않는다
   loc_check_marker:           # 측위 검증 마커 — ArUco ID 4. 웹캠1 박스 북쪽 약 0.4 m 앞 거치대, 북향, 높이 23.5 cm (계약 6절·9.2 ①)
     aruco_id: 4
     xy: [0.0, 0.0]            # map 좌표 — 로봇을 마커 앞에 세우고 amcl_pose 로 실측 [주행 입력 필요 9/7]
