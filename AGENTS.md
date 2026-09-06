@@ -60,6 +60,9 @@ fix: 도킹 실패 시 DOCK 토큰이 반납되지 않던 문제
 **브랜치** — `feature/<주제>` · `fix/<주제>` · `docs/<주제>` (예: `feature/zone-semaphore`)
 
 - `main` 에 직접 밀지 않는다. 브랜치에서 작업하고 PR 로 합친다.
+- **예외 — PM 문서 커밋**(`docs/`, AGENTS.md, PROJECT.md, README, `tools/`)은 `main` 에 바로 넣는다.
+  충돌할 상대가 없고 팀이 즉시 받아야 하는 내용이라 PR 을 거칠 이득이 없다 (9/6 결정).
+  코드(`ros2_ws/src/**`)와 계약(`mro_interfaces`, `docs/interfaces.md`)은 예외가 아니다.
 - PR 제목도 커밋 규칙과 같은 형식. 본문에 바뀐 범위와 검증한 내용을 적는다.
 - 리뷰어는 `docs/responsibilities.md` 의 담당을 따른다. 계약(`mro_interfaces`, `docs/interfaces.md`)이
   바뀌는 PR 은 PM 리뷰가 필수다.
