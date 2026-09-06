@@ -5,24 +5,21 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 18/53 완료** (███████░░░░░░░░░░░░░)  ·  기준 09/06
+**전체 21/57 완료** (███████░░░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 1/9 | `█░░░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 3/9 | `███░░░░░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 7/20 | `████░░░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 10/24 | `████░░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 2/7 | `███░░░░░░░` | — |
 | mro_bringup [PM 김병직] | 2/5 | `████░░░░░░` | — |
 
-**오늘 마감 6건**
+**오늘 마감 3건**
 
 - mro_perception — 인형 2종 제작 → 데이터 수집·라벨링 (상하의 전체, 9/6 결정)
 - mro_webcam — 새 아레나 호모그래피 cam1/cam2 캘리브레이션 (I-002) — 맵은 9/5 에 나왔다
-- mro_navigation — params/arena.yaml 좌표 입력 (I-001) — measurement_guide.md §1 절차대로 bays A/B…
-- mro_navigation — dock_zone.pose · robotN.yaml dock_pose 실측 기입 (I-013) — 맵 좌표계 통일의 전제
-- mro_navigation — I-004 받침대 돌출폭 · I-006 도크 실물 배치 실측 — measurement_guide.md §2·§4
 - mro_navigation — TB4 2대 동시 운용 검증
 
 > 이 표는 `python3 tools/todo_stats.py` 가 체크박스를 세어 다시 쓴다. 손으로 고치지 않는다.
@@ -62,14 +59,18 @@
 - [x] 실측 절차·양식 문서화 — `docs/measurement_guide.md` · 마감 9/5
 - [x] **통신 구성** — offboard 단일 서버 PC-F `192.168.108.41` ID 1. 로봇 2대·PC 5대 접속 확인 · 마감 9/5
 - [ ] 공유기 DHCP 예약 요청 — 지금은 재부팅하면 IP 가 바뀐다 · 마감 9/7
-- [ ] **`params/arena.yaml` 좌표 입력 (I-001)** — `measurement_guide.md` §1 절차대로 bays A/B/C, waiting_zone, `semaphore_zones` 폴리곤, `homography_marks` · 마감 9/6
-- [ ] **`dock_zone.pose` · `robotN.yaml` `dock_pose` 실측 기입 (I-013)** — 맵 좌표계 통일의 전제 · 마감 9/6
-- [ ] I-004 받침대 돌출폭 · I-006 도크 실물 배치 실측 — `measurement_guide.md` §2·§4 · 마감 9/6
+- [x] **`params/arena.yaml` 좌표 입력 (I-001)** — bays A/B/C, waiting_zone, dock_zone, `semaphore_zones` 폴리곤 실측 기입 (9/6) · 마감 9/6
+- [x] **`dock_zone.pose` · `robotN.yaml` `dock_pose` 실측 기입 (I-013)** — 두 파일 값 일치 확인 (9/6) · 마감 9/6
+- [ ] I-004 받침대 돌출폭 실측 — `measurement_guide.md` §2 · 마감 9/7
 - [ ] TB4 2대 동시 운용 검증 · 마감 9/6
+- [ ] **좌표 보정 3건 (I-001 PM 검증)** — 홀딩 포인트를 도크에서 ≥ 1.5 m 로, 베이 A 를 DOCK 폴리곤 밖으로, P1 폴리곤이 통로를 완전히 가로지르는지 확인 · 마감 9/7
+- [ ] 베이 B·C waypoint 확정 실측 — 지금은 대강 값이라 ArUco 도착 판정(TS-U05·U06) 전에 필요 · 마감 9/7
+- [ ] `arena.yaml` `homography_marks` 입력 — 웹캠 팀과 같은 바닥 지점을 쓴다 (I-002) · 마감 9/7
 - [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` · 마감 9/7
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
 - [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (관제 → 주행 이관) · 마감 9/8
-- [ ] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 + 로봇 측 진입 판정 연결 · 마감 9/8
+- [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
+- [ ] `zone_semaphore_node.py`: 로봇 측 진입 판정 연결 (폴리곤 vs 로봇 위치 비교) · 마감 9/8
 - [x] `safety_watchdog_node.py`: /scan → estop, cmd_vel 0 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: Nav2 goal cancel (액션 클라이언트), TS-14 결함 주입 검증 · 마감 9/8
 - [x] `return_dock_node.py`: DOCK 토큰 + 재시도 2회 복귀 로직 · 마감 9/8
