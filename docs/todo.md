@@ -5,15 +5,15 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 21/59 완료** (███████░░░░░░░░░░░░░)  ·  기준 09/06
+**전체 25/63 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 1/8 | `█░░░░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 3/9 | `███░░░░░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 3/10 | `███░░░░░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 10/26 | `████░░░░░░` | — |
-| mro_fleet [관제 — 김민준] | 2/7 | `███░░░░░░░` | — |
+| mro_fleet [관제 — 김민준] | 6/10 | `██████░░░░` | — |
 | mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
 
 **오늘 마감 3건**
@@ -51,6 +51,7 @@
 - [ ] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
 - [ ] `tools/kpi_report.py`: p95 추종거리, IPH, 리드타임 · 마감 9/10
+- [ ] `tools/kpi_report.py`: 배송 판정(AC-08)은 CSV 가 아니라 `~/mro_fleet.db` 의 `missions.result` 를 읽는다 — Mission.msg 에 result 가 없고 DB·kpi_logger 가 같은 PC-F 에 있다 (PR #7 합의) · 마감 9/10
 
 ## mro_navigation [주행 — 박병후, 이시율]
 - [x] 아레나 재구성 · 마감 9/5
@@ -83,11 +84,14 @@
 ## mro_fleet [관제 — 김민준]
 - [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8
 - [x] `control_ui`: 작업자별/전체 종료 버튼, `fleet_manager` RETURN_ALL · 마감 9/8
-- [ ] `fleet_manager_node.py`: yaw 계산, 미션 상태 전이 구독 (`shuttle/status` → Mission state) · 마감 9/8
-- [ ] `fleet_manager_node.py`: 배터리 25 % 미만 미션 거부·사유 기록 (FR-06) · 마감 9/8
-- [ ] `fleet_manager_node.py`: 리드타임 기록, T_lim 초과 실패 확정, `arrived_late` 별기 (FR-09) — **TS-07 배송 20회를 9/9 에 미리 빼므로 이것이 먼저다** · 마감 9/8
+- [x] `fleet_manager_node.py`: yaw 계산, 미션 상태 전이 구독 (`shuttle/status` → Mission state) (PR #7) · 마감 9/8
+- [x] `fleet_manager_node.py`: 배터리 25 % 미만 미션 거부·사유 기록 (FR-06) (PR #7) · 마감 9/8
+- [x] `fleet_manager_node.py`: 리드타임 기록, T_lim 초과 실패 확정, `arrived_late` 별기 (FR-09) — 도착 시점 판정 + 1초 스윕 타이머 (PR #7) · 마감 9/8
+- [ ] **`FleetStatus.state` 를 approach·shuttle 두 출처로 분리 (I-020)** — 지금은 한 필드를 두 노드가 덮어써 도킹 상태가 화면에 안 남는다 · 마감 9/7
+- [ ] `fleet_manager_node.py`: `/fleet/intervention` 구독 → DB events 기록 (I-021, FR-28) · 마감 9/8
+- [ ] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') · 마감 9/8
 - [ ] `control_ui`: 페어링 폴백(명시 페어링) 버튼 (FR-13) · 마감 9/8
-- [ ] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) · 마감 9/9
+- [x] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) (PR #7) · 마감 9/9
 
 ## mro_bringup [PM 김병직]
 - [x] robot / webcam_pc / fleet_pc launch, params 골격 · 마감 9/7

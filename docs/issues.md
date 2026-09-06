@@ -23,7 +23,8 @@
 | [I-009](#i-009) | 상 | **열림** | 주행 박병후·이시율 | 0.79 m 병목에서 Nav2 통과 실패 우려 |
 | [I-013](#i-013) | 상 | **진행중** | 주행 박병후·이시율 | 로봇 2대의 맵 좌표계가 어긋난다 |
 | [I-016](#i-016) | 상 | **진행중** | 웹캠 한세교·김학민 | 웹캠2 발행 주기 저하 (10 Hz 설정에 3~5 Hz) |
-| [I-019](#i-019) | 하 | **열림** | 관제 김민준 | fleet_manager 주석에 옛 구역 토큰 이름 남음 |
+| [I-020](#i-020) | 상 | **열림** | 관제 김민준 | FleetStatus.state 를 두 노드가 덮어써 도킹 상태가 남지 않는다 |
+| [I-021](#i-021) | 중 | **열림** | 관제 김민준 | 개입 이벤트가 DB(events)에 기록되지 않는다 (FR-28) |
 
 ## 해결된 이슈
 
@@ -37,6 +38,7 @@
 | [I-015](#i-015) | 웹캠 한세교·김학민 | 웹캠1 이 인형 상의를 몇 픽셀로 보는가 |
 | [I-017](#i-017) | PM 김병직 | 웹캠2 호모그래피 런치 경로 미반영 |
 | [I-018](#i-018) | 인지 정정인·민범진 | 두 인형의 치수가 상의 말고도 다르다 |
+| [I-019](#i-019) | 관제 김민준 | fleet_manager 주석에 옛 구역 토큰 이름 남음 |
 
 ---
 
@@ -221,4 +223,22 @@
 `mro_fleet` · 심각도 하 · 담당 관제 김민준 · 등록 2026-09-06 ([주행])
 
 - **내용·재현** — `fleet_manager_node.py:109` 주석이 `Z-09·Z-03 구역 토큰이 순서를 만든다` 로 적혀 있으나, 계약 v1.1 의 토큰은 `P1`·`DOCK` 둘뿐이다(`zone_semaphore_node.py` 의 `ZONES`). 동작에는 영향이 없지만 이 주석을 근거로 구현하면 없는 토큰을 요청해 `granted=false` 만 받는다
-- **조치·남은 것** — 주석을 `P1·DOCK` 으로 수정. 나머지 7개 파일(계약·주행·문서)은 주행이 9/6 에 통일 완료 — `mro_fleet` 은 관제 소관이라 손대지 않았다 (AGENTS.md)
+- **조치·남은 것** — **해결 (9/6, PR #7).** 주석이 `P1 통과 뒤 DOCK 토큰이 순차 도킹을 보장한다` 로 바뀐 것을 PM 이 확인했다. 나머지 7개 파일(계약·주행·문서)은 주행이 9/6 에 통일 완료
+
+### I-020
+
+**FleetStatus.state 를 두 노드가 덮어써 도킹 상태가 남지 않는다**
+
+`mro_fleet` · 심각도 상 · 담당 관제 김민준 · 등록 2026-09-06 (PR #7 리뷰)
+
+- **내용·재현** — `fleet_manager._status_cb` 가 `approach/status`(follow_target)와 `shuttle/status`(return_dock·shuttle_mission)를 **같은 `robot['state']` 한 필드**에 쓴다. 그런데 `follow_target_node.py:113` 은 1초 타이머로 자기 상태를 **무조건 재발행**하고, `return_dock` 은 **바뀔 때만** 발행한다. 따라서 return_dock 이 `DOCKED` 를 보내도 **1초 안에 follow_target 의 상태로 덮인다.** 관제 화면(FR-26·AC-07)에 도킹 완료가 남지 않아 **TS-20·AC-14 의 '두 대 모두 도킹 성공' 을 화면으로 판정할 수 없다.** 부수 효과로 `_set_robot_value` 가 값이 바뀔 때마다 STATE 이벤트를 남기므로 전이 1건이 2건으로 기록된다 (TS-18 로그 오염). **9/7 에 주행이 `shuttle_mission` 의 `shuttle/status` 발행을 붙이면 S4 구간에서도 같은 일이 난다** — 지금은 그 노드가 아직 발행하지 않아 드러나지 않을 뿐이다.
+- **조치·남은 것** — `robot[ns]` 에 `approach_state`·`shuttle_state` 를 따로 두고 `FleetStatus.state` 는 둘을 우선순위 규칙으로 합성한다(복귀·셔틀 구간은 shuttle, 페어링·추종 구간은 approach). STATE 이벤트도 출처별로 비교해 남긴다.
+
+### I-021
+
+**개입 이벤트가 DB(events)에 기록되지 않는다 (FR-28)**
+
+`mro_fleet` · 심각도 중 · 담당 관제 김민준 · 등록 2026-09-06 (PR #7 리뷰)
+
+- **내용·재현** — FR-28 은 개입 이벤트를 **DB(events) 와 KPI CSV 양쪽에** 남기도록 하고, `schema.sql` 의 `events.kind` 에도 `INTERVENTION` 이 있다. 그런데 DB 에 쓰는 노드는 `fleet_manager` 하나뿐인데 `/fleet/intervention` 을 구독하지 않는다(계약 4절 수신자 = `kpi_logger, fleet_manager`). `control_ui` 의 발행과 `kpi_logger` 의 CSV 기록은 되어 있으므로 **CSV 에만 남고 DB 에는 안 남는다.** AC-13(IPH) 를 DB 로 검산할 수 없다.
+- **조치·남은 것** — `fleet_manager` 에 `/fleet/intervention` 구독을 추가하고 `db.event(t, robot_ns, 'INTERVENTION', kind, note)` 로 기록한다. `SAFETY_POLICY` 는 개입으로 계상하지 않으므로 kind 를 그대로 넣되 집계에서 거른다 (BRD 5.3)
