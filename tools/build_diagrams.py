@@ -92,11 +92,14 @@ class Diagram:
 
     def edge(self, a, b, label='', anchors='bottom-top', dashed=False,
              color='#5A5F6A', label_dx=0, label_dy=-6, width=1.4, arrow=True,
-             mid=None, via=None):
+             mid=None, via=None, label_lines=None, label_x=None,
+             label_anchor='middle'):
         self.edges.append(dict(a=a, b=b, label=label, anchors=anchors,
                                dashed=dashed, color=color, ldx=label_dx,
                                ldy=label_dy, width=width, arrow=arrow,
-                               mid=mid, via=list(via) if via else None))
+                               mid=mid, via=list(via) if via else None,
+                               lines=label_lines, lx_fix=label_x,
+                               lanchor=label_anchor))
 
     def text(self, x, y, s, size=11, color='#5A5F6A', bold=False, anchor='start'):
         self.free.append(dict(x=x, y=y, s=s, size=size, color=color,
@@ -106,8 +109,12 @@ class Diagram:
     def anchor(self, nid, side):
         n = self.nodes[nid]
         x, y, w, h = n['x'], n['y'], n['w'], n['h']
-        return {'top': (x + w / 2, y), 'bottom': (x + w / 2, y + h),
-                'left': (x, y + h / 2), 'right': (x + w, y + h / 2)}[side]
+        f = 0.5
+        if '@' in side:
+            side, frac = side.split('@')
+            f = float(frac)
+        return {'top': (x + w * f, y), 'bottom': (x + w * f, y + h),
+                'left': (x, y + h * f), 'right': (x + w, y + h * f)}[side]
 
     def path_of(self, e):
         s_side, t_side = e['anchors'].split('-')
@@ -255,7 +262,23 @@ class Diagram:
              % (d, e['color'], e['width'],
                 ' stroke-dasharray="6 4"' if e['dashed'] else '',
                 ' marker-end="url(#%s)"' % mk if e['arrow'] else ''))
-        if e['label']:
+        if e.get('lines'):
+            ls = e['lines']
+            cx = e['lx_fix'] if e.get('lx_fix') is not None else lx
+            lh = 13
+            wmax = max(sum(11 if ord(c) > 0x2E80 else 6.1 for c in t) for t in ls)
+            bw, bh = wmax + 14, lh * len(ls) + 8
+            bx = cx - bw / 2 if e['lanchor'] == 'middle' else cx - 7
+            by = ly - bh - 5
+            s += ('<rect x="%g" y="%g" width="%g" height="%g" rx="3" fill="#FFFFFF" '
+                  'fill-opacity="0.94" stroke="%s" stroke-width="0.8"/>'
+                  % (bx, by, bw, bh, e['color']))
+            for i, t in enumerate(ls):
+                s += ('<text x="%g" y="%g" font-size="10.5" fill="%s"%s>%s</text>'
+                      % (bx + 7, by + 15 + lh * i,
+                         e['color'] if i == 0 else '#3A3E46',
+                         ' font-weight="600"' if i == 0 else '', esc(t)))
+        elif e['label']:
             s += ('<text x="%g" y="%g" font-size="10.5" fill="%s" text-anchor="middle">'
                   '%s</text>' % (lx + e['ldx'], ly + e['ldy'], e['color'], esc(e['label'])))
         return s
@@ -309,11 +332,18 @@ class Diagram:
                          '<mxGeometry x="%g" y="%g" width="%g" height="%g" as="geometry"/>'
                          '</mxCell>' % (gid, esc('<br>'.join(body)), style,
                                         n['x'], n['y'], n['w'], n['h']))
-        side_xy = {'top': (0.5, 0), 'bottom': (0.5, 1), 'left': (0, 0.5), 'right': (1, 0.5)}
+        def side_xy(side):
+            f = 0.5
+            if '@' in side:
+                side, frac = side.split('@')
+                f = float(frac)
+            return {'top': (f, 0.0), 'bottom': (f, 1.0),
+                    'left': (0.0, f), 'right': (1.0, f)}[side]
+
         for e in self.edges:
             s_side, t_side = e['anchors'].split('-')
-            ex, ey = side_xy[s_side]
-            nx, ny = side_xy[t_side]
+            ex, ey = side_xy(s_side)
+            nx, ny = side_xy(t_side)
             style = ('edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;'
                      'exitX=%g;exitY=%g;exitDx=0;exitDy=0;entryX=%g;entryY=%g;'
                      'entryDx=0;entryDy=0;strokeColor=%s;strokeWidth=%g;dashed=%d;'
@@ -327,10 +357,11 @@ class Diagram:
                 arr = ('<Array as="points">%s</Array>'
                        % ''.join('<mxPoint x="%g" y="%g"/>' % (px, py)
                                  for px, py in inner))
+            lbl = '<br>'.join(e['lines']) if e.get('lines') else e['label']
             cells.append('<mxCell id="%s" value="%s" style="%s" edge="1" parent="1" '
                          'source="%s" target="%s"><mxGeometry relative="1" as="geometry">'
                          '%s</mxGeometry></mxCell>'
-                         % (nid('e'), esc(e['label']), style,
+                         % (nid('e'), esc(lbl), style,
                             idmap[e['a']], idmap[e['b']], arr))
         for t in self.free:
             cells.append(self._dio_text(nid('f'), t['x'] - (0 if t['anchor'] == 'start' else 120),
@@ -856,21 +887,20 @@ def step3():
 # STEP 3-2 — 전체 노드·토픽 흐름 (교재 STEP 3 형식)
 # =====================================================================
 def step3b():
-    d = Diagram('STEP3-2 전체 흐름', 1980, 100,
+    d = Diagram('STEP3-2 전체 흐름', 2340, 100,
                 'STEP 3-2 — 전체 기능 흐름: PC·노드 내부 처리와 그 사이를 오가는 토픽',
-                '노드 하나하나가 무엇을 판단하고 무엇을 내보내는지, 그리고 그것이 어디로 가는지를 한 장에 담았다 · SDD 3.3')
+                '위쪽 통로 = 관제·웹캠에서 로봇으로 내려가는 명령 · 아래쪽 통로 = 로봇에서 올라오는 상태와 센서 · SDD 3.3')
 
-    C1X, C1W = 24, 300          # 웹캠 PC
-    C2X, C2W = 384, 330         # 관제 PC
-    C3X, C3W = 774, 880         # 로봇 제어 PC
-    N1X, N1W = 794, 400         # (안) 우리 노드
-    N2X, N2W = 1214, 420        # (안) Nav2
-    C4X, C4W = 1694, 242        # 로봇 하드웨어
+    C1X, C1W = 30, 390          # 웹캠 PC
+    C2X, C2W = 480, 390         # 관제 PC
+    C3X, C3W = 930, 1040        # 로봇 제어 PC
+    N1X, N1W = 952, 450         #  (안) 우리 노드
+    N2X, N2W = 1532, 416        #  (안) Nav2 — 우리 노드와의 사이를 넓혀 액션 표기를 넣는다
+    C4X, C4W = 2030, 280        # 로봇 하드웨어
+    TOP = 360                   # 컨테이너 시작 y
 
     def flow(x, w, y0, items, gap=13, color='#5A5F6A'):
-        """세로로 쌓고 이웃끼리 화살표로 잇는다. 반환: 마지막 bottom"""
-        prev = None
-        y = y0
+        prev, y = None, y0
         for nid, lines, st, shape in items:
             n = d.box(nid, x, y, w, lines, st, shape=shape, align='center')
             if prev:
@@ -880,91 +910,88 @@ def step3b():
         return y - gap
 
     def nodebox(nid, x, w, y0, title, items, gap=13, color='#5A5F6A', style='nodebox'):
-        """노드 컨테이너 + 그 안의 흐름"""
-        inner_y = y0 + 30
-        bot = flow(x + 14, w - 28, inner_y, items, gap, color)
+        bot = flow(x + 14, w - 28, y0 + 30, items, gap, color)
         d.band(nid, x, y0, w, bot - y0 + 14, title, style, dash=False)
         return bot + 14
 
     D, S, H, N2, SF = 'dec', 'step', 'hwstep', 'n2step', 'sfstep'
     R, B, P, G, O = '#C0392B', '#3576C8', '#6B4FA8', '#5A5F6A', '#B06810'
 
-    # ---------- 열 1 : 웹캠 PC ----------
-    y = 148
-    y = nodebox('nb_w1', C1X + 10, C1W - 20, y, 'webcam_register  (PC-W1)', [
+    # ─────────── 열 1 · 웹캠 PC ───────────
+    y = TOP + 38
+    y = nodebox('nb_w1', C1X + 12, C1W - 24, y, 'webcam_register  (PC-W1)', [
         ('w1a', ['웹캠1 프레임', '캡처 30 fps → 처리 10 Hz'], S, 'rect'),
         ('w1b', ['사람이 보이는가?'], D, 'diamond'),
         ('w1c', ['ByteTrack 으로 트랙 ID 부여'], S, 'rect'),
         ('w1d', ['0.3 s 연속으로 잡히는가?', '아니오 → 무시 (오검출 억제)'], D, 'diamond'),
-        ('w1e', ['벨트 위 상의만 잘라', 'HSV 히스토그램 H16×S8'], S, 'rect'),
+        ('w1e', ['벨트 위 상의만 잘라', 'HSV 히스토그램 H16×S8 = 128'], S, 'rect'),
         ('w1f', ['WorkerDescriptor 발행'], S, 'rect'),
-    ]) + 24
-    y = nodebox('nb_w2', C1X + 10, C1W - 20, y, 'webcam_hint  (PC-W2)', [
-        ('w2a', ['웹캠2 프레임', '작업공간 + P3 입구'], S, 'rect'),
+    ]) + 26
+    y = nodebox('nb_w2', C1X + 12, C1W - 24, y, 'webcam_hint  (PC-W2)', [
+        ('w2a', ['웹캠2 프레임', '작업공간 + P3 입구 (중앙 복도는 시야 밖)'], S, 'rect'),
         ('w2b', ['등록된 트랙이 보이는가?'], D, 'diamond'),
         ('w2c', ['호모그래피로 바닥 좌표 환산'], S, 'rect'),
         ('w2d', ['TargetHint 발행', '10 Hz · 유효 2 s'], S, 'rect'),
-    ]) + 24
-    d.box('c1note', C1X + 10, y, C1W - 20, [
+    ]) + 26
+    d.box('c1note', C1X + 12, y, C1W - 24, [
         '웹캠은 안전에 관여하지 않는다',
-        '여기서 나온 좌표는 재탐지 방향과',
-        'KPI 계측에만 쓴다. 정지·회피 판단에',
-        '쓰지 않는 것이 설계 원칙이다.',
+        '여기서 나온 좌표는 재탐지 방향과 KPI 계측에만 쓴다.',
+        '정지·회피 판단에 쓰지 않는 것이 설계 원칙이다 (NF-07).',
     ], 'note')
 
-    # ---------- 열 2 : 관제 PC ----------
-    y = 148
-    y = nodebox('nb_ui', C2X + 10, C2W - 20, y, 'control_ui  (Flask :5000)', [
-        ('ua', ['운영자 화면', '2대 상태 표시 (뷰어)'], S, 'rect'),
+    # ─────────── 열 2 · 관제 PC ───────────
+    y = TOP + 38
+    y = nodebox('nb_ui', C2X + 12, C2W - 24, y, 'control_ui  (Flask :5000)', [
+        ('ua', ['운영자 화면 — 2대 상태 표시 (뷰어)'], S, 'rect'),
         ('ub', ['자재 요청 → RequestMission'], S, 'rect'),
         ('uc', ['종료 버튼 → OperatorCommand', 'RETURN / RETURN_ALL'], S, 'rect'),
-    ]) + 22
-    y = nodebox('nb_fm', C2X + 10, C2W - 20, y, 'fleet_manager', [
-        ('fa', ['서술자 수신 → 로봇 배정', '트랙 ID 작은 쪽 먼저'], S, 'rect'),
-        ('fb', ['배터리 25 % 이상인가?', '아니오 → 미션 거부·사유 기록'], D, 'diamond'),
+    ]) + 24
+    y = nodebox('nb_fm', C2X + 12, C2W - 24, y, 'fleet_manager', [
+        ('fa', ['서술자 수신 → 로봇 배정', '트랙 ID 작은 쪽 먼저 (결정론적)'], S, 'rect'),
+        ('fb', ['배터리 25 % 이상인가?', '아니오 → 미션 거부 · 사유 기록'], D, 'diamond'),
         ('fc', ['mission/assigned 발행'], S, 'rect'),
-        ('fd', ['종료 명령 수신 시', 'mission/finish 발행'], S, 'rect'),
+        ('fd', ['종료 명령 수신 시 mission/finish 발행'], S, 'rect'),
         ('fe', ['FleetStatus 1 Hz 발행'], S, 'rect'),
-    ]) + 22
-    y = nodebox('nb_zs', C2X + 10, C2W - 20, y, 'zone_semaphore  (소유: 주행)', [
-        ('za', ['ZoneToken 요청 수신', '구역은 P1 · DOCK 둘뿐'], S, 'rect'),
+    ]) + 24
+    y = nodebox('nb_zs', C2X + 12, C2W - 24, y, 'zone_semaphore  (소유: 주행)', [
+        ('za', ['ZoneToken 요청 수신 — 구역은 P1 · DOCK 둘뿐'], S, 'rect'),
         ('zb', ['구역이 비어 있는가?', '아니오 → 대기열 등록, 2 s 후 재요청'], D, 'diamond'),
         ('zc', ['granted 반환'], S, 'rect'),
         ('zd', ['보유 60 s 초과 시 강제 회수'], S, 'rect'),
-    ]) + 22
-    y = nodebox('nb_kpi', C2X + 10, C2W - 20, y, 'kpi_logger', [
+    ]) + 24
+    y = nodebox('nb_kpi', C2X + 12, C2W - 24, y, 'kpi_logger', [
         ('ka', ['상태 · 미션 · 개입 · 힌트 구독'], S, 'rect'),
-        ('kb', ['CSV + SQLite 기록', '전부 ROS 시각 기준'], S, 'rect'),
+        ('kb', ['CSV + SQLite 기록 — 전부 ROS 시각 기준'], S, 'rect'),
     ])
 
-    # ---------- 열 3 : 로봇 제어 PC (우리 노드) ----------
-    y = 148
+    # ─────────── 열 3 · 우리 노드 ───────────
+    y = TOP + 38
     y = nodebox('nb_det', N1X, N1W, y, 'amr_detection  (mro_perception)', [
         ('da', ['RGB + Depth 동기화 (slop 0.1 s)'], S, 'rect'),
         ('db', ['worker 를 검출했는가?'], D, 'diamond'),
         ('dc', ['ROI p20 역깊이 보정 → 거리', 'amcl_pose 로 map 좌표 변환'], S, 'rect'),
         ('dd', ['등록 서술자와 유사도 ≥ 임계?', '아니오 → 페어링하지 않고 대기'], D, 'diamond'),
-        ('de', ['target/paired · map_point', 'distance · worker_id 발행'], S, 'rect'),
-    ]) + 20
+        ('de', ['target/paired · map_point · distance 발행'], S, 'rect'),
+    ]) + 22
     y = nodebox('nb_sh', N1X, N1W, y, 'shuttle_mission  (mro_navigation)', [
         ('sa', ['mission/assigned 를 받았는가?'], D, 'diamond'),
-        ('sb', ['P1 토큰 획득 → 베이 waypoint'], S, 'rect'),
+        ('sb', ['P1 토큰 획득 → 베이 waypoint 로 이동'], S, 'rect'),
         ('sc', ['ArUco ID 가 요청 베이와 같은가?', '아니오 → 재접근, T_lim 초과 시 실패'], D, 'diamond'),
         ('sd', ['5 s 체류 → 대기공간 → 토큰 반납', 'shuttle/arrived 발행'], S, 'rect'),
-    ], color=B) + 20
+    ], color=B) + 22
     y = nodebox('nb_fo', N1X, N1W, y, 'follow_target  (mro_navigation)', [
         ('oa', ['도착했고 페어링됐는가?'], D, 'diamond'),
-        ('ob', ['APPROACH → 간격 0.5 m 유지', 'FOLLOWING'], S, 'rect'),
+        ('ob', ['APPROACH → 간격 0.5 m 유지 → FOLLOWING'], S, 'rect'),
         ('oc', ['대상을 놓쳤는가?'], D, 'diamond'),
         ('od', ['힌트 방향으로 회전 탐색', '없으면 제자리 탐색 → STANDBY'], S, 'rect'),
         ('oe', ['mission/finish 수신 시', '즉시 페어링 해제 (≤ 1 s)'], S, 'rect'),
-    ], color=B) + 20
+    ], color=B) + 22
     y = nodebox('nb_rd', N1X, N1W, y, 'return_dock  (mro_navigation)', [
         ('ra', ['P1 → DOCK 토큰 (한 번에 한 대)'], S, 'rect'),
         ('rb', ['도크 정면 접근 지점 → dock'], S, 'rect'),
         ('rc', ['도킹에 성공했는가?', '아니오 → 최대 2회 재시도'], D, 'diamond'),
         ('rd', ['성공·실패와 무관하게 토큰 반납'], S, 'rect'),
-    ], color=B) + 20
+    ], color=B) + 22
     bot_ours = nodebox('nb_sw', N1X, N1W, y, 'safety_watchdog  (온보드 안전)', [
         ('wa', ['scan 만 구독 · 전방 ±35°'], SF, 'rect'),
         ('wb', ['0.30 m 이내가 2프레임 연속인가?'], D, 'diamond'),
@@ -972,21 +999,21 @@ def step3b():
         ('wd', ['0.45 m 밖 5프레임 → 스스로 해제'], SF, 'rect'),
     ], color=R)
 
-    # ---------- 열 3 : Nav2 ----------
-    y = 148
+    # ─────────── 열 3 · Nav2 ───────────
+    y = TOP + 38
     y = nodebox('nb_nav', N2X, N2W, y, 'Nav2 스택  (turtlebot4_navigation)', [
         ('va', ['map_server — auto_map.yaml'], N2, 'rect'),
         ('vb', ['amcl — scan + odom → amcl_pose'], N2, 'rect'),
-        ('vc', ['bt_navigator', 'action  navigate_to_pose'], N2, 'rect'),
+        ('vc', ['bt_navigator — action  navigate_to_pose'], N2, 'rect'),
         ('vd', ['planner_server — 전역 경로'], N2, 'rect'),
-        ('ve', ['costmap — inflation 0.22', 'P1 0.79 m 통과용'], N2, 'rect'),
-        ('vf', ['controller_server — 지역 추종'], N2, 'rect'),
+        ('ve', ['costmap — inflation 0.22 (P1 0.79 m 통과용)'], N2, 'rect'),
+        ('vf', ['controller_server — 지역 경로 추종'], N2, 'rect'),
         ('vg', ['velocity_smoother → cmd_vel'], N2, 'rect'),
-    ], color=P) + 22
+    ], color=P) + 24
     y = nodebox('nb_dk', N2X, N2W, y, 'opennav_docking', [
         ('ga', ['action  undock  (S2 기동)'], N2, 'rect'),
         ('gb', ['action  dock  (S10 복귀)'], N2, 'rect'),
-    ], color=P) + 22
+    ], color=P) + 24
     d.box('r4note', N2X, y, N2W, [
         'PC-R4 / robot4 는 그림을 생략한다',
         '네임스페이스가 /robot4 인 것 말고는 구성이 완전히 같다.',
@@ -994,98 +1021,104 @@ def step3b():
         '그 경합이 E-3 교착과 E-7 순차 도킹이다.',
     ], 'note')
 
-    # ---------- 열 4 : 로봇 하드웨어 ----------
-    y = 148
-    y = nodebox('nb_hw', C4X, C4W, y, 'robot3  (TurtleBot4)', [
+    # ─────────── 열 4 · 로봇 하드웨어 ───────────
+    nodebox('nb_hw', C4X, C4W, TOP + 38, 'robot3  (TurtleBot4)', [
         ('ha', ['OAK-D Pro', 'rgb · depth · camera_info'], H, 'rect'),
         ('hb', ['RPLIDAR A1', 'scan  10 Hz'], H, 'rect'),
         ('hc', ['Create3', 'odom · tf · battery_state', '범퍼 · 클리프'], H, 'rect'),
         ('hd', ['구동부', 'v ≤ 0.3 m/s'], H, 'rect'),
     ], color=G, style='hwbox')
 
-    # ---------- PC 컨테이너 ----------
+    # ─────────── PC 컨테이너 ───────────
     def wrap(nid, x, w, title, style, members, pad=16):
         top = min(d.nodes[m]['y'] for m in members) - 34
         bot = max(d.nodes[m]['y'] + d.nodes[m]['h'] for m in members) + pad
         d.band(nid, x, top, w, bot - top, title, style, dash=False)
         return bot
 
-    wrap('pc_w', C1X, C1W, 'PC-W1 / PC-W2 — 웹캠 PC 2대', 'pcbox',
-         ['nb_w1', 'nb_w2', 'c1note'])
+    wrap('pc_w', C1X, C1W, 'PC-W1 / PC-W2 — 웹캠 PC 2대', 'pcbox', ['nb_w1', 'nb_w2', 'c1note'])
     wrap('pc_f', C2X, C2W, 'PC-F — 관제 PC (192.168.108.41 · Discovery Server ID 1)', 'fbox',
          ['nb_ui', 'nb_fm', 'nb_zs', 'nb_kpi'])
-    wrap('pc_r', C3X, C3W, 'PC-R3 — 로봇3 제어 PC  (namespace = /robot3)', 'pcbox',
-         ['nb_det', 'nb_sh', 'nb_fo', 'nb_rd', 'nb_sw', 'nb_nav', 'nb_dk', 'r4note'])
+    pcr_bot = wrap('pc_r', C3X, C3W, 'PC-R3 — 로봇3 제어 PC  (namespace = /robot3)', 'pcbox',
+                   ['nb_det', 'nb_sh', 'nb_fo', 'nb_rd', 'nb_sw', 'nb_nav', 'nb_dk', 'r4note'])
     wrap('pc_h', C4X, C4W, '로봇 온보드', 'hwbox', ['nb_hw'])
-    d.order.sort(key=lambda t: 0 if t[0] == 'band' else 1)
-    # PC 컨테이너가 노드 컨테이너를 덮지 않도록 다시 정렬
-    depth = {'pc_w': 0, 'pc_f': 0, 'pc_r': 0, 'pc_h': 0}
-    d.order.sort(key=lambda t: (0, depth.get(t[1], 1)) if t[0] == 'band' else (1, 0))
+    d.order.sort(key=lambda t: (0, 0 if t[1] in ('pc_w', 'pc_f', 'pc_r', 'pc_h') else 1)
+                 if t[0] == 'band' else (1, 0))
 
-    # ---------- PC 사이를 건너는 토픽 ----------
-    G1 = (C1X + C1W + C2X) / 2          # 웹캠 ↔ 관제 사이
-    G2 = (C2X + C2W + C3X) / 2          # 관제 ↔ 로봇 사이
-    G3 = (N1X + N1W + N2X) / 2          # 우리 노드 ↔ Nav2 사이
-    G4 = (C3X + C3W + C4X) / 2          # 로봇 PC ↔ 하드웨어 사이
+    # ═══════════ 위쪽 통로 — 관제·웹캠 → 로봇 ═══════════
+    def down(src, sf, dst, tf, lane, lines, lx, color):
+        sx = d.anchor(src, 'top@%g' % sf)[0]
+        tx = d.anchor(dst, 'top@%g' % tf)[0]
+        d.edge(src, dst, '', 'top@%g-top@%g' % (sf, tf), color=color, width=1.6,
+               via=[(sx, lane), (tx, lane)], label_lines=lines, label_x=lx)
 
-    d.edge('nb_w1', 'nb_fm', '①', 'right-left', color=B, mid=G1 - 14)
-    d.edge('nb_ui', 'nb_fm', '②', 'right-right', color=O,
-           via=[(C2X + C2W - 4, d.nodes['nb_ui']['y'] + d.nodes['nb_ui']['h'] / 2),
-                (C2X + C2W - 4, d.nodes['nb_fm']['y'] + 20)])
-    d.edge('nb_fm', 'nb_sh', '③', 'right-left', color=O, mid=G2 - 22)
-    d.edge('nb_fm', 'nb_fo', '④', 'right-left', color=O, mid=G2 - 6)
-    d.edge('nb_fm', 'nb_rd', '⑤', 'right-left', color=O, mid=G2 + 10)
-    d.edge('nb_sh', 'nb_zs', '⑥', 'left-right', color=B, mid=G2 + 26)
-    d.edge('nb_rd', 'nb_zs', '⑦', 'left-right', color=B, mid=G2 + 42)
-    d.edge('nb_w1', 'nb_det', '⑧', 'right-left', color=B,
-           via=[(G1 + 14, d.nodes['nb_w1']['y'] + 22), (G1 + 14, 128),
-                (N1X - 12, 128), (N1X - 12, d.nodes['nb_det']['y'] + 22)])
-    d.edge('nb_w2', 'nb_fo', '⑨', 'right-left', color=B,
-           via=[(G1 + 30, d.nodes['nb_w2']['y'] + 22), (G1 + 30, 138),
-                (N1X - 26, 138), (N1X - 26, d.nodes['nb_fo']['y'] + 22)])
-    d.edge('nb_det', 'nb_fo', '⑩', 'left-left', color=B,
-           via=[(N1X - 40, d.nodes['nb_det']['y'] + d.nodes['nb_det']['h'] / 2),
-                (N1X - 40, d.nodes['nb_fo']['y'] + 40)])
-    d.edge('nb_sh', 'nb_fo', '⑪', 'left-left', color=B,
-           via=[(N1X - 54, d.nodes['nb_sh']['y'] + d.nodes['nb_sh']['h'] / 2),
-                (N1X - 54, d.nodes['nb_fo']['y'] + 56)])
-    d.edge('nb_sh', 'nb_nav', '⑫', 'right-left', color=P, mid=G3 - 14)
-    d.edge('nb_fo', 'nb_nav', '⑬', 'right-left', color=P, mid=G3)
-    d.edge('nb_rd', 'nb_dk', '⑭', 'right-left', color=P, mid=G3 + 14)
-    d.edge('nb_hw', 'nb_det', '⑮', 'left-right', color=G, mid=G4)
-    d.edge('nb_hw', 'nb_sw', '⑯', 'left-right', color=R, mid=G4 + 16)
-    d.edge('nb_nav', 'nb_hw', '⑰', 'right-left', color=P,
-           via=[(N2X + N2W + 14, d.nodes['nb_nav']['y'] + d.nodes['nb_nav']['h'] - 30),
-                (N2X + N2W + 14, bot_ours + 40),
-                (C4X + C4W / 2, bot_ours + 40)])
-    d.edge('nb_sw', 'nb_hw', '⑱', 'right-bottom', color=R, width=2.0,
-           via=[(N2X - 30, d.nodes['nb_sw']['y'] + d.nodes['nb_sw']['h'] / 2),
-                (N2X - 30, bot_ours + 62),
-                (C4X + C4W / 2, bot_ours + 62)])
-    d.edge('nb_fm', 'nb_kpi', '⑲', 'left-left', color=O,
-           via=[(C2X + 4, d.nodes['nb_fm']['y'] + d.nodes['nb_fm']['h'] / 2),
-                (C2X + 4, d.nodes['nb_kpi']['y'] + 20)])
+    down('nb_fm', 0.50, 'nb_fo', 0.50, 106,
+         ['mission/finish', 'std_msgs/Bool — S9 종료. 즉시 추종 중단 (≤ 1 s)'], 1180, O)
+    down('nb_fm', 0.72, 'nb_rd', 0.72, 148,
+         ['mission/finish', '같은 신호가 복귀를 시작시킨다'], 1500, O)
+    down('nb_fm', 0.28, 'nb_sh', 0.30, 190,
+         ['mission/assigned', 'mro_interfaces/Mission — S4 셔틀 트리거'], 1180, O)
+    down('nb_w2', 0.50, 'nb_fo', 0.80, 232,
+         ['/webcam2/target_hint', 'mro_interfaces/TargetHint — 재탐지 방향. 유효 2 s'], 1050, B)
+    down('nb_w1', 0.35, 'nb_det', 0.22, 274,
+         ['/webcam1/worker_descriptor', 'mro_interfaces/WorkerDescriptor — 로봇이 대조할 등록 외형'], 800, B)
+    down('nb_w1', 0.70, 'nb_fm', 0.14, 316,
+         ['/webcam1/worker_descriptor', '관제는 이것을 보고 로봇을 배정한다'], 470, B)
 
-    lg_y = max(d.nodes['pc_r']['y'] + d.nodes['pc_r']['h'],
-               d.nodes['pc_f']['y'] + d.nodes['pc_f']['h']) + 20
-    d.box('lg2', 24, lg_y, 1932, [
-        'PC 사이를 건너는 토픽 — 번호별 내용   (PC 를 넘는 것은 토픽과 서비스뿐이다. 직접 호출도, 소켓 통신도 없다)',
-        '①  /webcam1/worker_descriptor  WorkerDescriptor — 등록된 작업자의 외형. 관제가 이것을 보고 로봇을 배정한다        ②  RequestMission · OperatorCommand (서비스)',
-        '③  /robotN/mission/assigned  Mission — S4 셔틀을 시작시킨다        ④⑤  /robotN/mission/finish  Bool — 추종을 즉시 멈추게 하고(④) 복귀를 시작시킨다(⑤)',
-        '⑥⑦  /fleet/zone_token  ZoneToken (서비스) — P1 병목과 DOCK 구역. 두 로봇이 실제로 부딪히는 유일한 지점이라 여기만 토큰을 둔다',
-        '⑧  /webcam1/worker_descriptor — 같은 서술자가 로봇에도 간다. 웹캠1이 등록한 외형과 로봇이 본 외형을 같은 함수로 비교해야 재식별이 성립한다',
-        '⑨  /webcam2/target_hint  TargetHint — 놓쳤을 때 어느 쪽으로 돌아볼지. 유효 2 s. 안전 판단에는 쓰지 않는다',
-        '⑩  target/paired · target/map_point · target/distance        ⑪  shuttle/arrived  Bool — 대기공간 도착. 여기서부터 추종이 시작된다',
-        '⑫⑬  navigate_to_pose (액션) — 우리 노드가 Nav2 에 붙는 주행 인터페이스는 이것 하나뿐이다        ⑭  dock / undock (액션)',
-        '⑮  oakd/rgb · stereo · camera_info        ⑯  scan  LaserScan — 안전 감시가 직접 구독한다. 인지도 웹캠도 관제도 이 경로에 끼지 않는다',
-        '⑰  cmd_vel  TwistStamped — Nav2 가 낸 속도        ⑱  cmd_vel = 0 을 20 Hz 로 덮어쓴다. estop 동안에는 이쪽이 Nav2 출력을 이긴다',
-        '⑲  /fleet/status · /fleet/mission · /fleet/intervention — KPI 산출 원천',
+    # ═══════════ 아래쪽 통로 — 로봇 → 관제 · 센서 ═══════════
+    def up(src, sf, dst, tf, lane, lines, lx, color, width=1.6):
+        sx = d.anchor(src, 'bottom@%g' % sf)[0]
+        tx = d.anchor(dst, 'bottom@%g' % tf)[0]
+        d.edge(src, dst, '', 'bottom@%g-bottom@%g' % (sf, tf), color=color, width=width,
+               via=[(sx, lane), (tx, lane)], label_lines=lines, label_x=lx)
+
+    b0 = pcr_bot + 46
+    up('nb_sh', 0.30, 'nb_zs', 0.30, b0,
+       ['/fleet/zone_token   (서비스)', 'mro_interfaces/ZoneToken — P1 병목. S4 갈 때'], 1000, B)
+    up('nb_rd', 0.55, 'nb_zs', 0.55, b0 + 44,
+       ['/fleet/zone_token   (서비스)', 'DOCK 구역. 한 번에 한 대 → E-7 순차 도킹'], 1030, B)
+    up('nb_sh', 0.80, 'nb_fm', 0.80, b0 + 88,
+       ['shuttle/status · approach/status', 'std_msgs/String — 상태 보고. FleetStatus 로 집계된다'], 1130, G)
+    up('nb_hw', 0.30, 'nb_det', 0.55, b0 + 132,
+       ['oakd/rgb · stereo · camera_info', '압축 전송 · 로봇당 구독자 1개 (NR-03)'], 1700, G)
+    up('nb_hw', 0.55, 'nb_sw', 0.80, b0 + 176,
+       ['scan   sensor_msgs/LaserScan', '안전 감시가 직접 구독한다 — 인지도 웹캠도 관제도 끼지 않는다'], 1660, R)
+    up('nb_sw', 0.30, 'nb_hw', 0.80, b0 + 220,
+       ['cmd_vel = 0  @ 20 Hz', 'estop 동안 Nav2 출력을 덮어쓴다 — 이쪽이 이긴다'], 1700, R, 2.4)
+
+    # ═══════════ 열 안쪽 — 우리 노드 ↔ Nav2 ↔ 하드웨어 ═══════════
+    gi = (N1X + N1W + N2X) / 2
+    for src, dst, f in [('nb_sh', 'nb_nav', 0.30), ('nb_fo', 'nb_nav', 0.55),
+                        ('nb_rd', 'nb_nav', 0.75), ('nb_rd', 'nb_dk', 0.90)]:
+        d.edge(src, dst, '', 'right@%g-left@%g' % (f, f), color=P, width=1.6, mid=gi)
+    d.box('navnote', N1X + N1W + 6, TOP + 8, N2X - N1X - N1W - 12, [
+        'Nav2 액션', 'navigate_to_pose', 'dock · undock',
+    ], 'n2step', align='center')
+    d.edge('nb_nav', 'nb_hw', '', 'right@0.9-left@0.35', color=P, width=1.8,
+           mid=(N2X + N2W + C4X) / 2,
+           label_lines=['cmd_vel', 'geometry_msgs/TwistStamped'],
+           label_x=(N2X + N2W + C4X) / 2)
+    d.edge('nb_det', 'nb_fo', '', 'left@0.5-left@0.35', color=B, width=1.6,
+           via=[(N1X - 16, d.nodes['nb_det']['y'] + d.nodes['nb_det']['h'] * 0.5),
+                (N1X - 16, d.nodes['nb_fo']['y'] + d.nodes['nb_fo']['h'] * 0.35)],
+           label_lines=['target/paired · map_point'], label_x=N1X + 90)
+    d.edge('nb_sh', 'nb_fo', '', 'left@0.8-left@0.65', color=B, width=1.6,
+           via=[(N1X - 34, d.nodes['nb_sh']['y'] + d.nodes['nb_sh']['h'] * 0.8),
+                (N1X - 34, d.nodes['nb_fo']['y'] + d.nodes['nb_fo']['h'] * 0.65)],
+           label_lines=['shuttle/arrived'], label_x=N1X + 70)
+
+    # ═══════════ 범례 ═══════════
+    lg_y = b0 + 260
+    d.box('lg2', 30, lg_y, 2280, [
+        '읽는 법',
+        '· 화살표 위 상자의 첫 줄이 토픽·서비스 이름, 둘째 줄이 메시지 타입과 그 선이 하는 일이다. PC 를 넘는 것은 토픽과 서비스뿐이며 직접 호출도 소켓 통신도 없다 (NR-06).',
+        '· 색 — 주황: 관제가 내리는 명령 · 파랑: 인지·웹캠 데이터 · 보라: Nav2 액션 · 빨강: 안전 경로 · 회색: 상태 보고와 센서',
+        '· 위쪽 통로는 관제·웹캠에서 로봇으로 내려가는 흐름, 아래쪽 통로는 로봇에서 올라오는 상태와 센서다. 선이 겹치지 않도록 각 신호에 통로를 하나씩 줬다.',
         '',
-        '이 그림이 말하는 것 — 안전(⑯⑱)은 로봇 온보드에서만 닫힌 고리를 이룬다. 웹캠(①⑧⑨)도 관제(③④⑤)도 그 고리 밖에 있다.',
-        '                     그래서 Wi-Fi 가 끊기거나 웹캠 PC 가 죽어도 로봇은 여전히 멈춘다. 이것이 무사고 0 건을 지탱하는 구조다.',
+        '이 그림이 말하는 것 — 빨간 경로(scan → safety_watchdog → cmd_vel)만 로봇 온보드에서 닫힌 고리를 이룬다. 파란 웹캠 경로도 주황 관제 경로도 그 고리 밖에 있다.',
+        '                     그래서 Wi-Fi 가 끊기거나 웹캠 PC 가 죽어도 로봇은 여전히 멈춘다. 이것이 무사고 0 건(NF-06)을 지탱하는 구조다.',
     ], 'note')
-
-    d.text(24, lg_y + d.nodes['lg2']['h'] + 20,
+    d.text(30, lg_y + d.nodes['lg2']['h'] + 20,
            '생성: tools/build_diagrams.py   ·   근거: docs/architecture.md, docs/interfaces.md 4절, SDD 2.4 FR 표',
            10, '#8A8F98')
     return d.autosize()
