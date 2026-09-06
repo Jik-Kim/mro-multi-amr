@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""USB webcam2 영상을 ROS 2 Image 토픽으로 발행하고 미리보기로 표시한다."""
+"""USB webcam2 영상을 ROS 2 Image 토픽으로 발행한다."""
 
 import cv2
 import rclpy
@@ -21,7 +21,7 @@ class Webcam2Node(Node):
         self.declare_parameter('width', 640)
         self.declare_parameter('height', 480)
         self.declare_parameter('fps', 30.0)
-        self.declare_parameter('show_window', True)
+        self.declare_parameter('show_window', False)
 
         camera_index = int(self.get_parameter('camera_index').value)
         image_topic = str(self.get_parameter('image_topic').value)
