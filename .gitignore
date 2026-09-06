@@ -8,6 +8,7 @@ __pycache__/
 datasets/
 captures/
 ros2_ws/src/mro_webcam/config/WebCam2_*/
+webcam1_dataset*
 *.bag
 *.mp4
 *.db

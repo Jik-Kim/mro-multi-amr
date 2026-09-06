@@ -24,6 +24,7 @@ import os
 import cv2
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from std_msgs.msg import Bool
@@ -38,8 +39,9 @@ SHARE = get_package_share_directory('mro_webcam')
 MODEL_PATH = os.path.join(SHARE, 'models', 'best.pt')  # TODO: worker.pt 로 교체
 WEBCAM_INDEX = None          # None: 0~4 중 프레임 나오는 첫 장치. 외장 웹캠은 보통 1 또는 2
 CONF = 0.7                   # 단일 클래스 모델이라 오탐 많음 → 높게
-DETECT_FRAMES = 3            # 연속 N프레임 보이면 True
-CLEAR_FRAMES = 5             # 연속 N프레임 안 보이면 False
+PERIOD_S = 0.1               # 처리 주기 (10 Hz). 히스테리시스를 프레임 수로 환산하는 기준
+DETECT_S = 0.3               # 이 시간 동안 연속으로 보이면 True   (10 Hz 기준 3프레임)
+CLEAR_S = 0.5                # 이 시간 동안 연속으로 안 보이면 False (10 Hz 기준 5프레임)
 SHOW_WINDOW = True
 # ############################################################################
 
@@ -49,6 +51,8 @@ def open_webcam(index):
     for i in ([index] if index is not None else range(9, -1, -1)):
         cap = cv2.VideoCapture(i)
         if cap.isOpened():
+            # 캡처 25 fps > 처리 10 Hz 라 큐에 오래된 프레임이 남는다. 1 로 제한 (실측 0.16 s → 0.04 s)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             ok, frame = cap.read()
             if ok and frame is not None:
                 return cap, i
@@ -62,7 +66,8 @@ class WebcamDetection(Node):
         self.model = YOLO(MODEL_PATH)
         self.names = self.model.names
         self.bridge = CvBridge()
-        self.pub_img = self.create_publisher(Image, 'webcam/image', 1)
+        # 모니터링용. 계약상 카메라 토픽은 sensor_data(BEST_EFFORT) — 밀리면 버리고 발행자를 막지 않는다
+        self.pub_img = self.create_publisher(Image, 'webcam/image', qos_profile_sensor_data)
         self.pub_det = self.create_publisher(Bool, 'webcam/detected', 10)
         self.pub_pt = self.create_publisher(PointStamped, 'webcam/car_map_point', 10)
 
@@ -79,12 +84,12 @@ class WebcamDetection(Node):
         if self.cap is None:
             raise RuntimeError('웹캠을 못 열었음. v4l2-ctl --list-devices 로 번호 확인 후 WEBCAM_INDEX 설정')
         self.get_logger().info(f'웹캠 /dev/video{idx} | 모델 {MODEL_PATH} classes={list(self.names.values())} '
-                               f'| conf={CONF} | {DETECT_FRAMES}프레임 연속 → True')
+                               f'| conf={CONF} | {DETECT_S}s 연속 → True, {CLEAR_S}s 미검출 → False')
 
         self.detected = False
         self.hit = self.miss = 0
         self.last_logged = None
-        self.create_timer(0.1, self.process_frame)
+        self.create_timer(PERIOD_S, self.process_frame)
 
     def process_frame(self):
         ok, img = self.cap.read()
@@ -103,16 +108,16 @@ class WebcamDetection(Node):
                 if best is None or c > best[4]:
                     best = (x1, y1, x2, y2, c)
 
-        # N프레임 연속 조건 (원본 로직 그대로)
+        # 히스테리시스: 초 단위 상수를 처리 주기로 나눠 프레임 수로 환산 (원본 로직 그대로)
         if best:
             self.hit += 1
             self.miss = 0
         else:
             self.miss += 1
             self.hit = 0
-        if not self.detected and self.hit >= DETECT_FRAMES:
+        if not self.detected and self.hit >= round(DETECT_S / PERIOD_S):
             self.detected = True
-        elif self.detected and self.miss >= CLEAR_FRAMES:
+        elif self.detected and self.miss >= round(CLEAR_S / PERIOD_S):
             self.detected = False
         self.pub_det.publish(Bool(data=self.detected))
 
