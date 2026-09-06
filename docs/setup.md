@@ -104,7 +104,9 @@ ros2 launch mro_bringup webcam1_pc.launch.py
 # PC-W2 (작업공간·병목·더미 시야)
 ros2 launch mro_bringup webcam2_pc.launch.py
 ```
-호모그래피는 PC 별로 자기 json 을 쓴다 (`homography_cam1.json` / `homography_cam2.json`). 새 아레나에서 반드시 재캘리브레이션 (`mro_webcam/config/README.md`).
+호모그래피는 PC 별로 자기 json 을 쓴다 (`config/homography_cam1.json` /
+`config/WebCam2/homography_cam2.json`). 새 아레나에서 반드시 재캘리브레이션
+(`mro_webcam/config/README.md`).
 
 웹캠 PC 는 주로 **발행만** 하므로 `ROS_SUPER_CLIENT=False` 로 띄워 디스커버리 부하를 줄인다. 띄운 뒤 `/webcam1/worker_descriptor`, `/webcam2/target_hint` 가 로봇·관제에서 보이는지 확인할 것.
 
