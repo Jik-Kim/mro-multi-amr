@@ -32,11 +32,11 @@
 - [ ] TB4 2대 동시 운용 검증 (9/6) → SOT Q-18
 - [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → Z-05, zone_token, `shuttle/arrived`
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중
-- [x] `zone_semaphore_node.py`: Z-05/08/09/03 토큰, FIFO, 타임아웃 회수 (**관제 → 주행 이관 9/5**)
+- [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (**관제 → 주행 이관 9/5**)
 - [ ] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 + 로봇 측 진입 판정 연결
 - [x] `safety_watchdog_node.py`: /scan → estop, cmd_vel 0
 - [ ] `safety_watchdog_node.py`: Nav2 goal cancel (액션 클라이언트), TS-14 결함 주입 검증
-- [x] `return_dock_node.py`: Z-03 도크 토큰 + 재시도 2회 복귀 로직
+- [x] `return_dock_node.py`: DOCK 토큰 + 재시도 2회 복귀 로직
 - [ ] `return_dock_node.py`: arena.yaml 의 홀딩 포인트·**도크 정면 접근 지점**으로 goToPose 후 dock (도크 간격 0.9 m 라 필수)
 - [ ] 도킹 반복 시험 TS-U12 (9/5): 로봇별 10회, 오도킹 0 확인. 실패 시 도크 간격 확대 또는 IR 차폐 추가
 - [ ] `follow_target_node.py`: `mission/finish` 구독 → 즉시 페어링 해제·goal 취소 (≤ 1 s, FR-30)

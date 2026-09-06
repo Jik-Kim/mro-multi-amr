@@ -3,7 +3,7 @@
 
 입력: mission/finish (Bool)  ← fleet_manager 가 관제 UI 의 작업자별/전체 종료를 로봇 네임스페이스로 전달
 출력: dock 액션 (TurtleBot4Navigator), shuttle/status (RETURNING/DOCK_WAIT/DOCKING/DOCKED/FAILED)
-협조: /fleet/zone_token 의 'Z-03'(도크 구역) 토큰 — 한 번에 한 대만 도크에 진입한다.
+협조: /fleet/zone_token 의 'DOCK'(도크 구역) 토큰 — 한 번에 한 대만 도크에 진입한다.
       토큰을 못 얻으면 홀딩 포인트(도크에서 ≥ 1.5 m)로 가서 대기 → Create3 도크 IR 간섭도 함께 회피.
 
 규칙: 콜백 안에서 navigator 를 부르지 않는다 (Kn1_mini 교훈) — 플래그만 세우고 메인 루프에서 실행.
