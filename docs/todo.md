@@ -28,7 +28,7 @@
 ## mro_perception [인지 — 정정인, 민범진]
 - [x] 인형 2종 제작 (상하의 전체, 9/6 결정) · 마감 9/6
 - [x] 데이터 수집·라벨링 (9/6 완료) · 마감 9/6
-- [ ] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) — **9/6 밤 학습 중** · 마감 9/7
+- [ ] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) — **9/6 밤새 학습 중, 9/7 아침 완료 예정** (PM 확인 21:30) · 마감 9/7
 - [ ] `amr_detection_node.py`: `DETECT_CLASS` → worker_a/b, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9
 - [ ] `amr_detection_node.py`: **`target/distance` 발행 (FR-29)** — 추종거리 판정의 기준값. kpi_logger 는 이미 구독 중이라 이것만 붙으면 AC-05 가 측정된다 · 마감 9/8
 - [ ] **TS-U05 줄자 대조** — `target/distance` 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오차 < 기준의 1/3). 이게 없으면 AC-05 를 그 값으로 채점할 근거가 없다 · 마감 9/8
