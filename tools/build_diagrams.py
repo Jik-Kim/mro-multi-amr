@@ -280,13 +280,15 @@ class Diagram:
             align = ('align=center;' if (n['align'] == 'center' or
                                          n['shape'] in ('diamond', 'stadium'))
                      else 'align=left;spacingLeft=10;')
+            # draw.io 의 value 는 XML 속성이다. HTML 태그째로 넣되
+            # 문자열 전체를 마지막에 한 번만 이스케이프한다 (아래 esc()).
             body = []
             for i, ln in enumerate(n['lines']):
                 t = ln[1:] if ln.startswith('!') else ln
                 if i == 0:
-                    body.append('<b><font color="%s">%s</font></b>' % (tc, esc(t)))
+                    body.append('<b><font color="%s">%s</font></b>' % (tc, t))
                 else:
-                    body.append('<font style="font-size:10px">%s</font>' % esc(t))
+                    body.append('<font style="font-size:10px">%s</font>' % t)
             style = ('%swhiteSpace=wrap;html=1;fillColor=%s;strokeColor=%s;%s'
                      'verticalAlign=%s;spacingTop=4;fontFamily=%s;fontSize=11;%s'
                      % (shape, fill, stroke, align,
@@ -294,10 +296,8 @@ class Diagram:
                         DRAWIO_FONT, dashed))
             cells.append('<mxCell id="%s" value="%s" style="%s" vertex="1" parent="1">'
                          '<mxGeometry x="%g" y="%g" width="%g" height="%g" as="geometry"/>'
-                         '</mxCell>' % (gid, esc('<br>'.join(body)).replace('&lt;', '<')
-                                        .replace('&gt;', '>').replace('&amp;', '&')
-                                        if False else '<br>'.join(body),
-                                        style, n['x'], n['y'], n['w'], n['h']))
+                         '</mxCell>' % (gid, esc('<br>'.join(body)), style,
+                                        n['x'], n['y'], n['w'], n['h']))
         side_xy = {'top': (0.5, 0), 'bottom': (0.5, 1), 'left': (0, 0.5), 'right': (1, 0.5)}
         for e in self.edges:
             s_side, t_side = e['anchors'].split('-')
@@ -331,7 +331,7 @@ class Diagram:
                  'pageWidth="%d" pageHeight="%d" math="0" shadow="0"><root>%s</root>'
                  '</mxGraphModel>' % (self.w, self.h, ''.join(cells)))
         return ('<diagram id="%s" name="%s">%s</diagram>'
-                % (page_id, esc(self.key), model))
+                % (esc(page_id), esc(self.key), model))
 
     @staticmethod
     def _dio_text(gid, x, y, w, h, s, size, bold, color, align='left'):
@@ -855,10 +855,13 @@ def main():
         print('wrote', p, '(%d×%d)' % (d.w, d.h))
         pages.append(d.to_drawio_page(name))
     dio = os.path.join(OUT, 'mro_design_diagrams.drawio')
+    xml = '<mxfile host="app.diagrams.net" type="device">%s</mxfile>' % ''.join(pages)
+    # draw.io 가 열 수 있는지 쓰기 전에 확인한다 — 깨진 파일을 내보내지 않는다.
+    import xml.etree.ElementTree as ET
+    ET.fromstring(xml)
     with open(dio, 'w', encoding='utf-8') as f:
-        f.write('<mxfile host="app.diagrams.net" type="device">%s</mxfile>'
-                % ''.join(pages))
-    print('wrote', dio)
+        f.write(xml)
+    print('wrote', dio, '(XML 검증 통과)')
 
 
 if __name__ == '__main__':
