@@ -1,6 +1,7 @@
-# Interfaces — 계약 v1.1 (2026-09-06)
+# Interfaces — 계약 v1.2 (2026-09-06)
 
-> v1.0(9/5) 에 **주기·시간 상수 규칙**을 더했다. 토픽·메시지·서비스 정의는 v1.0 그대로이므로 구현에 영향 없다.
+> v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**했다(v1.2).
+> 토픽·메시지·서비스 정의는 v1.0 그대로이므로 구현에 영향 없다.
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
 
@@ -32,7 +33,7 @@
 | **`FleetStatus.yaw`** | `amcl_pose` 의 쿼터니언에서 `yaw = atan2(2(wz+xy), 1−2(y²+z²))`, 단위 **rad**, 범위 (−π, π] | 표시·기록용. 제어에 쓰지 않는다 |
 | **좌표계** | 모든 map 좌표는 **단일 맵 원점**(SLAM 작성 시점) 기준. 로봇은 기동 시 자신의 `dock_pose` 로 초기화한다 | 각자 (0,0) 으로 초기화하면 두 map 프레임이 어긋난다 (I-013) |
 | **시각** | 모든 로그·CSV 는 **ROS 시각**(`get_clock().now()`). 벽시계 시각을 섞지 않는다 | 후처리에서 로봇·웹캠·관제 로그를 합쳐야 한다 |
-| **주기** | 웹캠은 **캡처 30 fps · 추론 발행 10 Hz**, AMR OAK-D 는 10 Hz. 세 카메라의 주기를 통일하지 않는다 | 하는 일의 시간 상수가 다르다. 맞춰야 하는 것은 주기가 아니라 위의 **시각**이다 (SDD 2.3 주기 정책) |
+| **주기** | 웹캠은 **캡처는 장치 상한 그대로(25~30 fps) · 추론 발행 10 Hz**, AMR OAK-D 는 10 Hz. 세 카메라의 주기를 통일하지 않는다 | 지켜야 하는 것은 특정 숫자가 아니라 **캡처 ≥ 발행** 이다. 장치가 30 을 못 내면 그 상한을 쓴다 (웹캠1 Jieli = 25 fps, 9/6 확인). 하는 일의 시간 상수가 달라 주기를 맞출 이유가 없고, 맞춰야 하는 것은 주기가 아니라 위의 **시각**이다 (SDD 2.3 주기 정책) |
 | **시간 상수 표기** | 히스테리시스·유효기간 같은 값은 **프레임 수가 아니라 초로** 적고 파라미터로 노출한다 | 프레임 수로 적으면 추론 주기를 바꿨을 때 의미가 조용히 달라진다 |
 
 **남은 1건 — `reid_threshold`**
@@ -101,7 +102,7 @@
 | `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m` | 정정인·민범진 |
 | `mro_webcam/config/WebCam1/homography_cam1.json` | 웹캠1 호모그래피 행렬 | 한세교·김학민 |
 | `mro_webcam/config/WebCam2/homography_cam2.json` | 웹캠2 호모그래피 행렬·대응점·재투영 오차 | 한세교·김학민 |
-| `mro_webcam/config/webcam.yaml` | `process_hz` 10, `capture_fps` 30, `on_time_s` 0.3, `off_time_s` 0.5, `hint_valid_s` 2.0 | 한세교·김학민 |
+| `mro_webcam/config/webcam.yaml` | `process_hz` 10, `capture_fps` **장치 상한**(웹캠1 = 25), `on_time_s` 0.3, `off_time_s` 0.5, `register_s` 1.0, `hint_valid_s` 2.0 | 한세교·김학민 |
 
 **`dock_pose` 는 `arena.yaml` 의 `dock_zone.pose.<robot>` 과 같은 값이어야 한다.** 두 곳이 어긋나면 맵 좌표계가 깨진다.
 
