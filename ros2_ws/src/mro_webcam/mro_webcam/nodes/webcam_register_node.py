@@ -33,7 +33,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from cv_bridge import CvBridge
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import CompressedImage
 from std_msgs.msg import Bool
 from ultralytics import YOLO
 from ament_index_python.packages import get_package_share_directory
@@ -87,7 +87,9 @@ class WebcamDetection(Node):
         self.names = self.model.names
         self.bridge = CvBridge()
         # 모니터링용. 계약상 카메라 토픽은 sensor_data(BEST_EFFORT) — 밀리면 버리고 발행자를 막지 않는다
-        self.pub_img = self.create_publisher(Image, 'webcam/image', qos_profile_sensor_data)
+        # 모니터링용. raw 900 KB x 10 Hz = 9 MB/s 는 Wi-Fi 를 막는다 → JPEG 약 50 KB (I-016, NR-03)
+        self.pub_img = self.create_publisher(CompressedImage, 'webcam/image/compressed',
+                                             qos_profile_sensor_data)
         self.pub_det = self.create_publisher(Bool, 'webcam/detected', 10)
         # S1 등록 결과. 계약상 명령·상태·미션은 RELIABLE (기본값) — 버리면 안 된다
         self.pub_desc = self.create_publisher(WorkerDescriptor, '/webcam1/worker_descriptor', 10)
@@ -202,7 +204,7 @@ class WebcamDetection(Node):
             self.last_logged = self.detected
 
         cv2.putText(img, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        self.pub_img.publish(self.bridge.cv2_to_imgmsg(img, encoding='bgr8'))
+        self.pub_img.publish(self.bridge.cv2_to_compressed_imgmsg(img))
         if SHOW_WINDOW:
             cv2.imshow('WebCam Detection', img)
             cv2.waitKey(1)
