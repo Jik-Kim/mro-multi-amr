@@ -21,6 +21,7 @@
 | I-017 | 2026-09-06 | PR #1 리뷰 | mro_bringup | 중 | 웹캠2 호모그래피 런치 경로 미반영 | 계약은 `mro_webcam/config/WebCam2/homography_cam2.json`으로 변경됐으나 `webcam2_pc.launch.py`는 기존 루트 경로를 참조 | PM | 김병직 | **해결** | 9/6 처리. `webcam1_pc.launch.py`·`webcam2_pc.launch.py` 모두 카메라별 폴더 경로로 변경. cam1 도 `config/WebCam1/` 로 옮겨 좌우 대칭을 맞췄고, 빈 껍데기였던 `config/homography_cam2.json` 은 삭제 |
 | I-011 | 2026-09-05 | PM | mro_bringup | 중 | PC 5대 동시 Discovery 접속 | 웹캠 PC 분리(9/5)로 PC 5대 + 로봇 2대. Kn1_mini 에서 PC 2대·로봇 1대로도 lifecycle 멈춤이 있었음 | [주행] | 박병후, 이시율 | **해결** | 서버를 PC-F 로 옮겨 RPi 부하가 구조적으로 사라짐(I-014). 웹캠 PC 는 `ROS_SUPER_CLIENT=False` 유지 |
 | I-016 | 2026-09-06 | PM | mro_webcam | 상 | 웹캠 캡처 30 fps · 처리 10 Hz 의 버퍼 지연 | `VideoCapture` 는 읽지 않은 프레임을 버퍼에 쌓고 `read()` 시 **가장 오래된 것**을 준다. 초당 20장씩 밀려 몇 초 전 장면을 보게 된다. 웹캠2 힌트는 유효기간이 2 s 라 로봇이 이미 지나간 위치로 회전한다 — 원인이 코드가 아니라 버퍼라서 찾기 어렵다 | [웹캠] | 한세교, 김학민 | 열림 | `CAP_PROP_BUFFERSIZE=1`, 안 먹는 드라이버면 별도 스레드 `grab()` + 처리 시점 `retrieve()`. TS-U02 에 지연 측정 포함 (손 흔들기 → 화면 반응 ≤ 0.2 s) |
+| I-018 | 2026-09-06 | [주행] | mro_fleet | 하 | fleet_manager 주석에 옛 구역 토큰 이름 남음 | `fleet_manager_node.py:109` 주석이 `Z-09·Z-03 구역 토큰이 순서를 만든다` 로 적혀 있으나, 계약 v1.1 의 토큰은 `P1`·`DOCK` 둘뿐이다(`zone_semaphore_node.py` 의 `ZONES`). 동작에는 영향이 없지만 이 주석을 근거로 구현하면 없는 토큰을 요청해 `granted=false` 만 받는다 | [관제] | 김민준 | 열림 | 주석을 `P1·DOCK` 으로 수정. 나머지 7개 파일(계약·주행·문서)은 주행이 9/6 에 통일 완료 — `mro_fleet` 은 관제 소관이라 손대지 않았다 (AGENTS.md) |
 
 심각도: 상(Critical Path 지연) / 중(기능 차단) / 하(품질)
 담당: 역할 태그([인지]/[웹캠]/[주행]/[관제]/PM) · 담당자명: 실제 처리하는 사람 이름. 매핑 — 인지 정정인·민범진 / 웹캠 한세교·김학민 / 주행 박병후·이시율 / 관제 김민준 / PM 김병직

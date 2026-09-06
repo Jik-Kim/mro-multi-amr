@@ -3,7 +3,7 @@
 역할 변경: '웹캠 차 좌표 앞 1.5 m 로 이동' → '셔틀 미션 (S2 undock → S4 베이 waypoint → ArUco 확인 → N초 체류 → Z-05)'.
 유지: 도크 초기자세, Nav2 준비 대기, undock, goToPose, 콜백 밖 실행 규칙.
 TODO([주행]): ① 트리거를 webcam/detected 대신 mission/assigned(mro_interfaces/Mission) 로 ② 목표를 bringup/params/arena.yaml 의 bay waypoint → Z-05 순서로
-③ 베이 도착 후 aruco/id == 요청 베이 확인 → N초 체류 → shuttle/status 발행 ④ Z-08 진입 전 /fleet/zone_token 획득, 통과 후 반납 (E-3)
+③ 베이 도착 후 aruco/id == 요청 베이 확인 → N초 체류 → shuttle/status 발행 ④ P1 진입 전 /fleet/zone_token 획득, 통과 후 반납 (E-3)
 ⑤ 도착 시 goto_goal/arrived → shuttle/arrived 로 이름 변경 (follow_target_node 도 같이).
 """
 """
