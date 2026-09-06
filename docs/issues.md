@@ -16,13 +16,13 @@
 | [I-003](#i-003) | 상 | **진행중** | 인지 정정인·민범진 | worker.pt 미학습 — 이관 노드는 car 클래스 |
 | [I-009](#i-009) | 상 | **열림** | 주행 박병후·이시율 | 0.79 m 병목에서 Nav2 통과 실패 우려 |
 | [I-013](#i-013) | 상 | **진행중** | 주행 박병후·이시율 | 로봇 2대의 맵 좌표계가 어긋난다 |
-| [I-016](#i-016) | 상 | **진행중** | 웹캠 한세교·김학민 | 웹캠2 발행 주기 저하 (10 Hz 설정에 3~5 Hz) |
 | [I-021](#i-021) | 중 | **열림** | 관제 김민준 | 개입 이벤트가 DB(events)에 기록되지 않는다 (FR-28) |
 | [I-022](#i-022) | 상 | **열림** | 웹캠 한세교·김학민 | KPI 리포트의 지표가 AC 정의와 다르다 (AC-05·K-04·AC-13) |
 | [I-023](#i-023) | 상 | **열림** | 웹캠·관제 김학민·김민준 | 배송 판정(AC-08)이 CSV 에 남지 않는다 |
 | [I-024](#i-024) | 상 | **열림** | 주행 박병후·이시율 | `shuttle/status` 발행자가 없어 배송 성공률이 구조적으로 0 % |
 | [I-025](#i-025) | 상 | **열림** | 주행 박병후·이시율 | 베이 A·B 정차점이 도크 접근 지점과 물리적으로 겹친다 |
 | [I-026](#i-026) | 중 | **열림** | 관제 김민준 | 일시적 `FAILED` 가 미션을 영구 FAILED 로 굳힌다 |
+| [I-027](#i-027) | 중 | **열림** | 웹캠 한세교·김학민 | webcam_hint 의 YOLO 타이머가 겹쳐 돌 수 있다 (Reentrant 그룹) |
 
 ## 해결된 이슈
 
@@ -40,6 +40,7 @@
 | [I-012](#i-012) | 주행 박병후·이시율 | 테이프 구역은 LiDAR 에 안 보임 |
 | [I-014](#i-014) | 주행 박병후·이시율 | Discovery 구성 미확정 |
 | [I-015](#i-015) | 웹캠 한세교·김학민 | 웹캠1 이 인형 상의를 몇 픽셀로 보는가 |
+| [I-016](#i-016) | 웹캠 한세교·김학민 | 웹캠2 발행 주기 저하 (10 Hz 설정에 3~5 Hz) |
 | [I-017](#i-017) | PM 김병직 | 웹캠2 호모그래피 런치 경로 미반영 |
 | [I-018](#i-018) | 인지 정정인·민범진 | 두 인형의 치수가 상의 말고도 다르다 |
 | [I-019](#i-019) | 관제 김민준 | fleet_manager 주석에 옛 구역 토큰 이름 남음 |
@@ -219,7 +220,7 @@
 - **내용·재현** — **9/6 실측 (한세교): 10 Hz 설정인데 3~5 Hz 로 나오고 시간이 갈수록 1 Hz 까지 떨어진다.** 원인 계열: `VideoCapture` 가 읽지 않은 프레임을 버퍼에 쌓고 `read()` 는 **가장 오래된 것**을 돌려주므로 지연이 누적된다. 코드 확인 결과 ① `CAP_PROP_BUFFERSIZE` 미설정 ② `capture.read()` 가 타이머 콜백 안에 있고 `rclpy.spin` 이 단일 스레드라 read 가 막히면 노드 전체가 멈춘다 ③ `CAP_PROP_FPS` 와 `create_timer(1.0/fps)` 에 **같은 fps** 가 들어가 여유가 0 이다 — 한 번 밀리면 회복되지 않는다 ④ 프레임당 raw 921 KB. QoS 는 BEST_EFFORT 라 역압은 아니다. **점점 느려지는 것은 어딘가 누적된다는 신호이므로 재보기 전에는 단정하지 않는다.** 영향: 힌트 유효기간이 2 s 라 지연이 그것을 넘으면 로봇이 이미 지나간 위치로 회전한다 (E-1 재획득 실패). 원인이 코드가 아니라 버퍼·주기라 찾기 어렵다
 - **조치·남은 것** — **바로 조치** ① `CAP_PROP_BUFFERSIZE=1` ② 캡처와 발행 주기 분리 — 카메라 30, 타이머 10 ③ MJPG 강제(`CAP_PROP_FOURCC`), `v4l2-ctl --list-formats-ext` 로 지원 확인. **안 잡히면 구간 분리** ⓐ 구독자 전부 끄고 `ros2 topic hz` — 구독자 없이도 느리면 read·변환, 붙일 때만 느리면 발행 비용 ⓑ `publish_frame` 안 read / `cv2_to_imgmsg` / publish 세 구간 소요 시간 로깅 ⓒ read 가 범인이면 별도 스레드 `grab()` + 타이머는 `retrieve()` 만. **통합(9/9) 전 필수** — raw Image 는 다른 PC 에서 구독하는 순간 Wi-Fi 를 막는다. CompressedImage 로 바꾸거나 로컬 전용으로 못박는다 (NR-03). TS-U02 에 지연 측정 포함 (손 흔들기 → 화면 반응 ≤ 0.2 s)
   **원인은 잡혔다 — 코드가 저장소에 안 올라왔을 뿐 (9/6 저녁 PM 확인).** 한세교가 **웹캠2 에서 먼저** `BUFFERSIZE=1`·캡처/발행 주기 분리·Compressed 로 해결하고 그 방법을 웹캠1 로 넘겼다. 웹캠1 쪽은 PR #6 에 실려 `main` 에 있다(`webcam_register_node.py`). **웹캠2 쪽 수정분은 PR 에 실리지 않아 `main` 의 `webcam2.py` 는 아직 raw `Image`·30 Hz 타이머·BUFFERSIZE 없음**이다 — 이 파일을 바꾸는 브랜치·PR 이 없다. 시트 Time Line 27행 "촬영포맷 확정 100 %" 가 그 결정이다.
-  **남은 것 — 세교 로컬의 `webcam2.py` 수정분을 PR 로 올린다 (9/7).** 그러면 이슈를 닫는다. `webcam_hint_node` 는 아직 카메라를 열지 않는 뼈대이므로 힌트 구현 때 같은 캡처 설정을 쓴다
+  **해결 (9/7, PR #14 머지).** 수정분은 `webcam2.py` 가 아니라 **`webcam_hint_node.py` 에 병합**돼 들어왔다 — 캡처 전용 스레드가 V4L2 큐를 계속 비우고 최신 프레임만 보관(`LatestFrameCamera`), MJPG 강제, `CAP_PROP_BUFFERSIZE` 5, 카메라 30 fps · YOLO 10 Hz · 압축 발행 10 Hz 로 주기 분리, `/webcam2/image_raw/compressed`(jpeg 80) 만 발행. raw `Image` 발행은 없어졌다. `webcam2.py`·`webcam2_subscriber.py` 는 잔재로 남아 있어 정리 todo 로 넘겼다. PR 브랜치가 9/5 main 기준이라 `homography.py`·`kpi_logger_node.py` 가 PR #8·#9 이전 사본이었고, 머지 때 main 을 유지했다(PR 의 의도인 `homography` 키·힌트 sensor_data QoS 는 main 에 이미 있음). 남은 위험은 I-027
 
 ### I-017
 
@@ -323,3 +324,13 @@
   - 셔틀 중 shuttle `FAILED` → SHUTTLE → WAITING: **`mark_waiting` 이 호출되지 않는다** → `result` 가 `FAIL_ROBOT` 으로 굳어 제때 도착해도 AC-08 실패로 집계된다.
   PR 이전 코드도 FAILED 로 전이는 했지만 되돌아올 수 있었다. 이번에 '되돌리지 않는다' 규칙이 생기면서 일시 실패가 영구가 됐다.
 - **조치·남은 것** — 둘 중 하나. ① **approach `FAILED` 는 미션 전이에서 뺀다** (`APPROACH_MISSION_STATES` 에서 제거, STATE 이벤트로만 남김) — follow_target 의 FAILED 는 노드 내부 사이클 실패이지 미션 실패가 아니다. 미션 FAILED 는 shuttle 출처(포기)·T_lim·운영자에서만 온다. ② `FAILED` 는 터미널로 두지 않고 `DONE` 만 터미널로 — 이후 정상 진행 상태가 오면 FAILED 에서 빠져나오게 한다. **PM 은 ①+② 를 권한다.** 주행에는 `shuttle/status = FAILED` 를 **포기할 때만** 내도록 I-024 todo 에 적어뒀다 (재시도 중이면 SHUTTLE 유지).
+
+### I-027
+
+**webcam_hint 의 YOLO 타이머가 겹쳐 돌 수 있다 (Reentrant 그룹)**
+
+`mro_webcam` · 심각도 중 · 담당 웹캠 한세교·김학민 · 등록 2026-09-07 (PR #14 PM 검증)
+
+- **내용·재현** — PR #14 의 `webcam_hint_node.py` 는 YOLO 처리 타이머(10 Hz)와 압축 발행 타이머(10 Hz)를 **하나의 `ReentrantCallbackGroup`** 에 두고 `MultiThreadedExecutor(num_threads=2)` 로 돈다. Reentrant 그룹은 **같은 콜백의 동시 실행**도 허용하므로, `model.track()` 한 번이 100 ms 를 넘는 순간(CPU 추론 640×480 이면 흔하다) 다음 틱이 두 번째 스레드에서 같은 모델을 다시 부른다. ultralytics 의 `persist=True` 추적기는 스레드 안전하지 않고, `self.last_frame_number` 도 잠금 없이 두 스레드가 쓴다. 증상은 간헐적 예외·트랙 ID 튐·힌트 좌표 튐이라 재현이 어렵다
+- **조치·남은 것** — 두 타이머에 **각각 `MutuallyExclusiveCallbackGroup`** 을 준다 — 자기 자신과는 안 겹치고 둘 사이는 병렬. 코드 세 줄. 같이 볼 것: `_capture_loop` 가 `read()` 실패 때 `sleep` 없이 `continue` 라 카메라가 빠지면 CPU 100 % 로 돈다(짧은 sleep 추가), `close()` 는 `release()` 전에 `join()` 이 안전하다. 마감 9/8 (TS-U02 전)
+

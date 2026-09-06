@@ -1,6 +1,6 @@
-# Interfaces — 계약 v1.8 (2026-09-06)
+# Interfaces — 계약 v1.9 (2026-09-07)
 
-> v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐다**(v1.8).
+> v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했다**(v1.9, PR #14).
 > 토픽·메시지·서비스 정의는 v1.0 그대로이므로 구현에 영향 없다.
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
@@ -73,7 +73,8 @@
 | 토픽 | 송신 | 수신 | 타입 | 비고 |
 |---|---|---|---|---|
 | `/webcam1/worker_descriptor` | webcam_register | fleet_manager, amr_detection, webcam_hint | WorkerDescriptor | S1 등록 ≤ 10 s |
-| `/webcam2/target_hint` | webcam_hint | follow_target, kpi_logger | TargetHint | E-1. **10 Hz** 발행, 유효 2 s |
+| `/webcam2/target_hint` | webcam_hint | follow_target, kpi_logger | TargetHint | E-1. **10 Hz** 발행, 유효 2 s. **BEST_EFFORT** — 구독자도 sensor_data QoS 로 잡아야 받는다 |
+| `/webcam2/image_raw/compressed` | webcam_hint | (뷰어·영상 판독 기록) | CompressedImage | **jpeg 80, 10 Hz** (`image_publish_hz`). raw `Image` 는 발행하지 않는다 — 다른 PC 에서 구독하면 Wi-Fi 를 막는다 (NR-03). 안전 판단 금지, 세션 판정 후 폐기 (R-10). PR #14 |
 | `/fleet/mission` | fleet_manager | kpi_logger, UI | Mission | 상태 전이마다 |
 | `/fleet/status` | fleet_manager | control_ui, kpi_logger | FleetStatus | 1 Hz |
 | `/fleet/intervention` | control_ui | kpi_logger, fleet_manager | Intervention | 운영자 버튼 |
@@ -106,7 +107,7 @@
 | `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m` | 정정인·민범진 |
 | `mro_webcam/config/WebCam1/homography_cam1.json` | **쓰지 않는다 (9/6 결정)** — 웹캠1 은 작업자 출발(등록)만 인식하고 map 좌표를 내지 않는다. 파일은 Kn1_mini 잔재이며 `webcam_register` 가 좌표를 쓰면 안 된다 | 한세교·김학민 |
 | `mro_webcam/config/WebCam2/homography_cam2.json` | 웹캠2 호모그래피 행렬·대응점·재투영 오차. 기준점 원본은 같은 폴더 `marker_coordinates.json` (로봇 AMCL 로 실측, PR #9 — RMSE 2.8 cm) | 한세교·김학민 |
-| `mro_webcam/config/webcam.yaml` | `process_hz` 10, `capture_fps` **장치 상한**(웹캠1 = 25), `on_time_s` 0.3, `off_time_s` 0.5, `register_s` 1.0, `hint_valid_s` 2.0 | 한세교·김학민 |
+| `mro_webcam/config/webcam.yaml` | `process_hz` 10, `capture_fps` **장치 상한**(웹캠1 = 25), `on_time_s` 0.3, `off_time_s` 0.5, `register_s` 1.0, `hint_valid_s` 2.0, 웹캠2 `image_publish_hz` 10 · `jpeg_quality` 80 · `buffer_size` 5(캡처 스레드가 큐를 계속 비우므로 1 이 아니어도 지연이 쌓이지 않는다) | 한세교·김학민 |
 
 **`dock_pose` 는 `arena.yaml` 의 `dock_zone.pose.<robot>` 과 같은 값이어야 한다.** 두 곳이 어긋나면 맵 좌표계가 깨진다.
 

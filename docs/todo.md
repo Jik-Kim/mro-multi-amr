@@ -5,16 +5,26 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 37/80 완료** (█████████░░░░░░░░░░░)  ·  기준 09/06
+**전체 40/85 완료** (█████████░░░░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 3/12 | `██░░░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 6/14 | `████░░░░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 16/32 | `█████░░░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 8/17 | `█████░░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 16/33 | `█████░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 7/13 | `█████░░░░░` | — |
-| mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
+| mro_bringup [PM 김병직] | 3/7 | `████░░░░░░` | — |
+
+**오늘 마감 7건**
+
+- mro_perception — models/worker.pt 학습·검증, 색 편향 점검 (I-003) — 9/6 밤새 학습 중, 9/7 아침 완료 예정 (PM…
+- mro_navigation — 공유기 DHCP 예약 요청 — 지금은 재부팅하면 IP 가 바뀐다
+- mro_navigation — 측위 검증 마커 설치·실측 — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 …
+- mro_navigation — I-013 검증 — TS-U06 때 두 로봇을 베이 B 에 차례로 보내 aruco/distance 비교, 차이 ≤ 10 cm 면…
+- mro_navigation — shuttle_mission_node.py: mission/assigned 트리거, bay waypoint → ArUco 확인 …
+- mro_navigation — shuttle_mission_node.py: shuttle/status 발행 (I-024) — READY/SHUTTLE/AT_B…
+- mro_navigation — 주석 정정 — return_dock_node.py 도크 간격 0.9 → 0.84, zone_semaphore_node.py P1…
 
 > 이 표는 `python3 tools/todo_stats.py` 가 체크박스를 세어 다시 쓴다. 손으로 고치지 않는다.
 
@@ -45,8 +55,11 @@
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [ ] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) · 마감 9/8
 - [ ] `webcam_register_node.py`: 등록 구역 게이트 — 관제탑 위치 확정 후 · 마감 9/8
-- [ ] **웹캠2 발행 주기 저하 (I-016) — 세교 로컬 수정분(`webcam2.py`: BUFFERSIZE·주기 분리·Compressed)을 PR 로 올린다.** 웹캠2 에서 먼저 잡아 웹캠1(PR #6)에 넘겼는데 웹캠2 쪽은 PR 에 안 실렸다. main 은 아직 raw·30 Hz · 마감 9/7
-- [ ] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 · 마감 9/8
+- [x] **웹캠2 발행 주기 저하 (I-016)** — 캡처 스레드·BUFFERSIZE·주기 분리·CompressedImage 를 `webcam_hint_node.py` 에 병합 (PR #14, 9/7 머지) · 마감 9/7
+- [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 두 타이머를 각각 `MutuallyExclusiveCallbackGroup` 으로. 지금은 한 `Reentrant` 그룹이라 `model.track` 이 겹쳐 돌 수 있다 · 마감 9/8
+- [ ] `webcam2.py`·`webcam2_subscriber.py` 정리 — 캡처가 힌트 노드로 옮겨져 같은 `/dev/video` 를 두 번 여는 잔재. 삭제하거나 subscriber 를 `CompressedImage` 뷰어로 바꾸고 `setup.py` 진입점 정리 · 마감 9/8
+- [x] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 (PR #14) · 마감 9/8
+- [ ] `webcam_hint_node.py`: `worker.pt` 교체 후 **TS-U02** — 힌트 map 좌표 vs 실측 ≤ 0.3 m, 지연 ≤ 0.2 s (손 흔들기 → 화면) · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
 - [x] `tools/kpi_report.py`: 추종거리·IPH·리드타임·성공률·재획득 계산 구현 (PR #8) · 마감 9/10
 - [ ] **`kpi_report.py`: 배송 판정(AC-08)·리드타임을 `~/mro_fleet.db` 에서 읽기 (I-023)** — CSV 에는 T_lim 판정이 없어 실제보다 좋게 나온다. **TS-07 이 9/9 라 이것이 먼저** · 마감 9/8
@@ -76,6 +89,7 @@
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
 - [ ] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
+- [ ] `follow_target_node.py`: 힌트 구독을 `/webcam2/target_hint`(**TargetHint, sensor_data QoS**) 로 — 지금은 옛 `webcam/car_map_point` PointStamped RELIABLE 이라 BEST_EFFORT 발행자(PR #14)의 힌트를 못 받는다 · 마감 9/8
 - [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (관제 → 주행 이관) · 마감 9/8
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
 - [ ] `zone_semaphore_node.py`: 로봇 측 진입 판정 연결 (폴리곤 vs 로봇 위치 비교) · 마감 9/8
@@ -107,7 +121,8 @@
 ## mro_bringup [PM 김병직]
 - [x] robot / webcam_pc / fleet_pc launch, params 골격 · 마감 9/7
 - [x] 설계도 4장 — `docs/diagrams/` (STEP 1·2·3-1·3-2) · 마감 9/8
-- [ ] launch 가 `webcam.yaml`·`perception.yaml` 을 실제로 넘기도록 연결 · 마감 9/7
+- [x] launch 가 `webcam.yaml` 을 넘기도록 연결 — webcam1/webcam2 launch (9/7) · 마감 9/7
+- [ ] robot.launch 가 `perception.yaml` 을 넘기도록 연결 — 인지 노드가 파라미터를 읽기 시작할 때 같이 · 마감 9/8
 - [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8
 - [ ] 중복 파라미터 한 곳으로 — `reid_threshold`(perception.yaml ↔ robotN.yaml), `follow_standoff_m`·`t_lim_s`(navigation.yaml ↔ robotN.yaml), `t_lim_s`·`t_ret_s`·`dock_retry`(arena.yaml ↔ robotN.yaml). 지금은 노드가 안 읽어 무해하지만 값 확정 때 한쪽만 고치는 사고가 난다 · 마감 9/8
 - [ ] SDD 부록 A rqt_graph 캡처 첨부 · 마감 9/10
