@@ -22,3 +22,7 @@ webcam_register:            # 웹캠1 (PC-W1) — 작업자 등록 S1
 webcam_hint:                # 웹캠2 (PC-W2) — 재탐지 힌트 E-1. 한세교 담당, 값 확정 필요
   ros__parameters:
     hint_valid_s: 2.0       # 계약값 — 이 시간 지난 힌트는 쓰지 않는다
+    image_publish_hz: 10.0  # YOLO process_hz와 독립적인 압축 영상 발행 주기
+    compressed_topic: "/webcam2/image_raw/compressed"
+    image_frame_id: "webcam2_optical_frame"
+    jpeg_quality: 80
