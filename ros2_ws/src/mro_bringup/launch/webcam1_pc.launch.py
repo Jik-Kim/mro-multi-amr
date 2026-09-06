@@ -12,5 +12,5 @@ def generate_launch_description():
     cfg = os.path.join(get_package_share_directory('mro_webcam'), 'config')
     return LaunchDescription([
         Node(package='mro_webcam', executable='webcam_register_node', name='webcam_register', output='screen',
-             parameters=[{'homography_json': os.path.join(cfg, 'homography_cam1.json')}]),
+             parameters=[{'homography_json': os.path.join(cfg, 'WebCam1', 'homography_cam1.json')}]),
     ])

@@ -14,6 +14,10 @@ setup(
         (os.path.join('share', package_name, 'models'), glob('models/*.pt')),
         (os.path.join('share', package_name, 'config'), glob('config/*.*')),
         (
+            os.path.join('share', package_name, 'config', 'WebCam1'),
+            glob('config/WebCam1/*'),
+        ),
+        (
             os.path.join('share', package_name, 'config', 'WebCam2'),
             glob('config/WebCam2/*'),
         ),

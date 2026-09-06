@@ -5,7 +5,7 @@
 | ID | 날짜 | 보고 | 패키지 | 심각도 | 제목 | 내용·재현 | 담당 | 담당자명 | 상태 | 해결 |
 |---|---|---|---|---|---|---|---|---|---|---|
 | I-001 | 2026-09-04 | PM | mro_bringup | 중 | 새 아레나 맵 전까지 arena.yaml 좌표 전부 0 | 셔틀·세마포어가 좌표를 못 씀 | [주행] | 박병후, 이시율 | **진행중** | 아레나 재구성·SLAM 맵·저장소 반영 완료(9/5). 실측 절차는 `docs/measurement_guide.md` §1. 남은 것: RViz Publish Point 로 좌표 입력 |
-| I-002 | 2026-09-04 | PM | mro_webcam | 중 | homography_cam1.json 은 Kn1_mini 맵 기준 | 새 아레나에서 무효 | [웹캠] | 한세교, 김학민 | 열림 | 재캘리브레이션 |
+| I-002 | 2026-09-04 | PM | mro_webcam | 중 | `WebCam1/homography_cam1.json` 은 Kn1_mini 맵 기준 | 새 아레나에서 무효 | [웹캠] | 한세교, 김학민 | 열림 | 재캘리브레이션 |
 | I-003 | 2026-09-04 | PM | mro_perception | 상 | worker.pt 미학습 — 이관 노드는 car 클래스 | 시나리오 검출 불가 | [인지] | 정정인, 민범진 | 열림 | 9/6 밤 학습 시작, 9/7 완료 목표 |
 | I-004 | 2026-09-05 | PM | mro_bringup | 중 | 벽 받침대(발)가 LiDAR 사각지대 | 받침대는 바닥에 붙어 있어 LiDAR(약 27~30 cm)에 안 잡힘 → SLAM 지도에는 없는데 실제 통로는 그만큼 좁음. 벽에 붙어 주행하면 범퍼 충돌 | [주행] | 박병후, 이시율 | 열림 | 실측 표는 `docs/measurement_guide.md` §2. 받침대를 통로 바깥으로 돌리거나, Nav2 inflation 을 받침대 돌출폭 이상으로 |
 | I-005 | 2026-09-05 | PM | mro_bringup | 상 | 벽 높이 vs OAK-D 높이 미측정 | 벽이 카메라보다 낮으면 Z-06·Z-09 에서 가림(Target Lost)이 생기지 않아 E-1·TS-05 시나리오가 성립하지 않음 | [주행],[인지] | 박병후, 정정인 | 열림 | 실측 표는 `docs/measurement_guide.md` §3. 벽 상단·카메라 렌즈·인형 높이 3개 실측 (9/5) |
@@ -18,7 +18,7 @@
 | I-014 | 2026-09-05 | 팀 리뷰 | mro_bringup | **상** | Discovery 구성 미확정 | 실패하면 웹캠·관제가 로봇과 통신 못 해 S1·S3·힌트·FleetStatus 가 전부 죽는다. 단일 실패 지점 | [주행] | 박병후, 이시율 | **해결** | **offboard 단일 서버 채택 (9/5).** PC-F `192.168.108.41` ID 1. robot3·robot4 토픽 PC-F 에서 확인 완료. PC 4대 접속 완료(9/5). 남은 것: 공유기 `.41` 예약 요청 |
 | I-015 | 2026-09-05 | PM | mro_webcam | 중 | 웹캠1 이 인형 상의를 몇 픽셀로 보는가 | 인형 상의가 120 mm 인데 웹캠1 이 3 m 거리면 상의 영역이 대략 16×22 px. 색 히스토그램 서술자가 뭉개지면 S5 재식별이 시작부터 흔들린다 | [웹캠] | 한세교, 김학민 | 열림 | 인형을 관제탑 자리에 놓고 웹캠1 화면에서 상의 픽셀 크기 측정. 작으면 웹캠1 을 관제탑 쪽으로 붙이거나 등록 시 지정 위치까지 오게 절차 변경 (Q-26) |
 | I-012 | 2026-09-05 | PM | mro_bringup | 하 | 테이프 구역은 LiDAR 에 안 보임 | 바닥 테이프는 센서로 감지되지 않는다 | [주행] | 박병후, 이시율 | **해결** | KOZ·가상 차선을 Phase 2 로 이관(9/5). Phase 1 테이프는 구역 경계·waypoint·호모그래피 기준점 표시용이라 로봇이 지킬 필요가 없다 |
-| I-017 | 2026-09-06 | PR #1 리뷰 | mro_bringup | 중 | 웹캠2 호모그래피 런치 경로 미반영 | 계약은 `mro_webcam/config/WebCam2/homography_cam2.json`으로 변경됐으나 `webcam2_pc.launch.py`는 기존 루트 경로를 참조 | PM | 김병직 | **열림** | 런치 파라미터를 `WebCam2/homography_cam2.json`으로 변경 필요 |
+| I-017 | 2026-09-06 | PR #1 리뷰 | mro_bringup | 중 | 웹캠2 호모그래피 런치 경로 미반영 | 계약은 `mro_webcam/config/WebCam2/homography_cam2.json`으로 변경됐으나 `webcam2_pc.launch.py`는 기존 루트 경로를 참조 | PM | 김병직 | **해결** | 9/6 처리. `webcam1_pc.launch.py`·`webcam2_pc.launch.py` 모두 카메라별 폴더 경로로 변경. cam1 도 `config/WebCam1/` 로 옮겨 좌우 대칭을 맞췄고, 빈 껍데기였던 `config/homography_cam2.json` 은 삭제 |
 | I-011 | 2026-09-05 | PM | mro_bringup | 중 | PC 5대 동시 Discovery 접속 | 웹캠 PC 분리(9/5)로 PC 5대 + 로봇 2대. Kn1_mini 에서 PC 2대·로봇 1대로도 lifecycle 멈춤이 있었음 | [주행] | 박병후, 이시율 | **해결** | 서버를 PC-F 로 옮겨 RPi 부하가 구조적으로 사라짐(I-014). 웹캠 PC 는 `ROS_SUPER_CLIENT=False` 유지 |
 | I-016 | 2026-09-06 | PM | mro_webcam | 상 | 웹캠 캡처 30 fps · 처리 10 Hz 의 버퍼 지연 | `VideoCapture` 는 읽지 않은 프레임을 버퍼에 쌓고 `read()` 시 **가장 오래된 것**을 준다. 초당 20장씩 밀려 몇 초 전 장면을 보게 된다. 웹캠2 힌트는 유효기간이 2 s 라 로봇이 이미 지나간 위치로 회전한다 — 원인이 코드가 아니라 버퍼라서 찾기 어렵다 | [웹캠] | 한세교, 김학민 | 열림 | `CAP_PROP_BUFFERSIZE=1`, 안 먹는 드라이버면 별도 스레드 `grab()` + 처리 시점 `retrieve()`. TS-U02 에 지연 측정 포함 (손 흔들기 → 화면 반응 ≤ 0.2 s) |
 

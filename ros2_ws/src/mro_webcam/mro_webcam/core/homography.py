@@ -32,7 +32,7 @@ import cv2
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_JSON = os.path.join(HERE, '..', '..', 'config', 'homography_cam1.json')  # 설치본에서는 --out/--json 으로 share/config 경로를 명시할 것
+DEFAULT_JSON = os.path.join(HERE, '..', '..', 'config', 'WebCam1', 'homography_cam1.json')  # 설치본에서는 --out/--json 으로 share/config 경로를 명시할 것
 
 
 # --------------------------------------------------------------- 사용 함수

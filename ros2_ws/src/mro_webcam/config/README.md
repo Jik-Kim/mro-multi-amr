@@ -3,10 +3,10 @@
 상세 GUI 사용법은 [`CALIBRATION_GUIDE.md`](CALIBRATION_GUIDE.md)를 참고한다.
 
 ```bash
-ros2 run mro_webcam calibrate_homography calib --cam <번호> --map <mro_bringup>/maps/auto_map.yaml --out homography_cam1.json
-ros2 run mro_webcam calibrate_homography test  --cam <번호> --out homography_cam1.json
+ros2 run mro_webcam calibrate_homography calib --cam <번호> --map <mro_bringup>/maps/auto_map.yaml --out WebCam1/homography_cam1.json
+ros2 run mro_webcam calibrate_homography test  --cam <번호> --out WebCam1/homography_cam1.json
 ```
-`homography_cam1.json` 은 Kn1_mini auto_map 기준 값(검증 오차 0.11~0.27 m)이며 새 아레나에서는 **무효**다. cam2 는 비어 있다.
+`WebCam1/homography_cam1.json` 은 Kn1_mini auto_map 기준 값(검증 오차 0.11~0.27 m)이며 새 아레나에서는 **무효**다. cam2 는 비어 있다.
 
 ## WebCam2 마커 캘리브레이션 이력
 

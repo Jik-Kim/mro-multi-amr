@@ -1,6 +1,6 @@
-"""웹캠2 전역 추적 → 재탐지 방위 힌트. BRD v3.0 E-1 / BR-T27 / 4.1.
+"""웹캠2 전역 추적 → 재탐지 방위 힌트. BRD v3.1 E-1 / BR-T27 / 4.1.
 
-입력: USB 웹캠2 (Z-06·Z-07·Z-09 시야), config/homography_cam2.json, /webcam1/worker_descriptor (복장 클래스로 트랙-작업자 대응)
+입력: USB 웹캠2 (작업공간 + P3 입구 시야 — 중앙 복도는 시야 밖, 9/5 확정), config/WebCam2/homography_cam2.json, /webcam1/worker_descriptor (복장 클래스로 트랙-작업자 대응)
 출력: /webcam2/target_hint (mro_interfaces/TargetHint) — 작업자별 map 좌표. **안전 판단에는 절대 쓰지 않는다** (4장 원칙).
        /webcam2/positions.csv 는 kpi_logger 가 기록.
 """
