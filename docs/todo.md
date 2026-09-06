@@ -5,13 +5,13 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 25/63 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
+**전체 27/68 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
-| mro_perception [인지 — 정정인, 민범진] | 1/8 | `█░░░░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 3/10 | `███░░░░░░░` | — |
+| mro_perception [인지 — 정정인, 민범진] | 1/9 | `█░░░░░░░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 5/14 | `████░░░░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 10/26 | `████░░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 6/10 | `██████░░░░` | — |
 | mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
@@ -35,6 +35,7 @@
 - [ ] 인형 2종 제작 → 데이터 수집·라벨링 (상하의 전체, 9/6 결정) · 마감 9/6
 - [ ] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) · 마감 9/7
 - [ ] `amr_detection_node.py`: `DETECT_CLASS` → worker_a/b, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9
+- [ ] `amr_detection_node.py`: **`target/distance` 발행 (FR-29)** — 추종거리 판정의 기준값. kpi_logger 는 이미 구독 중이라 이것만 붙으면 AC-05 가 측정된다 · 마감 9/8
 - [ ] `amr_detection_node.py`: 모듈 상수 → ROS2 파라미터 (`config/perception.yaml`) · 마감 9/8
 - [x] `aruco_detector_node.py`: 검출·거리 초안 · 마감 9/7
 - [ ] `aruco_detector_node.py`: solvePnP 자세, 마커 ID 필터 · 마감 9/8
@@ -50,8 +51,12 @@
 - [ ] **웹캠2 발행 주기 저하 (I-016)** — `webcam2.py` 에도 `BUFFERSIZE=1`·주기 분리·Compressed 적용 · 마감 9/7
 - [ ] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
-- [ ] `tools/kpi_report.py`: p95 추종거리, IPH, 리드타임 · 마감 9/10
-- [ ] `tools/kpi_report.py`: 배송 판정(AC-08)은 CSV 가 아니라 `~/mro_fleet.db` 의 `missions.result` 를 읽는다 — Mission.msg 에 result 가 없고 DB·kpi_logger 가 같은 PC-F 에 있다 (PR #7 합의) · 마감 9/10
+- [x] `tools/kpi_report.py`: 추종거리·IPH·리드타임·성공률·재획득 계산 구현 (PR #8) · 마감 9/10
+- [ ] **`kpi_report.py`: 배송 판정(AC-08)·리드타임을 `~/mro_fleet.db` 에서 읽기 (I-023)** — CSV 에는 T_lim 판정이 없어 실제보다 좋게 나온다. **TS-07 이 9/9 라 이것이 먼저** · 마감 9/8
+- [ ] `kpi_report.py`: 추종거리를 FOLLOWING 구간으로 자르고 `|d−0.5|` p95 와 **최소 이격** 출력 (I-022, AC-05) · 마감 9/9
+- [ ] `kpi_report.py`: Lost 를 `target/visible` 전이로 잡고 재획득 **성공률** 산출 — SEARCHING 은 정상 절차에도 쓰인다 (I-022, K-04) · 마감 9/9
+- [ ] `kpi_report.py`: IPH 분모를 undock~도킹 완료 구간 합으로 (I-022, BRD 5.3) · 마감 9/9
+- [x] `kpi_logger_node.py`: `target/distance` 구독(FR-29), 로봇 네임스페이스 파라미터화, QoS 계약 반영 (PR #8) · 마감 9/9
 
 ## mro_navigation [주행 — 박병후, 이시율]
 - [x] 아레나 재구성 · 마감 9/5

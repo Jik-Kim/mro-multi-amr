@@ -25,6 +25,8 @@
 | [I-016](#i-016) | 상 | **진행중** | 웹캠 한세교·김학민 | 웹캠2 발행 주기 저하 (10 Hz 설정에 3~5 Hz) |
 | [I-020](#i-020) | 상 | **열림** | 관제 김민준 | FleetStatus.state 를 두 노드가 덮어써 도킹 상태가 남지 않는다 |
 | [I-021](#i-021) | 중 | **열림** | 관제 김민준 | 개입 이벤트가 DB(events)에 기록되지 않는다 (FR-28) |
+| [I-022](#i-022) | 상 | **열림** | 웹캠 한세교·김학민 | KPI 리포트의 지표가 AC 정의와 다르다 (AC-05·K-04·AC-13) |
+| [I-023](#i-023) | 상 | **열림** | 웹캠·관제 김학민·김민준 | 배송 판정(AC-08)이 CSV 에 남지 않는다 |
 
 ## 해결된 이슈
 
@@ -242,3 +244,25 @@
 
 - **내용·재현** — FR-28 은 개입 이벤트를 **DB(events) 와 KPI CSV 양쪽에** 남기도록 하고, `schema.sql` 의 `events.kind` 에도 `INTERVENTION` 이 있다. 그런데 DB 에 쓰는 노드는 `fleet_manager` 하나뿐인데 `/fleet/intervention` 을 구독하지 않는다(계약 4절 수신자 = `kpi_logger, fleet_manager`). `control_ui` 의 발행과 `kpi_logger` 의 CSV 기록은 되어 있으므로 **CSV 에만 남고 DB 에는 안 남는다.** AC-13(IPH) 를 DB 로 검산할 수 없다.
 - **조치·남은 것** — `fleet_manager` 에 `/fleet/intervention` 구독을 추가하고 `db.event(t, robot_ns, 'INTERVENTION', kind, note)` 로 기록한다. `SAFETY_POLICY` 는 개입으로 계상하지 않으므로 kind 를 그대로 넣되 집계에서 거른다 (BRD 5.3)
+
+### I-022
+
+**KPI 리포트의 지표가 AC 정의와 다르다 (AC-05·K-04·AC-13)**
+
+`tools` · 심각도 상 · 담당 웹캠 한세교·김학민 · 등록 2026-09-06 (PR #8 리뷰)
+
+- **내용·재현** — 합성 CSV 로 리포트와 손계산을 대조했다(PM, 9/6). 다섯 지표 중 셋이 수락 기준과 다른 값을 낸다.
+  - **AC-05 추종거리** — 기준은 **standoff 0.5 m 대비 오차의 p95 ≤ 0.2 m**, 추종(FOLLOWING) 구간 한정이다. 리포트는 구간 구분 없이 `target/distance` **원값**의 p95 를 낸다. 접근 단계(standoff 1.0·0.3 m)와 STANDBY 값이 섞여 대조에서 **p95 1.68 m** 가 나왔다 — 추종 구간만 보면 오차 p95 는 **0.077 m** 였다. 정상인 시스템이 대실패로 읽힌다. 또 기준인 **최소 이격(≥ 0.3 m)은 출력하지 않고** 기준이 아닌 최댓값을 출력한다.
+  - **K-04 재획득** — `approach/status == 'SEARCHING'` 을 Lost 신호로 쓰는데, `follow_target` 은 **정상 절차에서도 SEARCHING 을 쓴다**(`follow_target_node.py:129` 사이클 시작 검출 대기, `:318` 1단계 도착 후 정지·재검출). 게다가 SEARCHING 이후 아무 상태나 구간을 닫으므로 **재획득에 실패해 STANDBY 로 빠진 경우까지 '느린 성공'으로 계상**된다. 대조에서 4건·p95 26.0 s 가 나왔으나 실제 재획득 성공은 1건·3.0 s 였다. K-04 가 요구하는 **재획득 성공률**은 아예 산출하지 않는다.
+  - **AC-13 IPH** — 분모가 **CSV 첫 행~마지막 행 구간**이다. BRD 5.3 은 운용 시간을 **S2 undock ~ S10 도킹 완료의 합(충전 제외)**으로 정의한다. 미션 사이 대기 시간이 분모에 들어가면 IPH 가 실제보다 **작게** 나온다 — 기준 미달을 통과로 보이게 하는 방향이라 위험하다.
+  - (사소) `if t0:` 이 `t0 == 0.0` 을 없는 값으로 취급한다(`kpi_report.py:139`). 실제 ROS 시각에서는 안 걸리지만 `use_sim_time` 에서는 첫 미션이 통째로 빠진다. `if t0 is not None:` 로.
+- **조치·남은 것** — ① 추종거리는 `approach/status == FOLLOWING` 구간으로 자르고 `abs(d − follow_standoff_m)` 의 p95 와 **최솟값**을 낸다 ② Lost 는 `target/visible` 1→0 전이(1.0 s 이상 지속)로 잡고, 재획득은 0→1, STANDBY·FAILED 로 끝난 건은 **실패로 따로 세어 성공률**을 낸다 ③ IPH 분모는 `shuttle/status` 의 undock~DOCKED 구간 합으로 바꾼다. **TS-02·TS-05·TS-17 이 9/10 이므로 그 전에 필요하다.**
+
+### I-023
+
+**배송 판정(AC-08)이 CSV 에 남지 않는다**
+
+`mro_fleet` · `tools` · 심각도 상 · 담당 웹캠·관제 김학민·김민준 · 등록 2026-09-06 (PR #7·#8 리뷰)
+
+- **내용·재현** — `missions.result`(`SUCCESS`/`FAIL_TLIM`)는 `fleet_manager` 가 **SQLite 에만** 쓴다. `Mission.msg` 에는 `result`·`lead_time_s` 가 없어 `/fleet/mission` 을 받는 `kpi_logger` CSV 에는 판정이 남지 않는다. 그래서 `kpi_report.py` 는 **`Mission.DONE` 도달 여부**로 성공률을 세는데, ① T_lim 을 넘겨 도착한 미션도 결국 DONE 이 되므로 성공으로 계상되고 ② **끝내 도착하지 못한 미션은 CSV 에 흔적이 없어 분모에서 빠진다**(스윕 타이머는 DB 만 갱신한다). 대조에서 리포트 **50.0 %**, 참값 **0.0 %** 가 나왔다. 실제보다 **좋게** 나오는 방향이다. 리드타임도 `DONE − ASSIGNED`(요청→도킹 완료)라 K-05 의 정의(요청→**대기공간 도착**)와 다르다 — 대조에서 400 s vs 150 s.
+- **조치·남은 것** — **계약은 늘리지 않는다 (9/6 PM 결정).** `Mission.msg` 에 필드를 더하면 8명이 재빌드해야 한다. `kpi_logger` 와 DB 가 **같은 PC-F** 에 있으므로(`fleet_pc.launch.py`) `tools/kpi_report.py` 가 `~/mro_fleet.db` 의 `missions` 를 직접 읽어 `result` 로 AC-08 을, `waiting_at − created_at` 으로 K-05 리드타임을 낸다. CSV 는 그대로 두고 DB 경로를 인자로 받는다. **TS-07 배송 20회를 9/9 에 미리 빼므로 이것이 I-022 보다 먼저다.**
