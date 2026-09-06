@@ -45,7 +45,7 @@
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [ ] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) · 마감 9/8
 - [ ] `webcam_register_node.py`: 등록 구역 게이트 — 관제탑 위치 확정 후 · 마감 9/8
-- [ ] **웹캠2 발행 주기 저하 (I-016)** — `webcam2.py` 에도 `BUFFERSIZE=1`·주기 분리·Compressed 적용 · 마감 9/7
+- [ ] **웹캠2 발행 주기 저하 (I-016)** — `webcam2.py` 에도 `BUFFERSIZE=1`·주기 분리·Compressed 적용. **웹캠1 은 PR #6 로 됐고 웹캠2 는 main 기준 아직 raw·30 Hz** (9/6 확인). `webcam_hint_node` 구현 시 웹캠1 캡처 설정을 그대로 · 마감 9/7
 - [ ] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
 - [x] `tools/kpi_report.py`: 추종거리·IPH·리드타임·성공률·재획득 계산 구현 (PR #8) · 마감 9/10

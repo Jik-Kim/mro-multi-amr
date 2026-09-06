@@ -218,6 +218,7 @@
 
 - **내용·재현** — **9/6 실측 (한세교): 10 Hz 설정인데 3~5 Hz 로 나오고 시간이 갈수록 1 Hz 까지 떨어진다.** 원인 계열: `VideoCapture` 가 읽지 않은 프레임을 버퍼에 쌓고 `read()` 는 **가장 오래된 것**을 돌려주므로 지연이 누적된다. 코드 확인 결과 ① `CAP_PROP_BUFFERSIZE` 미설정 ② `capture.read()` 가 타이머 콜백 안에 있고 `rclpy.spin` 이 단일 스레드라 read 가 막히면 노드 전체가 멈춘다 ③ `CAP_PROP_FPS` 와 `create_timer(1.0/fps)` 에 **같은 fps** 가 들어가 여유가 0 이다 — 한 번 밀리면 회복되지 않는다 ④ 프레임당 raw 921 KB. QoS 는 BEST_EFFORT 라 역압은 아니다. **점점 느려지는 것은 어딘가 누적된다는 신호이므로 재보기 전에는 단정하지 않는다.** 영향: 힌트 유효기간이 2 s 라 지연이 그것을 넘으면 로봇이 이미 지나간 위치로 회전한다 (E-1 재획득 실패). 원인이 코드가 아니라 버퍼·주기라 찾기 어렵다
 - **조치·남은 것** — **바로 조치** ① `CAP_PROP_BUFFERSIZE=1` ② 캡처와 발행 주기 분리 — 카메라 30, 타이머 10 ③ MJPG 강제(`CAP_PROP_FOURCC`), `v4l2-ctl --list-formats-ext` 로 지원 확인. **안 잡히면 구간 분리** ⓐ 구독자 전부 끄고 `ros2 topic hz` — 구독자 없이도 느리면 read·변환, 붙일 때만 느리면 발행 비용 ⓑ `publish_frame` 안 read / `cv2_to_imgmsg` / publish 세 구간 소요 시간 로깅 ⓒ read 가 범인이면 별도 스레드 `grab()` + 타이머는 `retrieve()` 만. **통합(9/9) 전 필수** — raw Image 는 다른 PC 에서 구독하는 순간 Wi-Fi 를 막는다. CompressedImage 로 바꾸거나 로컬 전용으로 못박는다 (NR-03). TS-U02 에 지연 측정 포함 (손 흔들기 → 화면 반응 ≤ 0.2 s)
+  **혼동 주의 (9/6 21:40 PM 확인)** — **웹캠1**(`webcam_register_node.py`)은 PR #6 에서 CompressedImage·`BUFFERSIZE=1`·캡처/추론 주기 분리가 **적용됐다.** 그러나 이 이슈의 대상인 **웹캠2 `webcam2.py` 는 `main` 기준 아직 raw `Image`·30 Hz 타이머·BUFFERSIZE 없음**이고, 이 파일을 바꾸는 브랜치·PR 도 없다. 시트 Time Line 27행 "촬영포맷 확정(Compressed/mjpg/30/10 Hz) 100 %" 는 **포맷 결정**이지 구현이 아니다. 실제 발행 노드는 `webcam2_pc.launch.py` 가 띄우는 `webcam_hint_node` 인데 이 노드는 아직 카메라를 열지 않는 뼈대라, 힌트 구현 때 웹캠1 과 같은 캡처 설정을 그대로 가져오면 된다
 
 ### I-017
 
