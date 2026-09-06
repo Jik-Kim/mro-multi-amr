@@ -15,7 +15,8 @@ webcam_register:            # 웹캠1 (PC-W1) — 작업자 등록 S1
     register_s: 1.0         # 트랙이 이 시간 안정되면 worker_id 배정 (TS-U01: 등록 <= 10 s)
     publish_hz: 1.0         # 등록 결과 재발행. 관제가 늦게 켜져도 받게 한다
     max_workers: 2          # SOT 확정: 작업자 2명
-    reid_threshold: 0.7     # 끊긴 트랙이 기존 등록자와 같은 사람인지 판정. SOT Q-13 [미결] 잠정값
+    rematch_threshold: 0.7  # 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용).
+                            # robotN.yaml 의 reid_threshold(로봇 페어링 허용)와는 다른 결정이다
     show_window: true       # 로컬 미리보기 창
 
 webcam_hint:                # 웹캠2 (PC-W2) — 재탐지 힌트 E-1. 한세교 담당, 값 확정 필요

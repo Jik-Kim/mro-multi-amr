@@ -16,7 +16,7 @@ fleet_manager 가 이를 받아 작업자-로봇을 배정하고 언독(S2)으�
 주의
   - 캡처 fps > 처리 Hz 라 큐에 오래된 프레임이 남는다 → CAP_PROP_BUFFERSIZE=1 (I-016)
   - 자동 노출이 길어지면 캡처가 처리 주기 밑으로 떨어져 루프까지 느려진다
-  - webcam/detected 는 계약상 폐기 대상이나, 주행 노드 구독 코드가 남아 있어 확인 후 제거 예정
+  - 셔틀 트리거는 mission/assigned 가 계약이다 (FR-07). 옛 webcam/detected 발행은 제거했다
 
 TODO([웹캠]) 등록 구역 게이트 (관제탑 위치 확정 후), config/webcam.yaml 파라미터화
 
@@ -34,7 +34,6 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import Bool
 from ultralytics import YOLO
 from ament_index_python.packages import get_package_share_directory
 
@@ -54,8 +53,9 @@ PUBLISH_HZ = 1.0             # 등록된 작업자 재발행 주기. 관제가 �
 MAX_WORKERS = 2              # SOT 확정: 작업자 2명
 TARGET_CLASSES = ['worker_a', 'worker_b']   # 이 클래스만 등록 대상. 빈 리스트면 전체 허용
                                             # (테스트: -p target_classes:="['person']")
-REID_THRESHOLD = 0.7         # 추적이 끊겨 새 track_id 를 받은 대상이 기존 등록자와 같은 사람인지 판정
-                             # SOT Q-13 [미결] — 인지·관제 확정 전 잠정값
+REMATCH_THRESHOLD = 0.7      # 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용)
+                             # robotN.yaml 의 reid_threshold(로봇의 페어링 허용 판정)와는 다른 결정이라
+                             # 이름을 분리한다. 같게 두면 나중에 값을 통일해 버려 한쪽이 깨진다
 SHOW_WINDOW = True
 # ############################################################################
 
@@ -79,10 +79,10 @@ class WebcamDetection(Node):
         super().__init__('webcam_register')   # launch·문서·파라미터 파일과 이름을 맞춘다
         self.declare_parameter('model_path', MODEL_PATH)   # 9/7 worker.pt 로 교체 예정
         self.declare_parameter('target_classes', TARGET_CLASSES)
-        self.declare_parameter('reid_threshold', REID_THRESHOLD)
+        self.declare_parameter('rematch_threshold', REMATCH_THRESHOLD)
         model_path = self.get_parameter('model_path').value
         self.target_classes = list(self.get_parameter('target_classes').value)
-        self.reid_threshold = float(self.get_parameter('reid_threshold').value)
+        self.rematch_threshold = float(self.get_parameter('rematch_threshold').value)
         self.model = YOLO(model_path)
         self.names = self.model.names
         self.bridge = CvBridge()
@@ -90,7 +90,6 @@ class WebcamDetection(Node):
         # 모니터링용. raw 900 KB x 10 Hz = 9 MB/s 는 Wi-Fi 를 막는다 → JPEG 약 50 KB (I-016, NR-03)
         self.pub_img = self.create_publisher(CompressedImage, 'webcam/image/compressed',
                                              qos_profile_sensor_data)
-        self.pub_det = self.create_publisher(Bool, 'webcam/detected', 10)
         # S1 등록 결과. 계약상 명령·상태·미션은 RELIABLE (기본값) — 버리면 안 된다
         self.pub_desc = self.create_publisher(WorkerDescriptor, '/webcam1/worker_descriptor', 10)
 
@@ -168,7 +167,7 @@ class WebcamDetection(Node):
                     if old is None or outfit != cls_name:
                         continue
                     sim = similarity(old, h)
-                    if sim >= self.reid_threshold:
+                    if sim >= self.rematch_threshold:
                         rebound = (old_tid, wid, sim)
                         break
             if rebound:
@@ -182,7 +181,8 @@ class WebcamDetection(Node):
             self.workers[tid] = (wid, cls_name)
             self.get_logger().info(f'등록 확정 {wid} (track {tid}, {cls_name})')
 
-        # 히스테리시스: 초 단위 상수를 처리 주기로 나눠 프레임 수로 환산 (원본 로직 그대로)
+        # 히스테리시스: 초 단위 상수를 처리 주기로 나눠 프레임 수로 환산.
+        # webcam/detected 발행은 제거했고(FR-07 은 mission/assigned 가 계약), 지금은 로그 전이 판정에 쓴다
         if best:
             self.hit += 1
             self.miss = 0
@@ -193,17 +193,17 @@ class WebcamDetection(Node):
             self.detected = True
         elif self.detected and self.miss >= round(CLEAR_S / PERIOD_S):
             self.detected = False
-        self.pub_det.publish(Bool(data=self.detected))
 
-        # 화면 표시: 현재 등록 상태 (옛 car_map_point 표시를 대체)
-        label = ('등록 %d/%d: ' % (len(self.workers), MAX_WORKERS)
-                 + ', '.join(f'{w}({o})' for w, o in self.workers.values())) if self.workers else '등록 없음'
+        # 현재 등록 상태. cv2.putText 는 한글 글리프가 없어 화면용은 ASCII 로 따로 만든다
+        joined = ', '.join(f'{w}({o})' for w, o in self.workers.values())
+        label = f'등록 {len(self.workers)}/{MAX_WORKERS}: {joined}' if self.workers else '등록 없음'
+        overlay = f'REG {len(self.workers)}/{MAX_WORKERS}: {joined}' if self.workers else 'REG 0/%d' % MAX_WORKERS
 
         if self.detected != self.last_logged:
             self.get_logger().info(('🟢 ' if self.detected else '⚪ ') + label)
             self.last_logged = self.detected
 
-        cv2.putText(img, label, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        cv2.putText(img, overlay, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
         self.pub_img.publish(self.bridge.cv2_to_compressed_imgmsg(img))
         if SHOW_WINDOW:
             cv2.imshow('WebCam Detection', img)
@@ -224,10 +224,6 @@ class WebcamDetection(Node):
             self.pub_desc.publish(m)
 
     def destroy_node(self):
-        try:
-            self.pub_det.publish(Bool(data=False))   # 종료 시 탐지 상태로 남지 않게 (원본 로직)
-        except Exception:
-            pass
         self.cap.release()
         cv2.destroyAllWindows()
         super().destroy_node()
