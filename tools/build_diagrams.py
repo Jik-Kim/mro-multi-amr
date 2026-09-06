@@ -5,8 +5,9 @@
 출력 (docs/diagrams/):
   step1_deployment.svg   STEP 1 배치 블록도
   step2_nav2.svg         STEP 2 로봇 내부 · Nav2 스택과의 교환
-  step3_scenario.svg     STEP 3 시나리오 S1~S10 플로우차트
-  mro_design_diagrams.drawio   위 3장을 담은 draw.io 편집본 (3 페이지)
+  step3_scenario.svg     STEP 3-1 시나리오 S1~S10 플로우차트
+  step3b_system_flow.svg STEP 3-2 전체 노드·토픽 흐름
+  mro_design_diagrams.drawio   위 4장을 담은 draw.io 편집본 (4 페이지)
 
 재생성:  python3 tools/build_diagrams.py
 """
@@ -712,7 +713,7 @@ def step3():
                '→ fleet_manager  (PC-F)',
                '/webcam1/worker_descriptor',
                'HSV 히스토그램 H16 × S8 = 128',
-               '벨트 위 상의 영역만 쓴다',
+               '인형 전체(머리~바지 밑단)를 쓴다',
                '담당 한세교 · 김학민'],
          exc_lines=['두 작업자의 서술자가 너무 비슷할 때',
                     '같은 인형끼리의 유사도와 다른 인형끼리의 유사도 분포가 겹치면',
@@ -742,21 +743,9 @@ def step3():
                'mission/assigned 발행',
                '담당 김민준'])
 
-    step('d1', ['P1 병목 토큰을 얻었는가?',
-                '도크 ↔ 창고 통로 0.79 m · 한 번에 한 대만'],
-         'dec', shape='diamond',
-         node=['zone_semaphore  (PC-F 실행)',
-               'srv/ZoneToken  acquire',
-               '패키지는 관제, 소유는 주행',
-               '담당 박병후 · 이시율'],
-         exc_lines=['E-3  교착 회피',
-                    '거절되면 2 초 뒤 다시 요청한다. 폴리곤에 들어가기 전에 얻고,',
-                    '완전히 빠져나온 뒤에 반납한다. 60 초를 넘겨 쥐고 있으면',
-                    '세마포어가 강제로 회수하고 이벤트를 남긴다.',
-                    'S4 갈 때와 S10 돌아올 때 두 번 통과하므로 교착을 여기서 본다.'])
-
     step('s4', ['S4  셔틀 주행',
-                '창고 베이 A / B / C 의 고정 waypoint 로 이동한다'],
+                '도크에서 창고 베이 A / B / C 의 고정 waypoint 로 이동한다',
+                '도크와 창고는 벽 없이 이어져 여기서는 토큰이 필요 없다'],
          node=['shuttle_mission',
                'Nav2  navigate_to_pose',
                'arena.yaml 의 베이 waypoint'])
@@ -773,8 +762,21 @@ def step3():
                     '확정하고 운영자에게 알린다. 늦게라도 도착한 사실은',
                     'arrived_late 로 따로 남겨 성공으로 이중 계상하지 않는다.'])
 
+    step('d1', ['P1 병목 토큰을 얻었는가?',
+                '로봇 구역 → 중앙 복도 출구 0.79 m · 5 초 체류 뒤 요청 · 한 번에 한 대만'],
+         'dec', shape='diamond',
+         node=['zone_semaphore  (PC-F 실행)',
+               'srv/ZoneToken  acquire',
+               '패키지는 관제, 소유는 주행',
+               '담당 박병후 · 이시율'],
+         exc_lines=['E-3  교착 회피',
+                    '거절되면 2 초 뒤 다시 요청한다. 폴리곤에 들어가기 전에 얻고,',
+                    '완전히 빠져나온 뒤에 반납한다. 60 초를 넘겨 쥐고 있으면',
+                    '세마포어가 강제로 회수하고 이벤트를 남긴다.',
+                    'S4 창고에서 나올 때와 S10 돌아갈 때 두 번 통과하므로 교착을 여기서 본다.'])
+
     step('s4b', ['S4′  적재 · 합류 지점 이동',
-                 '베이에서 5 초 체류한 뒤 대기공간(Z-05)으로 이동하고',
+                 '적재(5 초 체류)를 마친 로봇이 P1 을 지나 대기공간(Z-05)에 닿으면',
                  'P1 토큰을 반납한다  ·  shuttle/arrived 발행'],
          node=['shuttle_mission',
                'zone_semaphore  release',
@@ -846,7 +848,7 @@ def step3():
          node=['return_dock',
                'zone_semaphore  P1 · DOCK'],
          exc_lines=['E-7  순차 도킹',
-                    '도크 두 대의 중심 간격이 0.9 m 뿐이라 두 대가 동시에 들어가면',
+                    '도크 두 대의 간격이 0.84 m(도킹점 기준) 뿐이라 두 대가 동시에 들어가면',
                     'IR 신호가 서로 간섭한다. DOCK 토큰으로 한 대씩 들여보내고',
                     '나머지는 홀딩 포인트에서 기다린다.',
                     '도크 사이에는 MDF 차폐판을 세운다.'])
@@ -924,7 +926,7 @@ def step3b():
         ('w1b', ['사람이 보이는가?'], D, 'diamond'),
         ('w1c', ['ByteTrack 으로 트랙 ID 부여'], S, 'rect'),
         ('w1d', ['0.3 s 연속으로 잡히는가?', '아니오 → 무시 (오검출 억제)'], D, 'diamond'),
-        ('w1e', ['벨트 위 상의만 잘라', 'HSV 히스토그램 H16×S8 = 128'], S, 'rect'),
+        ('w1e', ['인형 전체(머리~바지 밑단)에서', 'HSV 히스토그램 H16×S8 = 128'], S, 'rect'),
         ('w1f', ['WorkerDescriptor 발행'], S, 'rect'),
     ]) + 26
     y = nodebox('nb_w2', C1X + 12, C1W - 24, y, 'webcam_hint  (PC-W2)', [
@@ -975,9 +977,9 @@ def step3b():
     ]) + 22
     y = nodebox('nb_sh', N1X, N1W, y, 'shuttle_mission  (mro_navigation)', [
         ('sa', ['mission/assigned 를 받았는가?'], D, 'diamond'),
-        ('sb', ['P1 토큰 획득 → 베이 waypoint 로 이동'], S, 'rect'),
+        ('sb', ['베이 waypoint 로 이동 (도크·창고 사이는 토큰 없음)'], S, 'rect'),
         ('sc', ['ArUco ID 가 요청 베이와 같은가?', '아니오 → 재접근, T_lim 초과 시 실패'], D, 'diamond'),
-        ('sd', ['5 s 체류 → 대기공간 → 토큰 반납', 'shuttle/arrived 발행'], S, 'rect'),
+        ('sd', ['5 s 체류 → P1 토큰 → 대기공간 → 반납', 'shuttle/arrived 발행'], S, 'rect'),
     ], color=B) + 22
     y = nodebox('nb_fo', N1X, N1W, y, 'follow_target  (mro_navigation)', [
         ('oa', ['도착했고 페어링됐는가?'], D, 'diamond'),
@@ -1074,7 +1076,7 @@ def step3b():
 
     b0 = pcr_bot + 46
     up('nb_sh', 0.30, 'nb_zs', 0.30, b0,
-       ['/fleet/zone_token   (서비스)', 'mro_interfaces/ZoneToken — P1 병목. S4 갈 때'], 1000, B)
+       ['/fleet/zone_token   (서비스)', 'mro_interfaces/ZoneToken — P1 병목. S4 창고에서 나올 때'], 1000, B)
     up('nb_rd', 0.55, 'nb_zs', 0.55, b0 + 44,
        ['/fleet/zone_token   (서비스)', 'DOCK 구역. 한 번에 한 대 → E-7 순차 도킹'], 1030, B)
     up('nb_sh', 0.80, 'nb_fm', 0.80, b0 + 88,

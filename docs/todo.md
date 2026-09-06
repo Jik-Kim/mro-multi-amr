@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 21/57 완료** (███████░░░░░░░░░░░░░)  ·  기준 09/06
+**전체 21/59 완료** (███████░░░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 1/8 | `█░░░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 3/9 | `███░░░░░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 10/24 | `████░░░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 10/26 | `████░░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 2/7 | `███░░░░░░░` | — |
 | mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
 
@@ -72,8 +72,10 @@
 - [ ] `zone_semaphore_node.py`: 로봇 측 진입 판정 연결 (폴리곤 vs 로봇 위치 비교) · 마감 9/8
 - [x] `safety_watchdog_node.py`: /scan → estop, cmd_vel 0 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: Nav2 goal cancel (액션 클라이언트), TS-14 결함 주입 검증 · 마감 9/8
+- [ ] `safety_watchdog_node.py`: `HIT_FRAMES`·`CLEAR_FRAMES` 를 초 단위 파라미터로 (계약 시간 상수 규칙) · 마감 9/8
+- [ ] 주석 정정 — `return_dock_node.py` 도크 간격 0.9 → 0.84, `zone_semaphore_node.py` P1 통과 방향(창고에서 나올 때·복귀) · 마감 9/7
 - [x] `return_dock_node.py`: DOCK 토큰 + 재시도 2회 복귀 로직 · 마감 9/8
-- [ ] `return_dock_node.py`: 홀딩 포인트·**도크 정면 접근 지점**으로 goToPose 후 dock (도크 간격 0.9 m 라 필수) · 마감 9/8
+- [ ] `return_dock_node.py`: 홀딩 포인트·**도크 정면 접근 지점**으로 goToPose 후 dock (도크 간격 0.84 m 라 필수) · 마감 9/8
 - [ ] `follow_target_node.py`: `mission/finish` 구독 → 즉시 페어링 해제·goal 취소 (≤ 1 s, FR-30) · 마감 9/8
 - [ ] `inflation_radius` 0.22 실주행 확인 (I-009) — 지금 값은 계산일 뿐이다 · 마감 9/8
 - [ ] 도킹 반복 시험 TS-U12 — 로봇별 10회, 오도킹 0 확인 · 마감 9/8

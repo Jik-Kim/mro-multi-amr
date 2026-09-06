@@ -31,7 +31,7 @@ mission/assigned ─▶ shuttle_mission ─ shuttle/arrived ─▶ follow_target
 | S1 등록 | webcam_register → fleet_manager | 서술자 발행 → 작업자-로봇 배정 |
 | S2 준비 | fleet_manager → shuttle_mission | (등록 완료) → undock, READY |
 | S3 요청 | control_ui → fleet_manager | RequestMission → Mission(ASSIGNED) |
-| S4 셔틀 | shuttle_mission (+zone_semaphore, aruco_detector) | 베이 waypoint → ArUco 확인 → 체류 → Z-05 → shuttle/arrived |
+| S4 셔틀 | shuttle_mission (+zone_semaphore, aruco_detector) | 베이 waypoint(도크·창고 사이는 토큰 없음) → ArUco 확인 → 체류 → **P1 토큰** → Z-05 → shuttle/arrived |
 | S5 합류 | amr_detection(reid) → follow_target | target/paired → APPROACH |
 | S6~S8 추종 | follow_target (+webcam_hint) | FOLLOWING / Lost → 힌트 방향 탐색 / STANDBY |
 | E-4 정지 | safety_watchdog | /scan → estop, cmd_vel 0 |
