@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 30/77 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
+**전체 32/78 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 1/11 | `█░░░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 5/14 | `████░░░░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 13/31 | `████░░░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 15/32 | `█████░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 6/12 | `█████░░░░░` | — |
 | mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
 
@@ -67,13 +67,14 @@
 - [ ] 공유기 DHCP 예약 요청 — 지금은 재부팅하면 IP 가 바뀐다 · 마감 9/7
 - [x] **`params/arena.yaml` 좌표 입력 (I-001)** — bays A/B/C, waiting_zone, dock_zone, `semaphore_zones` 폴리곤 실측 기입 (9/6) · 마감 9/6
 - [x] **`dock_zone.pose` · `robotN.yaml` `dock_pose` 실측 기입 (I-013)** — 두 파일 값 일치 확인 (9/6) · 마감 9/6
-- [ ] I-004 받침대 돌출폭 실측 — `measurement_guide.md` §2 · 마감 9/7
+- [x] I-004 받침대 돌출폭 실측 (9/6) — P1 없음 · P2 양쪽 3 cm(폭 0.86 정정) · P3 입구 5 cm·안쪽 6.5 cm · 마감 9/7
+- [ ] **`inflation_radius` 0.05 → 0.25 적용 (I-009)** — 주행 합의값. 승인 후 PC-R3·PC-R4 의 `nav2.yaml` 양쪽에 같은 값으로 · 마감 9/8
 - [ ] **측위 검증 마커 설치·실측** — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 23.5 cm), map 좌표를 `arena.yaml` `loc_check_marker.xy` 에 (계약 6절·9.2 ①) · 마감 9/7
 - [ ] **I-013 검증** — TS-U06 때 두 로봇을 베이 B 에 차례로 보내 `aruco/distance` 비교, 차이 ≤ 10 cm 면 map 프레임 일치 · 마감 9/7
 - [x] TB4 2대 동시 운용 검증 (9/6) — 네임스페이스 격리 · `odom` 20 Hz · OAK-D 동시 스트리밍 · RPi CPU 21~31 % · **Nav2 2벌 동시 `active`** 확인 (I-011) · 마감 9/6
 - [x] **좌표 보정 3건 (I-001 PM 검증)** — holding ≥1.5m(1.52m), bays 전부 DOCK 폴리곤 밖, P1 폴리곤이 통로를 완전히 가로지르도록 재실측 (9/6) · 마감 9/7
 - [x] 베이 B·C waypoint 확정 실측 (9/6, x=-0.78 로 통일) · 마감 9/7
-- [ ] `arena.yaml` `homography_marks` 입력 — 웹캠 팀과 같은 바닥 지점을 쓴다 (I-002) · 마감 9/7
+- [ ] `arena.yaml` `homography_marks` — 웹캠(한세교)이 SLAM 좌표 기반 캘리브레이션(PR #9)으로 처리 중. **완료 처리는 웹캠 쪽에서 한다** (I-002) · 마감 9/7
 - [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` · 마감 9/7
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
@@ -90,7 +91,7 @@
 - [ ] `return_dock_node.py`: 홀딩 포인트·**도크 정면 접근 지점**으로 goToPose 후 dock (도크 간격 0.84 m 라 필수) · 마감 9/8
 - [ ] `follow_target_node.py`: `mission/finish` 구독 → 즉시 페어링 해제·goal 취소 (≤ 1 s, FR-30) · 마감 9/8
 - [ ] `inflation_radius` 0.22 실주행 확인 (I-009) — 지금 값은 계산일 뿐이다 · 마감 9/8
-- [ ] 도킹 반복 시험 TS-U12 — 로봇별 10회, 오도킹 0 확인 · 마감 9/8
+- [x] 도킹 반복 시험 TS-U12 (9/6) — 로봇별 10회, 차폐판 없이 오도킹 0 확인 (I-006 종결) · 마감 9/8
 
 ## mro_fleet [관제 — 김민준]
 - [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8
