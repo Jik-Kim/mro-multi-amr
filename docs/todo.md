@@ -5,15 +5,15 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 30/73 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
+**전체 30/77 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
-| mro_perception [인지 — 정정인, 민범진] | 1/10 | `█░░░░░░░░░` | — |
+| mro_perception [인지 — 정정인, 민범진] | 1/11 | `█░░░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 5/14 | `████░░░░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 13/29 | `████░░░░░░` | — |
-| mro_fleet [관제 — 김민준] | 6/11 | `█████░░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 13/31 | `████░░░░░░` | — |
+| mro_fleet [관제 — 김민준] | 6/12 | `█████░░░░░` | — |
 | mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
 
 **오늘 마감 2건**
@@ -36,6 +36,7 @@
 - [ ] `amr_detection_node.py`: `DETECT_CLASS` → worker_a/b, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9
 - [ ] `amr_detection_node.py`: **`target/distance` 발행 (FR-29)** — 추종거리 판정의 기준값. kpi_logger 는 이미 구독 중이라 이것만 붙으면 AC-05 가 측정된다 · 마감 9/8
 - [ ] **TS-U05 줄자 대조** — `target/distance` 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오차 < 기준의 1/3). 이게 없으면 AC-05 를 그 값으로 채점할 근거가 없다 · 마감 9/8
+- [ ] 시험 절차 — 대기공간 로봇이 서향이므로 S5 페어링 때 **RC카를 로봇 정면(서쪽)으로 돌아 들어오게** 조종 (FR-14 정면 1 m). 작업자는 P2(남쪽)로 온다 · 마감 9/9
 - [ ] `amr_detection_node.py`: 모듈 상수 → ROS2 파라미터 (`config/perception.yaml`) · 마감 9/8
 - [x] `aruco_detector_node.py`: 검출·거리 초안 · 마감 9/7
 - [ ] `aruco_detector_node.py`: solvePnP 자세, 마커 ID 필터 · 마감 9/8
@@ -67,6 +68,8 @@
 - [x] **`params/arena.yaml` 좌표 입력 (I-001)** — bays A/B/C, waiting_zone, dock_zone, `semaphore_zones` 폴리곤 실측 기입 (9/6) · 마감 9/6
 - [x] **`dock_zone.pose` · `robotN.yaml` `dock_pose` 실측 기입 (I-013)** — 두 파일 값 일치 확인 (9/6) · 마감 9/6
 - [ ] I-004 받침대 돌출폭 실측 — `measurement_guide.md` §2 · 마감 9/7
+- [ ] **측위 검증 마커 설치·실측** — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 23.5 cm), map 좌표를 `arena.yaml` `loc_check_marker.xy` 에 (계약 6절·9.2 ①) · 마감 9/7
+- [ ] **I-013 검증** — TS-U06 때 두 로봇을 베이 B 에 차례로 보내 `aruco/distance` 비교, 차이 ≤ 10 cm 면 map 프레임 일치 · 마감 9/7
 - [x] TB4 2대 동시 운용 검증 (9/6) — 네임스페이스 격리 · `odom` 20 Hz · OAK-D 동시 스트리밍 · RPi CPU 21~31 % · **Nav2 2벌 동시 `active`** 확인 (I-011) · 마감 9/6
 - [x] **좌표 보정 3건 (I-001 PM 검증)** — holding ≥1.5m(1.52m), bays 전부 DOCK 폴리곤 밖, P1 폴리곤이 통로를 완전히 가로지르도록 재실측 (9/6) · 마감 9/7
 - [x] 베이 B·C waypoint 확정 실측 (9/6, x=-0.78 로 통일) · 마감 9/7
@@ -97,7 +100,8 @@
 - [x] `fleet_manager_node.py`: 리드타임 기록, T_lim 초과 실패 확정, `arrived_late` 별기 (FR-09) — 도착 시점 판정 + 1초 스윕 타이머 (PR #7) · 마감 9/8
 - [ ] **`FleetStatus.state` 를 approach·shuttle 두 출처로 분리 (I-020)** — 지금은 한 필드를 두 노드가 덮어써 도킹 상태가 화면에 안 남는다 · 마감 9/7
 - [ ] `fleet_manager_node.py`: `/fleet/intervention` 구독 → DB events 기록 (I-021, FR-28) · 마감 9/8
-- [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2) — 대기공간은 카메라·마커가 없어 로봇 자기 보고가 유일한 근거다 · 마감 9/8
+- [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
+- [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①) · 마감 9/8
 - [ ] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') · 마감 9/8
 - [ ] `control_ui`: 페어링 폴백(명시 페어링) 버튼 (FR-13) · 마감 9/8
 - [x] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) (PR #7) · 마감 9/9
