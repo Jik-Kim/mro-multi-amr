@@ -42,6 +42,23 @@ class CameraConfig:
     buffer_size: int
 
 
+@dataclass(frozen=True)
+class NodeConfig:
+    """웹캠 힌트 노드의 실행 설정."""
+
+    camera: CameraConfig
+    process_hz: float
+    image_publish_hz: float
+    compressed_topic: str
+    image_frame_id: str
+    jpeg_quality: int
+    model_path: str
+    homography_path: str
+    confidence: float
+    target_classes: list
+    show_window: bool
+
+
 class LatestFrameCamera:
     """V4L2 큐를 계속 비우며 최신 프레임 하나만 보관한다."""
 
@@ -140,105 +157,66 @@ class WebcamHint(Node):
     # ROS I/O, YOLO, 호모그래피, 카메라와 처리 타이머를 구성한다.
     def __init__(self):
         super().__init__('webcam_hint')
-        self._declare_parameters()
-
-        camera_config = CameraConfig(
-            index=self._param('camera_index', int),
-            width=self._param('width', int),
-            height=self._param('height', int),
-            fps=self._param('fps', float),
-            buffer_size=self._param('buffer_size', int),
-        )
-        process_hz = self._param('process_hz', float)
-        image_publish_hz = self._param('image_publish_hz', float)
-        model_path = self._param('model_path', str)
-        homography_path = self._param('homography_json', str)
-        self.confidence = self._param('confidence', float)
-        self.target_classes = list(
-            self.get_parameter('target_classes').value
-        )
-        self.show_window = self._param('show_window', bool)
-        self.image_frame_id = self._param('image_frame_id', str)
-        self.jpeg_quality = self._param('jpeg_quality', int)
-        self._validate(
-            camera_config, process_hz, image_publish_hz, homography_path
-        )
+        config = self._load_parameters()
+        self.image_frame_id = config.image_frame_id
+        self.jpeg_quality = config.jpeg_quality
+        self.confidence = config.confidence
+        self.target_classes = config.target_classes
+        self.show_window = config.show_window
+        self._validate(config.camera, config.process_hz, config.image_publish_hz, config.homography_path)
 
         # 알고리즘: YOLO 검출 좌표를 SLAM map 좌표로 변환한다.
-        self.homography = load_homography(homography_path)
-        self.model = YOLO(model_path)
+        self.homography = load_homography(config.homography_path)
+        self.model = YOLO(config.model_path)
         self.class_names = self.model.names
         self.workers = {}  # worker_id -> outfit_class
 
         # ROS I/O: 등록 작업자를 받고 작업자 map 좌표를 보낸다.
-        self.create_subscription(
-            WorkerDescriptor,
-            '/webcam1/worker_descriptor',
-            self._on_worker_descriptor,
-            10,
-        )
-        self.hint_publisher = self.create_publisher(
-            TargetHint,
-            '/webcam2/target_hint',
-            qos_profile_sensor_data,
-        )
-        self.image_publisher = self.create_publisher(
-            CompressedImage,
-            self._param('compressed_topic', str),
-            qos_profile_sensor_data,
-        )
+        self.create_subscription(WorkerDescriptor, '/webcam1/worker_descriptor', self._on_worker_descriptor, 10)
+        self.hint_publisher = self.create_publisher(TargetHint, '/webcam2/target_hint', qos_profile_sensor_data)
+        self.image_publisher = self.create_publisher(CompressedImage, config.compressed_topic, qos_profile_sensor_data)
 
         # 캡처, YOLO 처리, 압축 영상 발행을 서로 다른 실행 경로로 분리한다.
-        self.camera = LatestFrameCamera(camera_config, self.get_logger())
+        self.camera = LatestFrameCamera(config.camera, self.get_logger())
         self.last_frame_number = 0
         timer_callbacks = ReentrantCallbackGroup()
-        self.create_timer(
-            1.0 / process_hz,
-            self._process_latest_frame,
-            callback_group=timer_callbacks,
-        )
-        self.create_timer(
-            1.0 / image_publish_hz,
-            self._publish_compressed_image,
-            callback_group=timer_callbacks,
-        )
+        self.create_timer(1.0 / config.process_hz, self._process_latest_frame, callback_group=timer_callbacks)
+        self.create_timer(1.0 / config.image_publish_hz, self._publish_compressed_image, callback_group=timer_callbacks)
         self.camera.start()
         self.get_logger().info(
             f'webcam_hint: {self.camera.description()} | '
-            f'process={process_hz:.1f} Hz | '
-            f'image_publish={image_publish_hz:.1f} Hz | model={model_path}'
+            f'process={config.process_hz:.1f} Hz | '
+            f'image_publish={config.image_publish_hz:.1f} Hz | '
+            f'model={config.model_path}'
         )
 
-    # 실행 시 조정할 카메라·검출·호모그래피 파라미터를 선언한다.
-    def _declare_parameters(self):
-        self.declare_parameters('', (
-            ('camera_index', 0),
-            ('width', 640),
-            ('height', 480),
-            ('fps', 30.0),
-            ('process_hz', 10.0),
-            ('image_publish_hz', 10.0),
-            ('buffer_size', 5),
-            ('compressed_topic', '/webcam2/image_raw/compressed'),
-            ('image_frame_id', 'webcam2_optical_frame'),
-            ('jpeg_quality', 80),
-            ('model_path', DEFAULT_MODEL_PATH),
-            ('confidence', 0.5),
-            ('target_classes', DEFAULT_CLASSES),
-            ('homography_json', ''),
-            ('show_window', False),
-        ))
-
-    # ROS 파라미터를 요청한 타입으로 변환해 반환한다.
-    def _param(self, name, value_type):
-        return value_type(self.get_parameter(name).value)
+    # 파라미터를 선언하면서 실행 시 override된 최종값을 읽는다.
+    def _load_parameters(self):
+        camera = CameraConfig(
+            index=int(self.declare_parameter('camera_index', 0).value),
+            width=int(self.declare_parameter('width', 640).value),
+            height=int(self.declare_parameter('height', 480).value),
+            fps=float(self.declare_parameter('fps', 30.0).value),
+            buffer_size=int(self.declare_parameter('buffer_size', 5).value),
+        )
+        return NodeConfig(
+            camera=camera,
+            process_hz=float(self.declare_parameter('process_hz', 10.0).value),
+            image_publish_hz=float(self.declare_parameter('image_publish_hz', 10.0).value),
+            compressed_topic=str(self.declare_parameter('compressed_topic', '/webcam2/image_raw/compressed').value),
+            image_frame_id=str(self.declare_parameter('image_frame_id', 'webcam2_optical_frame').value),
+            jpeg_quality=int(self.declare_parameter('jpeg_quality', 80).value),
+            model_path=str(self.declare_parameter('model_path', DEFAULT_MODEL_PATH).value),
+            homography_path=str(self.declare_parameter('homography_json', '').value),
+            confidence=float(self.declare_parameter('confidence', 0.5).value),
+            target_classes=list(self.declare_parameter('target_classes', DEFAULT_CLASSES).value),
+            show_window=bool(self.declare_parameter('show_window', False).value),
+        )
 
     # 실행 불가능한 FPS, 버퍼, 신뢰도와 경로 값을 초기에 차단한다.
     def _validate(self, camera, process_hz, image_publish_hz, homography_path):
         if camera.fps <= 0.0 or process_hz <= 0.0 or image_publish_hz <= 0.0:
-            raise ValueError(
-                'fps, process_hz, image_publish_hz는 0보다 커야 합니다.'
-            )
+            raise ValueError('fps, process_hz, image_publish_hz는 0보다 커야 합니다.')
         if camera.buffer_size <= 0:
             raise ValueError('buffer_size는 1 이상이어야 합니다.')
         if not 0.0 <= self.confidence <= 1.0:
