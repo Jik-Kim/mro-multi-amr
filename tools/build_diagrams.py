@@ -598,7 +598,7 @@ def step2():
                    'spin · backup · wait  (복구 동작)'], 'nav2'),
         ('cost', ['global / local costmap',
                   '입력: 정적 맵 + scan',
-                  'inflation_radius 0.22  ← P1 0.79 m 통과용'], 'nav2'),
+                  'inflation_radius 0.25  ← 받침대 6.5 cm 덮기 (I-009)'], 'nav2'),
         ('amcl', ['amcl  +  map_server',
                   '입력: scan + odom + 정적 맵',
                   '출력: amcl_pose · map→odom 변환'], 'nav2'),
@@ -851,7 +851,7 @@ def step3():
                     '도크 두 대의 간격이 0.84 m(도킹점 기준) 뿐이라 두 대가 동시에 들어가면',
                     'IR 신호가 서로 간섭한다. DOCK 토큰으로 한 대씩 들여보내고',
                     '나머지는 홀딩 포인트에서 기다린다.',
-                    '도크 사이에는 MDF 차폐판을 세운다.'])
+                    '차폐판은 두지 않는다 — TS-U12 10회 오도킹 0 (9/6).'])
 
     step('s10', ['S10  도킹',
                  '자기 도크 정면의 접근 지점을 거쳐 도킹한다',
@@ -1008,7 +1008,7 @@ def step3b():
         ('vb', ['amcl — scan + odom → amcl_pose'], N2, 'rect'),
         ('vc', ['bt_navigator — action  navigate_to_pose'], N2, 'rect'),
         ('vd', ['planner_server — 전역 경로'], N2, 'rect'),
-        ('ve', ['costmap — inflation 0.22 (P1 0.79 m 통과용)'], N2, 'rect'),
+        ('ve', ['costmap — inflation 0.25 (받침대 덮기, P1 하드 자유폭 0.44)'], N2, 'rect'),
         ('vf', ['controller_server — 지역 경로 추종'], N2, 'rect'),
         ('vg', ['velocity_smoother → cmd_vel'], N2, 'rect'),
     ], color=P) + 24

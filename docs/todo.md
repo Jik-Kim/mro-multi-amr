@@ -5,7 +5,7 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 32/78 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
+**전체 33/79 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | mro_perception [인지 — 정정인, 민범진] | 1/11 | `█░░░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 5/14 | `████░░░░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 15/32 | `█████░░░░░` | — |
-| mro_fleet [관제 — 김민준] | 6/12 | `█████░░░░░` | — |
+| mro_fleet [관제 — 김민준] | 7/13 | `█████░░░░░` | — |
 | mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
 
 **오늘 마감 2건**
@@ -78,7 +78,7 @@
 - [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` · 마감 9/7
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
-- [ ] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **TS-07 이 9/9** · 마감 9/7
+- [ ] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
 - [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (관제 → 주행 이관) · 마감 9/8
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
@@ -90,7 +90,7 @@
 - [x] `return_dock_node.py`: DOCK 토큰 + 재시도 2회 복귀 로직 · 마감 9/8
 - [ ] `return_dock_node.py`: 홀딩 포인트·**도크 정면 접근 지점**으로 goToPose 후 dock (도크 간격 0.84 m 라 필수) · 마감 9/8
 - [ ] `follow_target_node.py`: `mission/finish` 구독 → 즉시 페어링 해제·goal 취소 (≤ 1 s, FR-30) · 마감 9/8
-- [ ] `inflation_radius` 0.22 실주행 확인 (I-009) — 지금 값은 계산일 뿐이다 · 마감 9/8
+- [ ] `inflation_radius` **0.25** 실주행 확인 (I-009) — P1 통과 · P3 받침대 안 긁는지. 두 PC 값 일치 확인 · 마감 9/8
 - [x] 도킹 반복 시험 TS-U12 (9/6) — 로봇별 10회, 차폐판 없이 오도킹 0 확인 (I-006 종결) · 마감 9/8
 
 ## mro_fleet [관제 — 김민준]
@@ -99,7 +99,8 @@
 - [x] `fleet_manager_node.py`: yaw 계산, 미션 상태 전이 구독 (`shuttle/status` → Mission state) (PR #7) · 마감 9/8
 - [x] `fleet_manager_node.py`: 배터리 25 % 미만 미션 거부·사유 기록 (FR-06) (PR #7) · 마감 9/8
 - [x] `fleet_manager_node.py`: 리드타임 기록, T_lim 초과 실패 확정, `arrived_late` 별기 (FR-09) — 도착 시점 판정 + 1초 스윕 타이머 (PR #7) · 마감 9/8
-- [ ] **`FleetStatus.state` 를 approach·shuttle 두 출처로 분리 (I-020)** — 지금은 한 필드를 두 노드가 덮어써 도킹 상태가 화면에 안 남는다 · 마감 9/7
+- [x] **`FleetStatus.state` 를 approach·shuttle 두 출처로 분리 (I-020)** (PR #12) · 마감 9/7
+- [ ] **일시적 `FAILED` 가 미션을 굳히지 않게 (I-026)** — approach FAILED 는 미션 전이에서 빼고, FAILED 를 터미널에서 뺀다 (DONE 만 터미널). 재현 시나리오는 이슈에 · 마감 9/8
 - [ ] `fleet_manager_node.py`: `/fleet/intervention` 구독 → DB events 기록 (I-021, FR-28) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①) · 마감 9/8
