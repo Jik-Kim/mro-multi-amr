@@ -122,6 +122,9 @@ WebCam2/
 - `points.png`: 마커 ID와 mm 실좌표가 표시된 확인용 이미지
 - `homography_cam2.json`: 픽셀·map 대응점, homography, 재투영 오차, RMSE
 
+마커 ID는 세마포어 구역 ID `P1`과 구분하기 위해 `M1`, `M2`, ...
+순서로 저장한다.
+
 `reference.png`에는 3×3 px 민트색 마커만 합성하며 빨간 원, 마커 ID,
 실좌표 문자는 넣지 않는다. 이 주석들은 `points.png`에만 저장한다.
 `불러오기` 탭의 마커 이미지로 `points.png`를 선택할 수 없다.

@@ -127,7 +127,7 @@ class MarkerRenderer:
             center = (int(round(u)), int(round(v)))
             cv2.circle(preview, center, 6, (0, 0, 255), 1)
             cv2.putText(
-                preview, f"P{i}", (center[0] + 7, center[1] - 7),
+                preview, f"M{i}", (center[0] + 7, center[1] - 7),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 1,
                 cv2.LINE_AA,
             )
@@ -246,16 +246,16 @@ class CalibrationStore:
             "input_unit": INPUT_UNIT,
             "coordinate_unit": "m",
             "image_points": [
-                {"id": f"P{i}", "u": float(u), "v": float(v)}
+                {"id": f"M{i}", "u": float(u), "v": float(v)}
                 for i, (u, v) in enumerate(points, start=1)
             ],
             "map_points": [
-                {"id": f"P{i}", "x": float(x), "y": float(y)}
+                {"id": f"M{i}", "x": float(x), "y": float(y)}
                 for i, (x, y) in enumerate(map_points, start=1)
             ],
             "homography": H.tolist(),
             "reprojection_error_m": {
-                f"P{i}": float(error)
+                f"M{i}": float(error)
                 for i, error in enumerate(errors, start=1)
             },
             "rmse_m": rmse,
@@ -354,7 +354,7 @@ class CalibrationEditor:
             return
 
         if index is None:
-            coordinate = self.prompt_coordinate(f"P{len(self.points) + 1}")
+            coordinate = self.prompt_coordinate(f"M{len(self.points) + 1}")
             if coordinate is not None:
                 self.points.append((float(x), float(y)))
                 self.map_points.append(coordinate)
@@ -362,7 +362,7 @@ class CalibrationEditor:
         else:
             self.selected_index = index
             coordinate = self.prompt_coordinate(
-                f"P{index + 1}", self.map_points[index]
+                f"M{index + 1}", self.map_points[index]
             )
             if coordinate is not None:
                 self.map_points[index] = coordinate
@@ -436,7 +436,7 @@ class MarkerMovePanel:
             self.selected_text.set("선택된 마커 없음")
             return
         u, v = self.editor.points[index]
-        self.selected_text.set(f"P{index + 1}  pixel=({u:.0f}, {v:.0f})")
+        self.selected_text.set(f"M{index + 1}  pixel=({u:.0f}, {v:.0f})")
 
     def destroy(self):
         self.window.destroy()
@@ -698,7 +698,7 @@ def main():
         archived_dir, errors, rmse = result
         print("\n=== Reprojection error ===")
         for i, error in enumerate(errors, start=1):
-            print(f"P{i:02d}: {error:.4f} m")
+            print(f"M{i:02d}: {error:.4f} m")
         print(f"RMSE: {rmse:.4f} m\n")
         if archived_dir is not None:
             print(f"기존 캘리브레이션 보존: {archived_dir}")

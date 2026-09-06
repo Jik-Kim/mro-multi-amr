@@ -95,7 +95,8 @@
 | `arena.yaml` | 베이 waypoint·ArUco ID, 대기공간, `dock_zone`(pose·approach·holding), `passages`, `semaphore_zones` 폴리곤, `homography_marks`, `t_lim_s`·`t_ret_s`·`dock_retry` | 박병후·이시율 |
 | `robot3.yaml` / `robot4.yaml` | `dock_pose`, `follow_standoff_m` 0.5, `min_separation_m` 0.3, `v_max` 0.3, `reid_threshold`, `bay_dwell_s` 5, `t_lim_s` 120, `t_ret_s` 180, `dock_retry` 2 | 박병후·이시율 |
 | `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m` | 정정인·민범진 |
-| `mro_webcam/config/*.json` | 호모그래피 행렬 (cam1 / cam2) | 한세교·김학민 |
+| `mro_webcam/config/homography_cam1.json` | 웹캠1 호모그래피 행렬 | 한세교·김학민 |
+| `mro_webcam/config/WebCam2/homography_cam2.json` | 웹캠2 호모그래피 행렬·대응점·재투영 오차 | 한세교·김학민 |
 
 **`dock_pose` 는 `arena.yaml` 의 `dock_zone.pose.<robot>` 과 같은 값이어야 한다.** 두 곳이 어긋나면 맵 좌표계가 깨진다.
 
