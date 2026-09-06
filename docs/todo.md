@@ -24,8 +24,10 @@
 - [x] 아레나 재구성 (Z-01~Z-09 배치) (9/5)
 - [x] SLAM 맵 재작성 (9/5)
 - [x] 새 맵 파일을 `mro_bringup/maps/auto_map.pgm`·`.yaml` 로 교체 (9/5, `arena0905.*` 원본 반영)
-- [ ] `params/arena.yaml` 좌표 입력 — RViz Publish Point 로 bays A/B/C, waiting_zone, semaphore_zones(P1/DOCK) 폴리곤, homography_marks (I-001)
+- [x] 실측 절차·양식 문서화 — `docs/measurement_guide.md` (arena.yaml 좌표 체크리스트, I-004/I-005/I-006 표)
+- [ ] `params/arena.yaml` 좌표 입력 — `docs/measurement_guide.md` 절차대로 RViz Publish Point 로 bays A/B/C, waiting_zone, semaphore_zones(P1/DOCK) 폴리곤, homography_marks (I-001)
 - [ ] **`dock_zone.pose` · `robotN.yaml` `dock_pose` 실측 기입** — 맵 좌표계 통일의 전제 (I-013)
+- [ ] I-004/I-005/I-006 실측값 기입 — `docs/measurement_guide.md` §2~4
 - [x] **통신 구성 완료 (9/5)** — offboard 단일 서버 PC-F `192.168.108.41` ID 1. 로봇 2대·PC 5대 전부 접속 확인. 남은 것: 공유기 예약 요청
 - [ ] TB4 2대 동시 운용 검증 (9/6) → SOT Q-18
 - [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → Z-05, zone_token, `shuttle/arrived`
