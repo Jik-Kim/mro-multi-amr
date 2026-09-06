@@ -1,4 +1,4 @@
-# 자재 요청 → 셔틀 → 합류 → 추종 → 종료까지 한 사이클. BRD v3.0 S3~S9
+# 자재 요청 → 셔틀 → 합류 → 추종 → 종료까지 한 사이클. BRD v3.1 S3~S10
 std_msgs/Header header
 string mission_id
 string worker_id

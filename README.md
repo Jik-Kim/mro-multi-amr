@@ -17,7 +17,7 @@ ros2_ws/src/
 ├── mro_perception/    # OAK-D 검출·거리 보정·재식별 게이트, ArUco          [인지]
 ├── mro_webcam/        # 웹캠1 등록, 웹캠2 힌트, 호모그래피, KPI 로거       [웹캠]
 ├── mro_navigation/    # 셔틀, 추종·재탐지·Standby, safety_watchdog, 복귀  [주행]
-├── mro_fleet/         # DB, fleet_manager, 구역 세마포어, 관제 UI          [관제]
+├── mro_fleet/         # DB, fleet_manager, 관제 UI (구역 세마포어는 주행 소관)  [관제]
 └── mro_bringup/       # launch(PC 역할별), params(로봇별·아레나), maps    [PM]
 tools/                 # Nav2 복구 스크립트, KPI 리포트
 docs/
@@ -34,10 +34,11 @@ cd ros2_ws && colcon build --symlink-install && source install/setup.bash
 | PC | 실행 |
 |---|---|
 | 로봇 제어 PC (로봇당 1대) | `localization` → `nav2`(`ROS_SUPER_CLIENT=False`) 별도 터미널 → `ros2 launch mro_bringup robot.launch.py namespace:=/robot3` (두 번째 로봇은 `/robot4`) |
+| 웹캠1 PC | `ros2 launch mro_bringup webcam1_pc.launch.py` |
+| 웹캠2 PC | `ros2 launch mro_bringup webcam2_pc.launch.py` |
+| 관제 PC | `ros2 launch mro_bringup fleet_pc.launch.py` → http://localhost:5000 (kpi_logger 포함) |
 
-모든 PC·로봇은 `ROS_DOMAIN_ID=3`, 로봇 Discovery Server 경유.
-| 웹캠 PC | `ros2 launch mro_bringup webcam_pc.launch.py` |
-| 관제 PC | `ros2 launch mro_bringup fleet_pc.launch.py` → http://localhost:5000 |
+모든 PC·로봇은 `ROS_DOMAIN_ID=3`, **PC-F `192.168.108.41` 의 단일 offboard Discovery Server** 경유 (9/5 확정, `docs/setup.md`).
 
 ## 상태
 

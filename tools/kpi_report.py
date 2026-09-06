@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""kpi_logger CSV → 추종거리 p95, Lost/재획득 시간, IPH, 배송 성공률 요약. TODO([웹캠]) — BRD v3.0 5.3 정의대로."""
+"""kpi_logger CSV → 추종거리 p95, Lost/재획득 시간, IPH, 배송 성공률 요약. TODO([웹캠]) — BRD v3.1 5.3 정의대로."""
 import sys
 import csv
 

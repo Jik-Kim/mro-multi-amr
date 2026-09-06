@@ -27,9 +27,9 @@ echo $ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT
 값이 다르면 `source /etc/turtlebot4_discovery/setup.bash`. 이 파일은 PC 마다 한 번 위 표대로 맞춘다 (`turtlebot4_setup` 의 discovery 설정 스크립트에 서버 ID·IP 를 넣거나 파일을 직접 편집).
 `ROS_SUPER_CLIENT` 는 setup.bash 가 대화형 터미널에서만 `True` 로 주므로, launch 를 스크립트로 띄우면 `False` 가 된다 — nav2 외 노드는 `True` 가 필요하니 주의.
 
-**2대 동시 접속은 미검증이다** (SOT Q-18, 9/6). 두 서버에 동시에 붙는 웹캠·관제 PC 에서 양쪽 로봇 토픽이 다 보이는지가 첫 확인 항목이다.
+**offboard 단일 서버 구성은 9/5 에 검증했다** (SOT Q-18 해소) — PC 5대·로봇 2대가 PC-F 서버 하나에 붙어 양쪽 로봇 토픽이 보이는 것을 확인. 위 대안 ② 행은 되돌릴 때를 위해 남긴다.
 
-## Discovery Server 구성 — **offboard 단일 서버 (1순위, 9/6 결정 예정)**
+## Discovery Server 구성 — **offboard 단일 서버 (9/5 확정·검증)**
 
 Kn1_mini 에서 Nav2 lifecycle 이 자꾸 멈춘 원인이 **RPi 의 디스커버리 부담**이었다. 로봇 2대·PC 5대가 되면 그 부하가 두 배다.
 서버를 노트북 한 대로 옮기면 RPi 는 클라이언트로만 남고, **2서버 동시 접속 문제도 함께 사라진다.**
@@ -73,7 +73,7 @@ Save → 재부팅. **되돌리기:** Offboard IP 를 비우고 Save 하면 원�
 |---|---|
 | `ROS_DOMAIN_ID` | **3** (모든 PC·로봇 공통) |
 | 로봇 네임스페이스 | **`/robot3`**, **`/robot4`** |
-| Discovery Server | 로봇별 RPi — robot3 = ID 3 (`192.168.108.103`), robot4 = ID 4 (`[IP 확인 필요]`). PC 역할별 값은 아래 '터미널마다 맨 처음' 표 |
+| Discovery Server | **PC-F `192.168.108.41:11811`, ID 1** (offboard 단일 서버, 9/5 확정). 로봇 onboard 서버(ID 3·4)는 남아 있으나 PC 는 보지 않는다 |
 | nav2 launch 터미널 | `ROS_SUPER_CLIENT=False` |
 
 두 로봇이 같은 도메인·같은 Discovery Server 를 쓰므로 네임스페이스로만 구분된다. 노드는 상대 토픽 이름을 쓰고 launch 가 `namespace:=` 를 붙인다.

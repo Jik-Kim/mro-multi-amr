@@ -1,4 +1,4 @@
-# 웹캠1이 관제센터(Z-02)에서 등록한 작업자 외형 서술자. BRD v3.0 S1 / BR-T28
+# 웹캠1이 관제센터(Z-02)에서 등록한 작업자 외형 서술자. BRD v3.1 S1 / BR-T28
 std_msgs/Header header
 string worker_id        # W1, W2 (세션 내 고유)
 string outfit_class     # worker_a | worker_b (작업별 복장 클래스)

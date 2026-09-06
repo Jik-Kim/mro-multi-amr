@@ -45,4 +45,4 @@ mission/assigned ─▶ shuttle_mission ─ shuttle/arrived ─▶ follow_target
 
 ## 그림
 
-설계도 3장은 `docs/diagrams/` 에 있다 (STEP 1 배치 · STEP 2 Nav2 교환 · STEP 3 시나리오). 이 문서의 내용이 바뀌면 `python3 tools/build_diagrams.py` 로 다시 만든다.
+설계도 4장은 `docs/diagrams/` 에 있다 (STEP 1 배치 · STEP 2 Nav2 교환 · STEP 3-1 시나리오 · STEP 3-2 전체 흐름). 이 문서의 내용이 바뀌면 `python3 tools/build_diagrams.py` 로 다시 만든다.

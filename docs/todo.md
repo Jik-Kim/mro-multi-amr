@@ -10,11 +10,11 @@
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
-| mro_perception [인지 — 정정인, 민범진] | 1/9 | `█░░░░░░░░░` | — |
+| mro_perception [인지 — 정정인, 민범진] | 1/8 | `█░░░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 3/9 | `███░░░░░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 10/24 | `████░░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 2/7 | `███░░░░░░░` | — |
-| mro_bringup [PM 김병직] | 2/5 | `████░░░░░░` | — |
+| mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
 
 **오늘 마감 3건**
 
@@ -34,7 +34,6 @@
 ## mro_perception [인지 — 정정인, 민범진]
 - [ ] 인형 2종 제작 → 데이터 수집·라벨링 (상하의 전체, 9/6 결정) · 마감 9/6
 - [ ] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) · 마감 9/7
-- [ ] 두 인형 높이 맞추기 — worker_a 밑에 20 mm 스페이서 (I-018) · 마감 9/7
 - [ ] `amr_detection_node.py`: `DETECT_CLASS` → worker_a/b, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9
 - [ ] `amr_detection_node.py`: 모듈 상수 → ROS2 파라미터 (`config/perception.yaml`) · 마감 9/8
 - [x] `aruco_detector_node.py`: 검출·거리 초안 · 마감 9/7
@@ -93,4 +92,5 @@
 - [x] 설계도 4장 — `docs/diagrams/` (STEP 1·2·3-1·3-2) · 마감 9/8
 - [ ] launch 가 `webcam.yaml`·`perception.yaml` 을 실제로 넘기도록 연결 · 마감 9/7
 - [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8
+- [ ] 중복 파라미터 한 곳으로 — `reid_threshold`(perception.yaml ↔ robotN.yaml), `follow_standoff_m`·`t_lim_s`(navigation.yaml ↔ robotN.yaml), `t_lim_s`·`t_ret_s`·`dock_retry`(arena.yaml ↔ robotN.yaml). 지금은 노드가 안 읽어 무해하지만 값 확정 때 한쪽만 고치는 사고가 난다 · 마감 9/8
 - [ ] SDD 부록 A rqt_graph 캡처 첨부 · 마감 9/10
