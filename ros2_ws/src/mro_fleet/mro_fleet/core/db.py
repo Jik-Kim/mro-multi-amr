@@ -98,6 +98,21 @@ class FleetDB:
                 'arrived_late': result == 'FAIL_TLIM',
             }
 
+    def expire_overdue(self, now, t_lim_s):
+        """미도착 상태로 T_lim을 넘긴 미션을 실패로 한 번만 확정한다."""
+        with self._lock, self.con:
+            rows = self.con.execute(
+                'SELECT mission_id, robot_ns, created_at FROM missions '
+                'WHERE result IS NULL AND created_at + ? < ?',
+                (t_lim_s, now),
+            ).fetchall()
+            self.con.executemany(
+                "UPDATE missions SET result='FAIL_TLIM' "
+                'WHERE mission_id=? AND result IS NULL',
+                ((row['mission_id'],) for row in rows),
+            )
+            return [dict(row) for row in rows]
+
     def event(self, event_at, robot_ns, kind, value='', note=''):
         """ROS 시각이 포함된 관제 이벤트를 저장한다."""
         with self._lock, self.con:

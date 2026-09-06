@@ -10,10 +10,15 @@ class FakeDatabase:
     def __init__(self):
         """빈 이벤트 목록을 준비한다."""
         self.events = []
+        self.overdue = []
 
     def event(self, *values):
         """전달된 이벤트 값을 순서대로 보관한다."""
         self.events.append(values)
+
+    def expire_overdue(self, now, t_lim_s):
+        """타이머에 전달할 기한 초과 미션 목록을 반환한다."""
+        return self.overdue
 
 
 class FakePublisher:
@@ -73,4 +78,27 @@ def test_low_battery_rejects_mission_and_records_reason():
     assert '배터리 임계 미만' in result.message
     assert fake.db.events == [
         (20.0, '/robot3', 'ASSIGN_REFUSED_BATTERY', 0.24)
+    ]
+
+
+def test_overdue_timer_records_failure_without_stopping_robot():
+    """T_lim 타이머가 초과 이벤트만 남기고 주행 명령은 건드리지 않는다."""
+    database = FakeDatabase()
+    database.overdue = [{
+        'mission_id': 'M001',
+        'robot_ns': '/robot3',
+        'created_at': 10.0,
+    }]
+    logger = SimpleNamespace(warn=lambda _: None)
+    fake = SimpleNamespace(
+        db=database,
+        t_lim_s=120.0,
+        _now_s=lambda: 131.0,
+        get_logger=lambda: logger,
+    )
+
+    FleetManager._expire_overdue_missions(fake)
+
+    assert database.events == [
+        (131.0, '/robot3', 'TLIM_EXCEEDED', 'M001')
     ]

@@ -119,6 +119,7 @@ class FleetManager(Node):
             self._operator_cb,
         )
         self.create_timer(1.0, self._publish_status)
+        self.create_timer(1.0, self._expire_overdue_missions)
 
     def _create_robot_subscriptions(self, namespace):
         self.create_subscription(
@@ -297,6 +298,20 @@ class FleetManager(Node):
             status.paired_worker = robot['paired_worker']
             status.estop = bool(robot['estop'])
             self.pub_status.publish(status)
+
+    def _expire_overdue_missions(self):
+        """T_lim을 넘긴 미도착 미션을 실패 처리하되 운행은 유지한다."""
+        now = self._now_s()
+        for mission in self.db.expire_overdue(now, self.t_lim_s):
+            self.db.event(
+                now,
+                mission['robot_ns'],
+                'TLIM_EXCEEDED',
+                mission['mission_id'],
+            )
+            self.get_logger().warn(
+                f"{mission['mission_id']}: T_lim 초과 — 운행 계속"
+            )
 
     def _worker_cb(self, descriptor):
         if descriptor.worker_id in self.worker_robot:

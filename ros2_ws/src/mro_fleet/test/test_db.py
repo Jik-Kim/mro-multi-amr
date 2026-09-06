@@ -91,3 +91,24 @@ def test_done_keeps_delivery_result(tmp_path):
         assert mission['result'] == 'FAIL_TLIM'
     finally:
         db.close()
+
+
+def test_overdue_without_arrival_is_failed_once(tmp_path):
+    """미도착 미션도 T_lim 초과 뒤 한 번만 실패로 확정되는지 확인한다."""
+    db = make_db(tmp_path)
+    try:
+        mission_id = db.create_mission('W1', 'A', 100.0, '/robot3')
+
+        at_limit = db.expire_overdue(220.0, 120.0)
+        overdue = db.expire_overdue(220.001, 120.0)
+        repeated = db.expire_overdue(300.0, 120.0)
+        mission = db.mission(mission_id)
+
+        assert at_limit == []
+        assert [row['mission_id'] for row in overdue] == [mission_id]
+        assert repeated == []
+        assert mission['result'] == 'FAIL_TLIM'
+        assert mission['state'] == 0
+        assert mission['waiting_at'] is None
+    finally:
+        db.close()
