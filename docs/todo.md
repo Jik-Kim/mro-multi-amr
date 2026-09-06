@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 27/71 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
+**전체 29/71 완료** (████████░░░░░░░░░░░░)  ·  기준 09/06
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 1/10 | `█░░░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 5/14 | `████░░░░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 10/27 | `████░░░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 12/27 | `████░░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 6/11 | `█████░░░░░` | — |
 | mro_bringup [PM 김병직] | 2/6 | `███░░░░░░░` | — |
 
@@ -69,8 +69,8 @@
 - [x] **`dock_zone.pose` · `robotN.yaml` `dock_pose` 실측 기입 (I-013)** — 두 파일 값 일치 확인 (9/6) · 마감 9/6
 - [ ] I-004 받침대 돌출폭 실측 — `measurement_guide.md` §2 · 마감 9/7
 - [ ] TB4 2대 동시 운용 검증 · 마감 9/6
-- [ ] **좌표 보정 3건 (I-001 PM 검증)** — 홀딩 포인트를 도크에서 ≥ 1.5 m 로, 베이 A 를 DOCK 폴리곤 밖으로, P1 폴리곤이 통로를 완전히 가로지르는지 확인 · 마감 9/7
-- [ ] 베이 B·C waypoint 확정 실측 — 지금은 대강 값이라 ArUco 도착 판정(TS-U05·U06) 전에 필요 · 마감 9/7
+- [x] **좌표 보정 3건 (I-001 PM 검증)** — holding ≥1.5m(1.52m), bays 전부 DOCK 폴리곤 밖, P1 폴리곤이 통로를 완전히 가로지르도록 재실측 (9/6) · 마감 9/7
+- [x] 베이 B·C waypoint 확정 실측 (9/6, x=-0.78 로 통일) · 마감 9/7
 - [ ] `arena.yaml` `homography_marks` 입력 — 웹캠 팀과 같은 바닥 지점을 쓴다 (I-002) · 마감 9/7
 - [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` · 마감 9/7
 - [ ] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **TS-07 이 9/9** · 마감 9/7
