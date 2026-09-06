@@ -8,6 +8,7 @@ import time
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import String, Bool
 from mro_interfaces.msg import TargetHint, Mission, Intervention, FleetStatus
 
@@ -30,7 +31,8 @@ class KpiLogger(Node):
             self.create_subscription(Bool, f'{ns}/target/visible', lambda m, ns=ns: self.row('visible', ns, 'target', int(m.data)), 10)
             self.create_subscription(Bool, f'{ns}/safety/estop', lambda m, ns=ns: self.row('estop', ns, 'safety', int(m.data)), 10)
         self.create_subscription(TargetHint, '/webcam2/target_hint',
-                                 lambda m: self.row('hint', '', m.worker_id, m.confidence, m.point.point.x, m.point.point.y), 20)
+                                 lambda m: self.row('hint', '', m.worker_id, m.confidence, m.point.point.x, m.point.point.y),
+                                 qos_profile_sensor_data)
         self.create_subscription(Mission, '/fleet/mission', lambda m: self.row('mission', m.robot_ns, m.mission_id, m.state, extra=m.bay), 10)
         self.create_subscription(Intervention, '/fleet/intervention', lambda m: self.row('intervention', m.robot_ns, m.kind, 1, extra=m.note), 10)
         self.create_subscription(FleetStatus, '/fleet/status', lambda m: self.row('fleet', m.robot_ns, m.state, m.battery, m.x, m.y), 10)

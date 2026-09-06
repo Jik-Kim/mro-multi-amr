@@ -39,7 +39,10 @@ DEFAULT_JSON = os.path.join(HERE, '..', '..', 'config', 'WebCam1', 'homography_c
 def load_homography(path=DEFAULT_JSON):
     with open(path) as f:
         d = json.load(f)
-    return np.array(d['H'], dtype=np.float64)
+    matrix = d.get('homography', d.get('H'))
+    if matrix is None:
+        raise ValueError(f'호모그래피 행렬이 없습니다: {path}')
+    return np.array(matrix, dtype=np.float64)
 
 
 def pixel_to_map(H, u, v):
