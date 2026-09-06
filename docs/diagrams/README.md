@@ -6,7 +6,8 @@
 |---|---|---|
 | `step1_deployment.svg` | SDD 3.1 | PC 5대 · AMR 2대 · 네트워크 배치. Discovery Server 구성 포함 |
 | `step2_nav2.svg` | SDD 3.2 | 로봇 1대 내부. 우리 노드가 Nav2 스택과 무엇을 주고받는지 |
-| `step3_scenario.svg` | SDD 3.3 | 시나리오 S1~S10 흐름과 예외 E-1 · E-2 · E-3 · E-4 · E-7 |
+| `step3_scenario.svg` | SDD 3.3 | **3-1** 시나리오 S1~S10 흐름과 예외 E-1 · E-2 · E-3 · E-4 · E-7 |
+| `step3b_system_flow.svg` | SDD 3.3 | **3-2** 전체 기능 흐름 — PC·노드 내부 처리와 그 사이를 오가는 토픽 19개 |
 | `mro_design_diagrams.drawio` | — | 위 3장을 3 페이지로 담은 draw.io 편집본 |
 
 ## 고치는 법
