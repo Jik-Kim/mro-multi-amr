@@ -104,3 +104,41 @@ python3 tools/reid_threshold.py --dataset <그 폴더> --splits train --current 
   FOLLOWING 구간으로 안 걸러 Lost 로 셀 수 있다 — 웹캠팀 이슈
 - `follow_target` 이 `target/paired` 를 보고 추종을 시작하는 연동은 주행 TODO ④. 그 전까지 `paired` 는 발행만 된다
 - `/webcam1/worker_descriptor` 는 절대 이름 — 네임스페이스 리맵에 걸리지 않는다. "내 담당" 은 `mission/assigned` 의 `worker_id` 로 안다
+
+## 7. 렉 진단 — 추측 말고 숫자로
+
+`diag_log_s`(기본 1 s) 마다 이런 줄이 찍힌다.
+
+```
+[diag 1.0s] loop 48/s | cb rgb 9.2 depth 9.1 tf 25/s | synced 9.0/s | processed 9.0/s | age avg 140 max 210 ms | proc avg 31 max 58 ms
+```
+
+| 항목 | 뜻 |
+|---|---|
+| `loop` | 메인 루프 회전 수. spin_once(콜백 1개) + process() 한 쌍이 1회 |
+| `cb rgb/depth/tf` | 실제로 **실행된** 콜백 수. 네트워크로 온 수가 아니다 — 그건 `ros2 topic hz` 로 따로 잰다 |
+| `synced` | RGB·depth 가 짝지어진 수 |
+| `processed` | YOLO 까지 돈 프레임 수 |
+| `age` | 처리한 프레임이 **카메라에서 찍힌 뒤 지금까지** 걸린 시간. 이게 곧 "렉" |
+| `proc` | process() 한 번의 시간 (YOLO·거리·시각화 포함) |
+
+같이 잴 것 (노드가 도는 그 PC 에서, 다른 터미널):
+
+```bash
+ros2 topic hz    /robot3/oakd/rgb/image_raw/compressed     # 입력이 몇 Hz 로 도착하나
+ros2 topic delay /robot3/oakd/rgb/image_raw/compressed     # 입력이 찍힌 뒤 도착까지 (RPi→Wi-Fi 지연)
+ros2 topic hz    /robot3/tf                                # tf 가 초당 몇 개 오나
+ros2 topic bw    /robot3/target/image                      # 우리가 내보내는 모니터 영상 대역폭
+nvidia-smi                                                 # YOLO 가 GPU 를 쓰나 (python 프로세스가 보여야)
+```
+
+읽는 법 — 렉의 자리는 넷 중 하나다.
+
+| 증상 | 자리 | 확인 |
+|---|---|---|
+| `proc avg` ≫ 100 ms | **계산이 느림** — GPU 미사용, 또는 SSH -X 로 창 띄움 | `nvidia-smi`, `show_window:=false` 로 다시 |
+| `cb rgb` ≪ `topic hz` 입력 | **콜백이 굶음** — 노드가 메시지를 못 꺼냄 | `tf` 콜백 수가 높으면 TF 리스너를 별도 스레드로(`spin_thread=True`) |
+| `age` 큰데 `topic delay` 도 큼 | **입력이 늦게 옴** — RPi·Wi-Fi | 로봇 Wi-Fi, RPi 부하 |
+| 노드 `age` 는 작은데 rqt 만 늦음 | **출력 대역폭** — raw 2.97 MB/프레임 = 214 Mbit/s | rqt 를 다른 PC 에서 보고 있으면 Wi-Fi 포화. `bw` 확인, rqt 끄고 `age` 재확인 |
+
+한 번에 하나씩 끄면서 본다: ① rqt 끄기 → ② `show_window:=false` → ③ 그래도 `age` 크면 `cb` 와 `topic hz` 비교.

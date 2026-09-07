@@ -57,6 +57,7 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
 """
 import math
 import os
+import time
 
 import cv2
 import numpy as np
@@ -104,6 +105,7 @@ DESCRIPTOR_FRAMES = 10       # 지문 평균 창. 웹캠1 의 DESCRIPTOR_FRAMES 
 PAIR_ON_S = 1.0              # 이 시간 연속 통과해야 paired=True (웹캠1 register_s 와 같은 발상)
 PAIR_OFF_S = 3.0             # 이 시간 연속 실패·미검출이면 paired=False. 짧은 가림에 짝이 풀리지 않게 [팀 확정]
 PUBLISH_HZ = 1.0             # paired·worker_id 재발행 주기. 늦게 켜진 노드도 받게 한다
+DIAG_LOG_S = 1.0             # 계측 로그 주기(초). 0 이면 끔. 렉 원인 분리용 — 처리 프레임 나이·루프/콜백/처리 속도
 
 # ── 거리 측정 (파라미터 기본값) ──────────────────────────────────────────────────────────────────────
 BBOX_INNER = 0.5             # bbox 중심부 50 % 만 depth 를 읽는다. 가장자리는 인형 뒤 바닥·벽의 depth 가 섞인다
@@ -161,11 +163,16 @@ class AmrDetection(Node):
         self.declare_parameter('bbox_inner', BBOX_INNER)
         self.declare_parameter('sync_slop_s', SYNC_SLOP_S)
         self.declare_parameter('show_window', SHOW_WINDOW)
+        self.declare_parameter('diag_log_s', DIAG_LOG_S)
         p = lambda k: self.get_parameter(k).value  # noqa: E731
         self.detect_conf = float(p('detect_conf'))
         self.max_core_gap_mm = float(p('max_core_gap_mm'))
         self.bbox_inner = float(p('bbox_inner'))
         self.show_window = bool(p('show_window'))
+        # 계측 — 렉이 '입력이 늦게 오는 것'인지 '노드가 못 따라가는 것'인지 가른다 (README 7절)
+        self.diag_log_s = float(p('diag_log_s'))
+        self.diag = dict(t0=time.monotonic(), loops=0, rgb_cb=0, depth_cb=0, synced=0, processed=0,
+                         age_sum=0.0, age_max=0.0, proc_ms_sum=0.0, proc_ms_max=0.0, tf_cb=0)
 
         # 모델. names 는 {0: 'amr', 1: 'worker_b', 2: 'worker_a'} — 번호를 이름으로 바꾸는 표
         self.model = YOLO(MODEL_PATH)
@@ -191,6 +198,8 @@ class AmrDetection(Node):
         else:
             depth_sub = Subscriber(self, Image, 'oakd/stereo/image_raw')
         rgb_sub = Subscriber(self, CompressedImage, 'oakd/rgb/image_raw/compressed')
+        rgb_sub.registerCallback(lambda m: self.diag.__setitem__('rgb_cb', self.diag['rgb_cb'] + 1))
+        depth_sub.registerCallback(lambda m: self.diag.__setitem__('depth_cb', self.diag['depth_cb'] + 1))
         # RGB 와 depth 는 별도 토픽으로 따로 도착한다. 타임스탬프가 SYNC_SLOP_S 안으로 맞는 쌍만 synced_cb 로 넘겨,
         # "이 컬러 프레임의 이 픽셀이 저 depth 프레임의 이 거리" 라고 말할 수 있게 한다
         self.sync = ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size=10, slop=float(p('sync_slop_s')))
@@ -213,6 +222,14 @@ class AmrDetection(Node):
         # TF — 카메라 좌표의 점을 map 좌표로 바꿀 때 쓴다. Listener 가 /tf 를 듣고 Buffer 에 모아둔다
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
+        # /tf 콜백 횟수 — 같은 실행기에서 카메라 콜백과 경쟁하는 양. 구독 객체의 callback 은 실행 시점에 읽히므로
+        # (rclpy Subscription.callback 은 평범한 속성) 여기서 감싸면 센다. 리스너의 메서드를 바꾸는 건 소용없다
+        _tf_cb = self.tf_listener.tf_sub.callback
+
+        def _tf_counted(m):
+            self.diag['tf_cb'] += 1
+            return _tf_cb(m)
+        self.tf_listener.tf_sub.callback = _tf_counted
 
         if self.show_window:
             cv2.namedWindow('AMR Detection', cv2.WINDOW_NORMAL)
@@ -234,6 +251,7 @@ class AmrDetection(Node):
                  else self.bridge.imgmsg_to_cv2(depth_msg, desired_encoding='passthrough'))   # mm 단위 2차원 배열
         rgb = cv2.imdecode(np.frombuffer(rgb_msg.data, np.uint8), cv2.IMREAD_COLOR)          # JPEG → BGR 배열
         if depth is not None and rgb is not None:
+            self.diag['synced'] += 1
             # 시각·frame_id 는 depth 쪽 것을 쓴다 — 거리(3D 점)의 출처가 depth 카메라이기 때문
             self.pair = (rgb, depth, depth_msg.header.stamp, depth_msg.header.frame_id)
 
@@ -280,9 +298,15 @@ class AmrDetection(Node):
     # ── 메인 처리 ─────────────────────────────────────────────────────────────────────────────────────
     def process(self):
         """메인 루프가 매번 호출. 보관된 최신 한 쌍을 ①~⑧ 순서로 처리하고 소비한다."""
+        self.diag['loops'] += 1
+        self._diag_log()
         if self.pair is None:                                # 새 프레임이 없으면 할 일 없음
             return
         rgb, depth, stamp, frame_id = self.pair
+        t_proc = time.perf_counter()
+        age = (self.get_clock().now().nanoseconds - (stamp.sec * 10**9 + stamp.nanosec)) / 1e9   # 카메라 찍힘 → 지금
+        self.diag['age_sum'] += age
+        self.diag['age_max'] = max(self.diag['age_max'], age)
         self.pair = None                                     # 소비 표시 — 같은 프레임을 두 번 처리하지 않는다
         vis = rgb.copy()                                     # 오버레이는 복사본에 그린다 (원본은 YOLO 입력)
         label = 'detecting' if self.K is not None else 'waiting for camera_info'
@@ -350,6 +374,28 @@ class AmrDetection(Node):
         self.pub_image.publish(self.bridge.cv2_to_imgmsg(frame, encoding='bgr8'))
         if self.show_window:
             cv2.imshow('AMR Detection', frame)
+        ms = (time.perf_counter() - t_proc) * 1000
+        self.diag['processed'] += 1
+        self.diag['proc_ms_sum'] += ms
+        self.diag['proc_ms_max'] = max(self.diag['proc_ms_max'], ms)
+
+    def _diag_log(self):
+        """diag_log_s 마다 한 줄. 읽는 법은 README 7절."""
+        if self.diag_log_s <= 0:
+            return
+        d = self.diag
+        dt = time.monotonic() - d['t0']
+        if dt < self.diag_log_s:
+            return
+        n = max(d['processed'], 1)
+        self.get_logger().info(
+            f"[diag {dt:.1f}s] loop {d['loops'] / dt:.0f}/s | cb rgb {d['rgb_cb'] / dt:.1f} "
+            f"depth {d['depth_cb'] / dt:.1f} tf {d['tf_cb'] / dt:.0f}/s | synced {d['synced'] / dt:.1f}/s "
+            f"| processed {d['processed'] / dt:.1f}/s "
+            f"| age avg {d['age_sum'] / n * 1000:.0f} max {d['age_max'] * 1000:.0f} ms "
+            f"| proc avg {d['proc_ms_sum'] / n:.0f} max {d['proc_ms_max']:.0f} ms")
+        d.update(t0=time.monotonic(), loops=0, rgb_cb=0, depth_cb=0, synced=0, processed=0,
+                 age_sum=0.0, age_max=0.0, proc_ms_sum=0.0, proc_ms_max=0.0, tf_cb=0)
 
 
 def main():
