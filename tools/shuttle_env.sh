@@ -13,6 +13,13 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
   exit 1
 fi
 
+# 파이프나 $(...) 안에서 source 하면 서브셸이라 환경이 지금 터미널에 남지 않는다.
+#   `source tools/shuttle_env.sh build | tail` 처럼 쓰면 조용히 아무 일도 안 일어난다.
+if [ "${BASHPID:-$$}" != "$$" ]; then
+  echo "경고: 서브셸에서 source 됐다 (파이프·\$(...) 안). 환경이 이 터미널에 남지 않는다."
+  echo "      파이프 없이 그냥:  source tools/shuttle_env.sh ${1:-}"
+fi
+
 _SE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 _SE_WS="$_SE_DIR/ros2_ws"
 _SE_MODE="${1:-}"

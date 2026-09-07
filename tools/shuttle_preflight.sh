@@ -127,14 +127,20 @@ else
     printf '        → 라이프사이클 활성화가 끝나지 않아 bt_navigator 가 active 에 못 간다 (가이드 B-4 ②)\n'
   fi
 
-  # (b) 네임스페이스 없는 localization/nav2 한 벌 — 누가 namespace:= 를 빼고 띄운 것.
-  #     가이드 B-4 ②의 grep 은 "robot3/..." 만 세므로 이 경우를 못 잡는다 (9/7 이후 발견)
+  # (b) 네임스페이스 없이 뜬 localization/nav2 한 벌 — 누가 namespace:= 를 빼고 띄운 것.
+  #     [9/7 저녁 실측] 이것은 robot3 에 영향을 주지 않는다. 근거:
+  #       · 그쪽 lifecycle_manager 의 node_names 가 ['map_server','amcl'] 이라 상대 이름으로
+  #         /map_server·/amcl 로만 풀린다 — /robot3/* 를 관리 대상으로 잡지 않는다
+  #       · 토픽이 전부 루트(/tf·/map·/scan·/bond)라 /robot3/tf·/robot3/scan 과 겹치지 않는다
+  #       · 루트 /scan 은 발행자가 0 이라 그쪽 amcl 은 영원히 inactive 다
+  #     그래서 FAIL 이 아니라 WARN 이다. 진짜 위험한 것은 (a) 의 '완전한 이름이 같은 중복' 이다.
   BARE="$(printf '%s\n' "$NODES" | grep -E '^/(amcl|map_server|lifecycle_manager_localization|lifecycle_manager_navigation|bt_navigator|controller_server|planner_server)$' || true)"
   if [ -z "$BARE" ]; then
     pass "네임스페이스 없는 Nav2/localization 스택 없음"
   else
-    fail "네임스페이스 없이 뜬 노드가 있다:" "$(printf '%s' "$BARE" | tr '\n' ' ')"
-    printf '        → 누군가 localization/nav2 launch 를 namespace:= 없이 띄웠다. 그 PC 에서 내릴 것\n'
+    warn "네임스페이스 없이 뜬 노드가 있다:" "$(printf '%s' "$BARE" | tr '\n' ' ')"
+    printf '        → 남의 세션이 돌고 있다는 신호일 뿐, %s 와는 토픽·관리대상이 겹치지 않는다 (9/7 실측)\n' "$NS"
+    printf '        → 단, T1·T3 를 namespace:= 없이 띄우면 그때는 이것과 충돌한다. 항상 namespace 를 줄 것\n'
   fi
 
   # (c) pre 단계인데 이미 Nav2/AMCL 이 이 네임스페이스에 있다 = 이전 세션이나 다른 PC 의 잔재.
