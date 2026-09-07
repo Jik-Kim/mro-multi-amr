@@ -53,7 +53,7 @@
 - [ ] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
 - [x] `tools/kpi_report.py`: 추종거리·IPH·리드타임·성공률·재획득 계산 구현 (PR #8) · 마감 9/10
-- [ ] **`kpi_report.py`: 배송 판정(AC-08)·리드타임을 `~/mro_fleet.db` 에서 읽기 (I-023)** — CSV 에는 T_lim 판정이 없어 실제보다 좋게 나온다. **TS-07 이 9/9 라 이것이 먼저** · 마감 9/8
+- [ ] **`kpi_report.py`: 배송 판정(AC-08)·리드타임을 `~/mro_fleet.db` 에서 읽기 (I-023)** — DB `result`·`waiting_at`·`created_at` 집계 구현·단위 계산 검사 완료; PC-F 실제 DB 통합 검증 대기. **TS-07 이 9/9 라 이것이 먼저** · 마감 9/8
 - [ ] `kpi_report.py`: 추종거리를 FOLLOWING 구간으로 자르고 `|d−0.5|` p95 와 **최소 이격** 출력 (I-022, AC-05) · 마감 9/9
 - [ ] `kpi_report.py`: Lost 를 `target/visible` 전이로 잡고 재획득 **성공률** 산출 — SEARCHING 은 정상 절차에도 쓰인다 (I-022, K-04) · 마감 9/9
 - [ ] `kpi_report.py`: IPH 분모를 undock~도킹 완료 구간 합으로 (I-022, BRD 5.3) · 마감 9/9
