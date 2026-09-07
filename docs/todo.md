@@ -5,7 +5,7 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 58/96 완료** (████████████░░░░░░░░)  ·  기준 09/07
+**전체 59/96 완료** (████████████░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | mro_perception [인지 — 정정인, 민범진] | 5/14 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 19/24 | `████████░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 18/34 | `█████░░░░░` | — |
-| mro_fleet [관제 — 김민준] | 9/13 | `███████░░░` | — |
+| mro_fleet [관제 — 김민준] | 10/13 | `████████░░` | — |
 | mro_bringup [PM 김병직] | 4/8 | `█████░░░░░` | — |
 
 **오늘 마감 4건**
@@ -121,7 +121,7 @@
 - [x] `fleet_manager_node.py`: `/fleet/intervention` 구독 → DB events 기록 (I-021, FR-28) (PR #23, PM 스텁 18/18) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①) · 마감 9/8
-- [ ] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') · 마감 9/8
+- [x] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') — 1 s 배치 창 + `worker_id` 정렬, W1→robot3·W2→robot4 로 순서 무관 재현 (PR #28, PM 스텁 24/24) · 마감 9/8
 - [ ] `control_ui`: 페어링 폴백(명시 페어링) 버튼 (FR-13) · 마감 9/8
 - [x] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) (PR #7) · 마감 9/9
 
