@@ -9,6 +9,9 @@ datasets/
 captures/
 ros2_ws/src/mro_webcam/config/WebCam2_*/
 webcam1_dataset*
+# 인지팀 학습 데이터셋(1,533장)·학습 산출물 — 원본은 Drive
+2PM_Project_yolo/
+yolo_output/
 *.bag
 *.mp4
 *.db
