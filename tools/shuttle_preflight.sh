@@ -118,13 +118,24 @@ NODES="$(r2 25 node list | sort)"
 if [ -z "$NODES" ]; then
   warn "노드 목록을 못 받았다" "디스커버리 확인"
 else
-  # (a) 같은 이름이 두 번 이상 — 다른 PC 나 이전 세션이 같은 로봇을 물고 있다는 뜻
+  # (a) 같은 이름이 두 번 이상 — 다른 PC 나 이전 세션이 같은 로봇을 물고 있다는 뜻.
+  #     다만 무엇이 중복됐는지로 심각도가 갈린다. 라이프사이클 노드가 중복이면 활성화가 끝나지
+  #     않아 bt_navigator 가 active 에 못 가지만, rviz2 같은 관찰용 노드는 무관하다.
+  #     구분 없이 FAIL 을 내면 사람이 FAIL 을 안 읽게 된다 (9/7 저녁 rviz2 3개로 확인).
+  LC_PAT='(amcl|map_server|bt_navigator|controller_server|planner_server|behavior_server|smoother_server|velocity_smoother|waypoint_follower|lifecycle_manager_[a-z_]*|global_costmap|local_costmap)'
   DUP="$(printf '%s\n' "$NODES" | uniq -d | grep "^$NS/" || true)"
+  DUP_LC="$(printf '%s\n' "$DUP" | grep -E "^$NS/$LC_PAT$" || true)"
+  DUP_OTHER="$(printf '%s\n' "$DUP" | grep -vE "^$NS/$LC_PAT$" | grep -v '^$' || true)"
   if [ -z "$DUP" ]; then
     pass "$NS 안에 같은 이름의 노드 중복 없음"
-  else
-    fail "$NS 노드가 중복이다:" "$(printf '%s' "$DUP" | tr '\n' ' ')"
-    printf '        → 라이프사이클 활성화가 끝나지 않아 bt_navigator 가 active 에 못 간다 (가이드 B-4 ②)\n'
+  fi
+  if [ -n "$DUP_LC" ]; then
+    fail "$NS 의 라이프사이클 노드가 중복이다:" "$(printf '%s' "$DUP_LC" | tr '\n' ' ')"
+    printf '        → 활성화가 끝나지 않아 bt_navigator 가 active 에 못 간다. 다른 PC·이전 세션을 내릴 것 (가이드 B-4 ②)\n'
+  fi
+  if [ -n "$DUP_OTHER" ]; then
+    warn "$NS 에 같은 이름의 노드가 둘 이상이다:" "$(printf '%s' "$DUP_OTHER" | tr '\n' ' ')"
+    printf '        → 라이프사이클과는 무관하다. 다만 관찰이 헷갈리니 여분은 닫는 것이 좋다\n'
   fi
 
   # (b) 네임스페이스 없이 뜬 localization/nav2 한 벌 — 누가 namespace:= 를 빼고 띄운 것.
