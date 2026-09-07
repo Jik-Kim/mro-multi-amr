@@ -90,16 +90,21 @@ SHOW_WINDOW = True
 def mean_hist(hists):
     """최근 프레임들의 히스토그램 평균. 한 장의 잡음(먼 거리·흐림)을 씻는다.
 
-    hsv_hist() 가 돌려주는 것과 같은 모양·같은 스케일을 유지해야 AMR 과 비교가 성립한다
-    (계약 2절). 그래서 평균을 낸 뒤 합을 원래대로 되돌린다.
+    hsv_hist() 는 cv2.normalize(h, None) — 기본값이 NORM_L2 라 **L2 노름이 1** 이다
+    (합이 아니다). 평균을 내면 그 성질이 깨지므로 다시 L2 정규화해서 돌려준다.
+    발행되는 color_hist 가 AMR 이 만드는 것과 같은 척도여야 하기 때문이다 (계약 2절).
+
+    유사도만 보면 척도는 상관없다 — Bhattacharyya 가 척도 불변이라 어떤 배율이어도
+    같은 값이 나온다(실측 차이 5e-09). 그래서 이 정정 전후로 측정값은 바뀌지 않는다.
+    문제는 AMR 이 similarity() 말고 다른 것을 할 때다 (PR #26 PM 지적).
     """
     if len(hists) == 1:
         return hists[0]
     m = np.mean(np.stack(hists), axis=0).astype(np.float32)
-    total = float(np.sum(m))
-    if total <= 0:
+    norm = float(np.linalg.norm(m))
+    if norm <= 0:
         return m
-    return (m / total * len(m)).astype(np.float32)
+    return (m / norm).astype(np.float32)
 
 
 def open_webcam(index):
