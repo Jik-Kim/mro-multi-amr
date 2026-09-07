@@ -15,6 +15,7 @@ fleet_manager 가 이를 받아 작업자-로봇을 배정하고 언독(S2)으�
 
 주의
   - 캡처 fps > 처리 Hz 라 큐에 오래된 프레임이 남는다 → CAP_PROP_BUFFERSIZE=1 (I-016)
+  - rematch_threshold 는 잠정값이다. 인형 2체로 유사도 분포를 재서 확정한다 (계약 v1.3)
   - 자동 노출이 길어지면 캡처가 처리 주기 밑으로 떨어져 루프까지 느려진다
   - 셔틀 트리거는 mission/assigned 가 계약이다 (FR-07). 옛 webcam/detected 발행은 제거했다
 
@@ -53,9 +54,13 @@ PUBLISH_HZ = 1.0             # 등록된 작업자 재발행 주기. 관제가 �
 MAX_WORKERS = 2              # SOT 확정: 작업자 2명
 TARGET_CLASSES = ['worker_a', 'worker_b']   # 이 클래스만 등록 대상. 빈 리스트면 전체 허용
                                             # (테스트: -p target_classes:="['person']")
-REMATCH_THRESHOLD = 0.7      # 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용)
+REMATCH_THRESHOLD = 0.7      # 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용).
                              # robotN.yaml 의 reid_threshold(로봇의 페어링 허용 판정)와는 다른 결정이라
-                             # 이름을 분리한다. 같게 두면 나중에 값을 통일해 버려 한쪽이 깨진다
+                             # 이름을 분리한다. 같게 두면 나중에 값을 통일해 버려 한쪽이 깨진다.
+                             # [잠정값] 계약 v1.3 — crop 이 인형 전체라 하의·머리가 공통이고,
+                             # 다른 인형끼리도 유사도가 0.5 안팎에서 시작한다. 어림값을 그대로 쓰면
+                             # 두 인형이 같은 사람으로 판정될 수 있다. worker.pt 수령 후
+                             # 인형 2체로 분포를 실제로 재서 확정할 것 (눈대중 금지)
 SHOW_WINDOW = True
 # ############################################################################
 
@@ -136,7 +141,8 @@ class WebcamDetection(Node):
         self.tracks = tracks
 
         # 트랙별 색 서술자. bbox crop -> HSV 2D 히스토그램(길이 128)
-        # crop 범위는 현재 bbox 전체. 인형 머리 비중을 뺄지는 인지팀과 합의 후 조정 (Q)
+        # crop 은 bbox 전체를 쓴다 — 계약 v1.3(9/6) 이 '인형 머리부터 바지 밑단까지' 로 확정했다.
+        # 상의만 자르면 웹캠1 거리에서 픽셀이 부족해 히스토그램이 뭉개진다 (I-015)
         for x1, y1, x2, y2, _c, _cls, tid in tracks:
             crop = img[max(0, y1):y2, max(0, x1):x2]
             if crop.size == 0:
