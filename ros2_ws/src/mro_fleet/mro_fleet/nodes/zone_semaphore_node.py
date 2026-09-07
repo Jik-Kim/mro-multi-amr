@@ -37,6 +37,12 @@ class ZoneSemaphore(Node):
             if self.holder[z] == req.robot_ns:
                 self.holder[z] = None
                 self.get_logger().info(f'{z} 반납 ← {req.robot_ns}')
+            # 토큰을 못 받고 포기한 로봇도 반납을 부른다 (계약 3절: 성공·실패와 무관하게 반드시 반납).
+            #   대기열에서 빼지 않으면 그 로봇이 FIFO 선두로 남아 다른 로봇이 영구히 거절된다.
+            #   watchdog 은 holder 만 비우므로 자동 복구도 되지 않는다.
+            if req.robot_ns in self.queue[z]:
+                self.queue[z].remove(req.robot_ns)
+                self.get_logger().info(f'{z} 대기열에서 제거 ← {req.robot_ns}')
             res.granted, res.holder = True, ''
             return res
         if self.holder[z] in (None, req.robot_ns):
@@ -46,8 +52,10 @@ class ZoneSemaphore(Node):
                 return res
             if req.robot_ns in self.queue[z]:
                 self.queue[z].remove(req.robot_ns)
-            self.holder[z], self.since[z] = req.robot_ns, time.time()
-            self.get_logger().info(f'{z} 획득 → {req.robot_ns}')
+            if self.holder[z] != req.robot_ns:      # 새로 획득할 때만 보유 시계를 시작한다
+                self.since[z] = time.time()         #   보유자가 재요청해도 HOLD_TIMEOUT 이 리셋되지 않게
+                self.get_logger().info(f'{z} 획득 → {req.robot_ns}')
+            self.holder[z] = req.robot_ns
             res.granted, res.holder = True, req.robot_ns
             return res
         if req.robot_ns not in self.queue[z]:
@@ -58,6 +66,13 @@ class ZoneSemaphore(Node):
     def watchdog(self):
         for z, h in self.holder.items():
             if h and time.time() - self.since[z] > HOLD_TIMEOUT:
+                # 회수는 로봇이 구역을 실제로 빠져나왔는지 보지 않는다. 정상 통과는 10~20 s(P1 이동만 3~9 s)라
+                #   60 s 를 넘는 건 estop 이 오래 걸린 때 정도다. 그때 토큰만 넘어가고 앞 로봇은 아직 안에 있는데,
+                #   뒤 로봇은 costmap·collision_monitor·safety_watchdog 에 막혀 충돌하지 않고 앞에서 선다.
+                #   즉 증상은 충돌이 아니라 '토큰은 받았는데 못 들어감' 이다 — TS-08 에서 이게 보이면 이 줄을 볼 것.
+                #   갱신(heartbeat) 규칙은 계약에 없어 두지 않는다 (9/7 팀 판단).
+                # TODO([주행]): 이벤트로도 남겨야 K-06(교착 자동 해결률)을 셀 수 있다 — 지금은 로그뿐이다.
+                #   계약 3절이 '이벤트를 남긴다' 고만 적고 토픽·타입을 정의하지 않았다 (I-030).
                 self.get_logger().error(f'{z} {h} 보유 {HOLD_TIMEOUT}s 초과 — 강제 회수 (교착 의심)')
                 self.holder[z] = None
 
