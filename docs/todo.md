@@ -5,20 +5,19 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 59/96 완료** (████████████░░░░░░░░)  ·  기준 09/07
+**전체 60/96 완료** (████████████░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 5/14 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 19/24 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 18/34 | `█████░░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 19/34 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/13 | `████████░░` | — |
 | mro_bringup [PM 김병직] | 4/8 | `█████░░░░░` | — |
 
-**오늘 마감 4건**
+**오늘 마감 3건**
 
-- mro_navigation — 공유기 DHCP 예약 요청 — 지금은 재부팅하면 IP 가 바뀐다
 - mro_navigation — 측위 검증 마커 설치·실측 — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 …
 - mro_navigation — shuttle_mission_node.py: mission/assigned 트리거, bay waypoint → ArUco 확인 …
 - mro_navigation — shuttle_mission_node.py: shuttle/status 발행 (I-024) — READY/SHUTTLE/AT_B…
@@ -79,7 +78,7 @@
 - [x] SLAM 맵 재작성, `mro_bringup/maps/auto_map.*` 로 교체 · 마감 9/5
 - [x] 실측 절차·양식 문서화 — `docs/measurement_guide.md` · 마감 9/5
 - [x] **통신 구성** — offboard 단일 서버 PC-F `192.168.108.41` ID 1. 로봇 2대·PC 5대 접속 확인 · 마감 9/5
-- [ ] 공유기 DHCP 예약 요청 — 지금은 재부팅하면 IP 가 바뀐다 · 마감 9/7
+- [x] 공유기 DHCP 예약 요청 — **불필요로 종결 (9/7)**: PC-F 로 지정한 노트북은 학원 지원 장비라 재부팅해도 IP(`.41`)가 유지된다고 학원이 확답. 시연 전 `ip a` 로 `.41` 한 번만 확인 · 마감 9/7
 - [x] **`params/arena.yaml` 좌표 입력 (I-001)** — bays A/B/C, waiting_zone, dock_zone, `semaphore_zones` 폴리곤 실측 기입 (9/6) · 마감 9/6
 - [x] **`dock_zone.pose` · `robotN.yaml` `dock_pose` 실측 기입 (I-013)** — 두 파일 값 일치 확인 (9/6) · 마감 9/6
 - [x] I-004 받침대 돌출폭 실측 (9/6) — P1 없음 · P2 양쪽 3 cm(폭 0.86 정정) · P3 입구 5 cm·안쪽 6.5 cm · 마감 9/7
