@@ -20,10 +20,12 @@ webcam_register:            # 웹캠1 (PC-W1) — 작업자 등록 S1
     register_s: 1.0         # 트랙이 이 시간 안정되면 worker_id 배정 (TS-U01: 등록 <= 10 s)
     publish_hz: 1.0         # 등록 결과 재발행. 관제가 늦게 켜져도 받게 한다
     max_workers: 2          # SOT 확정: 작업자 2명
-    rematch_threshold: 0.7  # [잠정] 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용).
-                            # robotN.yaml 의 reid_threshold(로봇 페어링 허용)와는 다른 결정이다.
-                            # 계약 v1.3: crop 이 인형 전체라 다른 인형끼리도 0.5 안팎에서 시작한다.
-                            # worker.pt 수령 후 인형 2체로 분포를 재서 확정할 것
+    rematch_threshold: 0.45 # 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용).
+                            # robotN.yaml 의 reid_threshold(로봇 페어링 허용)와는 다른 결정이고,
+                            # 계약 5절이 이 값을 webcam.yaml 에 따로 두라고 했다 (웹캠 팀 소유).
+                            # 9/7 실측 확정 — tools/reid_threshold.py 참조. 같은 인형 재진입
+                            # sim 0.52~0.86(n=6), 종전 0.70 은 5회 중 1회만 성공했다.
+                            # 낮춰도 안전: 같은 복장끼리만 비교 + 복장 오분류 0/410 (인지팀 9/7)
     show_window: true       # 로컬 미리보기 창
 
 webcam_hint:                # 웹캠2 (PC-W2) — 재탐지 힌트 E-1. 한세교 담당, 값 확정 필요
