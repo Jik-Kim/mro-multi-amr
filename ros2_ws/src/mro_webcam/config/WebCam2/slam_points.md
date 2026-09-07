@@ -2,6 +2,8 @@
 
 WebCam2 호모그래피를 다시 계산할 때 사용한 픽셀–SLAM `map` 대응점 13개이다. 맵 좌표는 각 픽셀 지점에 TurtleBot4를 정차한 뒤 **LiDAR 중심을 기준으로 AMCL에서 읽은 값**이다. 원본 로봇 pose 로그는 `robot4_fromLiDAR2.txt`, 계산 결과는 `homography_cam2.json`에 보존한다.
 
+재매핑 전에 사용하던 캘리브레이션은 `homography_cam2_로봇중심점 기준.json`에 비교·복구용 기준선으로 보존한다. 실행 시 기본으로 읽는 현재 설정은 `homography_cam2.json`이다.
+
 | ID | pixel (u, v) | map x (m) | map y (m) |
 |---|---:|---:|---:|
 | M01 | (216, 64) | -0.553157 | 4.396334 |
