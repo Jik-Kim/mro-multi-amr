@@ -16,12 +16,14 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
   /webcam1/worker_descriptor (웹캠1) → "W1 은 worker_a, 색 지문은 …" ─┴→ PairingGate.register()
 
   process():  ① YOLO 검출 (작업자 후보 전부) → ② 후보마다 색 지문 → ③ 게이트: 내 담당 고르기·paired 판정
-              → ④ target/visible 발행 → ⑤ bbox 안쪽 depth 로 거리 → ⑥ 거리 품질 게이트
+              → ④ target/visible 발행 → ⑤ bbox 안쪽 depth 로 거리 → ⑥ 거리 품질 게이트 → target/distance 발행
               → ⑦ 픽셀+거리 → 카메라 3D 점 → TF 로 map 좌표 → ⑧ target/map_point 발행 → 오버레이 영상
 
 ■ 내보내는 토픽 (계약 interfaces.md 6절 — 전부 상대 이름, launch 가 /robotN 을 앞에 붙인다)
   target/map_point  PointStamped(frame=map)  대상 위치. ⑥ 품질 게이트 통과분만            → follow_target 목표점
   target/visible    Bool                     매 프레임 "대상이 화면에 잡혔나". 품질 무관  → kpi_logger Lost(K-04)
+  target/distance   Float32 (m)                대상까지 보정 거리. ⑥ 품질 게이트 통과분만    → kpi_logger AC-05 추종거리
+                                             TF 가 없어도 나간다 — 줄자 대조(TS-U05)는 map 없이 한다
   target/paired     Bool                     재식별 게이트 통과 여부 (바뀔 때 + 1 Hz)     → follow_target 추종 허가,
   target/worker_id  String                   짝이 된 작업자 ID (W1/W2, 미확정이면 '')        fleet_manager → PAIRED
   target/image      Image(bgr8)              모니터링. 좌 RGB+bbox / 우 depth 컬러맵       → rqt_image_view
@@ -48,7 +50,6 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
 
 파라미터 (robotN.yaml / config/perception.yaml): reid_threshold · detect_conf · descriptor_frames · pair_on_s ·
   pair_off_s · publish_hz. 나머지 모듈 상수(MAX_CORE_GAP_MM 등)의 파라미터 전환은 TODO (9/8).
-TODO([인지]): target/distance 발행 (FR-29, 9/8).
 """
 import os
 
@@ -57,7 +58,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool, Float32, String
 from geometry_msgs.msg import PointStamped
 from tf2_ros import Buffer, TransformListener
 from cv_bridge import CvBridge
@@ -80,6 +81,7 @@ MODEL_PATH = os.path.join(get_package_share_directory('mro_perception'), 'models
 POINT_TOPIC = 'target/map_point'     # 대상 위치(map). 거리 품질 게이트를 통과한 검출만. → follow_target
 IMAGE_TOPIC = 'target/image'         # 모니터링 오버레이. 좌 RGB+bbox, 우 depth 컬러맵
 VISIBLE_TOPIC = 'target/visible'     # 매 프레임 True/False. 거리 품질과 무관 → kpi_logger 가 Lost(1→0) 를 센다
+DISTANCE_TOPIC = 'target/distance'   # 대상까지 거리(m, 보정값). AC-05 의 기준값(FR-29) → kpi_logger. 품질 통과분만
 PAIRED_TOPIC = 'target/paired'       # 재식별 게이트 통과 여부 → follow_target(추종 허가), fleet_manager(PAIRED 전이)
 WORKER_ID_TOPIC = 'target/worker_id'  # 짝이 된 작업자 ID (W1/W2). 미확정이면 ''
 MISSION_TOPIC = 'mission/assigned'   # 관제 → 이 로봇. worker_id 로 "내 담당" 을 안다 (상대 이름)
@@ -191,6 +193,7 @@ class AmrDetection(Node):
         self.pub_point = self.create_publisher(PointStamped, POINT_TOPIC, 1)
         self.pub_image = self.create_publisher(Image, IMAGE_TOPIC, 1)
         self.pub_visible = self.create_publisher(Bool, VISIBLE_TOPIC, 1)
+        self.pub_distance = self.create_publisher(Float32, DISTANCE_TOPIC, 10)   # p95 표본이라 큐를 넉넉히
         self.pub_paired = self.create_publisher(Bool, PAIRED_TOPIC, 10)
         self.pub_worker_id = self.create_publisher(String, WORKER_ID_TOPIC, 10)
         self.create_timer(1.0 / float(p('publish_hz')), self.publish_pairing)   # 재발행 — 늦게 켜진 노드용
@@ -204,7 +207,8 @@ class AmrDetection(Node):
             cv2.resizeWindow('AMR Detection', 1408, 704)     # 704×704 두 장을 가로로 붙인 크기
         self.get_logger().info(f'YOLO {MODEL_PATH} | ns={self.get_namespace()} | 검출 대상 {DETECT_CLASSES} '
                                f'conf≥{self.detect_conf} | reid_threshold={self.gate.threshold} '
-                               f'| 출력: {POINT_TOPIC}, {VISIBLE_TOPIC}, {PAIRED_TOPIC}, {WORKER_ID_TOPIC}')
+                               f'| 출력: {POINT_TOPIC}, {VISIBLE_TOPIC}, {DISTANCE_TOPIC}, '
+                               f'{PAIRED_TOPIC}, {WORKER_ID_TOPIC}')
 
     # ── 콜백: 보관만 한다 ──────────────────────────────────────────────────────────────────────────────
     def info_cb(self, msg):
@@ -306,6 +310,9 @@ class AmrDetection(Node):
 
                 # ⑥ 품질 게이트 — p20 과 med 가 MAX_CORE_GAP_MM 이상 벌어지면 가림·경계 걸침이다. 이 프레임 거리는 버린다
                 if r is not None and (r['med'] - r['q']) <= MAX_CORE_GAP_MM:
+                    # 거리는 TF 와 무관하게 여기서 바로 낸다 — AC-05 는 이 값의 p95·최솟값으로 채점한다 (계약 9절).
+                    # 품질 게이트를 통과한 프레임만 — 가림·경계 걸침 거리가 섞이면 p95 가 오염된다
+                    self.pub_distance.publish(Float32(data=float(r['z_corr'])))
                     # ⑦ bbox 중심 픽셀 (u,v) + 거리 z → 카메라 광학 좌표의 3D 점 → TF 로 map 좌표
                     u, v = (x1 + x2) // 2, (y1 + y2) // 2
                     pm = to_map(self.tf_buffer, back_project(self.K, u, v, r['z_corr'], frame_id, stamp),
