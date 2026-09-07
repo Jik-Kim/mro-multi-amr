@@ -29,7 +29,9 @@
     (계약 7절, 이중 계상 금지). 늦은 도착은 관제가 arrived_late 로 따로 남긴다.
 
 TODO([주행]): ① 신규 파라미터 7개(bay_advance_m·aruco_* 4종·token_retry_s·nav2_poll_s)를
-  mro_bringup/params/robotN.yaml 로 옮길 것 — 파라미터 단일 출처는 params 다 (계약 5절). PM 요청 필요
+  mro_bringup/params/robotN.yaml 로 옮기고, arena_yaml 경로도 robot.launch.py 가 넘기게 할 것 —
+  파라미터 단일 출처는 params 다 (계약 5절). 지금은 이 노드가 mro_bringup 의 share 디렉터리를
+  런타임 조회로 들여다본다. 의존을 선언하면 순환이라 막을 수 없고, 런치가 넘겨주면 깨끗해진다. PM 요청 필요
 ② follow_target_node.py 가 아직 옛 goto_goal/arrived 를 구독한다. shuttle/arrived 로 바꾸지 않으면
   S5 합류가 시작되지 않는다 (docs/todo.md 에 등록)
 ③ ArUco '정면 ±30°'(계약 6절)는 검사하지 않는다 — aruco_detector 가 자세를 발행하지 않아
@@ -48,6 +50,7 @@ from lifecycle_msgs.srv import GetState
 from mro_interfaces.msg import Mission
 from mro_interfaces.srv import ZoneToken
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from rclpy.time import Time
 from std_msgs.msg import Bool, Float32, Int32, String
@@ -83,8 +86,15 @@ class ShuttleMission(Node):
 
         # 파라미터 — 값의 단일 출처는 mro_bringup/params (계약 5절). 여기 기본값은 params 가
         #   아직 안 넘어올 때의 대체값이며, 코드가 값을 소유하지 않는다.
-        default_arena = os.path.join(
-            get_package_share_directory('mro_bringup'), 'params', 'arena.yaml')
+        # arena.yaml 은 mro_bringup 소유지만 **의존을 선언할 수 없다** — mro_bringup 이 이미
+        #   mro_navigation 을 의존해서(런치가 노드를 띄운다) 선언하면 colcon 이 순환으로 막는다.
+        #   그래서 런타임 조회로만 기본값을 잡고, 못 찾으면 arena_yaml 파라미터로 받는다.
+        default_arena = ''
+        try:
+            default_arena = os.path.join(
+                get_package_share_directory('mro_bringup'), 'params', 'arena.yaml')
+        except Exception as e:
+            self.get_logger().warn(f'mro_bringup 을 찾지 못했다 — arena_yaml 을 직접 넘길 것: {e}')
         # 기본값 (0,0,0) 은 '주입 안 됨' 을 뜻한다. 빈 리스트는 BYTE_ARRAY 로 추론되어
         #   robotN.yaml 의 실제 값을 되레 막으므로 쓸 수 없다 (9/7 확인).
         self.declare_parameter('dock_pose', [0.0, 0.0, 0.0])   # robotN.yaml (필수)
@@ -133,6 +143,11 @@ class ShuttleMission(Node):
 
     def _load_arena(self, path):
         """arena.yaml 은 ROS 파라미터 형식이 아닌 데이터 yaml 이라 파일로 직접 읽는다."""
+        if not path:
+            self.get_logger().error(
+                'arena_yaml 경로가 비었다 — 미션을 받아도 수행할 수 없다. '
+                '런치나 --ros-args -p arena_yaml:=<경로> 로 넘길 것')
+            return None
         try:
             with open(path, encoding='utf-8') as f:
                 return yaml.safe_load(f)['arena']
@@ -415,7 +430,9 @@ def main():
             if node.pending is not None and node.mission is None:
                 m, node.pending = node.pending, None
                 node.run_mission(m)      # 콜백 밖에서만 navigator 를 부른다
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, ExternalShutdownException):
+        # Ctrl+C 는 KeyboardInterrupt, launch·systemd 의 SIGTERM 은 ExternalShutdownException 이다.
+        #   둘 다 잡아야 종료 경로가 같아지고, 아래 finally 가 P1 토큰을 반납한다
         pass
     finally:
         try:
