@@ -34,8 +34,10 @@ TODO([주행]): ① 신규 파라미터 7개(bay_advance_m·aruco_* 4종·token_
   런타임 조회로 들여다본다. 의존을 선언하면 순환이라 막을 수 없고, 런치가 넘겨주면 깨끗해진다. PM 요청 필요
 ② follow_target_node.py 가 아직 옛 goto_goal/arrived 를 구독한다. shuttle/arrived 로 바꾸지 않으면
   S5 합류가 시작되지 않는다 (docs/todo.md 에 등록)
-③ ArUco '정면 ±30°'(계약 6절)는 검사하지 않는다 — aruco_detector 가 자세를 발행하지 않아
-  검출된 사실 자체가 그 조건의 결과다. 인지의 solvePnP 도입 후 재검토
+③ ArUco '정면 ±30°'(계약 6절)는 여전히 아무도 검사하지 않는다. aruco_detector 가 PR #30 으로
+  solvePnP 를 넣어 기운각을 **계산은 하지만 로그로만 남기고 발행하지 않는다** — 게이팅이 필요하면
+  인지에 각도 발행을 요청할 것. 거리는 그쪽이 이미 1.5 m 에서 자른다(`max_distance_m`, 넘으면 id=-1)
+  므로 아래 aruco_max_dist_m 는 이중 방어다
 ④ 대기공간 정차 중에도 로봇 몸통이 P1 폴리곤에 살짝 걸친다 — robot3 정차점이 폴리곤에서
   0.20 m 인데 반지름은 0.22 m 다. 반납 시점이 계약상 '완전 이탈' 인지 실주행에서 확인할 것
   (2대 시험 때 다른 로봇이 P1 을 지날 수 있는지가 실제 판단 기준)
@@ -413,6 +415,8 @@ class ShuttleMission(Node):
 
     def advance_into_bay(self, bay):
         """확인된 자리에서 창고 안쪽(로봇 전방)으로 bay_advance_m 전진."""
+        # 주의 — Nav2 xy_goal_tolerance 가 0.25 m 로 고정이라(I-029, 낮추면 목표 근처에서 진동한다)
+        #   0.3 m 목표를 줘도 실제 이동은 0.05~0.3 m 사이다. 도착 로그의 실제 좌표로 확인할 것
         d = self.p('bay_advance_m')
         pose = self.tf_pose()
         if pose is None:
