@@ -1,7 +1,8 @@
 """미션 생성·배정, 상태 집계, DB 기록, 종료 명령을 담당한다.
 
 서비스: /fleet/request_mission, /fleet/operator_command
-구독: /webcam1/worker_descriptor, 로봇별 상태·배터리·pose·estop
+구독: /webcam1/worker_descriptor, /fleet/intervention,
+      로봇별 상태·배터리·pose·estop
 발행: /fleet/mission, 로봇별 mission/assigned·mission/finish,
       /fleet/status
 """
@@ -15,7 +16,12 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 
 from mro_fleet.core.db import FleetDB
 
-from mro_interfaces.msg import FleetStatus, Mission, WorkerDescriptor
+from mro_interfaces.msg import (
+    FleetStatus,
+    Intervention,
+    Mission,
+    WorkerDescriptor,
+)
 from mro_interfaces.srv import OperatorCommand, RequestMission
 
 import rclpy
@@ -122,6 +128,12 @@ class FleetManager(Node):
             self._worker_cb,
             10,
         )
+        self.create_subscription(
+            Intervention,
+            '/fleet/intervention',
+            self._intervention_cb,
+            10,
+        )
         for namespace in self.robots:
             self._create_robot_subscriptions(namespace)
 
@@ -184,6 +196,26 @@ class FleetManager(Node):
 
     def _now_s(self):
         return self.get_clock().now().nanoseconds / 1_000_000_000.0
+
+    def _intervention_cb(self, message):
+        """개입 메시지의 원 시각과 내용을 SQLite 이벤트로 기록한다."""
+        stamp = message.header.stamp
+        stamp_is_valid = (
+            stamp.sec >= 0
+            and 0 <= stamp.nanosec < 1_000_000_000
+            and (stamp.sec != 0 or stamp.nanosec != 0)
+        )
+        if stamp_is_valid:
+            event_at = stamp.sec + stamp.nanosec / 1_000_000_000.0
+        else:
+            event_at = self._now_s()
+        self.db.event(
+            event_at,
+            message.robot_ns,
+            'INTERVENTION',
+            message.kind,
+            message.note,
+        )
 
     def _set_robot_value(self, namespace, key, value):
         if self.robot[namespace].get(key) != value:

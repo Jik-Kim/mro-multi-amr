@@ -144,6 +144,77 @@ def test_overdue_timer_records_failure_without_stopping_robot():
     ]
 
 
+def test_intervention_records_message_timestamp_and_fields():
+    """개입 메시지의 발행 시각과 필드가 DB 이벤트로 전달되는지 확인한다."""
+    fake = SimpleNamespace(db=FakeDatabase(), _now_s=lambda: 99.0)
+    message = SimpleNamespace(
+        header=SimpleNamespace(
+            stamp=SimpleNamespace(sec=12, nanosec=500_000_000)
+        ),
+        robot_ns='/robot3',
+        kind='TOW',
+        note='주행 불가로 작업자가 이동',
+    )
+
+    FleetManager._intervention_cb(fake, message)
+
+    assert fake.db.events == [
+        (
+            12.5,
+            '/robot3',
+            'INTERVENTION',
+            'TOW',
+            '주행 불가로 작업자가 이동',
+        )
+    ]
+
+
+def test_intervention_uses_receive_time_for_invalid_stamp():
+    """발행 시각이 0이거나 비정상이면 수신 시각을 사용하는지 확인한다."""
+    fake = SimpleNamespace(db=FakeDatabase(), _now_s=lambda: 99.0)
+    invalid_stamps = (
+        SimpleNamespace(sec=0, nanosec=0),
+        SimpleNamespace(sec=-1, nanosec=0),
+        SimpleNamespace(sec=1, nanosec=1_000_000_000),
+    )
+
+    for stamp in invalid_stamps:
+        message = SimpleNamespace(
+            header=SimpleNamespace(stamp=stamp),
+            robot_ns='/robot4',
+            kind='RESTART',
+            note='노드 재시작',
+        )
+        FleetManager._intervention_cb(fake, message)
+
+    assert fake.db.events == 3 * [
+        (99.0, '/robot4', 'INTERVENTION', 'RESTART', '노드 재시작')
+    ]
+
+
+def test_safety_policy_is_recorded_without_filtering():
+    """SAFETY_POLICY도 DB에는 원래 종류 그대로 기록하는지 확인한다."""
+    fake = SimpleNamespace(db=FakeDatabase(), _now_s=lambda: 99.0)
+    message = SimpleNamespace(
+        header=SimpleNamespace(stamp=SimpleNamespace(sec=20, nanosec=0)),
+        robot_ns='/robot3',
+        kind='SAFETY_POLICY',
+        note='E-STOP 자동 정지',
+    )
+
+    FleetManager._intervention_cb(fake, message)
+
+    assert fake.db.events == [
+        (
+            20.0,
+            '/robot3',
+            'INTERVENTION',
+            'SAFETY_POLICY',
+            'E-STOP 자동 정지',
+        )
+    ]
+
+
 def test_docked_is_not_overwritten_by_periodic_following():
     """DOCKED 뒤 FOLLOWING 재발행이 화면과 미션 완료를 못 덮는지 확인한다."""
     fake = make_status_manager()
