@@ -31,6 +31,21 @@ from std_msgs.msg import Bool
 from tf2_msgs.msg import TFMessage
 
 
+def find_node_pid(exe_name):
+    """실행 파일 이름이 exe_name 인 프로세스의 PID. pgrep -f 는 명령줄에 그 문자열이 든 셸까지 잡으므로 쓰지 않는다."""
+    for d in os.listdir('/proc'):
+        if not d.isdigit() or int(d) == os.getpid():
+            continue
+        try:
+            argv = open(f'/proc/{d}/cmdline', 'rb').read().split(b'\0')
+        except OSError:
+            continue
+        # ros2 run 은 ".../lib/mro_perception/amr_detection_node" 스크립트를 python 이 실행한다
+        if any(a.decode(errors='ignore').rstrip('.py').endswith(exe_name) for a in argv[:2] if a):
+            return d
+    return ''
+
+
 def sh(cmd):
     try:
         return subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=5).stdout.strip()
@@ -97,9 +112,7 @@ def main():
           f"| DISCOVERY={env('ROS_DISCOVERY_SERVER', '')} | SUPER_CLIENT={env('ROS_SUPER_CLIENT', '')}")
     print(f"SSH 접속={'예' if os.environ.get('SSH_CONNECTION') else '아니오'} | DISPLAY={os.environ.get('DISPLAY', '(없음)')}"
           f" — SSH 로 창을 띄우면 X 포워딩이라 imshow 가 느리다")
-    # python 프로세스만, 그리고 이 스크립트와 그 부모 셸(명령줄에 같은 문자열이 들어감)은 제외
-    me = {str(os.getpid()), str(os.getppid())}
-    pid = next((x for x in sh("pgrep -f 'python.*amr_detection_node'").split() if x not in me), '')
+    pid = find_node_pid('amr_detection_node')
     if pid:
         print(f"amr_detection PID {pid} | " + sh(f"ps -o %cpu=,%mem=,nlwp= -p {pid}").strip() + '  (%CPU %MEM 스레드수)')
     else:
