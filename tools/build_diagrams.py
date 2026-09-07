@@ -250,6 +250,24 @@ class Diagram:
                         and ly < n['y'] + n['h'] and ly + lh > n['y']):
                     warn.append('라벨 "%s" 이 상자 %s 를 가린다' % (e['lines'][0], n['id']))
                     break
+        # 라벨이 컨테이너 경계선에 걸치는지 — 배경 상자와 반쯤 겹쳐 보기 나쁘다
+        bands = [n for n in self.nodes.values() if n['shape'] == 'band']
+        for e in self.edges:
+            r = self.label_rect(e)
+            if r is None:
+                continue
+            lx, ly, lw, lh = r
+            for b in bands:
+                if not (lx < b['x'] + b['w'] and lx + lw > b['x']):
+                    continue
+                for edge_y in (b['y'], b['y'] + b['h']):
+                    if ly < edge_y < ly + lh:
+                        warn.append('라벨 "%s" 이 컨테이너 %s 의 경계선에 걸친다'
+                                    % (e['lines'][0], b['id']))
+                        break
+                else:
+                    continue
+                break
         # 라벨이 화살촉을 덮는지 — 선은 보이는데 화살표 머리만 사라진다
         heads = []
         for e in self.edges:
@@ -1285,10 +1303,10 @@ def step3b():
         '전부 ROS 시각 기준',
     ], 'in_ctl')
     ctl_bot = y + 82
-    d.band('ctl_sys', CX + 8, TOP + 32, CW - 16, ctl_bot - TOP - 14,
+    d.band('ctl_sys', CX + 8, TOP + 32, CW - 16, ctl_bot - TOP - 10,
            '관제 시스템 / Control Server', 'band', dash=True)
 
-    y = ctl_bot + 62      # 안쪽 밴드 제목 자리를 비운다
+    y = ctl_bot + 96      # 안쪽 밴드 제목 자리 + 그 위 라벨 자리를 비운다
     d.box('db', hx2 + 40, y, hw - 80, [
         'SQLite   ~/mro_fleet.db',
         'workers · missions · events',
@@ -1300,21 +1318,22 @@ def step3b():
         'K-06: REJECT → GRANT 60 s · RECLAIM 있으면 미해결',
     ], 'in_ctl')
     obs_bot = y + 76
-    d.band('ctl_obs', CX + 8, ctl_bot + 30, CW - 16, obs_bot - ctl_bot - 12,
+    d.band('ctl_obs', CX + 8, ctl_bot + 60, CW - 16, obs_bot - ctl_bot - 44,
            '관측 · 기록 / Observability', 'band', dash=True)
+    # 두 안쪽 밴드 사이(ctl_sys 아래 ctl_bot+18 ~ ctl_obs 위 ctl_bot+60)에 라벨을 넣는다
     link('kpi', 'db', hx2 + hw * 0.5, ['CSV + SQLite 기록'], PLAIN,
-         ylab=ylab_in(ctl_bot, 62))
+         ylab=ctl_bot + 52)
     side('db', 'rep', 'left@0.5-right@0.5', ['events · missions 조회'], PLAIN,
          mid=cb + hw + 85, lx=cb + hw + 85)
     side('ui', 'fm', 'right@0.35-left@0.35', ['RequestMission', '(서비스)'], SRV,
          dashed=True, mid=cb + hw + 65, lx=cb + hw + 65)
 
-    ctl_pc_bot = obs_bot + 18
+    ctl_pc_bot = obs_bot + 40      # 안쪽 밴드 아래 선과 22 px 띄운다
     d.band('pc_f', CX, TOP, CW, ctl_pc_bot - TOP, 'PC-F — 관제 PC   (Discovery Server ID 1)',
            'pc_ctl', dash=False)
 
     # ══════════════ DDS 버스 ══════════════
-    BY = max(r3_bot, r4_bot, ctl_pc_bot) + 150
+    BY = max(r3_bot, r4_bot, ctl_pc_bot) + 240   # 라벨 세 줄과 화살표가 다 보일 만큼
     d.band('bus', L1X, BY, W - 2 * L1X, 108, '', 'bus', dash=False)
     d.box('hex', W / 2 - 210, BY + 20, 420, [
         'ROS 2 / DDS     Topic · Service · Action',
@@ -1328,31 +1347,32 @@ def step3b():
     d.text(W - L1X - 16, BY + 68, '카메라 · 힌트 = BEST_EFFORT', 11, '#5A5F6A', anchor='end')
 
     # ── 로봇 → 버스 · 버스 → 로봇 ──
+    # 라벨은 폭이 200 px 를 넘는다. 세로선이 다른 라벨 밑을 지나지 않도록 x 와 줄을 따로 잡는다.
+    #   내려가는 화살표는 화살촉이 버스 위 모서리라 라벨을 위쪽 줄에,
+    #   올라가는 화살표는 화살촉이 패널 아래 모서리라 라벨을 아래쪽 줄에 둔다.
+    R1, R2, R3 = BY - 186, BY - 124, BY - 62   # R1 상자 윗변이 패널 아래 모서리보다 15 px 아래다
     for tag, px, pw in (('a', L1X, L1W), ('b', L2X, L2W)):
         pc = tag + 'pc'
-        xs = [px + 150 + i * ((pw - 300) / 2) for i in range(3)]
-        r1, r2 = BY - 128, BY - 66          # 아래로 가는 화살표: 화살촉이 버스 위 모서리라 여유가 있다
-        u1, u2 = BY - 102, BY - 44          # 위로 가는 화살표: 화살촉이 패널 아래 모서리(BY-150)라 더 내린다
-        link(pc, 'bus', xs[0], ['shuttle/status · approach/status', 'std_msgs/String  → 관제'],
-             TOPIC, ylab=r1)
-        link(pc, 'bus', xs[1], ['/fleet/zone_token   (서비스)', 'ZoneToken  P1 · DOCK'],
-             SRV, dashed=True, ylab=r1)
-        link('bus', pc, xs[2], ['mission/assigned · mission/finish', 'Mission  ← 관제'],
-             TOPIC, ylab=u1, updown='up')
-        link(pc, 'bus', xs[0] + 78, ['battery_state · safety/estop', 'sensor_msgs · Bool  → 관제'],
-             TOPIC, ylab=r2)
-        link(pc, 'bus', xs[1] + 78, ['target/distance · visible', 'amcl_pose  → kpi_logger'],
-             TOPIC, ylab=r2)
-        link('bus', pc, xs[2] + 78, ['/webcam1/worker_descriptor', '/webcam2/target_hint  ← 웹캠'],
-             TOPIC, ylab=u2, updown='up')
+        link(pc, 'bus', px + 120, ['shuttle/status · approach/status',
+                                   'std_msgs/String — 상태 보고 → 관제'], TOPIC, ylab=R1)
+        link(pc, 'bus', px + 480, ['/fleet/zone_token   (서비스)',
+                                   'ZoneToken — P1 · DOCK 획득 / 반납'], SRV, dashed=True, ylab=R1)
+        link(pc, 'bus', px + 300, ['battery_state · safety/estop · amcl_pose',
+                                   'sensor_msgs · Bool · Pose → 관제 · kpi_logger'], TOPIC, ylab=R2)
+        link('bus', pc, px + 620, ['mission/assigned · mission/finish',
+                                   'mro_interfaces/Mission  ← 관제'], TOPIC, ylab=R2, updown='up')
+        link('bus', pc, px + 780, ['/webcam1/worker_descriptor · /webcam2/target_hint',
+                                   'WorkerDescriptor · TargetHint  ← 웹캠 PC'], TOPIC,
+             ylab=R3, updown='up')
 
     # ── 관제 ↔ 버스 ──
-    link('pc_f', 'bus', CX + 170, ['mission/assigned · mission/finish', 'Mission  → 두 로봇'],
-         TOPIC, ylab=BY - 128)
-    link('pc_f', 'bus', CX + 410, ['/fleet/zone_token   (서비스)', 'zone_semaphore 가 서버'],
-         SRV, dashed=True, ylab=BY - 66)
-    link('bus', 'pc_f', CX + 650, ['RobotStatus · BatteryState', 'zone_event · DetectionEvent'],
-         TOPIC, ylab=BY - 128, updown='up')
+    link('pc_f', 'bus', CX + 170, ['mission/assigned · mission/finish',
+                                   'mro_interfaces/Mission  → 두 로봇'], TOPIC, ylab=R1)
+    link('pc_f', 'bus', CX + 410, ['/fleet/zone_token   (서비스)',
+                                   'zone_semaphore 가 서버다'], SRV, dashed=True, ylab=R2)
+    link('bus', 'pc_f', CX + 650, ['RobotStatus · BatteryState',
+                                   'zone_event · DetectionEvent  ← 두 로봇'], TOPIC,
+         ylab=R3, updown='up')
 
     # ══════════════ 웹캠 PC ══════════════
     WY = BY + 108 + 150
