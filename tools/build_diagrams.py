@@ -407,7 +407,7 @@ def step1():
         'pkg  mro_webcam',
         '• webcam_register',
         '   작업자 등록 · 외형 서술자 발행',
-        'USB 웹캠 640×480 (관제탑 전경)',
+        'USB 웹캠 640×480 (출입구 시야)',
         'ROS_SUPER_CLIENT = False',
         '담당  한세교 · 김학민',
     ], 'pc')
@@ -707,7 +707,7 @@ def step3():
         return n
 
     step('s1', ['S1  진입 · 등록',
-                '작업자가 관제 구역에 들어서면 웹캠1 이 외형을 등록하고',
+                '작업자가 출입구를 지나면 웹캠1 이 외형을 등록하고',
                 '로봇 한 대를 배정한다  ·  등록 완료 ≤ 10 초'],
          node=['webcam_register  (PC-W1)',
                '→ fleet_manager  (PC-F)',
