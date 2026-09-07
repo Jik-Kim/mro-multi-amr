@@ -122,7 +122,13 @@ python3 tools/reid_threshold.py --dataset <그 폴더> --splits train --current 
 | `age` | 처리한 프레임이 **카메라에서 찍힌 뒤 지금까지** 걸린 시간. 이게 곧 "렉" |
 | `proc` | process() 한 번의 시간 (YOLO·거리·시각화 포함) |
 
-같이 잴 것 (노드가 도는 그 PC 에서, 다른 터미널):
+**한 번에 재는 도구** — 노드가 도는 PC 에서, 노드는 그대로 둔 채:
+
+```bash
+python3 tools/diag_lag.py --ns /robot3 --seconds 10     # 입력·tf·처리·출력 Hz/대역폭/지연 + [diag] 로그 + 판정
+```
+
+파일을 쓰지 않고 파라미터를 바꾸지 않는다. 손으로 재려면:
 
 ```bash
 ros2 topic hz    /robot3/oakd/rgb/image_raw/compressed     # 입력이 몇 Hz 로 도착하나
