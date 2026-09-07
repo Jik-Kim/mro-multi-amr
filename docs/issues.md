@@ -19,7 +19,8 @@
 | [I-024](#i-024) | 상 | **열림** | 주행 박병후·이시율 | `shuttle/status` 발행자가 없어 배송 성공률이 구조적으로 0 % |
 | [I-025](#i-025) | 상 | **열림** | 주행 박병후·이시율 | 베이 A·B 정차점이 도크 접근 지점과 물리적으로 겹친다 |
 | [I-029](#i-029) | 상 | **열림** | 주행 박병후·이시율 | Nav2 도착 오차 0.25 m 를 낮출 수 없어 추종거리(AC-05)를 못 맞춘다 |
-| [I-030](#i-030) | 중 | **열림** | 주행 박병후·이시율 | 세마포어 강제 회수가 로그만 남겨 K-06 을 셀 수 없다 |
+| [I-030](#i-030) | 중 | **진행중** | 주행 박병후·이시율 | 세마포어 강제 회수가 로그만 남겨 K-06 을 셀 수 없다 |
+| [I-031](#i-031) | 중 | **열림** | 인지 정정인·민범진 | OAK-D `camera_info` 초점거리가 704×704 crop 과 안 맞아 ArUco 거리가 1.74 배 작게 나온다 |
 | [I-027](#i-027) | 중 | **진행중** | 웹캠 한세교·김학민 | webcam_hint 의 YOLO 타이머가 겹쳐 돌 수 있다 (Reentrant 그룹) |
 
 ## 해결된 이슈
@@ -379,10 +380,25 @@
   ① `Intervention.msg` 의 `kind` 에 `DEADLOCK_RECLAIM` 같은 값을 추가하고 `/fleet/intervention` 으로 발행 → 다만 `SAFETY_POLICY` 처럼 "개입 아님, 별도 집계" 로 분류해야 한다. IPH 에 섞이면 안 된다.
   ② 관제 `fleet_manager` 가 DB `events` 에 직접 기록하도록 새 토픽을 하나 만든다.
   ③ `kpi_logger` 가 세마포어 로그를 파싱한다 → 권하지 않는다. 로그 형식이 바뀌면 깨진다.
-  **계약(`mro_interfaces` 또는 `docs/interfaces.md`)이 바뀌므로 PM 결정이 필요하다.** 코드에는 `watchdog()` 안에 TODO 로 표시해 두었다.
+  **계약(`mro_interfaces` 또는 `docs/interfaces.md`)이 바뀌므로 PM 결정이 필요하다.**
   K-06 이 필요한 시점은 TS-08 교착 20회(9/10)이므로 그 전에 정해야 한다.
   **PM 결정 (9/7, 계약 v1.11):** ② 의 변형 — 새 msg 없이 `std_msgs/String` 토픽 `/fleet/zone_event` 로 `"<zone> <robot> <REJECT|GRANT|RELEASE|RECLAIM>"` 를 발행한다. 발행은 주행(세마포어, 9/8), DB 기록은 관제(`events.kind='ZONE'`, 9/8), CSV·K-06 산출은 웹캠(`kpi_logger`·`kpi_report`, 9/9). `Intervention` 에 섞지 않는다(IPH 오염). 산출 규칙은 계약 9절.
   **함께 확인한 것 (9/7)** — 강제 회수는 로봇이 구역을 실제로 빠져나왔는지 보지 않는다. 정상 통과가 10~20 s(P1 이동만 3~9 s)라 60 s 초과는 estop 이 오래 걸린 경우 정도이고, 그때 토큰만 넘어가고 앞 로봇이 아직 안에 있어도 뒤 로봇은 costmap·collision_monitor·safety_watchdog 에 막혀 **충돌하지 않고 구역 앞에서 선다**. 증상은 '토큰은 받았는데 못 들어감' 이다. 갱신(heartbeat) 규칙은 계약에 없고 60 s 가 정상 통과의 3배 이상이라 **HOLD_TIMEOUT 은 그대로 두기로 했다(9/7 팀 판단)**. TS-08 에서 이 증상이 보이면 `watchdog()` 주석을 참고할 것.
+  **진행 (9/7) — 주행 몫 완료.** `zone_semaphore_node.py` 가 `/fleet/zone_event`(String, RELIABLE) 로 4종을 발행한다: `GRANT` 는 새로 획득할 때만(보유자 재요청 제외), `REJECT` 는 대기가 시작될 때 1건만(2초 재요청의 연속 거절은 발행하지 않음 — 로봇별 `notified` 집합으로 억제, 획득·반납 때 해제), `RELEASE` 는 실제 보유자의 반납만(못 받고 포기한 로봇의 반납은 발행하지 않아 그 `REJECT` 가 K-06 의 미해결로 남는다), `RECLAIM` 은 `watchdog()` 강제 회수. 6개 시나리오(경합 없음·재요청 3회·보유자 재요청·대기 중 포기·강제 회수·같은 로봇 대기 2회) 로직 검증 완료. **남은 것: 관제 DB 기록(9/8), 웹캠 CSV·K-06 산출(9/9) — 그래서 이슈는 열림 유지.**
+
+### I-031
+
+**OAK-D `camera_info` 초점거리가 704×704 crop 영상과 안 맞아 ArUco 거리가 1.74 배 작게 나온다**
+
+`mro_perception` (aruco_detector, amr_detection) · 심각도 중 · 담당 인지 정정인·민범진 · 등록 2026-09-07 (PR #30, 인지 정정인)
+
+- **증상** — 줄자 1.35 m 를 `aruco/distance` 가 0.76 m 로 냈다 (9/7 robot4 실측). robot3 도 `camera_info` 구조가 같다 (fx 566.65 / 569.95, 0.58 % 는 개체 차).
+- **원인** — 발행 영상은 704×704 정사각 crop 인데 `camera_info` 의 `fx`·`fy` 가 자르기 전 16:9 **전체 폭** 기준으로 줄어 실려 온다 (`cx`·`cy` ≈ 353 은 정상 — 가운데를 잘랐다는 뜻). crop 은 화각만 좁히고 초점거리는 안 바꾸므로 실제 fx 는 16/9 = 1.778 배다. 현장 비 1.35 / 0.76 = 1.776 과 일치. depthai / turtlebot4 설정이라 **저장소 밖** (I-009 와 같은 부류).
+- **영향** — `aruco/distance` 1.74 배 작게 (FR-08 베이 도착 확정 · FR-35 측위 검증) · `target/map_point` 좌우 1.76 배 크게 (1.13 m 지점에서 11.7 cm — 추종 목표가 옆으로 밀린다) · `target/distance` 는 depth 라 영향 없음.
+- **조치 (PR #30, 9/7)** — `core/camera.py` 의 `corrected_K` 가 `fx`·`fy` 에 `camera_fx_scale`(기본 16/9 = 1.7778, `perception.yaml`) 을 곱한다. `aruco_detector` 적용 완료. 합성 검증 두 벌 — 인지 `tools/aruco_offline_check.py`(왜곡 포함) 보정 후 최대 2.4 cm, PM 핀홀 재현(노드 코드 그대로) 0.5~1.45 m 오차 0.3~1.9 cm · 보정 없이 1.35 → 0.770 m 로 현장 0.76 재현. 함께 들어간 것: solvePnP(IPPE_SQUARE) · 자세 실패 시 NaN 대신 `id = -1` · 거리 게이트 `max_distance_m` 1.5 (계약 6절) · `marker_ids` 허용 목록 · 카메라 구독 `sensor_data` QoS.
+- **남은 것** — ① `amr_detection_node` 에도 `corrected_K` 적용 + RGB·depth 구독 QoS `sensor_data` (9/9 교체 PR 에 포함) ② **TS-U05 줄자 대조로 계수 확정** (9/8) — 실측 역산 1.728 / 1.744 / 1.761 은 depth 를 자로 써서 2 % 낮게 본 것으로 추정, 줄자가 판가름한다 ③ robot3 실기 확인 ④ 근본 해결(로봇이 영상과 맞는 `camera_info` 를 내보냄)은 Phase 1 범위 밖 — 되면 계수를 1.0 으로. **①·② 가 끝나면 닫는다.**
+- **경계값 주의 (PM 재현)** — 정확히 1.5 m 에 둔 마커가 추정 1.52 m 로 걸러졌다. 베이 정차점에서 선반 마커까지 실거리가 1.5 m 근처면 `max_distance_m` 에 여유를 둘 것 — I-025 ① 정차점 서쪽 이동 때 같이 본다.
+- **관제 주의** — `aruco/distance` 는 **카메라**→마커, `|amcl_pose − xy|` 는 **base_link**→마커라 상수 오프셋이 생긴다. `tolerance_m` 0.10 과 같은 급이므로 FR-35 구현 시 `ros2 run tf2_ros tf2_echo base_link oakd_rgb_camera_optical_frame` 으로 재서 뺀다.
 
 ### I-028
 

@@ -5,16 +5,16 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 66/104 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 67/103 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
-| mro_perception [인지 — 정정인, 민범진] | 5/14 | `████░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 22/28 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 21/36 | `██████░░░░` | — |
+| mro_perception [인지 — 정정인, 민범진] | 6/15 | `████░░░░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 20/26 | `████████░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 22/36 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
-| mro_bringup [PM 김병직] | 5/9 | `██████░░░░` | — |
+| mro_bringup [PM 김병직] | 6/9 | `███████░░░` | — |
 
 **오늘 마감 3건**
 
@@ -38,12 +38,13 @@
 - [x] **배포 PC 에서 `tools/bench_yolo.py` 로 `worker.pt` 10 Hz 확인** (PR #22 최저 사양 RTX 3060 track max 42.7 ms · PR #26 PC-W1 max 40.5 ms — nano 불필요, 실부하는 통합 9/9) — max 가 100 ms 넘으면 nano(`yolo26n`@640) 로 교체. PM 노트북 CPU 는 track 9 ms (PR #19) · 마감 9/8
 - [ ] **TS-U04 측면·후면** — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·`outfit_class` 유지 확인 (AC-10 근거, SDD 부록 B). 판정 기준은 SDD v0.10 · 마감 9/8
 - [ ] `amr_detection_node.py`: `MODEL_PATH` → `worker.pt`, `DETECT_CLASS` → worker_a/b (이름으로 거른다, 인덱스 아님), **`ONLY_OUR_CAR` 흰차 필터 해제**, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9
+- [ ] `amr_detection_node.py`: RGB·depth 구독 QoS → `qos_profile_sensor_data` (계약 8절 — 발행자가 BEST_EFFORT 면 영상이 한 장도 안 온다) · `camera_info` K 를 `core/camera.corrected_K` 로 보정 (`target/map_point` 좌우 1.76 배, I-031) — PR #30 후속, 교체 PR 에 같이 · 마감 9/9
 - [ ] `amr_detection_node.py`: **`target/distance` 발행 (FR-29)** — 추종거리 판정의 기준값. kpi_logger 는 이미 구독 중이라 이것만 붙으면 AC-05 가 측정된다 · 마감 9/8
-- [ ] **TS-U05 줄자 대조** — `target/distance` 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오차 < 기준의 1/3). 이게 없으면 AC-05 를 그 값으로 채점할 근거가 없다 · 마감 9/8
+- [ ] **TS-U05 줄자 대조** — `target/distance` 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오차 < 기준의 1/3). 이게 없으면 AC-05 를 그 값으로 채점할 근거가 없다. **같은 시험에서 `aruco/distance` 도 줄자와 대조해 `camera_fx_scale` 1.7778 을 확정한다 (I-031)** · 마감 9/8
 - [ ] 시험 절차 — 대기공간 로봇이 서향이므로 S5 페어링 때 **RC카를 로봇 정면(서쪽)으로 돌아 들어오게** 조종 (FR-14 정면 1 m). 작업자는 P2(남쪽)로 온다 · 마감 9/9
 - [ ] `amr_detection_node.py`: 모듈 상수 → ROS2 파라미터 (`config/perception.yaml`) · 마감 9/8
 - [x] `aruco_detector_node.py`: 검출·거리 초안 · 마감 9/7
-- [ ] `aruco_detector_node.py`: solvePnP 자세, 마커 ID 필터 · 마감 9/8
+- [x] `aruco_detector_node.py`: solvePnP 자세, 마커 ID 필터 — PR #30: solvePnP(IPPE_SQUARE) · `marker_ids` 허용 목록 · 거리 게이트 1.5 m · `camera_info` fx 16/9 보정 (I-031, PM 합성 재현: 보정 후 오차 ≤ 1.9 cm, 보정 없이 1.35 → 0.77 m) · 마감 9/8
 - [ ] `core/reid.py` 단위 테스트 (같은 인형 ≥ threshold, 다른 인형 < threshold) · 마감 9/8
 - [ ] `reid_threshold` 확정 — 같은/다른 인형 유사도 분포를 그려 결정 (SOT Q-13). 추출 영역이 인형 전체라 다른 인형끼리도 0.5 안팎에서 시작한다 · 마감 9/8
 
@@ -54,16 +55,14 @@
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [x] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) — PR #26 실기동: 등록 0.90 s · W1/W2 별개 · 재등록 15/15 (체류 시간은 Q-26 todo 별도) · 마감 9/8
 - [x] `webcam_register_node.py`: `mean_hist()` 스케일 정정 — 평균 뒤 **L2 정규화**로 바꿨다(`hsv_hist` 가 `cv2.normalize` 기본값 NORM_L2 라 L2=1 이다). 종전에는 합을 128 로 맞춰 발행 `color_hist` 의 L2 가 **31.6** 이었다. 유사도는 Bhattacharyya 척도 불변이라 영향 없음을 실측 확인(차이 5e-09) — 오늘 낸 측정값은 그대로 유효하다 (PR #26 PM 노트) · 마감 9/8
-- [x] `webcam_hint_node.py`: `DEFAULT_MODEL_PATH` 를 단일 출처인 `mro_perception/models/worker.pt` 로 변경 · 마감 9/8
-- [ ] `mro_webcam/models/best.pt` 구형 사본 삭제 — 실행 참조는 `worker.pt`로 전환 완료 · 마감 9/8
+- [ ] `webcam_hint_node.py`: `DEFAULT_MODEL_PATH` 를 `mro_perception/models/worker.pt` 로, `mro_webcam/models/best.pt` 사본 삭제 (단일 출처, PR #26 노트) · 마감 9/8
 - [x] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26, PR #20) · 마감 9/8
 - [x] `webcam_register_node.py`: `webcam.yaml` 파라미터화 — `webcam_index`·`conf` (PR #26) (9/7 내장 카메라가 잡히고 conf 를 못 낮춰 두 번 막힘, PR #20 노트). yaml 의 `model_path: ""` 는 launch 가 덮으므로 그대로 두되 주석 정정 · 마감 9/8
 - [x] **웹캠1 출입구 체류 시간 실측 (Q-26 해소)** — 실측 결과 문제 없다. 등록 없는 상태에서 시작해 **첫 통과에 두 명 다 등록**(0.90 / 0.91 s). 체류 구간 **18.99 · 16.30 s** 로 필요한 **1.3 s** 의 10배 이상 여유. 재등록 3/3(sim 0.71·0.75·0.77) · 마감 9/8
 - [x] **웹캠2 발행 주기 저하 (I-016)** — 캡처 스레드·BUFFERSIZE·주기 분리·CompressedImage 를 `webcam_hint_node.py` 에 병합 (PR #14, 9/7 머지) · 마감 9/7
 - [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 개별 `MutuallyExclusiveCallbackGroup`, `read()` 실패 대기, `stop → join → release` 종료 순서 코드 완료 (PR #21, PM 확정 로직 단위 검사 통과); **실장비 검증** 후 닫는다 · 마감 9/8
-- [x] `webcam_hint_node.py`: `detection_confirm_count`(3 프레임) → **초 단위** `detection_confirm_s`(0.3) 로 변경 — `process_hz`가 바뀌어도 확정 시간이 같은 의미를 유지하도록 실행 시 횟수로 환산 (`6679782`) · 마감 9/8
-- [x] `webcam2_subscriber.py` 삭제·`setup.py` 진입점 정리 — 폐기된 raw `/webcam2/image_raw` 구독 잔재 제거 · 마감 9/8
-- [ ] `webcam2.py` 정리 — 호모그래피 클릭·Nav2 실험 도구로 보존 중. 실행 용도와 기본 파라미터를 통합 전 확정 · 마감 9/8
+- [x] `webcam_hint_node.py`: `detection_confirm_count`(3 프레임) → **초 단위** `detection_confirm_s`(0.3) 로 — 계약 「시간 상수 표기」 규칙(프레임 수 금지, `webcam.yaml` 헤더). `process_hz` 를 바꾸면 의미가 조용히 달라진다 (PR #21 PM 노트) — PR #32 (`detection_confirm_s` 0.3 s, `ceil(초 × process_hz)`) · 마감 9/8
+- [ ] `webcam2.py` 는 **호모그래피 검증 도구로 유지** (PR #32: 클릭·수동 픽셀 → map 변환 → Nav2 goal. 프로덕션 launch 는 `webcam_hint_node` 만 띄운다) · `webcam2_subscriber.py` 는 삭제 (PM 결정 9/7, PR #33 질문 답) · 마감 9/8
 - [x] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 (PR #14) · 마감 9/8
 - [ ] `webcam_hint_node.py`: `worker.pt` 교체 후 **TS-U02** — 힌트 map 좌표 vs 실측 ≤ 0.3 m, 지연 ≤ 0.2 s (손 흔들기 → 화면) · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
@@ -93,7 +92,7 @@
 - [x] **좌표 보정 3건 (I-001 PM 검증)** — holding ≥1.5m(1.52m), bays 전부 DOCK 폴리곤 밖, P1 폴리곤이 통로를 완전히 가로지르도록 재실측 (9/6) · 마감 9/7
 - [x] 베이 B·C waypoint 확정 실측 (9/6, x=-0.78 로 통일) · 마감 9/7
 - [x] `arena.yaml` `homography_marks` — cam2 기준점은 `mro_webcam/config/WebCam2/marker_coordinates.json` 이 원본(PR #9), cam1 은 불필요(9/6). arena.yaml 에는 복사하지 않는다 · 마감 9/7
-- [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` · 마감 9/7
+- [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` — `aruco/id` 는 **1.5 m 안에서만** 나온다 (PR #30 거리 게이트) · 마감 9/7
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
 - [ ] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
@@ -104,7 +103,7 @@
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
 - [x] `zone_semaphore_node.py`: 진입 판정은 **순서 기반(방법 B)으로 확정** — 폴리곤 계산 안 함, 폴리곤은 로그 검산용 (PM 결정 9/7) · 마감 9/8
 - [x] `zone_semaphore_node.py`: 반납 시 대기열 누락으로 구역이 영구 차단되는 버그 수정 (9/7) · 마감 9/8
-- [ ] **`zone_semaphore_node.py`: `/fleet/zone_event` 발행 (I-030, 계약 v1.11)** — `"<zone> <robot> <REJECT|GRANT|RELEASE|RECLAIM>"`. REJECT 는 대기 시작 1건만, GRANT 는 새 획득만 · 마감 9/8
+- [x] **`zone_semaphore_node.py`: `/fleet/zone_event` 발행 (I-030, 계약 v1.11)** — `"<zone> <robot> <REJECT|GRANT|RELEASE|RECLAIM>"`. REJECT 는 대기 시작 1건만, GRANT 는 새 획득만 · 마감 9/8
 - [x] `safety_watchdog_node.py`: /scan → estop, cmd_vel 0 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: Nav2 goal cancel (액션 클라이언트), TS-14 결함 주입 검증 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: `HIT_FRAMES`·`CLEAR_FRAMES` 를 초 단위 파라미터로 (계약 시간 상수 규칙) · 마감 9/8
@@ -126,7 +125,7 @@
 - [x] `fleet_manager_node.py`: `/fleet/intervention` 구독 → DB events 기록 (I-021, FR-28) (PR #23, PM 스텁 18/18) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `/fleet/zone_event` 구독 → DB `events` kind `ZONE` 기록 (I-030, 계약 v1.11 §7) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
-- [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①) · 마감 9/8
+- [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①). **기준점 주의:** `aruco/distance` 는 카메라→마커, `\|amcl_pose − xy\|` 는 base_link→마커 — `tf2_echo base_link oakd_rgb_camera_optical_frame` 으로 오프셋을 재서 뺀다 (I-031) · 마감 9/8
 - [x] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') — 1 s 배치 창 + `worker_id` 정렬, W1→robot3·W2→robot4 로 순서 무관 재현 (PR #28, PM 스텁 24/24) · 마감 9/8
 - [ ] `control_ui`: 페어링 폴백(명시 페어링) 버튼 (FR-13) · 마감 9/8
 - [x] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) (PR #7) · 마감 9/9
@@ -137,7 +136,7 @@
 - [x] launch 가 `webcam.yaml` 을 넘기도록 연결 — webcam1/webcam2 launch (9/7) · 마감 9/7
 - [x] webcam1 launch 에서 안 쓰는 `homography_json` 제거 (계약 v1.8, PR #26 노트) · 마감 9/7
 - [x] 계약 v1.11 — 세마포어 이벤트 토픽 `/fleet/zone_event`·DB kind ZONE·K-06 산출 규칙 (I-030 PM 결정) · 마감 9/7
-- [ ] robot.launch 가 `perception.yaml` 을 넘기도록 연결 — 인지 노드가 파라미터를 읽기 시작할 때 같이 · 마감 9/8
+- [x] robot.launch 가 `perception.yaml` 을 넘기도록 연결 — 9/7, `aruco_detector` 가 PR #30 부터 파라미터를 읽어서 앞당김 (amr_detection·aruco 두 노드에만, robotN.yaml 뒤) · 마감 9/8
 - [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8
 - [ ] 중복 파라미터 한 곳으로 — `reid_threshold`(perception.yaml ↔ robotN.yaml), `follow_standoff_m`·`t_lim_s`(navigation.yaml ↔ robotN.yaml), `t_lim_s`·`t_ret_s`·`dock_retry`(arena.yaml ↔ robotN.yaml). 지금은 노드가 안 읽어 무해하지만 값 확정 때 한쪽만 고치는 사고가 난다 · 마감 9/8
 - [ ] SDD 부록 A rqt_graph 캡처 첨부 · 마감 9/10
