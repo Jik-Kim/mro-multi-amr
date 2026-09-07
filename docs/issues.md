@@ -17,12 +17,11 @@
 | [I-009](#i-009) | 상 | **열림** | 주행 박병후·이시율 | 0.79 m 병목에서 Nav2 통과 실패 우려 |
 | [I-013](#i-013) | 상 | **진행중** | 주행 박병후·이시율 | 로봇 2대의 맵 좌표계가 어긋난다 |
 | [I-021](#i-021) | 중 | **열림** | 관제 김민준 | 개입 이벤트가 DB(events)에 기록되지 않는다 (FR-28) |
-| [I-022](#i-022) | 상 | **열림** | 웹캠 한세교·김학민 | KPI 리포트의 지표가 AC 정의와 다르다 (AC-05·K-04·AC-13) |
-| [I-023](#i-023) | 상 | **열림** | 웹캠·관제 김학민·김민준 | 배송 판정(AC-08)이 CSV 에 남지 않는다 |
 | [I-024](#i-024) | 상 | **열림** | 주행 박병후·이시율 | `shuttle/status` 발행자가 없어 배송 성공률이 구조적으로 0 % |
 | [I-025](#i-025) | 상 | **열림** | 주행 박병후·이시율 | 베이 A·B 정차점이 도크 접근 지점과 물리적으로 겹친다 |
 | [I-026](#i-026) | 중 | **열림** | 관제 김민준 | 일시적 `FAILED` 가 미션을 영구 FAILED 로 굳힌다 |
 | [I-027](#i-027) | 중 | **열림** | 웹캠 한세교·김학민 | webcam_hint 의 YOLO 타이머가 겹쳐 돌 수 있다 (Reentrant 그룹) |
+| [I-028](#i-028) | 중 | **열림** | 웹캠 한세교·김학민 | K-04: STANDBY 뒤 대상이 재출현하면 성공과 실패로 이중 계상 |
 
 ## 해결된 이슈
 
@@ -45,6 +44,8 @@
 | [I-018](#i-018) | 인지 정정인·민범진 | 두 인형의 치수가 상의 말고도 다르다 |
 | [I-019](#i-019) | 관제 김민준 | fleet_manager 주석에 옛 구역 토큰 이름 남음 |
 | [I-020](#i-020) | 관제 김민준 | FleetStatus.state 를 두 노드가 덮어써 도킹 상태가 남지 않는다 |
+| [I-022](#i-022) | 웹캠 한세교·김학민 | KPI 리포트의 지표가 AC 정의와 다르다 (AC-05·K-04·AC-13) |
+| [I-023](#i-023) | 웹캠·관제 김학민·김민준 | 배송 판정(AC-08)이 CSV 에 남지 않는다 |
 
 ---
 
@@ -279,6 +280,7 @@
   - **AC-13 IPH** — 분모가 **CSV 첫 행~마지막 행 구간**이다. BRD 5.3 은 운용 시간을 **S2 undock ~ S10 도킹 완료의 합(충전 제외)**으로 정의한다. 미션 사이 대기 시간이 분모에 들어가면 IPH 가 실제보다 **작게** 나온다 — 기준 미달을 통과로 보이게 하는 방향이라 위험하다.
   - (사소) `if t0:` 이 `t0 == 0.0` 을 없는 값으로 취급한다(`kpi_report.py:139`). 실제 ROS 시각에서는 안 걸리지만 `use_sim_time` 에서는 첫 미션이 통째로 빠진다. `if t0 is not None:` 로.
 - **조치·남은 것** — ① 추종거리는 `approach/status == FOLLOWING` 구간으로 자르고 `abs(d − follow_standoff_m)` 의 p95 와 **최솟값**을 낸다 ② Lost 는 `target/visible` 1→0 전이(1.0 s 이상 지속)로 잡고, 재획득은 0→1, STANDBY·FAILED 로 끝난 건은 **실패로 따로 세어 성공률**을 낸다 ③ IPH 분모는 `shuttle/status` 의 undock~DOCKED 구간 합으로 바꾼다. **TS-02·TS-05·TS-17 이 9/10 이므로 그 전에 필요하다.**
+  **해결 (9/7, PR #15 김학민).** ①②③ 모두 계약 9절대로 들어갔고 PASS/FAIL 을 같이 찍는다. PM 이 합성 CSV 로 재대조 — AC-05 오차 p95·최소 이격, IPH 분모(미션 사이 대기 600 s 제외), SAFETY_POLICY 제외 모두 손계산과 일치. K-04 는 한 경우가 남아 I-028 로 분리했다
 
 ### I-023
 
@@ -288,6 +290,7 @@
 
 - **내용·재현** — `missions.result`(`SUCCESS`/`FAIL_TLIM`)는 `fleet_manager` 가 **SQLite 에만** 쓴다. `Mission.msg` 에는 `result`·`lead_time_s` 가 없어 `/fleet/mission` 을 받는 `kpi_logger` CSV 에는 판정이 남지 않는다. 그래서 `kpi_report.py` 는 **`Mission.DONE` 도달 여부**로 성공률을 세는데, ① T_lim 을 넘겨 도착한 미션도 결국 DONE 이 되므로 성공으로 계상되고 ② **끝내 도착하지 못한 미션은 CSV 에 흔적이 없어 분모에서 빠진다**(스윕 타이머는 DB 만 갱신한다). 대조에서 리포트 **50.0 %**, 참값 **0.0 %** 가 나왔다. 실제보다 **좋게** 나오는 방향이다. 리드타임도 `DONE − ASSIGNED`(요청→도킹 완료)라 K-05 의 정의(요청→**대기공간 도착**)와 다르다 — 대조에서 400 s vs 150 s.
 - **조치·남은 것** — **계약은 늘리지 않는다 (9/6 PM 결정).** `Mission.msg` 에 필드를 더하면 8명이 재빌드해야 한다. `kpi_logger` 와 DB 가 **같은 PC-F** 에 있으므로(`fleet_pc.launch.py`) `tools/kpi_report.py` 가 `~/mro_fleet.db` 의 `missions` 를 직접 읽어 `result` 로 AC-08 을, `waiting_at − created_at` 으로 K-05 리드타임을 낸다. CSV 는 그대로 두고 DB 경로를 인자로 받는다. **TS-07 배송 20회를 9/9 에 미리 빼므로 이것이 I-022 보다 먼저다.**
+  **해결 (9/7, PR #15 김학민).** `kpi_report.py --db ~/mro_fleet.db`(기본값, read-only) 가 `missions` 를 읽어 AC-08 = `SUCCESS`/전체(NULL 분모 포함), K-05 = `waiting_at − created_at`. PM 합성 DB 대조: 3건(SUCCESS·FAIL_TLIM·미판정) → 33.3 %, 리드타임 90·150 s → 평균 120 · p95 147. 정확. 관제 쪽 `result` 확정은 PR #7 에 이미 있다
 
 ### I-024
 
@@ -333,4 +336,13 @@
 
 - **내용·재현** — PR #14 의 `webcam_hint_node.py` 는 YOLO 처리 타이머(10 Hz)와 압축 발행 타이머(10 Hz)를 **하나의 `ReentrantCallbackGroup`** 에 두고 `MultiThreadedExecutor(num_threads=2)` 로 돈다. Reentrant 그룹은 **같은 콜백의 동시 실행**도 허용하므로, `model.track()` 한 번이 100 ms 를 넘는 순간(CPU 추론 640×480 이면 흔하다) 다음 틱이 두 번째 스레드에서 같은 모델을 다시 부른다. ultralytics 의 `persist=True` 추적기는 스레드 안전하지 않고, `self.last_frame_number` 도 잠금 없이 두 스레드가 쓴다. 증상은 간헐적 예외·트랙 ID 튐·힌트 좌표 튐이라 재현이 어렵다
 - **조치·남은 것** — 두 타이머에 **각각 `MutuallyExclusiveCallbackGroup`** 을 준다 — 자기 자신과는 안 겹치고 둘 사이는 병렬. 코드 세 줄. 같이 볼 것: `_capture_loop` 가 `read()` 실패 때 `sleep` 없이 `continue` 라 카메라가 빠지면 CPU 100 % 로 돈다(짧은 sleep 추가), `close()` 는 `release()` 전에 `join()` 이 안전하다. 마감 9/8 (TS-U02 전)
+
+### I-028
+
+**K-04: STANDBY 뒤 대상이 재출현하면 성공과 실패로 이중 계상**
+
+`tools` · 심각도 중 · 담당 웹캠 한세교·김학민 · 등록 2026-09-07 (PR #15 PM 검증)
+
+- **내용·재현** — `kpi_report.py` 가 Lost 를 두 함수에서 따로 센다. `reacquisition()` 은 `visible` 0→1 이면 무조건 **성공**으로 넣고, `reacq_failures_by_state()` 는 그 구간 안에 `STANDBY`/`FAILED` 가 있으면 **실패**로 넣는다. 로봇이 탐색을 포기해 STANDBY 로 빠진 뒤 작업자가 다시 시야에 들어오면(현장에서 흔하다) 같은 Lost 1건이 양쪽에 다 들어간다. PM 합성 로그: Lost 3회(성공 1·STANDBY 후 재출현 1·미복귀 1) 참값 성공률 33.3 % → 리포트 **Lost 4회 · 성공 2 · 50.0 %**, 재획득 p95 도 3.0 s → 17.2 s. 게다가 실패 함수는 `LOST_MIN_S` 1.0 s 필터가 없어 짧은 끊김도 실패로 센다. `reacquisition()` 끝의 `for a in appr:` 루프는 아무것도 하지 않는 잔재다
+- **조치·남은 것** — 한 함수로 합친다: 0→1 로 닫을 때 **그 구간 안에 STANDBY/FAILED 가 있었으면 실패, 없으면 성공**, 두 경우 모두 `dur ≥ LOST_MIN_S` 일 때만 Lost 로 센다. `reacq_failures_by_state()` 와 잔재 루프는 지운다. 검증은 위 합성 로그(성공 1·실패 2·p95 3.0 s). 마감 9/9 (TS-19 전). 다른 네 지표(AC-05·AC-08·K-05·AC-13)는 대조 결과 정확하다
 

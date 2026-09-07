@@ -5,13 +5,13 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 40/85 완료** (█████████░░░░░░░░░░░)  ·  기준 09/07
+**전체 44/86 완료** (██████████░░░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 3/12 | `██░░░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 8/17 | `█████░░░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 12/18 | `███████░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 16/33 | `█████░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 7/13 | `█████░░░░░` | — |
 | mro_bringup [PM 김병직] | 3/7 | `████░░░░░░` | — |
@@ -62,10 +62,11 @@
 - [ ] `webcam_hint_node.py`: `worker.pt` 교체 후 **TS-U02** — 힌트 map 좌표 vs 실측 ≤ 0.3 m, 지연 ≤ 0.2 s (손 흔들기 → 화면) · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
 - [x] `tools/kpi_report.py`: 추종거리·IPH·리드타임·성공률·재획득 계산 구현 (PR #8) · 마감 9/10
-- [ ] **`kpi_report.py`: 배송 판정(AC-08)·리드타임을 `~/mro_fleet.db` 에서 읽기 (I-023)** — CSV 에는 T_lim 판정이 없어 실제보다 좋게 나온다. **TS-07 이 9/9 라 이것이 먼저** · 마감 9/8
-- [ ] `kpi_report.py`: 추종거리를 FOLLOWING 구간으로 자르고 `|d−0.5|` p95 와 **최소 이격** 출력 (I-022, AC-05) · 마감 9/9
-- [ ] `kpi_report.py`: Lost 를 `target/visible` 전이로 잡고 재획득 **성공률** 산출 — SEARCHING 은 정상 절차에도 쓰인다 (I-022, K-04) · 마감 9/9
-- [ ] `kpi_report.py`: IPH 분모를 undock~도킹 완료 구간 합으로 (I-022, BRD 5.3) · 마감 9/9
+- [x] **`kpi_report.py`: 배송 판정(AC-08)·리드타임을 `~/mro_fleet.db` 에서 읽기 (I-023)** (PR #15, PM 합성 DB 대조 일치) · 마감 9/8
+- [x] `kpi_report.py`: 추종거리를 FOLLOWING 구간으로 자르고 `|d−0.5|` p95 와 **최소 이격** 출력 (I-022, AC-05, PR #15) · 마감 9/9
+- [x] `kpi_report.py`: Lost 를 `target/visible` 전이로 잡고 재획득 **성공률** 산출 — SEARCHING 은 정상 절차에도 쓰인다 (I-022, K-04, PR #15) · 마감 9/9
+- [ ] `kpi_report.py`: **K-04 이중 계상 수정 (I-028)** — STANDBY/FAILED 뒤 재출현은 실패로만, 두 함수를 하나로, `LOST_MIN_S` 필터를 실패에도 · 마감 9/9
+- [x] `kpi_report.py`: IPH 분모를 undock~도킹 완료 구간 합으로 (I-022, BRD 5.3, PR #15) · 마감 9/9
 - [x] `kpi_logger_node.py`: `target/distance` 구독(FR-29), 로봇 네임스페이스 파라미터화, QoS 계약 반영 (PR #8) · 마감 9/9
 
 ## mro_navigation [주행 — 박병후, 이시율]
