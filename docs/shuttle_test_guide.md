@@ -162,10 +162,10 @@ ros2 service list | grep zone_token
 
 **② Nav2 가 '떴다' 가 아니라 'active' 인지** — 셔틀 노드는 후자만 인정한다
 
-> **⚠ 아래 `grep -c` 만으로는 부족하다 (9/7 저녁 발견).** 이 패턴은 `robot3/` 로 시작하는 것만
-> 세므로 **네임스페이스 없이 뜬 스택**(`/amcl`·`/map_server`·`/lifecycle_manager_localization`)과
-> **죽은 세션이 남긴 유령 노드**를 못 잡는다. 실제로 그 상태에서 `1` 이 나와 통과했다.
-> 위 스크립트는 둘 다 본다 (D-5).
+> **⚠ 아래 `grep -c` 만으로는 부족하다 (9/7 저녁 발견).** 이 패턴은 이름이 `robot3/` 로 시작하고
+> **살아 있는** 노드만 센다. **죽은 세션이 디스커버리 서버에 남긴 유령 노드**는 `ros2 node list` 에
+> 그대로 보이므로 `1` 이 나와 통과하지만, T3 를 띄우면 이름 충돌로 활성화가 끝나지 않는다.
+> 위 스크립트가 이것을 본다 (D-5).
 
 ```bash
 ros2 node list | grep -c "robot3/lifecycle_manager_localization"
@@ -377,13 +377,26 @@ ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -p bay_
 
 - **원인** — 죽은 세션의 등록이 디스커버리 서버에 남아 있다. `controller_server`·`planner_server`
   같은 나머지 Nav2 서버가 함께 안 보이면 유령이 거의 확실하다.
-- **왜 위험한가** — 이 상태에서 T3 를 띄우면 같은 이름이 둘이 되어 라이프사이클 활성화가
-  끝나지 않는다. **9/7 에 T_lim 120 초를 날린 것이 이 증상이다.**
-- **판별** — `tools/shuttle_preflight.sh pre` 가 잡는다. 손으로 하면
-  `ros2 node list | grep -E '^/(amcl|map_server|lifecycle_manager_localization|bt_navigator)$'`
-  (네임스페이스 없는 스택) 과 위 `lifecycle get` 무응답 두 가지를 본다.
+- **왜 위험한가** — **같은 네임스페이스에 같은 이름**이 둘이 되어 라이프사이클 활성화가 끝나지
+  않는다. **9/7 에 T_lim 120 초를 날린 것이 이 증상이다.**
+- **판별** — `tools/shuttle_preflight.sh pre` 가 잡는다. 손으로 하면 `ros2 lifecycle get
+  /robot3/bt_navigator` 가 **아무것도 출력하지 않는지**를 본다.
 - **조치** — ① 그 노드를 띄운 PC 를 찾아 내린다 ② 못 찾으면 **PC-F 의 `fastdds discovery` 를
-  재시작**해 등록을 비우고 로봇을 재부팅한다.
+  재시작**해 등록을 비우고 로봇을 재부팅한다 ③ 그냥 두면 시간이 지나 사라지기도 한다
+  (9/7 저녁 유령 `bt_navigator` 가 그렇게 없어졌다).
+
+**반대로, 네임스페이스가 다른 노드는 무해하다 (9/7 저녁 실측).** 이름 없이 뜬
+`/amcl`·`/map_server`·`/lifecycle_manager_localization` 한 벌이 있어도 `/robot3` 시험에 영향이 없다.
+
+| 확인한 것 | 결과 |
+|---|---|
+| 그쪽 `lifecycle_manager` 의 `node_names` | `['map_server', 'amcl']` — **상대 이름**이라 `/map_server`·`/amcl` 로만 풀린다. `/robot3/*` 를 관리 대상으로 잡지 않는다 |
+| 토픽 | 그쪽은 전부 루트(`/tf`·`/map`·`/scan`·`/bond`), robot3 은 `/robot3/tf`·`/robot3/scan` — 겹치는 것이 없다 |
+| 루트 `/scan` | **Publisher count: 0** — 그쪽 amcl 은 아무도 발행하지 않는 토픽을 듣고 있어 영원히 `inactive` 다 |
+
+그래서 preflight 는 이것을 **WARN 으로만** 낸다. 위험한 것은 '네임스페이스가 없는 것' 이 아니라
+**'완전한 이름이 같은 것'** 이다. 단, T1·T3 를 `namespace:=` 없이 띄우면 그때는 진짜로 충돌한다 —
+**항상 네임스페이스를 준다.**
 
 ### D-4. 그 밖
 

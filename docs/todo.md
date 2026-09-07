@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 75/114 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 75/116 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 6/15 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/28 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 28/44 | `██████░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 28/46 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 7/10 | `███████░░░` | — |
 
@@ -97,6 +97,8 @@
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
 - [x] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
+- [ ] **AMCL `update_min_d` 0.05 실주행 확인 (I-029)** — 9/7 저녁 적용(0.25→0.05). 도착 판정이 안정되는지, 리샘플링이 잦아져 pose 가 더 떨리지는 않는지. 떨리면 `resample_interval` 2로 · 마감 9/8
+- [ ] **PC-R4 에 `localization.yaml` `update_min_d: 0.05` 복제 (I-029)** — `turtlebot4_ws` 는 git 밖이라 PC 마다 손으로. I-009 의 `nav2.yaml` 과 같이 확인 · 마감 9/8
 - [ ] **추종거리 분포 실측 (I-029)** — `xy_goal_tolerance` 0.25 고정이라 정지 시 오차 25 cm. TS-U07 로 `target/distance` p95·min 을 재고 미달이면 `cmd_vel` 미세 보정 구현 (PM: ③→② 순서, 기준 완화는 마지막) · 마감 9/8
 - [ ] `follow_target_node.py`: 힌트 구독을 `/webcam2/target_hint`(**TargetHint, sensor_data QoS**) 로 — 지금은 옛 `webcam/car_map_point` PointStamped RELIABLE 이라 BEST_EFFORT 발행자(PR #14)의 힌트를 못 받는다 · 마감 9/8
 - [ ] **`shuttle_mission_node.py`: P1 대기 중 포기해도 반납을 부를 것 (I-033)** — 거절당하면 세마포어 대기열에 들어가는데 `token_held` 가 False 라 `release_token` 이 그냥 돌아온다. T_lim 으로 끊기면 유령 대기열이 남아 **P1 이 영구히 잠기고 watchdog 도 못 푼다**. `token_requested` 플래그 추가. 거절만 반복하다 T_lim 으로 끝나는 단위 시험도 함께 · 마감 9/8
