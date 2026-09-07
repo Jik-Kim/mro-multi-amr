@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """웹캠1 작업자 등록 노드 (S1) — PC-W1.
 
-관제센터 시야에서 작업자를 추적하고, 외형 서술자를 붙여 /webcam1/worker_descriptor 로 발행한다.
+출입구 시야에서 작업자를 추적하고, 외형 서술자를 붙여 /webcam1/worker_descriptor 로 발행한다.
 fleet_manager 가 이를 받아 작업자-로봇을 배정하고 언독(S2)으로 이어간다.
 
   카메라 → YOLO.track(ByteTrack) → 트랙 ID → bbox crop
@@ -18,8 +18,11 @@ fleet_manager 가 이를 받아 작업자-로봇을 배정하고 언독(S2)으�
   - rematch_threshold 는 잠정값이다. 인형 2체로 유사도 분포를 재서 확정한다 (계약 v1.3)
   - 자동 노출이 길어지면 캡처가 처리 주기 밑으로 떨어져 루프까지 느려진다
   - 셔틀 트리거는 mission/assigned 가 계약이다 (FR-07). 옛 webcam/detected 발행은 제거했다
+  - 웹캠1 은 출입구만 본다 (9/7 결정, 계약 v1.10). 관제탑 구역은 시야 밖이고 map 좌표도 내지 않는다.
+    등록은 작업자가 출입구를 지나는 순간에 일어나므로 통과 시간이 register_s 를 채우는지 확인할 것 (Q-26)
 
-TODO([웹캠]) 등록 구역 게이트 (관제탑 위치 확정 후), config/webcam.yaml 파라미터화
+TODO([웹캠]) config/webcam.yaml 파라미터화 — 지금은 model_path·target_classes·rematch_threshold
+             셋만 선언한다. 등록 구역 게이트는 두지 않는다 — 시야 전체가 곧 등록 구역이다 (Q-26)
 
 실행
   ros2 launch mro_bringup webcam1_pc.launch.py

@@ -174,15 +174,26 @@ def reacquisition(rows, t_end):
 
 # ── AC-08 / K-05 : 관제 DB ────────────────────────────────────────
 def missions_from_db(db_path):
+    """(행, 안내문) 을 돌려준다. 행이 None 이면 안내문에 못 읽은 이유가 담긴다.
+
+    관제 DB 가 아직 초기화되기 전이면 파일만 있고 missions 테이블이 없다. 그대로 두면
+    OperationalError 로 리포트 전체가 죽어 나머지 네 지표까지 못 본다 — 잡아서 안내한다.
+    """
     if not db_path or not os.path.exists(db_path):
-        return None
-    con = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
+        return None, f'DB 없음: {db_path}'
     try:
-        return con.execute(
-            'SELECT mission_id, result, created_at, waiting_at, finished_at FROM missions'
-        ).fetchall()
-    finally:
-        con.close()
+        con = sqlite3.connect(f'file:{db_path}?mode=ro', uri=True)
+        try:
+            rows = con.execute(
+                'SELECT mission_id, result, created_at, waiting_at, finished_at FROM missions'
+            ).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error as e:
+        return None, (f'DB 를 읽지 못했습니다: {db_path}\n'
+                      f'    {e}\n'
+                      '    관제 DB 가 초기화됐는지 확인하세요 (fleet_manager 가 schema.sql 로 만듭니다)')
+    return rows, None
 
 
 def main():
@@ -232,9 +243,9 @@ def main():
 
     # AC-08 / K-05
     print('\nAC-08 배송 성공률 · K-05 리드타임 — 관제 DB')
-    ms = missions_from_db(a.db)
+    ms, why = missions_from_db(a.db)
     if ms is None:
-        print(f'  DB 없음: {a.db}')
+        print(f'  {why}')
         print('  ※ CSV 로는 낼 수 없습니다. Mission.msg 에 result 가 없어 판정이 로그에 남지 않고,')
         print('    끝내 도착 못 한 미션은 CSV 에 흔적이 없어 분모에서 빠집니다 (I-023)')
     else:
