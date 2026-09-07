@@ -200,7 +200,9 @@ class Diagram:
         _pts, lx, ly = self.path_of(e)
         ls = e['lines']
         lh = 13
-        wmax = max(self.text_w(t, False) for t in ls)
+        # 첫 줄은 font-weight 600 이라 같은 크기라도 넓다. 안 보면 글자가 상자 밖으로 나간다
+        wmax = max(self.text_w(t, False) * (1.10 if i == 0 else 1.0)
+                   for i, t in enumerate(ls))
         bw, bh = wmax + 14, lh * len(ls) + 8
         bx = lx - bw / 2 if e['lanchor'] == 'middle' else lx - 7
         if e.get('lx_fix') is not None:
@@ -250,6 +252,14 @@ class Diagram:
                         and ly < n['y'] + n['h'] and ly + lh > n['y']):
                     warn.append('라벨 "%s" 이 상자 %s 를 가린다' % (e['lines'][0], n['id']))
                     break
+        for e in self.edges:
+            r = self.label_rect(e)
+            if r is None:
+                continue
+            lx, ly, lw, _lh = r
+            if lx < 0 or lx + lw > self.w:
+                warn.append('라벨 "%s" 이 캔버스 밖으로 %d px 나간다'
+                            % (e['lines'][0], max(-lx, lx + lw - self.w)))
         # 라벨이 컨테이너 경계선에 걸치는지 — 배경 상자와 반쯤 겹쳐 보기 나쁘다
         bands = [n for n in self.nodes.values() if n['shape'] == 'band']
         for e in self.edges:
@@ -1263,7 +1273,7 @@ def step3b():
         side(tag + 'fol', tag + 'nav', 'right@0.35-left@0.85',
              ['navigate_to_pose', '(액션) 작업자 추종'], ACT, width=2.0, mid=gm, lx=gm)
         side(tag + 'ret', tag + 'dok', 'right@0.30-left@0.80',
-             ['dock / undock  (액션)'], ACT, width=2.0, mid=gm, lx=gm)
+             ['dock / undock'], ACT, width=2.0, mid=gm, lx=gm)
 
         d.band(tag + 'pc', px, TOP, pw, bot - TOP + 18, ns, sty, dash=False)
         return bot + 18
@@ -1361,8 +1371,9 @@ def step3b():
                                    'sensor_msgs · Bool · Pose → 관제 · kpi_logger'], TOPIC, ylab=R2)
         link('bus', pc, px + 620, ['mission/assigned · mission/finish',
                                    'mro_interfaces/Mission  ← 관제'], TOPIC, ylab=R2, updown='up')
-        link('bus', pc, px + 780, ['/webcam1/worker_descriptor · /webcam2/target_hint',
-                                   'WorkerDescriptor · TargetHint  ← 웹캠 PC'], TOPIC,
+        link('bus', pc, px + 755, ['/webcam1/worker_descriptor',
+                                   '/webcam2/target_hint  ← 웹캠 PC',
+                                   'WorkerDescriptor · TargetHint'], TOPIC,
              ylab=R3, updown='up')
 
     # ── 관제 ↔ 버스 ──
