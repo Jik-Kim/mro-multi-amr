@@ -2,7 +2,12 @@
 
 입력: oakd/rgb/image_raw/compressed · oakd/rgb/camera_info · oakd/stereo/image_raw/compressedDepth
 출력: aruco/id (Int32, 없으면 -1) · aruco/distance (Float32, m)
-      aruco/pose (PoseStamped, 카메라 광학 프레임) — publish_pose=true 일 때만. 계약에 아직 없다
+      aruco/pose (PoseStamped) — 마커 중심의 위치·자세, 카메라 광학 프레임(x 우·y 하·z 앞).
+        위치는 solvePnP 의 tvec 에 depth/pnp 비를 곱한 것이라 aruco/distance 와 같은 자다.
+        주행이 베이 정렬에 쓰는 법: 좌우 치우침 = x, 앞 거리 = z, 마커 방위 = atan2(x, z),
+        벽과의 각 = 회전의 yaw. base_link 로 옮기려면 TF(oakd_rgb_camera_optical_frame) 를 쓴다.
+        회전은 정사각 마커의 두 해 문제로 흔들릴 수 있어 이전 프레임 자세로 동점을 해소한다 —
+        그래도 정렬에는 x·z(방위)를 먼저 쓰고 yaw 는 보조로 쓰기를 권한다.
 
 이 노드는 **값을 만들 뿐 판정하지 않는다** (계약 9.1). 같은 두 토픽을 두 곳이 다르게 쓴다.
 
@@ -77,7 +82,7 @@ class ArucoDetector(Node):
         self.declare_parameter('depth_min_m', 0.8)            # 이 아래는 depth 대신 pnp
         self.declare_parameter('pair_tol_s', 0.02)            # 같은 프레임 쌍으로 볼 RGB·depth stamp 차
         self.declare_parameter('depth_wait_s', 0.08)          # RGB 가 먼저 오면 짝 depth 를 이만큼 기다린다
-        self.declare_parameter('publish_pose', False)         # aruco/pose — 계약 추가 후 켠다
+        self.declare_parameter('publish_pose', True)          # aruco/pose (계약 4절 추가 — PR #40)
         self.declare_parameter('publish_pose_log', True)
         self.declare_parameter('fx_ratio_log_s', 10.0)        # 0 이면 끔
         p = lambda k: self.get_parameter(k).value             # noqa: E731
@@ -99,6 +104,7 @@ class ArucoDetector(Node):
         self.D = np.zeros((5, 1))
         self.depth = None            # (depth_mm, stamp_s) 최신 한 장. RGB 와 stamp 로 짝짓는다
         self.pending = None          # 짝 depth 를 기다리는 RGB 프레임의 계산 결과
+        self.prev = None             # (id, rvec, stamp) — 자세 두 해 사이 동점 해소용. 1 초 넘게 끊기면 버린다
         self.ratios = deque(maxlen=20)    # depth/pnp 비, 최근 2 초. pnp 대체값·pose 에 곱한다
         self.det = aruco.make_detector()
 
@@ -178,9 +184,12 @@ class ArucoDetector(Node):
         # 여럿 보이면 가장 큰(= 가장 가까운) 것 하나. 베이 마커와 ID 4 가 동시에 잡히는 구간은
         # 없지만(셔틀 중 vs 대기공간 접근 중), 그래도 결정론적으로 하나만 낸다
         mid, corners = cand[0]
-        pose = aruco.solve_pose(corners, self.K, self.D, self.size)
+        t = stamp_s(msg.header)
+        prev = self.prev[1] if (self.prev and self.prev[0] == mid and t - self.prev[2] < 1.0) else None
+        pose = aruco.solve_pose(corners, self.K, self.D, self.size, prev_rvec=prev)
         if pose is None:
             return self.none(f'ID {mid} 자세 실패 — 프레임 버림')
+        self.prev = (mid, pose['rvec'], t)
 
         if self.pending is not None:
             self.flush(final=True)       # 앞 프레임의 depth 는 이제 안 온다 — pnp 로 마무리하고 넘어간다

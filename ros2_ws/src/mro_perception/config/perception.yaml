@@ -40,8 +40,8 @@
     max_distance_m: 2.0        # 이보다 멀면 '못 봤다'(id = -1). 원거리 오검출을 거르는 느슨한 한계다 —
                                # 주행이 aruco_max_dist_m 1.5 로 다시 자른다(계약 6절 검출 조건).
                                # 1.5 로 두면 정확히 1.5 m 에 둔 마커가 1.52 로 걸러진다 (I-031 PM 재현)
-    publish_pose: false        # aruco/pose(PoseStamped, 카메라 광학 프레임) 발행. **계약 4절에 없다** —
-                               # 주행이 정렬·각도 게이팅에 쓰려면 PM 이 계약에 넣은 뒤 켠다
+    publish_pose: true         # aruco/pose(PoseStamped, 카메라 광학 프레임) — 마커 중심 위치·자세. 주행 베이 정렬용
+                               # (계약 4절, PR #40). 위치는 aruco/distance 와 같은 자(depth/pnp 비 반영)
     publish_pose_log: true     # 검출 로그에 거리(출처)·기운각 남김. 통합 때 시끄러우면 false
     fx_ratio_log_s: 10.0       # depth/pnp 비(최근 20 프레임 ≈ 2 초 중앙값)를 이 주기로 로그. 노드는 이 비를
                                # depth 없는 프레임의 pnp 대체값과 aruco/pose 위치에 곱한다 — 9/7 robot3 에서

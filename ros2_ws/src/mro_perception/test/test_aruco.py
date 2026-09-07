@@ -137,6 +137,19 @@ def test_detect_filters_by_allowed_ids():
     assert aruco.detect(det, _scene_with_marker(12), {1, 2, 3, 4}) == []   # 예약 ID 는 통과 못 한다
 
 
+def test_prev_rvec_breaks_tie_between_mirror_solutions():
+    """기울어진 마커의 두 해(앞으로/뒤로 기움)가 오차 동점일 때 이전 프레임 자세에 가까운 쪽을 고른다."""
+    rng = np.random.default_rng(3)
+    corners = corners_at(z=1.0, tilt_deg=20) + rng.normal(0, 0.15, (4, 2)).astype(np.float32)
+    true_rvec = cv2.Rodrigues(marker_rotation(20))[0].ravel()
+    mirror_rvec = cv2.Rodrigues(marker_rotation(-20))[0].ravel()
+    a = aruco.solve_pose(corners, K, D, SIZE, prev_rvec=true_rvec, tie_px=5.0)
+    b = aruco.solve_pose(corners, K, D, SIZE, prev_rvec=mirror_rvec, tie_px=5.0)
+    assert aruco.rotation_gap_deg(a['rvec'], true_rvec) < 8
+    assert aruco.rotation_gap_deg(b['rvec'], mirror_rvec) < 8
+    assert abs(a['dist'] - b['dist']) < 0.01              # 거리는 두 해가 같다 — 그래서 거리에는 영향이 없다
+
+
 def test_rvec_to_quat_matches_rotation_matrix():
     rng = np.random.default_rng(0)
     for _ in range(20):
