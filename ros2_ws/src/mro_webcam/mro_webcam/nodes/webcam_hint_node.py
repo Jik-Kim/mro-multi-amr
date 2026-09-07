@@ -9,13 +9,14 @@
 """
 import os
 import threading
+import time
 from dataclasses import dataclass
 
 import cv2
 import rclpy
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import PointStamped
-from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -56,6 +57,10 @@ class NodeConfig:
     homography_path: str
     confidence: float
     target_classes: list
+    detection_confirm_count: int
+    detection_hold_s: float
+    lost_confirm_s: float
+    hint_valid_s: float
     show_window: bool
 
 
@@ -134,6 +139,7 @@ class LatestFrameCamera:
                         '웹캠2 프레임을 읽지 못했습니다.',
                         throttle_duration_sec=5.0,
                     )
+                time.sleep(0.05)
                 continue
             with self.lock:
                 self.frame = frame
@@ -142,8 +148,13 @@ class LatestFrameCamera:
     # 캡처를 중지하고 카메라와 스레드 자원을 정리한다.
     def close(self):
         self.stop_event.set()
-        self.capture.release()
         self.thread.join(timeout=2.0)
+        if self.thread.is_alive():
+            self.logger.warning('webcam_hint 캡처 스레드가 종료되지 않아 카메라 read를 해제합니다.')
+            self.capture.release()
+            self.thread.join(timeout=1.0)
+        else:
+            self.capture.release()
 
 
 
@@ -162,6 +173,10 @@ class WebcamHint(Node):
         self.jpeg_quality = config.jpeg_quality
         self.confidence = config.confidence
         self.target_classes = config.target_classes
+        self.detection_confirm_count = config.detection_confirm_count
+        self.detection_hold_s = config.detection_hold_s
+        self.lost_confirm_s = config.lost_confirm_s
+        self.hint_valid_s = config.hint_valid_s
         self.show_window = config.show_window
         self._validate(config.camera, config.process_hz, config.image_publish_hz, config.homography_path)
 
@@ -170,6 +185,7 @@ class WebcamHint(Node):
         self.model = YOLO(config.model_path)
         self.class_names = self.model.names
         self.workers = {}  # worker_id -> outfit_class
+        self.track_states = {}  # track_id -> first_seen, last_seen, confirmed
 
         # ROS I/O: 등록 작업자를 받고 작업자 map 좌표를 보낸다.
         self.create_subscription(WorkerDescriptor, '/webcam1/worker_descriptor', self._on_worker_descriptor, 10)
@@ -179,9 +195,10 @@ class WebcamHint(Node):
         # 캡처, YOLO 처리, 압축 영상 발행을 서로 다른 실행 경로로 분리한다.
         self.camera = LatestFrameCamera(config.camera, self.get_logger())
         self.last_frame_number = 0
-        timer_callbacks = ReentrantCallbackGroup()
-        self.create_timer(1.0 / config.process_hz, self._process_latest_frame, callback_group=timer_callbacks)
-        self.create_timer(1.0 / config.image_publish_hz, self._publish_compressed_image, callback_group=timer_callbacks)
+        self.yolo_callback_group = MutuallyExclusiveCallbackGroup()
+        self.image_callback_group = MutuallyExclusiveCallbackGroup()
+        self.create_timer(1.0 / config.process_hz, self._process_latest_frame, callback_group=self.yolo_callback_group)
+        self.create_timer(1.0 / config.image_publish_hz, self._publish_compressed_image, callback_group=self.image_callback_group)
         self.camera.start()
         self.get_logger().info(
             f'webcam_hint: {self.camera.description()} | '
@@ -210,6 +227,10 @@ class WebcamHint(Node):
             homography_path=str(self.declare_parameter('homography_json', '').value),
             confidence=float(self.declare_parameter('confidence', 0.5).value),
             target_classes=list(self.declare_parameter('target_classes', DEFAULT_CLASSES).value),
+            detection_confirm_count=int(self.declare_parameter('detection_confirm_count', 3).value),
+            detection_hold_s=float(self.declare_parameter('detection_hold_s', 0.5).value),
+            lost_confirm_s=float(self.declare_parameter('lost_confirm_s', 1.0).value),
+            hint_valid_s=float(self.declare_parameter('hint_valid_s', 2.0).value),
             show_window=bool(self.declare_parameter('show_window', False).value),
         )
 
@@ -223,6 +244,8 @@ class WebcamHint(Node):
             raise ValueError('confidence는 0~1 범위여야 합니다.')
         if not 1 <= self.jpeg_quality <= 100:
             raise ValueError('jpeg_quality는 1~100 범위여야 합니다.')
+        if self.detection_confirm_count <= 0 or self.detection_hold_s < 0.0 or self.lost_confirm_s <= 0.0 or self.hint_valid_s <= 0.0:
+            raise ValueError('detection_confirm_count는 1 이상이고 추적 시간 파라미터는 음수일 수 없습니다.')
         if not homography_path:
             raise ValueError('homography_json 경로가 필요합니다.')
 
@@ -286,18 +309,24 @@ class WebcamHint(Node):
             conf=self.confidence,
             verbose=False,
         )[0]
+        now = self.get_clock().now().nanoseconds / 1e9
         if result.boxes is not None:
             for box in result.boxes:
-                self._process_detection(frame, box)
+                self._process_detection(frame, box, now)
+        self._remove_lost_tracks(now)
 
         if self.show_window:
             cv2.imshow('webcam2 hint', frame)
             cv2.waitKey(1)
 
     # 대상 클래스를 작업자와 연결하고 bbox를 SLAM map 좌표로 변환한다.
-    def _process_detection(self, frame, box):
+    def _process_detection(self, frame, box, now):
         outfit_class = self._class_name(int(box.cls[0]))
         if self.target_classes and outfit_class not in self.target_classes:
+            return
+
+        track_id = int(box.id[0]) if box.id is not None else None
+        if track_id is None or not self._confirm_track(track_id, now):
             return
 
         worker_id = self._worker_id_for_class(outfit_class)
@@ -313,6 +342,28 @@ class WebcamHint(Node):
             self._draw_detection(
                 frame, (x1, y1, x2, y2), worker_id, confidence
             )
+
+    # 새 트랙은 최소 검출 횟수를 채우고, 확정된 트랙은 즉시 통과시킨다.
+    def _confirm_track(self, track_id, now):
+        state = self.track_states.get(track_id)
+        if state is None or now - state['last_seen'] > self.detection_hold_s:
+            state = {'last_seen': now, 'detection_count': 1, 'confirmed': False}
+            self.track_states[track_id] = state
+        else:
+            state['last_seen'] = now
+            if not state['confirmed']:
+                state['detection_count'] += 1
+        if not state['confirmed'] and state['detection_count'] >= self.detection_confirm_count:
+            state['confirmed'] = True
+            self.get_logger().info(f'track_id={track_id} 확정 ({state["detection_count"]}회 검출)')
+        return state['confirmed']
+
+    # Lost 확정 시간을 넘겼으면 트랙 상태를 제거한다.
+    def _remove_lost_tracks(self, now):
+        lost_ids = [track_id for track_id, state in self.track_states.items() if now - state['last_seen'] >= self.lost_confirm_s]
+        for track_id in lost_ids:
+            del self.track_states[track_id]
+            self.get_logger().info(f'track_id={track_id} Lost 확정')
 
     # YOLO 클래스 ID를 모델에 정의된 클래스 이름으로 변환한다.
     def _class_name(self, class_id):
