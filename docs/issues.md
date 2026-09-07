@@ -15,7 +15,6 @@
 |---|---|---|---|---|
 | [I-003](#i-003) | 상 | **진행중** | 인지 정정인·민범진 | worker.pt 미학습 — 이관 노드는 car 클래스 |
 | [I-009](#i-009) | 상 | **열림** | 주행 박병후·이시율 | 0.79 m 병목에서 Nav2 통과 실패 우려 |
-| [I-021](#i-021) | 중 | **열림** | 관제 김민준 | 개입 이벤트가 DB(events)에 기록되지 않는다 (FR-28) |
 | [I-024](#i-024) | 상 | **열림** | 주행 박병후·이시율 | `shuttle/status` 발행자가 없어 배송 성공률이 구조적으로 0 % |
 | [I-025](#i-025) | 상 | **열림** | 주행 박병후·이시율 | 베이 A·B 정차점이 도크 접근 지점과 물리적으로 겹친다 |
 | [I-029](#i-029) | 상 | **열림** | 주행 박병후·이시율 | Nav2 도착 오차 0.25 m 를 낮출 수 없어 추종거리(AC-05)를 못 맞춘다 |
@@ -43,6 +42,7 @@
 | [I-018](#i-018) | 인지 정정인·민범진 | 두 인형의 치수가 상의 말고도 다르다 |
 | [I-019](#i-019) | 관제 김민준 | fleet_manager 주석에 옛 구역 토큰 이름 남음 |
 | [I-020](#i-020) | 관제 김민준 | FleetStatus.state 를 두 노드가 덮어써 도킹 상태가 남지 않는다 |
+| [I-021](#i-021) | 관제 김민준 | 개입 이벤트가 DB(events)에 기록되지 않는다 (FR-28) |
 | [I-022](#i-022) | 웹캠 한세교·김학민 | KPI 리포트의 지표가 AC 정의와 다르다 (AC-05·K-04·AC-13) |
 | [I-023](#i-023) | 웹캠·관제 김학민·김민준 | 배송 판정(AC-08)이 CSV 에 남지 않는다 |
 | [I-026](#i-026) | 관제 김민준 | 일시적 `FAILED` 가 미션을 영구 FAILED 로 굳힌다 |
@@ -88,7 +88,7 @@
 `mro_perception` · 심각도 상 · 담당 인지 정정인·민범진 · 등록 2026-09-04 (PM)
 
 - **내용·재현** — 시나리오 검출 불가
-- **조치·남은 것** — **9/7 `worker.pt` 수령 (PR #19)** — yolo26s @ 640, 클래스 `amr`/`worker_b`/`worker_a`, val mAP50 0.995 · mAP50-95 0.816, test 0.803, 혼동행렬 amr↔작업자 0건, 색 편향 점검 밝기 차 0.6 % (PM 이 체크포인트 열어 클래스·파라미터 708 텐서·지표 대조 일치). 웹캠1·2 launch 가 `mro_perception/models/worker.pt` 를 `model_path` 로 넘김 (PM, 같은 날). PM 노트북 CPU 로 track 호출 9 ms. **남은 것:** `amr_detection` 모델 경로·클래스 교체 + `ONLY_OUR_CAR` 해제 (9/9) · 배포 PC 4대 `tools/bench_yolo.py` 10 Hz 확인 (9/8) · TS-U01·U03 통과 시 닫는다
+- **조치·남은 것** — **9/7 `worker.pt` 수령 (PR #19)** — yolo26s @ 640, 클래스 `amr`/`worker_b`/`worker_a`, val mAP50 0.995 · mAP50-95 0.816, test 0.803, 혼동행렬 amr↔작업자 0건, 색 편향 점검 밝기 차 0.6 % (PM 이 체크포인트 열어 클래스·파라미터 708 텐서·지표 대조 일치). 웹캠1·2 launch 가 `mro_perception/models/worker.pt` 를 `model_path` 로 넘김 (PM, 같은 날). **속도 실측 완료 (9/7):** 팀 최저 사양 RTX 3060 노트북에서 track max 42.7 ms (PR #22 정인), PC-W1 RTX 4070 max 40.5 ms (PR #26 학민) — nano 불필요, 실부하는 통합 9/9 에 재확인. **웹캠1 교체 완료 (PR #26):** 등록 0.90 s, 인형 2체 W1·W2 별개, 재등록 15/15 (TS-U01 실기동 통과). **남은 것:** `amr_detection` 모델 경로·클래스 교체 + `ONLY_OUR_CAR` 해제 (9/9) → TS-U03 통과 시 닫는다
 
 ### I-004
 
@@ -276,6 +276,7 @@
 
 - **내용·재현** — FR-28 은 개입 이벤트를 **DB(events) 와 KPI CSV 양쪽에** 남기도록 하고, `schema.sql` 의 `events.kind` 에도 `INTERVENTION` 이 있다. 그런데 DB 에 쓰는 노드는 `fleet_manager` 하나뿐인데 `/fleet/intervention` 을 구독하지 않는다(계약 4절 수신자 = `kpi_logger, fleet_manager`). `control_ui` 의 발행과 `kpi_logger` 의 CSV 기록은 되어 있으므로 **CSV 에만 남고 DB 에는 안 남는다.** AC-13(IPH) 를 DB 로 검산할 수 없다.
 - **조치·남은 것** — `fleet_manager` 에 `/fleet/intervention` 구독을 추가하고 `db.event(t, robot_ns, 'INTERVENTION', kind, note)` 로 기록한다. `SAFETY_POLICY` 는 개입으로 계상하지 않으므로 kind 를 그대로 넣되 집계에서 거른다 (BRD 5.3)
+  **해결 (9/7, PR #23 김민준).** `fleet_manager` 가 `/fleet/intervention` 을 구독해 `events` 에 `(t=header.stamp, robot_ns, 'INTERVENTION', kind, note)` 로 기록. stamp 가 0·비정상이면 수신 시각. `SAFETY_POLICY` 도 원본 kind 그대로 저장하고 집계에서 거른다 — DB 로 IPH 를 검산할 때 `value != 'SAFETY_POLICY'` 를 빼는 것을 잊지 말 것. 회귀 테스트 3개, PM 스텁으로 18/18 통과. `FAIL_INTERVENTION` 은 계약에 확정 조건이 없어 넣지 않았고, 필요해지면 PM 이 계약 9.2 에 먼저 정의한다
 
 ### I-022
 
@@ -361,6 +362,7 @@
   ③ **실측을 먼저 한다** → 추종 중에는 표적이 움직여 목표가 계속 갱신되므로 0.5 m 근처를 유지할 수 있다. p95 는 95 % 분위이므로 정지 구간 비중이 작으면 통과할 여지가 있다. **TS-U07 로 실제 분포를 재본 뒤 판단하는 것을 권한다.**
   ④ 기준 완화를 PM 에 요청한다 (Q-16 과 함께).
   남은 것 — ③으로 분포를 먼저 재고, 미달이면 ②를 구현한다. `follow_target` 구현(9/8)과 같이 결정한다.
+  **PM 결정 (9/7):** ③ → ② 순서로 간다. 9/8 TS-U07 에서 `target/distance` 분포(p95·min)를 먼저 재고, 미달이면 도착 후 `cmd_vel` 미세 보정을 넣는다. ④ 기준 완화는 마지막 수단이다 — AC-05 는 BRD 값이라 바꾸면 BRD 개정이고, 추종 중에는 목표가 계속 갱신돼 정지 구간 비중이 작을 가능성이 크다.
 
 ### I-028
 
