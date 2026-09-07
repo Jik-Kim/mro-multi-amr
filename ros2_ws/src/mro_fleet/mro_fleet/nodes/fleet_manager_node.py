@@ -38,8 +38,23 @@ SHUTTLE_MISSION_STATES = {
 APPROACH_MISSION_STATES = {
     'FOLLOWING': Mission.FOLLOWING,
     'STANDBY': Mission.STANDBY,
-    'FAILED': Mission.FAILED,
 }
+SHUTTLE_OUTBOUND_STATES = {'READY', 'SHUTTLE', 'AT_BAY', 'WAITING'}
+SHUTTLE_RETURN_STATES = {'RETURNING', 'DOCK_WAIT', 'DOCKED'}
+APPROACH_ACTIVE_STATES = {
+    'SEARCHING',
+    'APPROACH_1',
+    'APPROACH_2',
+    'ARRIVED',
+    'FOLLOWING',
+    'STANDBY',
+}
+APPROACH_MISSION_PHASES = {
+    Mission.PAIRED,
+    Mission.FOLLOWING,
+    Mission.STANDBY,
+}
+TERMINAL_MISSION_STATES = {Mission.DONE}
 
 
 class FleetManager(Node):
@@ -66,7 +81,9 @@ class FleetManager(Node):
         )
         self.robot = {
             namespace: {
-                'state': 'UNKNOWN',
+                'approach_state': 'UNKNOWN',
+                'shuttle_state': 'UNKNOWN',
+                'status_owner': None,
                 'mission_state': None,
                 'battery': 1.0,
                 'x': 0.0,
@@ -171,7 +188,6 @@ class FleetManager(Node):
     def _set_robot_value(self, namespace, key, value):
         if self.robot[namespace].get(key) != value:
             event_kind = {
-                'state': 'STATE',
                 'estop': 'ESTOP',
                 'paired_worker': 'PAIRED_WORKER',
             }.get(key)
@@ -183,19 +199,115 @@ class FleetManager(Node):
 
     def _status_cb(self, namespace, source, message):
         status = message.data
-        self._set_robot_value(namespace, 'state', status)
+        self._set_source_state(namespace, source, status)
         if source == 'shuttle':
             state_map = SHUTTLE_MISSION_STATES
         else:
             state_map = APPROACH_MISSION_STATES
         mission_state = state_map.get(status)
-        if mission_state is not None:
+        if (
+            mission_state is not None
+            and self._can_transition_from_status(
+                namespace, source, mission_state
+            )
+        ):
             self._transition_mission(namespace, mission_state)
+
+    def _set_source_state(self, namespace, source, status):
+        """상태 출처별 최신값을 저장하고 화면에 쓸 출처를 고른다."""
+        robot = self.robot[namespace]
+        key = f'{source}_state'
+        if robot[key] != status:
+            self.db.event(
+                self._now_s(), namespace, 'STATE', status, source
+            )
+            robot[key] = status
+
+        if source == 'shuttle':
+            is_return = self._is_return_state(status)
+            is_outbound = status in SHUTTLE_OUTBOUND_STATES
+            mission_phase = robot['mission_state']
+            if is_return or status == 'FAILED':
+                if mission_phase not in TERMINAL_MISSION_STATES:
+                    robot['status_owner'] = 'shuttle'
+            elif (
+                is_outbound
+                and mission_phase not in APPROACH_MISSION_PHASES
+                and mission_phase not in TERMINAL_MISSION_STATES
+            ):
+                robot['status_owner'] = 'shuttle'
+        elif (
+            not self._shuttle_return_has_priority(robot)
+            and robot['mission_state'] not in TERMINAL_MISSION_STATES
+            and (
+                status in APPROACH_ACTIVE_STATES
+                or not robot['mission_id']
+            )
+        ):
+            robot['status_owner'] = 'approach'
+
+    @staticmethod
+    def _is_return_state(status):
+        """복귀·도킹 상태인지 판별한다."""
+        return (
+            status in SHUTTLE_RETURN_STATES
+            or status.startswith('DOCKING')
+        )
+
+    @staticmethod
+    def _shuttle_return_has_priority(robot):
+        """복귀가 시작돼 shuttle 상태를 유지해야 하는지 반환한다."""
+        return (
+            robot['status_owner'] == 'shuttle'
+            and (
+                FleetManager._is_return_state(robot['shuttle_state'])
+                or robot['shuttle_state'] == 'FAILED'
+            )
+        )
+
+    def _can_transition_from_status(
+        self, namespace, source, mission_state
+    ):
+        """서로 다른 상태 출처가 미션 단계를 되돌리지 않게 한다."""
+        robot = self.robot[namespace]
+        current = robot['mission_state']
+        if current in TERMINAL_MISSION_STATES:
+            return False
+        if source == 'approach':
+            if self._shuttle_return_has_priority(robot):
+                return False
+            return current in {
+                Mission.WAITING,
+                Mission.PAIRED,
+                Mission.FOLLOWING,
+                Mission.STANDBY,
+            }
+        if mission_state in {
+            Mission.SHUTTLE,
+            Mission.AT_BAY,
+            Mission.WAITING,
+        }:
+            return current not in APPROACH_MISSION_PHASES
+        return True
+
+    @staticmethod
+    def _composed_state(robot):
+        """현재 단계의 담당 출처가 보낸 상태를 FleetStatus에 사용한다."""
+        owner = robot['status_owner']
+        if owner:
+            return robot[f'{owner}_state']
+        if robot['approach_state'] != 'UNKNOWN':
+            return robot['approach_state']
+        return robot['shuttle_state']
 
     def _transition_mission(self, namespace, state):
         mission_id = self.robot[namespace]['mission_id']
         previous_state = self.robot[namespace]['mission_state']
-        if not mission_id or previous_state == state:
+        if (
+            not mission_id
+            or previous_state == state
+            or previous_state in TERMINAL_MISSION_STATES
+        ):
             return
 
         now = self._now_s()
@@ -289,7 +401,7 @@ class FleetManager(Node):
             status = FleetStatus()
             status.header.stamp = self.get_clock().now().to_msg()
             status.robot_ns = namespace
-            status.state = robot['state']
+            status.state = self._composed_state(robot)
             status.battery = float(robot['battery'])
             status.x = robot['x']
             status.y = robot['y']
@@ -379,6 +491,9 @@ class FleetManager(Node):
         mission.state = Mission.ASSIGNED
         self.robot[namespace]['mission_id'] = mission_id
         self.robot[namespace]['mission_state'] = Mission.ASSIGNED
+        self.robot[namespace]['approach_state'] = 'UNKNOWN'
+        self.robot[namespace]['shuttle_state'] = 'UNKNOWN'
+        self.robot[namespace]['status_owner'] = None
         self.db.set_state(mission_id, Mission.ASSIGNED, now)
         self.pub_mission.publish(mission)
         self.pub_assigned[namespace].publish(mission)

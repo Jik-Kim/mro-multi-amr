@@ -1,6 +1,6 @@
-# Interfaces — 계약 v1.6 (2026-09-06)
+# Interfaces — 계약 v1.10 (2026-09-07)
 
-> v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했다(v1.6).
+> v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
 > 토픽·메시지·서비스 정의는 v1.0 그대로이므로 구현에 영향 없다.
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
@@ -73,7 +73,8 @@
 | 토픽 | 송신 | 수신 | 타입 | 비고 |
 |---|---|---|---|---|
 | `/webcam1/worker_descriptor` | webcam_register | fleet_manager, amr_detection, webcam_hint | WorkerDescriptor | S1 등록 ≤ 10 s |
-| `/webcam2/target_hint` | webcam_hint | follow_target, kpi_logger | TargetHint | E-1. **10 Hz** 발행, 유효 2 s |
+| `/webcam2/target_hint` | webcam_hint | follow_target, kpi_logger | TargetHint | E-1. **10 Hz** 발행, 유효 2 s. **BEST_EFFORT** — 구독자도 sensor_data QoS 로 잡아야 받는다 |
+| `/webcam2/image_raw/compressed` | webcam_hint | (뷰어·영상 판독 기록) | CompressedImage | **jpeg 80, 10 Hz** (`image_publish_hz`). raw `Image` 는 발행하지 않는다 — 다른 PC 에서 구독하면 Wi-Fi 를 막는다 (NR-03). 안전 판단 금지, 세션 판정 후 폐기 (R-10). PR #14 |
 | `/fleet/mission` | fleet_manager | kpi_logger, UI | Mission | 상태 전이마다 |
 | `/fleet/status` | fleet_manager | control_ui, kpi_logger | FleetStatus | 1 Hz |
 | `/fleet/intervention` | control_ui | kpi_logger, fleet_manager | Intervention | 운영자 버튼 |
@@ -104,9 +105,9 @@
 | `arena.yaml` | 베이 waypoint·ArUco ID, 대기공간, `dock_zone`(pose·approach·holding), `passages`, `semaphore_zones` 폴리곤, `homography_marks`, `t_lim_s`·`t_ret_s`·`dock_retry` | 박병후·이시율 |
 | `robot3.yaml` / `robot4.yaml` | `dock_pose`, `follow_standoff_m` 0.5, `min_separation_m` 0.3, `v_max` 0.3, `reid_threshold`, `bay_dwell_s` 5, `t_lim_s` 120, `t_ret_s` 180, `dock_retry` 2 | 박병후·이시율 |
 | `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m` | 정정인·민범진 |
-| `mro_webcam/config/WebCam1/homography_cam1.json` | 웹캠1 호모그래피 행렬 | 한세교·김학민 |
-| `mro_webcam/config/WebCam2/homography_cam2.json` | 웹캠2 호모그래피 행렬·대응점·재투영 오차 | 한세교·김학민 |
-| `mro_webcam/config/webcam.yaml` | `process_hz` 10, `capture_fps` **장치 상한**(웹캠1 = 25), `on_time_s` 0.3, `off_time_s` 0.5, `register_s` 1.0, `hint_valid_s` 2.0 | 한세교·김학민 |
+| `mro_webcam/config/WebCam1/homography_cam1.json` | **쓰지 않는다 (9/6 결정)** — 웹캠1 은 작업자 출발(등록)만 인식하고 map 좌표를 내지 않는다. 파일은 Kn1_mini 잔재이며 `webcam_register` 가 좌표를 쓰면 안 된다 | 한세교·김학민 |
+| `mro_webcam/config/WebCam2/homography_cam2.json` | 웹캠2 호모그래피 행렬·대응점·재투영 오차. 기준점 원본은 같은 폴더 `marker_coordinates.json` (로봇 AMCL 로 실측, PR #9 — RMSE 2.8 cm) | 한세교·김학민 |
+| `mro_webcam/config/webcam.yaml` | `process_hz` 10, `capture_fps` **장치 상한**(웹캠1 = 25), `on_time_s` 0.3, `off_time_s` 0.5, `register_s` 1.0, `hint_valid_s` 2.0, 웹캠2 `image_publish_hz` 10 · `jpeg_quality` 80 · `buffer_size` 5(캡처 스레드가 큐를 계속 비우므로 1 이 아니어도 지연이 쌓이지 않는다) | 한세교·김학민 |
 
 **`dock_pose` 는 `arena.yaml` 의 `dock_zone.pose.<robot>` 과 같은 값이어야 한다.** 두 곳이 어긋나면 맵 좌표계가 깨진다.
 
@@ -118,6 +119,7 @@
 |---|---|
 | 1 / 2 / 3 | 베이 A / B / C. 10 cm, **선반 뒤 벽면 높이 20 cm.** 실측 광축은 23.5 cm 라 마커는 그보다 3.5 cm 아래에 오지만 화각 안이다. 올리면 선반(25 cm)에 가린다. 바닥 부착 금지 — 가까워지면 시야 아래로 사라진다. 무광 인쇄, 검은 테두리 바깥에 흰 여백 한 칸 이상 |
 | 10~19 | *(예약)* KOZ 바닥 마커 — Phase 2. Phase 1 에서는 쓰지 않는다 |
+| **4** | **측위 검증 마커** (9/6 신설) — 웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 23.5 cm. 베이 마커와 달리 **AMCL 이 맞는지 확인하는 용도**다. 로봇이 P1 을 나와 남쪽으로 대기공간에 접근하는 구간에서 정면에 들어온다 (턴 시점 ≈ 1.36 m · robot3 정차 1.08 m · robot4 정차 0.58 m, 9/6 실측). map 좌표는 `arena.yaml` `loc_check_marker` (주행 실측 9/7). 규칙은 9.2 |
 
 검출 조건: 거리 ≤ 1.5 m, 정면 ±30°.
 
@@ -184,7 +186,7 @@
 
 ### 9.2 배송 판정(AC-08)의 사슬과 그 한계
 
-**웹캠은 AC-08 을 보지 않는다.** 웹캠1 은 관제탑 구역, 웹캠2 는 작업공간과 P3 개구부만 본다 — **대기공간(Z-05)은 두 카메라 모두 시야 밖이다** (I-010, 9/5 확정). 판정은 로봇과 관제 사이에서 끝난다.
+**웹캠은 AC-08 을 보지 않는다.** 웹캠1 은 **출입구만**(9/7, 관제탑 구역까지 보지 않는다 — 등록은 작업자가 출입구를 지나는 순간), 웹캠2 는 작업공간과 P3 개구부만 본다 — **대기공간(Z-05)은 두 카메라 모두 시야 밖이다** (I-010, 9/5 확정). 판정은 로봇과 관제 사이에서 끝난다.
 
 | 단계 | 노드 | 하는 일 |
 |---|---|---|
@@ -194,11 +196,19 @@
 
 BRD 5.2 도 K-05 의 측정 출처를 **「미션 로그」** 로 적는다. 웹캠2 가 지상 진실이 되는 것은 K-01·K-03(오추종·ID Swap)과 접촉 판정뿐이다 (BRD 4.1).
 
-**한계 — 대기공간 도착에는 독립 검증 수단이 없다.**
+**원래 한계 — 대기공간 도착에는 독립 검증 수단이 없었다.**
 
-베이 도착은 ArUco 로 독립 확인한다 — 로봇이 도착했다고 보고해도 마커 ID 가 다르면 오도착이다 (FR-08, 오도착 0건). **대기공간에는 마커가 없고 카메라도 닿지 않으므로 로봇의 자기 보고가 유일한 근거다.**
+베이 도착은 ArUco 로 독립 확인한다 — 로봇이 도착했다고 보고해도 마커 ID 가 다르면 오도착이다 (FR-08, 오도착 0건). **대기공간에는 카메라가 닿지 않으므로 로봇의 자기 보고가 유일한 근거였다.**
 
-`amcl_pose` 로 대조해도 이 구멍은 메워지지 않는다. 로봇의 믿음을 같은 로봇의 믿음과 비교하는 것이라 **AMCL 이 발산하면 둘 다 함께 틀린다.** 잡히는 것은 `arena.yaml` 의 좌표 오타와 잘못된 상태 전이뿐이며, **그 둘은 이 프로젝트에서 실제로 났다** (I-001 — 베이 A waypoint 가 DOCK 폴리곤 안에 있었다). TS-07 배송 20회는 사람이 매회 지켜보지 않으므로 그만큼은 걸러둔다.
+**두 가지 검사로 메운다 (9/6 결정).** 둘 다 `fleet_manager` 가 한다 — 이미 `amcl_pose` 를 구독하고 있고 `arena.yaml` 을 읽으면 되므로 **주행 코드 변경도 계약(토픽) 변경도 없다.**
 
-- 보강: `fleet_manager` 가 `WAITING` 을 받을 때 그 시점 `amcl_pose` 가 `arena.yaml` 의 `waiting_zone` 근처인지 확인하고, 벗어나면 `result='FAIL_WRONG_POSE'` 로 남긴다 (이미 `amcl_pose` 를 구독하고 있다).
-- **AMCL 발산은 이것으로 잡히지 않는다.** 결과를 보고할 때 이 한계를 함께 적는다 (BRD 3.4 와 같은 성격).
+| 검사 | 무엇을 잡나 | 방법 |
+|---|---|---|
+| **① 측위 검증** | **AMCL 발산** | 로봇이 P1 을 나와 남쪽으로 접근하는 동안 **ArUco ID 4**(6절)가 정면에 들어온다. 그 순간의 `aruco/distance`(카메라 실측)와 `\|amcl_pose − 마커 map 좌표\|`(AMCL 의 믿음)를 비교한다. **차이 ≤ 10 cm 면 측위 정상** → `localization_verified`, 30 cm 이상이면 AMCL 이 밀린 것 → `localization_suspect` 이벤트 |
+| **② 좌표 검증** | `arena.yaml` 오타 · 잘못된 전이 | `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `result='FAIL_WRONG_POSE'` |
+
+①은 마커가 보이는 **아무 지점**에서나 유효하다 — 정차 위치일 필요가 없다. 접근 중 0.5~1 m 앞에서 측위가 맞았으면 그 뒤 몇십 cm 동안 AMCL 이 갑자기 틀어지진 않는다. `amcl_pose` 만으로는 로봇의 믿음을 같은 로봇의 믿음과 비교하는 것이라 발산을 못 잡는데, 마커는 카메라가 실제 세계의 인쇄물을 보는 것이라 측위와 독립이다. ①이 "측위가 맞다", ②가 "목표 좌표로 갔다" 를 각각 보장하므로 둘이 합쳐지면 "실제로 그 자리에 있다" 가 된다.
+
+- **기록 방식이다.** 마커를 못 읽어도 `WAITING` 은 그대로 나가고 미션은 진행한다. 보고할 때 "배송 20회 중 성공 19, **그중 측위 확인 19**" 로 적는다. 못 읽은 회차는 조사 대상이다.
+- **정차 자세는 서향(작업공간 방향)을 유지한다** (9/6, 시연 고려). 그래서 ①은 정차 후가 아니라 **남향 접근 구간**에서 일어난다. 작업자는 P2(남쪽)로 오므로 **S5 페어링 때 RC카를 로봇 정면(서쪽)으로 돌아 들어오게** 조종한다 — 시험 절차에 적는다.
+- 위치의 근거 — 정차 정면(서쪽 1 m)은 추종 경로라 안 되고, 로봇 뒤쪽 벽은 180° 돌아 봐야 해서 T_lim 안에서 3~5 s 를 먹는다. 웹캠1 박스 북면은 robot3 이 1.5 m 로 한계선이라 **0.4 m 앞으로 당겼다** (그 사이는 평지, 작업자 동선에서 0.6 m 서쪽).

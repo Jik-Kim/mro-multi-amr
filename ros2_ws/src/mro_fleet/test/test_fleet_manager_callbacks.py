@@ -1,7 +1,9 @@
 """ROS 네트워크 없이 관제 콜백의 분기 규칙을 검증한다."""
-from types import SimpleNamespace
+from types import MethodType, SimpleNamespace
 
 from mro_fleet.nodes.fleet_manager_node import FleetManager
+
+from mro_interfaces.msg import Mission
 
 
 class FakeDatabase:
@@ -19,6 +21,44 @@ class FakeDatabase:
     def expire_overdue(self, now, t_lim_s):
         """타이머에 전달할 기한 초과 미션 목록을 반환한다."""
         return self.overdue
+
+
+def make_status_manager(mission_state=Mission.FOLLOWING):
+    """상태 콜백 검증에 필요한 최소 관제 객체를 만든다."""
+    namespace = '/robot3'
+    fake = SimpleNamespace(
+        robot={
+            namespace: {
+                'approach_state': 'UNKNOWN',
+                'shuttle_state': 'UNKNOWN',
+                'status_owner': None,
+                'mission_state': mission_state,
+                'mission_id': 'M001',
+            }
+        },
+        db=FakeDatabase(),
+        _now_s=lambda: 30.0,
+    )
+    for method_name in (
+        '_set_source_state',
+        '_can_transition_from_status',
+    ):
+        setattr(
+            fake,
+            method_name,
+            MethodType(getattr(FleetManager, method_name), fake),
+        )
+    fake._is_return_state = FleetManager._is_return_state
+    fake._shuttle_return_has_priority = (
+        FleetManager._shuttle_return_has_priority
+    )
+    fake._composed_state = FleetManager._composed_state
+
+    def transition(namespace_arg, state):
+        fake.robot[namespace_arg]['mission_state'] = state
+
+    fake._transition_mission = transition
+    return fake
 
 
 class FakePublisher:
@@ -102,3 +142,112 @@ def test_overdue_timer_records_failure_without_stopping_robot():
     assert database.events == [
         (131.0, '/robot3', 'TLIM_EXCEEDED', 'M001')
     ]
+
+
+def test_docked_is_not_overwritten_by_periodic_following():
+    """DOCKED 뒤 FOLLOWING 재발행이 화면과 미션 완료를 못 덮는지 확인한다."""
+    fake = make_status_manager()
+
+    FleetManager._status_cb(
+        fake, '/robot3', 'shuttle', SimpleNamespace(data='RETURNING')
+    )
+    FleetManager._status_cb(
+        fake, '/robot3', 'shuttle', SimpleNamespace(data='DOCKED')
+    )
+    FleetManager._status_cb(
+        fake, '/robot3', 'approach', SimpleNamespace(data='FOLLOWING')
+    )
+
+    robot = fake.robot['/robot3']
+    assert robot['mission_state'] == Mission.DONE
+    assert FleetManager._composed_state(robot) == 'DOCKED'
+
+
+def test_repeated_source_state_does_not_duplicate_event():
+    """같은 출처의 동일 상태 재발행이 이벤트를 늘리지 않는지 확인한다."""
+    fake = make_status_manager(mission_state=Mission.WAITING)
+    message = SimpleNamespace(data='FOLLOWING')
+
+    FleetManager._status_cb(fake, '/robot3', 'approach', message)
+    FleetManager._status_cb(fake, '/robot3', 'approach', message)
+
+    assert fake.db.events == [
+        (30.0, '/robot3', 'STATE', 'FOLLOWING', 'approach')
+    ]
+
+
+def test_old_shuttle_state_does_not_regress_following_mission():
+    """추종 중 늦게 온 WAITING이 미션 상태와 화면을 되돌리지 않는지 확인한다."""
+    fake = make_status_manager()
+    robot = fake.robot['/robot3']
+    robot['approach_state'] = 'FOLLOWING'
+    robot['status_owner'] = 'approach'
+
+    FleetManager._status_cb(
+        fake, '/robot3', 'shuttle', SimpleNamespace(data='WAITING')
+    )
+
+    assert robot['mission_state'] == Mission.FOLLOWING
+    assert FleetManager._composed_state(robot) == 'FOLLOWING'
+
+
+def test_transient_approach_failure_recovers_and_reaches_done():
+    """접근 시도 실패 후 복구하면 미션이 최종 DONE에 도달하는지 확인한다."""
+    fake = make_status_manager(mission_state=Mission.WAITING)
+    states = [
+        ('approach', 'SEARCHING'),
+        ('approach', 'FAILED'),
+        ('approach', 'SEARCHING'),
+        ('approach', 'FOLLOWING'),
+        ('shuttle', 'RETURNING'),
+        ('shuttle', 'DOCKED'),
+    ]
+
+    for source, state in states:
+        FleetManager._status_cb(
+            fake,
+            '/robot3',
+            source,
+            SimpleNamespace(data=state),
+        )
+
+    robot = fake.robot['/robot3']
+    assert robot['mission_state'] == Mission.DONE
+    assert FleetManager._composed_state(robot) == 'DOCKED'
+
+
+def test_transient_approach_failure_is_only_recorded_as_event():
+    """접근 FAILED가 상태 이벤트만 남기고 미션을 실패시키지 않는지 확인한다."""
+    fake = make_status_manager(mission_state=Mission.WAITING)
+
+    FleetManager._status_cb(
+        fake,
+        '/robot3',
+        'approach',
+        SimpleNamespace(data='FAILED'),
+    )
+
+    assert fake.robot['/robot3']['mission_state'] == Mission.WAITING
+    assert fake.db.events == [
+        (30.0, '/robot3', 'STATE', 'FAILED', 'approach')
+    ]
+
+
+def test_failed_mission_state_can_receive_later_shuttle_progress():
+    """FAILED 뒤 정상 셔틀 상태가 오면 미션 상태 전이가 재개되는지 확인한다."""
+    fake = make_status_manager(mission_state=Mission.FAILED)
+
+    FleetManager._status_cb(
+        fake,
+        '/robot3',
+        'shuttle',
+        SimpleNamespace(data='SHUTTLE'),
+    )
+    FleetManager._status_cb(
+        fake,
+        '/robot3',
+        'shuttle',
+        SimpleNamespace(data='WAITING'),
+    )
+
+    assert fake.robot['/robot3']['mission_state'] == Mission.WAITING

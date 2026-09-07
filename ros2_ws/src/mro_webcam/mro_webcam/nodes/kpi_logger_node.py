@@ -1,6 +1,17 @@
-"""KPI 로거 — 상태 전이·미션·개입·웹캠2 좌표를 ROS 시각 기준 CSV 한 파일에 기록. BRD v3.0 4.1 / BR-T13 / BR-T26.
+"""KPI 로거 — 상태 전이·미션·개입·추종거리·힌트를 ROS 시각 기준 CSV 한 파일에 기록.
 
-후처리(추종거리 p95, IPH, 성공률)는 tools/kpi_report.py (TODO). 영상 원본은 세션 판정 후 폐기 (R-10).
+관제 PC(PC-F)에서 실행한다 — fleet 토픽을 가장 많이 구독하므로 (fleet_pc.launch.py, 9/5 결정).
+후처리(추종거리 p95, IPH, 리드타임, 성공률)는 tools/kpi_report.py.
+영상 원본은 세션 판정 후 폐기 (R-10).
+
+계약 (docs/interfaces.md)
+  - 모든 시각은 ROS 시각. 벽시계를 섞지 않는다 — 로봇·웹캠·관제 로그를 합쳐야 하므로
+  - target/distance 가 추종거리 판정의 기준값이다 (FR-29). 좌표로 역산하지 않는다
+  - QoS: 명령·상태·미션은 RELIABLE, 카메라·scan·힌트는 BEST_EFFORT.
+    구독을 잘못 잡으면 발행자와 안 맞아 해당 항목이 통째로 빈다
+
+CSV 열
+  t_ros, source, robot, key, value, x, y, extra
 """
 import csv
 import os
@@ -9,34 +20,57 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
-from std_msgs.msg import String, Bool
+from std_msgs.msg import String, Bool, Float32
 from mro_interfaces.msg import TargetHint, Mission, Intervention, FleetStatus
 
-ROBOTS = ['/robot3', '/robot4']   # TODO: 파라미터화 (bringup params)
+ROBOT_NAMESPACES = ['/robot3', '/robot4']   # 기본값. bringup params 로 덮어쓸 수 있다
 
 
 class KpiLogger(Node):
     def __init__(self):
         super().__init__('kpi_logger')
         self.declare_parameter('out_dir', os.path.expanduser('~/mro_kpi'))
+        self.declare_parameter('robot_namespaces', ROBOT_NAMESPACES)
         out = self.get_parameter('out_dir').value
+        robots = list(self.get_parameter('robot_namespaces').value)
+
         os.makedirs(out, exist_ok=True)
         self.path = os.path.join(out, time.strftime('kpi_%Y%m%d_%H%M%S.csv'))
         self.f = open(self.path, 'w', newline='', encoding='utf-8')
         self.wr = csv.writer(self.f)
         self.wr.writerow(['t_ros', 'source', 'robot', 'key', 'value', 'x', 'y', 'extra'])
-        for ns in ROBOTS:
-            self.create_subscription(String, f'{ns}/approach/status', lambda m, ns=ns: self.row('status', ns, 'approach', m.data), 10)
-            self.create_subscription(String, f'{ns}/shuttle/status', lambda m, ns=ns: self.row('status', ns, 'shuttle', m.data), 10)
-            self.create_subscription(Bool, f'{ns}/target/visible', lambda m, ns=ns: self.row('visible', ns, 'target', int(m.data)), 10)
-            self.create_subscription(Bool, f'{ns}/safety/estop', lambda m, ns=ns: self.row('estop', ns, 'safety', int(m.data)), 10)
+
+        for ns in robots:
+            # 상태 전이 — RELIABLE. 놓치면 리드타임·Lost 구간 계산이 어긋난다
+            self.create_subscription(String, f'{ns}/approach/status',
+                                     lambda m, ns=ns: self.row('status', ns, 'approach', m.data), 10)
+            self.create_subscription(String, f'{ns}/shuttle/status',
+                                     lambda m, ns=ns: self.row('status', ns, 'shuttle', m.data), 10)
+            self.create_subscription(Bool, f'{ns}/safety/estop',
+                                     lambda m, ns=ns: self.row('estop', ns, 'safety', int(m.data)), 10)
+            # 검출 결과 — 발행 측이 sensor_data 일 수 있어 BEST_EFFORT 로 받는다.
+            # BEST_EFFORT 구독자는 RELIABLE 발행자도 받을 수 있으나 그 반대는 성립하지 않는다
+            self.create_subscription(Float32, f'{ns}/target/distance',
+                                     lambda m, ns=ns: self.row('distance', ns, 'target', f'{m.data:.3f}'),
+                                     qos_profile_sensor_data)   # FR-29 추종거리 판정 기준값
+            self.create_subscription(Bool, f'{ns}/target/visible',
+                                     lambda m, ns=ns: self.row('visible', ns, 'target', int(m.data)),
+                                     qos_profile_sensor_data)
+
+        # 힌트 — 계약상 BEST_EFFORT (interfaces.md QoS 절)
         self.create_subscription(TargetHint, '/webcam2/target_hint',
-                                 lambda m: self.row('hint', '', m.worker_id, m.confidence, m.point.point.x, m.point.point.y),
+                                 lambda m: self.row('hint', '', m.worker_id, m.confidence,
+                                                    m.point.point.x, m.point.point.y),
                                  qos_profile_sensor_data)
-        self.create_subscription(Mission, '/fleet/mission', lambda m: self.row('mission', m.robot_ns, m.mission_id, m.state, extra=m.bay), 10)
-        self.create_subscription(Intervention, '/fleet/intervention', lambda m: self.row('intervention', m.robot_ns, m.kind, 1, extra=m.note), 10)
-        self.create_subscription(FleetStatus, '/fleet/status', lambda m: self.row('fleet', m.robot_ns, m.state, m.battery, m.x, m.y), 10)
-        self.get_logger().info(f'KPI 로그 → {self.path}')
+        # 미션·개입·집계 상태 — RELIABLE
+        self.create_subscription(Mission, '/fleet/mission',
+                                 lambda m: self.row('mission', m.robot_ns, m.mission_id, m.state, extra=m.bay), 10)
+        self.create_subscription(Intervention, '/fleet/intervention',
+                                 lambda m: self.row('intervention', m.robot_ns, m.kind, 1, extra=m.note), 10)
+        self.create_subscription(FleetStatus, '/fleet/status',
+                                 lambda m: self.row('fleet', m.robot_ns, m.state, m.battery, m.x, m.y), 10)
+
+        self.get_logger().info(f'KPI 로그 → {self.path} | 로봇 {robots}')
 
     def row(self, source, robot, key, value, x='', y='', extra=''):
         t = self.get_clock().now().nanoseconds / 1e9
@@ -49,10 +83,13 @@ def main():
     node = KpiLogger()
     try:
         rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     finally:
         node.f.close()
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':

@@ -9,14 +9,17 @@ webcam_register:            # 웹캠1 (PC-W1) — 작업자 등록 S1
     target_classes: ["worker_a", "worker_b"]   # 이 클래스만 등록 대상 (오검출이 등록 자리를 뺏지 않게)
     conf: 0.7
     process_hz: 10.0        # 계약값. YOLO 추론·발행 주기 (캡처 fps 와 다른 값이다)
-    capture_fps: 25         # 웹캠1(Jieli) 장치 상한. 계약은 30 이나 이 장치에서는 불가 — 수정 요청 중
+    capture_fps: 25         # 웹캠1(Jieli) 장치 상한 (9/6 실측). 계약 v1.2 가 '장치 상한 그대로' 로 완화됨.
+                            # 지켜야 하는 것은 숫자가 아니라 캡처 >= 발행 이다
     on_time_s: 0.3          # 계약값 — 이 시간 연속 검출되면 detected True
     off_time_s: 0.5         # 계약값 — 이 시간 연속 미검출이면 False
     register_s: 1.0         # 트랙이 이 시간 안정되면 worker_id 배정 (TS-U01: 등록 <= 10 s)
     publish_hz: 1.0         # 등록 결과 재발행. 관제가 늦게 켜져도 받게 한다
     max_workers: 2          # SOT 확정: 작업자 2명
-    rematch_threshold: 0.7  # 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용).
-                            # robotN.yaml 의 reid_threshold(로봇 페어링 허용)와는 다른 결정이다
+    rematch_threshold: 0.7  # [잠정] 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용).
+                            # robotN.yaml 의 reid_threshold(로봇 페어링 허용)와는 다른 결정이다.
+                            # 계약 v1.3: crop 이 인형 전체라 다른 인형끼리도 0.5 안팎에서 시작한다.
+                            # worker.pt 수령 후 인형 2체로 분포를 재서 확정할 것
     show_window: true       # 로컬 미리보기 창
 
 webcam_hint:                # 웹캠2 (PC-W2) — 재탐지 힌트 E-1. 한세교 담당, 값 확정 필요
