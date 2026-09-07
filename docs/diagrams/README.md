@@ -8,7 +8,8 @@
 | `step2_nav2.svg` | SDD 3.2 | 로봇 1대 내부. 우리 노드가 Nav2 스택과 무엇을 주고받는지 |
 | `step3_scenario.svg` | SDD 3.3 | **3-1** 시나리오 S1~S10 순서도. 단계 · 전이 토픽 · 예외 처리 |
 | `step3b_system_flow.svg` | SDD 3.3 | **3-2** 전체 기능 흐름 — 노드 내부 순서도와 그 사이를 오가는 토픽 |
-| `mro_design_diagrams.drawio` | — | 위 4장을 4 페이지로 담은 draw.io 편집본 |
+| `fr13_manual_pairing.svg` | 계약 10절 | **FR-13 명시 페어링 폴백 순서도.** 관제가 올린 8개 질문의 답이 어느 단계에 붙는지 번호로 표시 |
+| `mro_design_diagrams.drawio` | — | 위 4장을 4 페이지로 담은 draw.io 편집본 (FR-13 은 별도 파일) |
 
 ## 그리는 규칙
 
@@ -70,5 +71,5 @@ draw.io 에서 직접 손볼 일이 있으면 `mro_design_diagrams.drawio` 를 �
 
 ## 근거
 
-`docs/architecture.md`(노드 구성) · `docs/interfaces.md`(토픽 계약) · `docs/setup.md`(네트워크) ·
+`docs/architecture.md`(노드 구성) · `docs/interfaces.md`(토픽 계약, FR-13 은 10절) · `docs/setup.md`(네트워크) ·
 BRD v3.1 3.2(시나리오) · SDD 2.3 NR-01(통신). 이 문서들이 바뀌면 그림도 같이 고친다.

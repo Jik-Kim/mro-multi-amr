@@ -5,15 +5,15 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 72/110 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 73/113 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
-| mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
-| mro_perception [인지 — 정정인, 민범진] | 6/15 | `████░░░░░░` | — |
+| mro_interfaces [PM 김병직] | 4/4 | `██████████` | — |
+| mro_perception [인지 — 정정인, 민범진] | 6/16 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/28 | `████████░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 25/40 | `██████░░░░` | — |
-| mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
+| mro_fleet [관제 — 김민준] | 10/15 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 7/10 | `███████░░░` | — |
 
 **오늘 마감 1건**
@@ -25,11 +25,13 @@
 <!-- STATS:END -->
 
 ## mro_interfaces [PM 김병직]
+- [x] **계약 v1.12 — 명시 페어링 폴백(FR-13) 확정** (관제 8개 질문 답변) — `target/pair_state` 토픽, `srv/ManualPair`, 개입 종류 `MANUAL_PAIR` 추가. 규칙은 계약 10절 · 마감 9/7
 - [x] msg/srv 8종 정의 · 마감 9/6
 - [x] **계약 v1.3 확정** — `docs/interfaces.md`. 구역 ID `P1`·`DOCK`, 확정 값 8건, 파라미터 단일 출처, 주기·시간 상수 규칙, 서술자 추출 영역 · 마감 9/6
 - [x] `WorkerDescriptor.color_hist` — H16×S8=128, `reid.hsv_hist()` 공유 호출로 확정 · 마감 9/6
 
 ## mro_perception [인지 — 정정인, 민범진]
+- [ ] **`amr_detection_node.py`: 명시 페어링 폴백 서버 (FR-13, 계약 10절)** — ① `target/pair_state` 발행 (`PAIRED`/`GATE_FAIL`/`NO_TARGET`) ② 게이트 미달 30 s 계측 — **대상이 보이는데 못 넘는 경우만 센다**(`NO_TARGET` 은 세지 않음) ③ `/robotN/manual_pair` 서비스 서버 — 거부 사유 6종(10.5 표) ④ `mission/finish` 구독해 명시 페어링 해제 ⑤ 확정 시 `target/paired`·`target/worker_id` 발행은 **여기서만** · 마감 9/9
 - [x] 인형 2종 제작 (상하의 전체, 9/6 결정) · 마감 9/6
 - [x] 데이터 수집·라벨링 (9/6 완료) · 마감 9/6
 - [x] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) — PR #19, yolo26s@640 · val mAP50-95 0.816 · 밝기 차 0.6 % (PM 체크포인트 대조 일치) · 마감 9/7
@@ -119,6 +121,7 @@
 - [x] 도킹 반복 시험 TS-U12 (9/6) — 로봇별 10회, 차폐판 없이 오도킹 0 확인 (I-006 종결) · 마감 9/8
 
 ## mro_fleet [관제 — 김민준]
+- [ ] **`control_ui`: 명시 페어링 폴백 버튼 (FR-13, 계약 10절)** — `target/pair_state = GATE_FAIL` 이면 버튼 표시, 운영자가 로봇·작업자 선택 → `fleet_manager` 가 `/robotN/manual_pair` 호출, 응답의 `reason` 을 화면에 그대로 보여준다. 성공 시 `/fleet/intervention` 에 **`kind = MANUAL_PAIR`** 발행 — IPH 에 들어간다(10.7) · 마감 9/9
 - [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8
 - [x] `control_ui`: 작업자별/전체 종료 버튼, `fleet_manager` RETURN_ALL · 마감 9/8
 - [x] `fleet_manager_node.py`: yaw 계산, 미션 상태 전이 구독 (`shuttle/status` → Mission state) (PR #7) · 마감 9/8
