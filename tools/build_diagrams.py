@@ -22,6 +22,33 @@ FONT = "'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-ser
 DRAWIO_FONT = "Noto Sans KR"
 
 # style key -> (fill, stroke, title color)
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def from_yaml(relpath, *keys, default=None):
+    """설정 파일에서 값을 직접 읽는다 — 그림에 숫자를 손으로 적지 않기 위해서다.
+
+    9/7 에 웹캠1 캡처 fps 를 그림에만 30 으로 적어 실제 값(25)과 어긋난 적이 있다.
+    읽지 못하면 default 를 쓰고 경고를 남긴다.
+    """
+    try:
+        import yaml as _y
+        with open(os.path.join(ROOT, relpath), encoding='utf-8') as f:
+            node = _y.safe_load(f)
+        for k in keys:
+            node = node[k]
+        return node
+    except Exception as e:
+        print('  [경고] %s 에서 %s 를 읽지 못했다 (%s) — 기본값 %r 사용'
+              % (relpath, ' / '.join(keys), e, default))
+        return default
+
+
+WEBCAM_YAML = 'ros2_ws/src/mro_webcam/config/webcam.yaml'
+CAM1_FPS = from_yaml(WEBCAM_YAML, 'webcam_register', 'ros__parameters', 'capture_fps', default=25)
+CAM2_FPS = from_yaml(WEBCAM_YAML, 'webcam_hint', 'ros__parameters', 'fps', default=30.0)
+PROC_HZ = from_yaml(WEBCAM_YAML, 'webcam_register', 'ros__parameters', 'process_hz', default=10.0)
+
 STYLES = {
     'pc':     ('#EEF4FD', '#3576C8', '#1B4F91'),
     'pcf':    ('#FDF3E3', '#B06810', '#8A4F0B'),
@@ -1245,7 +1272,7 @@ def step3b():
 
     y = ctl_bot + 62      # 안쪽 밴드 제목 자리를 비운다
     d.box('db', hx2 + 40, y, hw - 80, [
-        'SQLite  mro.db',
+        'SQLite   ~/mro_fleet.db',
         'workers · missions · events',
         'kind = STATE / INTERVENTION / ZONE',
     ], 'db', h=76, shape='cyl')
@@ -1313,14 +1340,14 @@ def step3b():
     wb, wbw = CX + 16, CW - 32
     d.box('w1', wb, WY + 40, (wbw - 16) / 2, [
         'webcam_register     PC-W1',
-        '출입구 시야 · 캡처 30 fps → 추론 10 Hz',
+        '출입구 시야 · 캡처 %g fps (Jieli 장치 상한) → 추론 %g Hz' % (CAM1_FPS, PROC_HZ),
         'ByteTrack ID · 0.3 s 연속이어야 등록',
         'HSV H16×S8 = 128 · 10프레임 평균 · 재등록 0.45',
         '/webcam1/worker_descriptor 발행',
     ], 'in_cam')
     d.box('w2', wb + (wbw - 16) / 2 + 16, WY + 40, (wbw - 16) / 2, [
         'webcam_hint          PC-W2',
-        '작업공간 + P3 입구 (중앙 복도는 시야 밖)',
+        '작업공간 + P3 입구 · 캡처 %g fps → 추론 %g Hz' % (CAM2_FPS, PROC_HZ),
         '호모그래피로 바닥 좌표 환산 (I-002 재검증 중)',
         '/webcam2/target_hint  10 Hz · 유효 2 s',
         'BEST_EFFORT — 안전 판단에는 쓰지 않는다 (NF-07)',
