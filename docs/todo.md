@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 74/114 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 77/124 완료** (████████████░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 5/5 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 6/16 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/28 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 25/40 | `██████░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 28/50 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/15 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 7/10 | `███████░░░` | — |
 
@@ -97,15 +97,25 @@
 - [x] `arena.yaml` `homography_marks` — cam2 기준점은 `mro_webcam/config/WebCam2/marker_coordinates.json` 이 원본(PR #9), cam1 은 불필요(9/6). arena.yaml 에는 복사하지 않는다 · 마감 9/7
 - [x] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` — `aruco/id` 는 **1.5 m 안에서만** 나온다 (PR #30 거리 게이트) · 마감 9/7
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
+- [ ] **estop 중 Nav2 복구 행동이 막히는 문제 (I-036)** — 벽 앞에서 후진·회전까지 0 으로 덮여 95 초를 못 빠져나왔다. 후보 ①전진 성분만 차단 ②N초 후 워치독이 후진 ③goal cancel — **PM·안전 검토 필요** · 마감 9/8
+- [ ] **도착 오차 수치 신뢰성 확인 (I-037)** — 노드 TF 0.84 m vs 같은 순간 `amcl_pose` 0.18 m. 3회차에 `tf2_echo` 기록 + **베이에서 줄자 실측**으로 가른다 · 마감 9/8
+- [ ] **P1 통과 실주행 확인 (I-009)** — 여유 0.175 m < 실측 측위 오차 0.32 m 라 통과가 운에 좌우된다. `inflation_radius` 0.15 실험 후 결정. **PC-R3 는 0.25 적용 확인됨, PC-R4 미확인** · 마감 9/8
+- [ ] **Nav2 초기자세 선후 문제 해결 (I-035)** — 초기자세 없이 뜬 Nav2 가 `global_costmap` 활성화에 실패하고 재시도하지 않아 셔틀이 T_lim 을 날린다. 조치 후보 ①절차 ②노드가 RESUME ③`t0` 이동 — **PM 판단 필요** · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
 - [x] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
+- [ ] **AMCL `update_min_d` 0.05 실주행 확인 (I-029)** — 9/7 저녁 적용(0.25→0.05). 도착 판정이 안정되는지, 리샘플링이 잦아져 pose 가 더 떨리지는 않는지. 떨리면 `resample_interval` 2로 · 마감 9/8
+- [ ] **PC-R4 에 `localization.yaml` `update_min_d: 0.05` 복제 (I-029)** — `turtlebot4_ws` 는 git 밖이라 PC 마다 손으로. I-009 의 `nav2.yaml` 과 같이 확인 · 마감 9/8
 - [ ] **추종거리 분포 실측 (I-029)** — `xy_goal_tolerance` 0.25 고정이라 정지 시 오차 25 cm. TS-U07 로 `target/distance` p95·min 을 재고 미달이면 `cmd_vel` 미세 보정 구현 (PM: ③→② 순서, 기준 완화는 마지막) · 마감 9/8
 - [ ] `follow_target_node.py`: 힌트 구독을 `/webcam2/target_hint`(**TargetHint, sensor_data QoS**) 로 — 지금은 옛 `webcam/car_map_point` PointStamped RELIABLE 이라 BEST_EFFORT 발행자(PR #14)의 힌트를 못 받는다 · 마감 9/8
 - [ ] **`shuttle_mission_node.py`: P1 대기 중 포기해도 반납을 부를 것 (I-033)** — 거절당하면 세마포어 대기열에 들어가는데 `token_held` 가 False 라 `release_token` 이 그냥 돌아온다. T_lim 으로 끊기면 유령 대기열이 남아 **P1 이 영구히 잠기고 watchdog 도 못 푼다**. `token_requested` 플래그 추가. 거절만 반복하다 T_lim 으로 끝나는 단위 시험도 함께 · 마감 9/8
 - [ ] **`shuttle_mission_node.py`: 성공 직후 `READY` 를 내지 말 것 (I-034)** — `kpi_report` 의 `DOCKED_STATES` 에 `READY` 가 있어 AC-13 운용시간이 대기공간에서 끊긴다. 한 사이클 재현에서 분모 390 s → 150 s, IPH 27.7 → 72.0 회/h (K-07 목표 ≤ 1.0). 성공 경로는 `WAITING` 유지, 포기 경로의 `FAILED`→`READY` 는 그대로 · 마감 9/8
 - [ ] `follow_target_node.py`: 시작 신호 구독을 옛 `goto_goal/arrived` → **`shuttle/arrived`** 로 (계약 4절, 옛 토픽은 '쓰지 않는 옛 토픽' 목록). `shuttle_mission` 이 계약 이름으로 발행하도록 바뀌면 이걸 안 고치는 순간 S5 합류가 시작되지 않는다 · 마감 9/8
 - [x] **셔틀 실주행 시험 절차 문서화** — `docs/shuttle_test_guide.md`. 단계별 설계, 1단계 절차, 로그 해석·증상별 판별. `fleet_manager`·마커 없이 주행 골격만 떼어 확인하는 방법과 **그래서 무엇이 확인되지 않는지**를 같이 적었다 · 마감 9/8
+- [x] **셔틀 시험 환경 스크립트** — `source tools/shuttle_env.sh [build|nav2]`. source 4종 + 빌드 + T3 전용 `ROS_SUPER_CLIENT=False` 를 한 줄로. 9/7 실패 1번(디스커버리 설정 누락)이 여기서 사라진다 · 마감 9/8
+- [x] **셔틀 시험 사전 점검 스크립트** — `tools/shuttle_preflight.sh [pre|nav|mission]`. `is_docked` 실측·중복 노드·**네임스페이스 없는 스택·유령 노드**·`bt_navigator active`·토큰 서비스·마커 주기·미션 구독을 한 번에 본다. 9/7 실패 세 번이 전부 '환경을 확인하지 않아서' 였다 · 마감 9/8
+- [x] **셔틀 1단계 시험 리그 launch** — `mro_navigation/launch/shuttle_step1_rig.launch.py`. 옛 T4·T5·T6(세마포어·안전감시·마커주입)을 한 터미널로. 셔틀·Nav2 는 로그 관찰 대상이라 묶지 않는다 · 마감 9/8
+- [ ] **셔틀 실주행 1단계 완주** — 판정 7항목 (I-024 '확인하지 못한 것' ①) · 마감 9/8
 - [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (관제 → 주행 이관) · 마감 9/8
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
 - [x] `zone_semaphore_node.py`: 진입 판정은 **순서 기반(방법 B)으로 확정** — 폴리곤 계산 안 함, 폴리곤은 로그 검산용 (PM 결정 9/7) · 마감 9/8

@@ -16,6 +16,12 @@
   <exec_depend>turtlebot4_navigation</exec_depend>
   <exec_depend>mro_interfaces</exec_depend>
   <exec_depend>mro_perception</exec_depend>
+  <!-- 시험 리그 launch 가 zone_semaphore_node 를 띄운다. 그 파일은 mro_fleet 안에 있지만
+       소유는 주행이다 (docs/responsibilities.md 예외 행). mro_fleet 은 mro_navigation 을
+       의존하지 않으므로 순환이 아니다 -->
+  <exec_depend>mro_fleet</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
   <exec_depend>python3-yaml</exec_depend>
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
