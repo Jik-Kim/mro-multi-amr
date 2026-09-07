@@ -1,8 +1,9 @@
-# Interfaces — 계약 v1.11 (2026-09-07)
+# Interfaces — 계약 v1.12 (2026-09-07)
 
 > v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
 > **v1.11 (9/7 저녁): 세마포어 이벤트 토픽 `/fleet/zone_event` 신설** — 대기·획득·반납·강제 회수를 기록해 K-06(교착 자동 해결률)을 센다 (I-030). `mro_interfaces` 는 바꾸지 않고 `std_msgs/String` 을 쓴다.
-> 토픽·메시지·서비스 정의는 v1.0 그대로이므로 구현에 영향 없다 (v1.11 의 토픽 하나는 추가).
+> **v1.12 (9/7 저녁): 명시 페어링 폴백(FR-13) 확정** — 재식별 게이트 미달이 30 s 지속될 때 운영자가 로봇과 작업자를 직접 짝지어 주는 경로다. 상태 토픽 `target/pair_state`, 서비스 `srv/ManualPair`, 개입 종류 `MANUAL_PAIR` 셋이 새로 생겼다. 규칙은 아래 **10절**. 관제가 올린 8개 질문(9/7)에 대한 답을 그대로 계약으로 굳힌 것이다.
+> 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나를 더한 것이 전부다.
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
 
@@ -19,10 +20,11 @@
 | `msg/Mission` | 미션 상태 (CREATED…FAILED 상수) | 상태 전이는 fleet_manager 가 DB 에 기록 |
 | `msg/FleetStatus` | 로봇별 집계 상태, 1 Hz | BR-T08 ≤ 2 s. `yaw` 는 아래 2절 |
 | `msg/TargetHint` | 웹캠2 → 대상 map 좌표 | **안전 판단 금지.** 재탐지 회전 방향 결정에만 |
-| `msg/Intervention` | 개입 이벤트 | `SAFETY_POLICY` 는 개입으로 계상하지 않음 (BRD 5.3) |
+| `msg/Intervention` | 개입 이벤트 | `SAFETY_POLICY` 는 개입으로 계상하지 않음 (BRD 5.3). **`MANUAL_PAIR` 는 계상한다** (v1.12, 10절) |
 | `srv/RequestMission` | UI → fleet | 접수 ≤ 2 s |
 | `srv/ZoneToken` | 로봇 → zone_semaphore | acquire/release, FIFO. 구역은 아래 3절 |
 | `srv/OperatorCommand` | UI → fleet | **RETURN**(해당 로봇) / **RETURN_ALL**(전체) 만. 정지·재개는 9/4 결정으로 제외 |
+| `srv/ManualPair` | fleet → amr_detection | **v1.12.** 명시 페어링 폴백 (FR-13). 서버는 로봇마다 하나 — `/robotN/manual_pair`. 10절 |
 
 ## 2. 확정된 값 — 더 논의하지 않는다
 
@@ -82,13 +84,15 @@
 | `/fleet/intervention` | control_ui | kpi_logger, fleet_manager | Intervention | 운영자 버튼 |
 | `/fleet/zone_event` | zone_semaphore | kpi_logger, fleet_manager | String | **v1.11 (I-030).** `"<zone_id> <robot_ns> <REJECT\|GRANT\|RELEASE\|RECLAIM>"`. K-06 원천 — 3절 이벤트 규칙 |
 | `mission/assigned` | fleet_manager | shuttle_mission | Mission | **S4 트리거.** 옛 `webcam/detected` 는 쓰지 않는다 |
-| `mission/finish` | fleet_manager | return_dock, **follow_target** | Bool | S9. follow_target 은 **즉시 페어링 해제·추종 중단**(≤ 1 s), return_dock 은 복귀 시작 |
+| `mission/finish` | fleet_manager | return_dock, **follow_target**, amr_detection | Bool | S9. follow_target 은 **즉시 페어링 해제·추종 중단**(≤ 1 s), return_dock 은 복귀 시작. **amr_detection 은 명시 페어링을 해제한다** (v1.12, 10절) |
 | `shuttle/status` | shuttle_mission, return_dock | fleet_manager, kpi_logger | String | READY / SHUTTLE / AT_BAY / WAITING / RETURNING / DOCK_WAIT / DOCKING / DOCKED / FAILED |
 | `shuttle/arrived` | shuttle_mission | follow_target | Bool | 대기공간 도착 (구 `goto_goal/arrived`) |
 | `target/map_point`, `target/visible`, `target/image` | amr_detection | follow_target | PointStamped, Bool, Image | Kn1_mini 계약 유지 |
 | `target/distance` | amr_detection | kpi_logger | Float32 | **추종거리 판정의 기준값**(FR-29). 검출 노드가 산출한 대상 거리, m |
-| `target/paired`, `target/worker_id` | amr_detection | follow_target, fleet_manager | Bool, String | 재식별 게이트 통과 여부 |
+| `target/paired`, `target/worker_id` | amr_detection | follow_target, fleet_manager | Bool, String | 재식별 게이트 통과 여부. **발행자는 amr_detection 하나뿐이다** — 자동이든 명시 페어링이든 (10절) |
+| `target/pair_state` | amr_detection | control_ui, fleet_manager, kpi_logger | String | **v1.12 (FR-13).** `PAIRED` / `GATE_FAIL` / `NO_TARGET`. `GATE_FAIL` 은 **대상은 보이는데 게이트를 못 넘는 상태가 30 s 지속됐을 때만** 낸다 — 10절 |
 | `aruco/id`, `aruco/distance` | aruco_detector | shuttle_mission | Int32, Float32 | `id = -1` 이면 없음 |
+| `aruco/pose` | aruco_detector | shuttle_mission (베이 정렬, 예정) | PoseStamped | 마커 중심의 위치·자세, `frame_id` = 카메라 광학 프레임(x 우·y 하·z 앞). `id` 와 같은 프레임에서만 발행. 위치는 `aruco/distance` 와 같은 자. 좌우 치우침 = x, 방위 = atan2(x, z). 회전(yaw)은 정사각 마커의 두 해 문제로 흔들릴 수 있어 보조로만 (PR #40, **PM 확인 필요**) |
 | `approach/status` | follow_target | fleet_manager, kpi_logger | String | IDLE / SEARCHING / APPROACH_1 / APPROACH_2 / ARRIVED / FOLLOWING / STANDBY / FAILED |
 | `safety/estop` | safety_watchdog | 모든 로봇 노드, fleet_manager | Bool | True 동안 **주행 명령 금지** |
 | `cmd_vel` | safety_watchdog(0), Nav2 | Create3 | TwistStamped | estop 중 20 Hz 로 0 발행 |
@@ -134,7 +138,7 @@
 
 **판정 규칙**
 - `missions.result` 는 **T_lim 기준으로 확정**한다. T_lim 초과 후 도착하면 실패로 두고 도착 사실은 `arrived_late` 로 따로 남긴다 — 이중 계상하지 않는다.
-- 개입은 `events.kind='INTERVENTION'`. **안전 정책 기인 정지(E-4·E-6) 후의 자동 재개는 개입이 아니다.**
+- 개입은 `events.kind='INTERVENTION'`. **안전 정책 기인 정지(E-4·E-6) 후의 자동 재개는 개입이 아니다.** **명시 페어링 폴백(`MANUAL_PAIR`)은 개입이다** — 사람이 판단을 대신했기 때문이다 (v1.12, 10절).
 - 구역 토큰 이벤트는 `events.kind='ZONE'`, `value`=`REJECT|GRANT|RELEASE|RECLAIM`, `note`=zone_id. `fleet_manager` 가 `/fleet/zone_event` 를 받아 그대로 적는다 (v1.11). 개입이 아니므로 IPH 분자에 넣지 않는다.
 
 ---
@@ -158,6 +162,7 @@
 | **AC-05** 추종거리 · 최소 이격 | 샘플 1개 | **`approach/status == FOLLOWING` 인 동안만** | CSV `target/distance` |
 | **K-04** 재획득 | Lost 1건 | `target/visible` 1→0 (1.0 s 이상 지속) → 0→1 | CSV `target/visible` |
 | **AC-13 · K-07** IPH | 개입 1건 ÷ 시간 | 분모 = undock → 도킹 완료 **구간의 합** | 분자 DB `events` · 분모 CSV `shuttle/status` |
+| **FR-13** 폴백 발동률 | 폴백 1건 (`MANUAL_PAIR`) | 발동 건수 ÷ 페어링 시도 건수 · **≤ 20 %** | DB `events` kind `INTERVENTION` value `MANUAL_PAIR` |
 | **AC-09 · K-06** 교착 자동 해결 | 대기 1건 (`REJECT` 로 시작) | `REJECT` → 같은 로봇·구역의 `GRANT` | DB `events` kind `ZONE` (CSV 동일) |
 | **AC-03 · K-01** 추종 성공률 | 유효 미션 1건 | 페어링 확정(S5) → 종료 발행(S9) | CSV 시계열 + **웹캠2 영상 판독** |
 | **AC-04 · K-03** ID Swap | 교차 1건 | 교차 이벤트 단위 | **웹캠2 영상 판독** |
@@ -169,7 +174,7 @@
 - **배송 성공률** = `result='SUCCESS'` / 전체 미션. **`result IS NULL` 도 분모에 남긴다** — 판정이 없다고 빼면 못 간 미션일수록 성공률이 올라간다. `Mission.DONE` 도달 여부로 세지 않는다 (T_lim 을 넘겨 도착해도 결국 DONE 이 된다).
 - **추종거리** = `|distance − follow_standoff_m|` 의 **p95 ≤ 0.2 m** **AND** `min(distance)` **≥ 0.3 m**. 거리 원값의 p95 가 아니고, 접근 단계(standoff 1.0·0.3 m)와 STANDBY 구간을 포함하지 않는다.
 - **교착 자동 해결률** = 60 s 안에 `GRANT` 로 끝난 대기 / 전체 대기. 그 사이 같은 구역에 `RECLAIM` 이 있었거나 60 s 를 넘긴 건은 미해결로 센다(사람 개입 없이 60 s 이내 재개 — BRD 5.3). 같은 로봇·구역의 연속 `REJECT` 는 한 건이다.
-- **IPH** = 개입 건수 / 운용 시간(h). `SAFETY_POLICY` 는 개입이 아니다 (BRD 5.3). **로그 전체 구간을 분모로 쓰지 않는다** — 미션 사이 대기가 들어가면 IPH 가 실제보다 작게 나온다.
+- **IPH** = 개입 건수 / 운용 시간(h). `SAFETY_POLICY` 는 개입이 아니다 (BRD 5.3). **`MANUAL_PAIR`(FR-13 폴백)는 개입이다** — 10.7. **로그 전체 구간을 분모로 쓰지 않는다** — 미션 사이 대기가 들어가면 IPH 가 실제보다 작게 나온다.
 - **재획득** = Lost 후 게이트를 다시 통과한 건이 성공. **STANDBY·FAILED 로 끝난 건은 실패로 따로 센다.** 느린 성공으로 섞으면 K-04 의 성공률이 사라진다. `approach/status == 'SEARCHING'` 은 Lost 신호가 아니다 — 사이클 시작과 2단계 접근에도 쓰인다.
 
 ### 9.1 누가 무엇을 맡나
@@ -218,3 +223,66 @@ BRD 5.2 도 K-05 의 측정 출처를 **「미션 로그」** 로 적는다. 웹
 - **기록 방식이다.** 마커를 못 읽어도 `WAITING` 은 그대로 나가고 미션은 진행한다. 보고할 때 "배송 20회 중 성공 19, **그중 측위 확인 19**" 로 적는다. 못 읽은 회차는 조사 대상이다.
 - **정차 자세는 서향(작업공간 방향)을 유지한다** (9/6, 시연 고려). 그래서 ①은 정차 후가 아니라 **남향 접근 구간**에서 일어난다. 작업자는 P2(남쪽)로 오므로 **S5 페어링 때 RC카를 로봇 정면(서쪽)으로 돌아 들어오게** 조종한다 — 시험 절차에 적는다.
 - 위치의 근거 — 정차 정면(서쪽 1 m)은 추종 경로라 안 되고, 로봇 뒤쪽 벽은 180° 돌아 봐야 해서 T_lim 안에서 3~5 s 를 먹는다. 웹캠1 박스 북면은 robot3 이 1.5 m 로 한계선이라 **0.4 m 앞으로 당겼다** (그 사이는 평지, 작업자 동선에서 0.6 m 서쪽).
+
+---
+
+## 10. 명시 페어링 폴백 (FR-13) — v1.12
+
+로봇이 재식별 게이트를 못 넘으면 따라가지 않고 그 자리에 선다(FR-12). 멈추기만 하면 미션이 안 나가므로,
+**미달이 30 s 지속되면 운영자가 로봇과 작업자를 직접 짝지어 주는 길**을 연다. 관제가 9/7 에 올린 8개 질문에
+대한 PM 결정을 그대로 옮긴 것이다.
+
+**흐름** — `docs/diagrams/fr13_manual_pairing.svg` 와 같다.
+
+```
+게이트 미달 30 s → target/pair_state = GATE_FAIL → control_ui 에 버튼
+  → 운영자가 robot_ns + worker_id 선택 → fleet_manager 가 /robotN/manual_pair 호출
+  → amr_detection 이 확정 → target/paired = True · target/worker_id
+  → follow_target 추종 시작 + Intervention(MANUAL_PAIR) 1건 기록
+```
+
+**10.1 30 s 는 `amr_detection` 이 잰다.** 관제가 재면 "사람이 없어서 안 잡히는 것" 과 "사람은 보이는데
+못 알아보는 것" 을 구분할 수 없어, 아무도 없을 때도 폴백 버튼을 띄운다. 그 둘을 가릴 수 있는 곳은 게이트
+판정을 하는 노드뿐이다. 그래서 `target/pair_state` 의 값이 셋이다 — `NO_TARGET` 일 때는 30 s 를 세지 않는다.
+
+**10.2 알림은 `target/pair_state`(String) 로 한다.** `approach/status` 로 대신하지 않는다. 그것은
+`follow_target` 의 주행 상태라 소유자가 다르고, 게이트 판정 결과도 30 s 조건도 담고 있지 않다.
+
+**10.3 요청은 서비스다.** `srv/ManualPair` — 요청 `robot_ns`, `worker_id` / 응답 `accepted`, `reason`.
+토픽이면 눌렀는데 됐는지 알 수 없다. **두 필드 모두 필수다** — 어느 로봇이 누구를 따라갈지가 곧 페어링이라
+하나만으로는 성립하지 않는다.
+
+**10.4 확정은 `amr_detection` 이 한다.** `target/paired` 와 `target/worker_id` 의 **발행자는 계약상
+amr_detection 하나뿐이며, 명시 페어링에서도 바뀌지 않는다.** 발행자가 둘이 되면 로그만 보고 어느 값이
+이겼는지 가릴 수 없다. `control_ui` 는 버튼과 표시, `fleet_manager` 는 전달만 맡는다.
+
+**10.5 수동이 자동을 덮어쓴다. 단 이미 페어링됐으면 거부한다.**
+
+| 그때 상태 | 처리 | `reason` |
+|---|---|---|
+| 미페어링 (`GATE_FAIL`) | 수동 요청을 받아 확정한다 — 폴백의 목적이다 | — |
+| 이미 `PAIRED` | **거부** — 추종 중 대상 교체는 오페어링 0건(AC-04)을 흔든다. 바꾸려면 `mission/finish` 로 먼저 푼다 | `ALREADY_PAIRED` |
+| 대상이 안 보임 (`NO_TARGET`) | 거부 | `NO_TARGET` |
+| 대상이 1 m 밖 | 거부 — **FR-14 의 판정 조건을 명시 페어링도 지킨다.** 멀면 좌표 오차가 커져 수동이든 자동이든 결과가 같다 | `TOO_FAR` |
+| `robot_ns` 가 서버 자신과 다름 | 거부 | `WRONG_ROBOT` |
+| 요청 전에 게이트가 스스로 통과함 | 거부 (이미 자동으로 짝지어졌다) | `GATE_OK` |
+
+**10.6 유효 범위는 현재 미션뿐이다.** `mission/finish` 를 받으면 `amr_detection` 이 명시 페어링을 해제한다
+(`follow_target` 의 즉시 해제와 같은 신호다). 새 미션은 자동 게이트부터 다시 시작한다. 도킹·미션 종료 뒤에
+수동 지정이 남아 있으면 다음 미션에서 엉뚱한 사람을 따라간다.
+
+**10.7 폴백 발동은 개입 1건이다.** `control_ui` 가 `/fleet/intervention` 에 `kind = MANUAL_PAIR` 로
+발행한다. **IPH(AC-13) 분자에 넣는다** — 개입에서 빼는 것은 `SAFETY_POLICY` 하나뿐이다.
+이유가 단순한 기록이 아니다. FR-13 의 판정 기준이 **오페어링 0건 AND 폴백 발동률 ≤ 20 %** 인데,
+상한이 없으면 게이트를 극단적으로 빡빡하게 잡고 매번 사람에게 넘기는 '판단하지 않는 시스템' 이 만점을
+받는다. 개입으로 세야 그 상한이 실제로 작동하고, 발동률과 IPH 가 같은 원천(`events`)을 쓴다.
+
+**10.8 적용 구간은 최초 페어링(S5)과 재탐색(E-1) 둘 다다.** 근거인 BR-T16 이 "추종 개시·재개는 게이트를
+통과한 경우에만" 으로 개시와 재개를 함께 적었다. 다만 재탐색 때는 이미 `worker_id` 가 정해져 있으므로,
+수동 요청의 뜻은 "대상을 바꾼다" 가 아니라 **"지금 보이는 이 사람이 그 작업자다" 를 확정하는 것**이다.
+그래서 재탐색 중의 요청은 `worker_id` 가 진행 중인 미션의 것과 같아야 하고, 다르면 `WRONG_ROBOT` 과
+같은 급으로 거부한다.
+
+**담당** — `target/pair_state` 발행과 30 s 계측, `manual_pair` 서버, 확정 발행은 **인지(정정인·민범진)**.
+버튼·표시와 `MANUAL_PAIR` 개입 발행은 **관제(김민준)**. 서비스 호출 전달은 `fleet_manager`(관제).
+`srv/ManualPair` 정의와 이 절은 **PM**.

@@ -15,6 +15,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/RequestMission.srv"
   "srv/ZoneToken.srv"
   "srv/OperatorCommand.srv"
+  "srv/ManualPair.srv"
   DEPENDENCIES std_msgs geometry_msgs
 )
 

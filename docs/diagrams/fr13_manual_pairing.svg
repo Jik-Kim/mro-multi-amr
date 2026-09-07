@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="1000" viewBox="0 0 760 1000" font-family="'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif">
+<defs>
+<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A5F6A"/></marker>
+<marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2E8B57"/></marker>
+<marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C0392B"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#FFFFFF"/>
+<text x="24" y="34" font-size="19" font-weight="700" fill="#1A1D22">FR-13 — 명시 페어링 폴백 순서도</text>
+<text x="24" y="56" font-size="12" fill="#5A5F6A">게이트를 통과하면 오른쪽으로 빠져 끝난다. 미달일 때만 아래로 내려간다 · 상자 안 번호는 관제가 올린 질문 번호</text>
+
+<rect x="70" y="90" width="320" height="52" rx="5" fill="#F7F8FA" stroke="#8A8F98" stroke-width="1.6"/>
+<text x="230" y="113" font-size="13" font-weight="700" fill="#333840" text-anchor="middle">게이트 판정</text>
+<text x="230" y="131" font-size="11" fill="#3A3E46" text-anchor="middle">amr_detection 이 등록 외형과 대조 · 매 프레임</text>
+<path d="M 230 142 L 230 176" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+
+<polygon points="230,176 390,207 230,238 70,207" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/>
+<text x="230" y="203" font-size="13" font-weight="700" fill="#6F5610" text-anchor="middle">유사도 ≥ 임계?</text>
+<text x="230" y="221" font-size="11" fill="#3A3E46" text-anchor="middle">reid_threshold (FR-12)</text>
+<path d="M 390 207 L 430 207" fill="none" stroke="#2E8B57" stroke-width="1.6" marker-end="url(#arG)"/>
+<text x="410" y="200" font-size="11" fill="#2E8B57" text-anchor="middle">예</text>
+<rect x="430" y="181" width="280" height="52" rx="5" fill="#DFF0E6" stroke="#2E8B57" stroke-width="1.6"/>
+<text x="570" y="204" font-size="13" font-weight="700" fill="#1E6B40" text-anchor="middle">자동 페어링 — 여기서 끝</text>
+<text x="570" y="222" font-size="11" fill="#3A3E46" text-anchor="middle">폴백은 발동하지 않는다</text>
+
+<path d="M 230 238 L 230 272" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="243" y="258" font-size="11" fill="#5A5F6A">아니오</text>
+
+<rect x="70" y="272" width="320" height="52" rx="5" fill="#F7F8FA" stroke="#8A8F98" stroke-width="1.6"/>
+<text x="230" y="295" font-size="13" font-weight="700" fill="#333840" text-anchor="middle">따라가지 않고 그 자리에 선다</text>
+<text x="230" y="313" font-size="11" fill="#3A3E46" text-anchor="middle">오추종 0건이 절대 기준이다 (AC-04)</text>
+<path d="M 230 324 L 230 358" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+
+<polygon points="230,358 390,389 230,420 70,389" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/>
+<text x="230" y="385" font-size="13" font-weight="700" fill="#6F5610" text-anchor="middle">미달로 30 초 지났나?</text>
+<text x="230" y="403" font-size="11" fill="#3A3E46" text-anchor="middle">amr_detection 이 잰다 · 질문 1</text>
+<path d="M 390 389 L 416 389 L 416 298 L 390 298" fill="none" stroke="#8A8F98" stroke-width="1.4" marker-end="url(#ar)"/>
+<text x="424" y="348" font-size="11" fill="#8A8F98">아니오 · 계속 센다</text>
+
+<path d="M 230 420 L 230 454" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="243" y="440" font-size="11" fill="#5A5F6A">예</text>
+
+<rect x="70" y="454" width="320" height="52" rx="5" fill="#FFF6E8" stroke="#D6B685" stroke-width="1.6"/>
+<text x="230" y="477" font-size="13" font-weight="700" fill="#8A4F0B" text-anchor="middle">관제 화면에 폴백 버튼 표시</text>
+<text x="230" y="495" font-size="11" fill="#3A3E46" text-anchor="middle">target/pair_state = GATE_FAIL · 질문 2</text>
+<path d="M 230 506 L 230 540" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+
+<rect x="70" y="540" width="320" height="52" rx="5" fill="#FFF6E8" stroke="#D6B685" stroke-width="1.6"/>
+<text x="230" y="563" font-size="13" font-weight="700" fill="#8A4F0B" text-anchor="middle">운영자가 로봇 · 작업자 지정</text>
+<text x="230" y="581" font-size="11" fill="#3A3E46" text-anchor="middle">manual_pair 서비스 (robot_ns, worker_id) · 질문 3</text>
+<path d="M 230 592 L 230 626" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+
+<polygon points="230,626 390,657 230,688 70,657" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/>
+<text x="230" y="653" font-size="13" font-weight="700" fill="#6F5610" text-anchor="middle">이미 페어링돼 있나?</text>
+<text x="230" y="671" font-size="11" fill="#3A3E46" text-anchor="middle">질문 5</text>
+<path d="M 390 657 L 430 657" fill="none" stroke="#C0392B" stroke-width="1.6" marker-end="url(#arR)"/>
+<text x="410" y="650" font-size="11" fill="#C0392B" text-anchor="middle">예</text>
+<rect x="430" y="631" width="280" height="52" rx="5" fill="#FCECEC" stroke="#C0392B" stroke-width="1.6"/>
+<text x="570" y="654" font-size="13" font-weight="700" fill="#8E2A1F" text-anchor="middle">거부하고 사유를 돌려준다</text>
+<text x="570" y="672" font-size="11" fill="#3A3E46" text-anchor="middle">추종 중에는 대상을 바꾸지 않는다</text>
+
+<path d="M 230 688 L 230 722" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+<text x="243" y="708" font-size="11" fill="#5A5F6A">아니오</text>
+
+<rect x="70" y="722" width="320" height="52" rx="5" fill="#EDF3FC" stroke="#9FB4CE" stroke-width="1.6"/>
+<text x="230" y="745" font-size="13" font-weight="700" fill="#1B4F91" text-anchor="middle">페어링 확정</text>
+<text x="230" y="763" font-size="11" fill="#3A3E46" text-anchor="middle">amr_detection 이 target/paired 발행 · 질문 4</text>
+<path d="M 230 774 L 230 808" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+
+<rect x="70" y="808" width="320" height="52" rx="5" fill="#FCECEC" stroke="#C0392B" stroke-width="1.6"/>
+<text x="230" y="831" font-size="13" font-weight="700" fill="#8E2A1F" text-anchor="middle">개입 1건 기록</text>
+<text x="230" y="849" font-size="11" fill="#3A3E46" text-anchor="middle">kind = MANUAL_PAIR · IPH 에 포함 · 질문 7</text>
+<path d="M 230 860 L 230 894" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+
+<rect x="70" y="894" width="320" height="52" rx="5" fill="#EDF3FC" stroke="#9FB4CE" stroke-width="1.6"/>
+<text x="230" y="917" font-size="13" font-weight="700" fill="#1B4F91" text-anchor="middle">follow_target 추종 시작</text>
+<text x="230" y="935" font-size="11" fill="#3A3E46" text-anchor="middle">mission/finish 오면 해제 · 질문 6</text>
+
+<rect x="430" y="722" width="280" height="118" rx="5" fill="#F7F8FA" stroke="#C9CFD6" stroke-width="1.2" stroke-dasharray="5 4"/>
+<text x="442" y="744" font-size="12" font-weight="700" fill="#333840">왜 개입으로 세는가</text>
+<text x="442" y="764" font-size="11" fill="#3A3E46">폴백 발동률에 20 % 상한이 붙어 있다.</text>
+<text x="442" y="782" font-size="11" fill="#3A3E46">상한이 없으면 게이트를 극단적으로</text>
+<text x="442" y="800" font-size="11" fill="#3A3E46">빡빡하게 잡고 매번 사람에게 넘기는</text>
+<text x="442" y="818" font-size="11" fill="#3A3E46">설계가 만점을 받는다. 개입으로 세야</text>
+<text x="442" y="836" font-size="11" fill="#3A3E46">그 상한이 실제로 작동한다.</text>
+
+<text x="430" y="900" font-size="11" fill="#8A8F98">적용 구간 — 최초 페어링(S5)과 재탐색(E-1) 둘 다 · 질문 8</text>
+<text x="430" y="920" font-size="11" fill="#8A8F98">재탐색 때는 대상을 바꾸는 것이 아니라</text>
+<text x="430" y="938" font-size="11" fill="#8A8F98">"지금 보이는 이 사람이 그 작업자다" 를 확정하는 것이다.</text>
+<text x="24" y="978" font-size="10" fill="#8A8F98">근거: SDD FR-12·FR-13, BRD BR-T16·AC-04 · 새로 필요한 계약: target/pair_state, manual_pair 서비스, MANUAL_PAIR</text>
+</svg>
