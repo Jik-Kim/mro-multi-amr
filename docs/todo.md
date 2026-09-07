@@ -5,13 +5,13 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 44/86 완료** (██████████░░░░░░░░░░)  ·  기준 09/07
+**전체 45/88 완료** (██████████░░░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 3/12 | `██░░░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 12/18 | `███████░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 13/20 | `██████░░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 16/33 | `█████░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 7/13 | `█████░░░░░` | — |
 | mro_bringup [PM 김병직] | 3/7 | `████░░░░░░` | — |
@@ -54,7 +54,8 @@
 - [x] `webcam2.py` USB 캡처 + `calibrate_cam2_markers.py` 마커 캘리브레이션 도구 (PR #2) · 마감 9/6
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [ ] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) · 마감 9/8
-- [ ] `webcam_register_node.py`: 등록 구역 게이트 — 관제탑 위치 확정 후 · 마감 9/8
+- [ ] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26) · 마감 9/8
+- [ ] **웹캠1 출입구 체류 시간 실측** — 작업자가 프레임을 지나는 동안 `register_s` 1.0 s 를 채우는지. 못 채우면 `register_s` 하향 또는 시야를 안쪽 통로까지 (Q-26 남은 확인). TS-U01 은 한 명씩 순차 진입 · 마감 9/8
 - [x] **웹캠2 발행 주기 저하 (I-016)** — 캡처 스레드·BUFFERSIZE·주기 분리·CompressedImage 를 `webcam_hint_node.py` 에 병합 (PR #14, 9/7 머지) · 마감 9/7
 - [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 두 타이머를 각각 `MutuallyExclusiveCallbackGroup` 으로. 지금은 한 `Reentrant` 그룹이라 `model.track` 이 겹쳐 돌 수 있다 · 마감 9/8
 - [ ] `webcam2.py`·`webcam2_subscriber.py` 정리 — 캡처가 힌트 노드로 옮겨져 같은 `/dev/video` 를 두 번 여는 잔재. 삭제하거나 subscriber 를 `CompressedImage` 뷰어로 바꾸고 `setup.py` 진입점 정리 · 마감 9/8
@@ -65,7 +66,8 @@
 - [x] **`kpi_report.py`: 배송 판정(AC-08)·리드타임을 `~/mro_fleet.db` 에서 읽기 (I-023)** (PR #15, PM 합성 DB 대조 일치) · 마감 9/8
 - [x] `kpi_report.py`: 추종거리를 FOLLOWING 구간으로 자르고 `|d−0.5|` p95 와 **최소 이격** 출력 (I-022, AC-05, PR #15) · 마감 9/9
 - [x] `kpi_report.py`: Lost 를 `target/visible` 전이로 잡고 재획득 **성공률** 산출 — SEARCHING 은 정상 절차에도 쓰인다 (I-022, K-04, PR #15) · 마감 9/9
-- [ ] `kpi_report.py`: **K-04 이중 계상 수정 (I-028)** — STANDBY/FAILED 뒤 재출현은 실패로만, 두 함수를 하나로, `LOST_MIN_S` 필터를 실패에도 · 마감 9/9
+- [x] `kpi_report.py`: **K-04 이중 계상 수정 (I-028)** — 포기/성공/미복귀를 한 함수에서 판정 (PR #17, PM 합성 로그 재대조 일치) · 마감 9/9
+- [ ] `kpi_report.py`: `--db` 파일은 있는데 `missions` 테이블이 없으면 `OperationalError` 로 통째로 죽는다 — 잡아서 안내문으로 (관제 DB 초기화 전 TS-07 대비) · 마감 9/8
 - [x] `kpi_report.py`: IPH 분모를 undock~도킹 완료 구간 합으로 (I-022, BRD 5.3, PR #15) · 마감 9/9
 - [x] `kpi_logger_node.py`: `target/distance` 구독(FR-29), 로봇 네임스페이스 파라미터화, QoS 계약 반영 (PR #8) · 마감 9/9
 
