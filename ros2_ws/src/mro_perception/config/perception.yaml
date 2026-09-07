@@ -1,9 +1,12 @@
-# amr_detection_node / aruco_detector_node 파라미터 (TODO: 노드가 declare_parameter 로 읽도록 전환)
+# amr_detection_node / aruco_detector_node 파라미터. amr_detection 은 전부 declare_parameter 로 읽는다 (9/7).
+# launch 가 이 파일을 넘기기 전(PM 9/8)에는 노드 기본값이 쓰인다 — 값은 여기와 노드 상수가 같아야 한다
 /**:
   ros__parameters:
     detect_conf: 0.5
-    max_core_gap_mm: 150
-    sync_slop_s: 0.1
+    max_core_gap_mm: 150       # 거리 품질 게이트. ROI 핵심부(p20~median)가 이 이상 벌어지면 그 프레임 거리를 버린다
+    bbox_inner: 0.5            # 거리 측정에 쓰는 bbox 중심부 비율. 가장자리는 배경 depth 가 섞인다
+    sync_slop_s: 0.1           # RGB·depth 타임스탬프 차 허용치(초)
+    show_window: true          # 로컬 미리보기 창. 모니터 없는 로봇 PC(SSH)에서는 false — 창을 못 만들면 노드가 죽는다
     reid_threshold: 0.6        # Q-13 [팀 확정 필요] — TS-U04 프레임(AMR 시점)으로 같은/다른 인형 분포를 재서 정한다.
                                # 웹캠1 의 rematch_threshold(0.45, 웹캠 시점)와는 다른 결정이다
     descriptor_frames: 10      # 색 지문 평균 창. 웹캠1 DESCRIPTOR_FRAMES 와 같아야 같은 척도

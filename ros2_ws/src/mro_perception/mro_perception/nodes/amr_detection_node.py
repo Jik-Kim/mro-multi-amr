@@ -48,8 +48,9 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
 실행: ros2 launch mro_bringup robot.launch.py            (namespace·tf 리맵·robotN.yaml 을 launch 가 붙인다)
 단독: ros2 run mro_perception amr_detection_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static
 
-파라미터 (robotN.yaml / config/perception.yaml): reid_threshold · detect_conf · descriptor_frames · pair_on_s ·
-  pair_off_s · publish_hz. 나머지 모듈 상수(MAX_CORE_GAP_MM 등)의 파라미터 전환은 TODO (9/8).
+파라미터 (robotN.yaml / config/perception.yaml 이 덮어쓴다. 아래 모듈 상수는 기본값):
+  detect_conf · reid_threshold · descriptor_frames · pair_on_s · pair_off_s · publish_hz
+  · max_core_gap_mm · bbox_inner · sync_slop_s · show_window
 """
 import os
 
@@ -100,16 +101,16 @@ PAIR_ON_S = 1.0              # 이 시간 연속 통과해야 paired=True (웹�
 PAIR_OFF_S = 3.0             # 이 시간 연속 실패·미검출이면 paired=False. 짧은 가림에 짝이 풀리지 않게 [팀 확정]
 PUBLISH_HZ = 1.0             # paired·worker_id 재발행 주기. 늦게 켜진 노드도 받게 한다
 
-# ── 거리 측정 ─────────────────────────────────────────────────────────────────────────────────────────
+# ── 거리 측정 (파라미터 기본값) ──────────────────────────────────────────────────────────────────────
 BBOX_INNER = 0.5             # bbox 중심부 50 % 만 depth 를 읽는다. 가장자리는 인형 뒤 바닥·벽의 depth 가 섞인다
 # distance_from_bbox() 는 ROI 안 depth 의 p20(q)·중앙값(med)·최댓값 등을 돌려준다.
 # 인형 하나만 깨끗하게 들어오면 p20 과 med 가 비슷하고, 가림·경계에 걸치면 둘이 벌어진다 → 그 프레임의 거리는 안 믿는다.
 # (max-min 인 spread 는 bbox 에 뒷배경이 조금만 들어와도 1 m 를 넘어 게이트로 못 쓴다 — 실측 로그)
 MAX_CORE_GAP_MM = 150
 
-# ── 입력·표시 ─────────────────────────────────────────────────────────────────────────────────────────
+# ── 입력·표시 (파라미터 기본값) ──────────────────────────────────────────────────────────────────────
 SYNC_SLOP_S = 0.1            # RGB 와 depth 의 타임스탬프 차이가 이 안(초)이면 "같은 순간" 으로 묶는다
-SHOW_WINDOW = True           # 로컬 미리보기 창. GUI 없는 로봇 PC 에서는 False (파라미터 전환은 9/8)
+SHOW_WINDOW = True           # 로컬 미리보기 창. 모니터 없는 로봇 PC 에서는 yaml 로 false — 창을 못 만들면 노드가 죽는다
 
 
 def worker_boxes(results, names, cls_names, conf_min):
@@ -152,8 +153,15 @@ class AmrDetection(Node):
         self.declare_parameter('pair_on_s', PAIR_ON_S)
         self.declare_parameter('pair_off_s', PAIR_OFF_S)
         self.declare_parameter('publish_hz', PUBLISH_HZ)
+        self.declare_parameter('max_core_gap_mm', MAX_CORE_GAP_MM)
+        self.declare_parameter('bbox_inner', BBOX_INNER)
+        self.declare_parameter('sync_slop_s', SYNC_SLOP_S)
+        self.declare_parameter('show_window', SHOW_WINDOW)
         p = lambda k: self.get_parameter(k).value  # noqa: E731
         self.detect_conf = float(p('detect_conf'))
+        self.max_core_gap_mm = float(p('max_core_gap_mm'))
+        self.bbox_inner = float(p('bbox_inner'))
+        self.show_window = bool(p('show_window'))
 
         # 모델. names 는 {0: 'amr', 1: 'worker_b', 2: 'worker_a'} — 번호를 이름으로 바꾸는 표
         self.model = YOLO(MODEL_PATH)
@@ -181,7 +189,7 @@ class AmrDetection(Node):
         rgb_sub = Subscriber(self, CompressedImage, 'oakd/rgb/image_raw/compressed')
         # RGB 와 depth 는 별도 토픽으로 따로 도착한다. 타임스탬프가 SYNC_SLOP_S 안으로 맞는 쌍만 synced_cb 로 넘겨,
         # "이 컬러 프레임의 이 픽셀이 저 depth 프레임의 이 거리" 라고 말할 수 있게 한다
-        self.sync = ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size=10, slop=SYNC_SLOP_S)
+        self.sync = ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size=10, slop=float(p('sync_slop_s')))
         self.sync.registerCallback(self.synced_cb)
         self.create_subscription(CameraInfo, 'oakd/stereo/camera_info', self.info_cb, 1)
 
@@ -202,7 +210,7 @@ class AmrDetection(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        if SHOW_WINDOW:
+        if self.show_window:
             cv2.namedWindow('AMR Detection', cv2.WINDOW_NORMAL)
             cv2.resizeWindow('AMR Detection', 1408, 704)     # 704×704 두 장을 가로로 붙인 크기
         self.get_logger().info(f'YOLO {MODEL_PATH} | ns={self.get_namespace()} | 검출 대상 {DETECT_CLASSES} '
@@ -305,11 +313,11 @@ class AmrDetection(Node):
                 cv2.rectangle(vis, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
                 # ⑤ 거리 — bbox 중심부(BBOX_INNER) depth 의 p20(q)·중앙값(med)·보정 거리(z_corr, m)
-                r = distance_from_bbox(depth, x1, y1, x2, y2, inner_ratio=BBOX_INNER)
+                r = distance_from_bbox(depth, x1, y1, x2, y2, inner_ratio=self.bbox_inner)
                 self.get_logger().info(f'{cls_name} conf={c:.2f} {tag} | {format_result(r)}')
 
                 # ⑥ 품질 게이트 — p20 과 med 가 MAX_CORE_GAP_MM 이상 벌어지면 가림·경계 걸침이다. 이 프레임 거리는 버린다
-                if r is not None and (r['med'] - r['q']) <= MAX_CORE_GAP_MM:
+                if r is not None and (r['med'] - r['q']) <= self.max_core_gap_mm:
                     # 거리는 TF 와 무관하게 여기서 바로 낸다 — AC-05 는 이 값의 p95·최솟값으로 채점한다 (계약 9절).
                     # 품질 게이트를 통과한 프레임만 — 가림·경계 걸침 거리가 섞이면 p95 가 오염된다
                     self.pub_distance.publish(Float32(data=float(r['z_corr'])))
@@ -322,7 +330,7 @@ class AmrDetection(Node):
                         self.pub_point.publish(pm)
                         label = f"{cls_name} {r['z_corr']:.2f} m -> map ({pm.point.x:.2f}, {pm.point.y:.2f}) {tag}"
                 elif r is not None:
-                    label = f"core gap {r['med'] - r['q']:.0f} mm > {MAX_CORE_GAP_MM} - rejected"
+                    label = f"core gap {r['med'] - r['q']:.0f} mm > {self.max_core_gap_mm:.0f} - rejected"
                 cv2.putText(vis, label, (x1, max(15, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
             else:
                 label = f'detecting - no target ({self.last_reason})'
@@ -332,7 +340,7 @@ class AmrDetection(Node):
         cv2.rectangle(frame, (0, 0), (frame.shape[1], 26), (0, 0, 0), -1)
         cv2.putText(frame, label, (8, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
         self.pub_image.publish(self.bridge.cv2_to_imgmsg(frame, encoding='bgr8'))
-        if SHOW_WINDOW:
+        if self.show_window:
             cv2.imshow('AMR Detection', frame)
 
 
@@ -345,7 +353,7 @@ def main():
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=0.02)
             node.process()
-            if SHOW_WINDOW and (cv2.waitKey(1) & 0xFF) == ord('q'):
+            if node.show_window and (cv2.waitKey(1) & 0xFF) == ord('q'):
                 break
     except KeyboardInterrupt:
         pass
