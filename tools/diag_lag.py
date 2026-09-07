@@ -19,7 +19,6 @@ import argparse
 import os
 import shutil
 import subprocess
-import sys
 import time
 from collections import defaultdict
 
@@ -93,8 +92,9 @@ def main():
     a = ap.parse_args()
 
     print('=== 환경 ===')
-    print(f"host {sh('hostname')} | ROS_DOMAIN_ID={os.environ.get('ROS_DOMAIN_ID')} "
-          f"| DISCOVERY={os.environ.get('ROS_DISCOVERY_SERVER', '')} | SUPER_CLIENT={os.environ.get('ROS_SUPER_CLIENT', '')}")
+    env = os.environ.get
+    print(f"host {sh('hostname')} | ROS_DOMAIN_ID={env('ROS_DOMAIN_ID')} "
+          f"| DISCOVERY={env('ROS_DISCOVERY_SERVER', '')} | SUPER_CLIENT={env('ROS_SUPER_CLIENT', '')}")
     print(f"SSH 접속={'예' if os.environ.get('SSH_CONNECTION') else '아니오'} | DISPLAY={os.environ.get('DISPLAY', '(없음)')}"
           f" — SSH 로 창을 띄우면 X 포워딩이라 imshow 가 느리다")
     # python 프로세스만, 그리고 이 스크립트와 그 부모 셸(명령줄에 같은 문자열이 들어감)은 제외
