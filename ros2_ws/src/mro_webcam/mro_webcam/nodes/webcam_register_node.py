@@ -30,8 +30,10 @@ fleet_manager 가 이를 받아 작업자-로봇을 배정하고 언독(S2)으�
   ros2 topic echo /webcam1/worker_descriptor
 """
 import os
+from collections import deque
 
 import cv2
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -55,6 +57,15 @@ PERIOD_S = 0.1               # 처리 주기 (10 Hz). 히스테리시스를 프�
 DETECT_S = 0.3               # 이 시간 동안 연속으로 보이면 True   (10 Hz 기준 3프레임)
 CLEAR_S = 0.5                # 이 시간 동안 연속으로 안 보이면 False (10 Hz 기준 5프레임)
 REGISTER_S = 1.0             # 트랙이 이 시간 연속 유지되면 등록 확정 (TS-U01: 등록 <= 10 s)
+DESCRIPTOR_FRAMES = 10       # 서술자를 최근 이만큼의 프레임 평균으로 만든다 (10 Hz 기준 1초).
+                             # 한 프레임만 쓰면 그게 멀거나 흐릴 때 그대로 나간다. 평균을 내면
+                             # 그 잡음이 씻겨 같은 인형끼리의 유사도가 올라간다 — 데이터셋 실측
+                             # (9/7, tools/reid_threshold.py 기준 crop 702+648):
+                             #   k=1  같은 인형 p5 0.256 / 다른 인형 p95 0.610  → 겹침 0.353
+                             #   k=10 같은 인형 p5 0.411 / 다른 인형 p95 0.602  → 겹침 0.192
+                             # 다른 인형 쪽은 거의 안 움직이고 같은 인형 쪽만 올라간다.
+                             # REGISTER_S 동안 어차피 기다리므로 그 프레임을 버리지 않고 쓴다.
+                             # 계약은 그대로다 — color_hist 는 여전히 hsv_hist() 로 만든 길이 128 이다
 PUBLISH_HZ = 1.0             # 등록된 작업자 재발행 주기. 관제가 늦게 켜져도 받게 한다
 MAX_WORKERS = 2              # SOT 확정: 작업자 2명
 TARGET_CLASSES = ['worker_a', 'worker_b']   # 이 클래스만 등록 대상. 빈 리스트면 전체 허용
@@ -63,14 +74,32 @@ REMATCH_THRESHOLD = 0.45     # 끊긴 트랙이 기존 등록자와 같은 사�
                              # robotN.yaml 의 reid_threshold(로봇의 페어링 허용 판정)와는 다른 결정이라
                              # 이름을 분리한다. 같게 두면 나중에 값을 통일해 버려 한쪽이 깨진다.
                              # 9/7 실측으로 확정 (tools/reid_threshold.py, 계약 v1.3 '눈대중 금지').
-                             #   같은 인형이 시야에 다시 들어왔을 때 sim 0.52~0.86 (n=6, 최솟값 0.52)
-                             #   종전 0.70 은 재등록 기회 5회 중 1회만 성공했다 — 게다가 실패해도
-                             #   REG 2/2 가 그대로 떠 있고 발행도 계속돼 겉으로 드러나지 않는다
+                             #   서술자 평균화(DESCRIPTOR_FRAMES) 후 실기동 sim 0.55~0.91
+                             #   (n=15, 최솟값 0.55, 중앙 0.81) → 0.45 는 0.10 여유, 15건 전부 통과
+                             #   평균화 전에는 0.52~0.86 (n=6, 중앙 0.73) 이었다
+                             #   종전 0.70 은 재등록 기회 5회 중 1회만 성공했고, 평균화 후에도
+                             #   15건 중 2건이 미달이다. 실패해도 REG 2/2 가 그대로 떠 있고 발행도
+                             #   계속돼 겉으로 드러나지 않는다 — 그래서 놓치는 쪽이 더 위험하다
                              # 낮춰서 생기는 위험(다른 인형을 같은 사람으로 봄)은 두 겹으로 막혀 있다:
                              #   ① 같은 복장 클래스끼리만 비교한다 (아래 outfit != cls_name)
                              #   ② 복장 상호 오분류 0/410 = 0.00 % (인지팀 실측 9/7, conf 0.5)
 SHOW_WINDOW = True
 # ############################################################################
+
+
+def mean_hist(hists):
+    """최근 프레임들의 히스토그램 평균. 한 장의 잡음(먼 거리·흐림)을 씻는다.
+
+    hsv_hist() 가 돌려주는 것과 같은 모양·같은 스케일을 유지해야 AMR 과 비교가 성립한다
+    (계약 2절). 그래서 평균을 낸 뒤 합을 원래대로 되돌린다.
+    """
+    if len(hists) == 1:
+        return hists[0]
+    m = np.mean(np.stack(hists), axis=0).astype(np.float32)
+    total = float(np.sum(m))
+    if total <= 0:
+        return m
+    return (m / total * len(m)).astype(np.float32)
 
 
 def open_webcam(index):
@@ -122,6 +151,7 @@ class WebcamDetection(Node):
         self.hit = self.miss = 0
         self.tracks = []          # (x1,y1,x2,y2,conf,cls_name,track_id) — 다음 단계(서술자·등록)에서 쓴다
         self.hists = {}           # track_id -> color_hist (float32[128]). interfaces.md: H16 x S8
+        self.hist_buf = {}        # track_id -> 최근 DESCRIPTOR_FRAMES 개 히스토그램 (평균용)
         self.track_seen = {}      # track_id -> 연속 관측 프레임 수
         self.workers = {}         # track_id -> (worker_id, outfit_class)
         self.last_logged = None
@@ -161,9 +191,11 @@ class WebcamDetection(Node):
             if crop.size == 0:
                 continue
             h = hsv_hist(crop)
-            if tid not in self.hists:
+            if tid not in self.hist_buf:
+                self.hist_buf[tid] = deque(maxlen=DESCRIPTOR_FRAMES)
                 self.get_logger().info(f'서술자 생성 ID{tid} len={len(h)}')
-            self.hists[tid] = h
+            self.hist_buf[tid].append(h)
+            self.hists[tid] = mean_hist(self.hist_buf[tid])
 
         # 등록 판정: 트랙이 REGISTER_S 동안 끊기지 않고 보이면 worker_id 를 배정한다
         alive = {t[6] for t in tracks}
