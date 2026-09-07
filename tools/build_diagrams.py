@@ -59,6 +59,11 @@ STYLES = {
     'bus':    ('#F7F8FA', '#5A5F6A', '#333840'),
     'bushex': ('#EFF2F6', '#5A5F6A', '#333840'),
     'db':     ('#FFFFFF', '#8A8F98', '#333840'),
+    # 시나리오 단계 — 그 단계를 수행하는 PC 를 채움색으로 나타낸다
+    'st_cam': ('#EDF7F1', '#93C4A8', '#1E6B40'),
+    'st_ctl': ('#FFF6E8', '#D6B685', '#8A4F0B'),
+    'st_rob': ('#EDF3FC', '#9FB4CE', '#1B4F91'),
+    'st_saf': ('#FDF0EF', '#D98A80', '#8E2A1F'),
 }
 
 PAD_TOP = 21     # baseline of first line
@@ -771,100 +776,285 @@ def step2():
 # STEP 3 — 시나리오 플로우차트
 # =====================================================================
 def step3():
-    """STEP 3-1 시나리오 순서도 — 강의안(Day5 p.73) 형식.
+    """STEP 3-1 시나리오 순서도 — 3-2 와 같은 밀도.
 
-    상자 하나에 짧은 한 줄, 판단은 마름모 + Y/N, 예외는 오른쪽에 태그만 붙이고
-    설명은 그림 아래 표로 뺀다. 흐름이 길어 두 단으로 접고 ① 로 잇는다.
+    상자마다 그 단계를 누가 · 어떤 토픽으로 하는지 3~5줄, 화살표마다 토픽·서비스·액션
+    이름과 메시지 타입, 예외는 오른쪽에 내용까지. 흐름이 길어 두 단으로 접고 ① 로 잇는다.
     """
-    d = Diagram('STEP3 시나리오', 1180, 100,
+    W = 2360
+    d = Diagram('STEP3 시나리오', W, 100,
                 'STEP 3-1 — 운영 시나리오 S1 ~ S10 순서도',
-                '상자 = 단계 · 마름모 = 판단(Y/N) · 오른쪽 태그 = 그때의 예외 처리(아래 표) · SDD 3.3 / BRD 3.2')
+                '단계 상자 = 채움색이 수행 PC · 화살표 색 = 통신 종류 · 오른쪽 = 그때의 예외 처리 · SDD 3.3 / BRD 3.2')
 
-    BH, DH, GAP = 30, 44, 18
-    S, D, T, X = 'step', 'dec', 'term', 'exc'
+    TOPIC, SRV, ACT, SAFE, PLAIN = '#3576C8', '#B06810', '#6B4FA8', '#C0392B', '#5A5F6A'
+    FW, CORR, EW = 400, 190, 520
+    A_X = 40
+    B_X = 1210
+    TOP = 118
+    GAP = 58                      # 단계 사이 — 두 줄짜리 화살표 라벨이 들어갈 자리
 
-    A_NODE, AX, AW, A_EXC = 196, 210, 210, 440   # 1단 — 노드 이름 오른쪽 끝 · 흐름 · 예외 태그
-    B_NODE, BX, BW, B_EXC = 756, 770, 210, 1000  # 2단
-    TOP = 142
+    def ylab_in(gy0, gh, nlines=1):
+        bh = 13 * nlines + 8
+        return gy0 + (gh - bh) / 2 + bh + 5
 
-    def column(x, w, y0, node_x, exc_x, items):
-        """items = (id, 라벨, 모양, 아래 가지 라벨, 수행 노드, (예외태그, 가지라벨))"""
-        prev, prev_lbl, y = None, '', y0
-        for nid, lbl, shape, out, node, exc in items:
-            h = DH if shape == 'd' else (26 if shape == 't' else BH)
-            style = {'d': D, 't': T}.get(shape, S)
-            sh = {'d': 'diamond', 't': 'stadium'}.get(shape, 'rect')
-            d.box(nid, x, y, w, [lbl], style, h=h, shape=sh, align='center')
-            if node:
-                d.text(node_x, y + h / 2 + 4, node, 10.5, '#8A8F98', anchor='end')
-            if exc:
-                tag, elbl = exc
-                d.box(nid + '_e', exc_x, y + h / 2 - 13, 150, [tag], X, h=26, align='center')
-                d.edge(nid, nid + '_e', elbl, 'right-left', color='#C0392B',
-                       width=1.2, label_dy=-4)
-            if prev:
-                d.edge(prev, nid, prev_lbl, 'bottom-top', color='#5A5F6A',
-                       width=1.3, label_dx=13, label_dy=-5)
-            prev, prev_lbl, y = nid, out, y + h + GAP
+    def column(fx0, y, steps):
+        """steps 를 위에서 아래로 놓고, 사이를 라벨 달린 화살표로 잇는다."""
+        ex0 = fx0 + FW + CORR
+        prev = None
+        for st in steps:
+            shape = st.get('shape', 'rect')
+            h = st.get('h') or (76 if shape == 'diamond' else None)
+            d.box(st['id'], fx0, y, FW, st['lines'], st['style'], h=h, shape=shape,
+                  align='center' if shape != 'rect' else 'left')
+            hh = d.nodes[st['id']]['h']
+            if prev is not None:
+                gy0, gh = prev[1], y - prev[1]
+                d.edge(prev[0], st['id'], '', 'bottom@0.5-top@0.5',
+                       color=st.get('incolor', TOPIC), width=1.8,
+                       dashed=st.get('indash', False),
+                       via=[(fx0 + FW / 2, ylab_in(gy0, gh, len(st['in'])) - 1),
+                            (fx0 + FW / 2, ylab_in(gy0, gh, len(st['in'])) + 1)],
+                       label_lines=st['in'], label_x=fx0 + FW / 2)
+            if st.get('exc'):
+                eid = st['id'] + '_e'
+                eh = box_h(st['exc'])
+                d.box(eid, ex0, y + hh / 2 - eh / 2, EW, st['exc'], 'exc')
+                d.edge(st['id'], eid, '', 'right@0.5-left@0.5',
+                       color=st.get('exccolor', SAFE), width=1.8,
+                       label_lines=st['exclabel'], label_x=fx0 + FW + CORR / 2)
+            prev = (st['id'], y + hh)
+            y = y + hh + GAP
         return y - GAP
 
-    # ─────────── 1단 · S1 ~ S4′ ───────────
-    d.text(AX, TOP - 58, '1단  —  요청에서 대기공간까지', 12, '#5A5F6A', bold=True)
-    a_bot = column(AX, AW, TOP, A_NODE, A_EXC, [
-        ('s1', 'S1  진입 · 등록', 'r', '', 'webcam_register', ('서술자 유사', '')),
-        ('s2', 'S2  준비 (undock)', 'r', '', 'shuttle_mission', ('I-013  맵 좌표계', '')),
-        ('s3', 'S3  자재 요청', 'r', '', 'control_ui', None),
-        ('s4', 'S4  베이 이동', 'r', '', 'shuttle_mission', None),
-        ('q1', '베이 ArUco 일치', 'd', 'Y', 'aruco_detector', ('오도착 → 재접근', 'N')),
-        ('q2', 'P1 토큰 획득?', 'd', 'Y', 'zone_semaphore', ('E-3  교착 회피', 'N')),
-        ('s5', "S4′  적재 · 대기공간", 'r', '', 'shuttle_mission', None),
+    # ═════════ 1단 · S1 ~ S4′ ═════════
+    d.text(A_X, TOP - 22, '1단  —  진입 · 등록에서 대기공간 도착까지', 13, '#333840', bold=True)
+    a_bot = column(A_X, TOP, [
+        dict(id='s1', style='st_cam', lines=[
+            'S1   진입 · 등록',
+            'webcam_register (PC-W1) · 출입구 시야 · 추론 10 Hz',
+            'ByteTrack ID 부여 · 0.3 s 연속으로 잡혀야 등록',
+            'HSV H16×S8 = 128 · 10프레임 평균 · 재등록 임계 0.45',
+            '등록 ≤ 10 초 → 로봇 배정 (트랙 ID 작은 쪽 먼저)',
+        ], exc=[
+            '두 작업자의 서술자가 너무 비슷할 때',
+            '같은 인형끼리의 유사도와 다른 인형끼리의 유사도 분포가 겹치면',
+            '서술자 자체를 손봐야 한다는 신호다. 조명을 맞추고 다시 등록한다.',
+            '상의 색 두 가지는 휘도를 맞춰 인쇄해 색만으로 갈리게 한다.',
+        ], exclabel=['분포가 겹친다']),
+        dict(id='s2', style='st_rob', lines=[
+            'S2   준비 — 도크에서 나온다',
+            'shuttle_mission (PC-R3 / PC-R4)',
+            'dock_pose 로 AMCL 초기 위치 설정 — I-013',
+            'opennav_docking   action  undock',
+            'shuttle/status = READY → SHUTTLE',
+        ], **{'in': ['/webcam1/worker_descriptor',
+                     'WorkerDescriptor → fleet_manager 가 로봇을 배정한다']},
+            exc=[
+            'I-013   두 로봇의 맵 좌표계가 어긋나는 사고',
+            '각 로봇이 (0,0) 으로 초기화하면 같은 좌표가 서로 다른 장소를',
+            '가리키게 되어 세마포어도 waypoint 도 전부 무의미해진다.',
+            '맵 원점은 SLAM 작성 시점 하나로 고정하고, 각 로봇은',
+            'arena.yaml 의 dock_zone.pose 값으로 초기화한다.',
+        ], exclabel=['(0,0) 으로 초기화하면']),
+        dict(id='s3', style='st_ctl', lines=[
+            'S3   자재 요청',
+            'control_ui (Flask :5000) 에서 작업자 · 베이 선택',
+            'RequestMission (서비스) → fleet_manager',
+            '배터리 25 % 미만이면 거부하고 사유를 남긴다',
+            '접수 ≤ 2 초 · missions.created_at 기록 (K-05 시작점)',
+        ], **{'in': ['shuttle/status = READY', 'std_msgs/String → fleet_manager · 배차 가능']}),
+        dict(id='s4', style='st_rob', lines=[
+            'S4   셔틀 주행 — 창고 베이로',
+            'shuttle_mission → Nav2   navigate_to_pose (액션)',
+            'arena.yaml 의 베이 A / B / C waypoint',
+            '도크와 창고는 벽 없이 이어져 여기서는 토큰이 없다',
+            'shuttle/status = SHUTTLE → AT_BAY',
+        ], **{'in': ['mission/assigned', 'mro_interfaces/Mission (ASSIGNED) → 배정된 로봇']}),
+        dict(id='q1', style='dec', shape='diamond', lines=[
+            '베이 ArUco ID 가 일치하는가?',
+            'aruco_detector · 거리 ≤ 1.5 m',
+        ], **{'in': ['aruco/id · aruco/distance',
+                     'Int32 · Float32 — 1.5 m 안에서만 나온다 (PR #30)']},
+            exc=[
+            '도착 판정 실패 — 오도착',
+            '다시 접근해 읽는다. T_lim 120 초를 넘기면 미션을 FAILED 로',
+            '확정하고 운영자에게 알린다. 늦게라도 도착한 사실은',
+            'arrived_late 로 따로 남겨 성공으로 이중 계상하지 않는다.',
+        ], exclabel=['N  ·  ID 불일치 또는 -1']),
+        dict(id='q2', style='dec', shape='diamond', lines=[
+            'P1 병목 토큰을 얻었는가?',
+            'zone_semaphore · 한 번에 한 대',
+        ], **{'in': ['/fleet/zone_token   acquire',
+                     'mro_interfaces/ZoneToken (서비스) → zone_semaphore']},
+            incolor=SRV, indash=True,
+            exc=[
+            'E-3   교착 회피',
+            '거절되면 2 초 뒤 다시 요청한다 (REJECT 는 대기 시작 1건만).',
+            '폴리곤에 들어가기 전에 얻고 완전히 빠져나온 뒤 반납한다.',
+            '60 초를 넘겨 쥐고 있으면 세마포어가 강제 회수(RECLAIM)한다.',
+            'S4 창고에서 나올 때와 S10 돌아갈 때 두 번 통과한다.',
+        ], exclabel=['N  ·  granted = false', '2 s 후 재요청'], exccolor=SRV),
+        dict(id='s5', style='st_rob', lines=[
+            'S4′   적재 · 대기공간 이동',
+            '적재 5 초 체류 → P1 통과 → 대기공간 (Z-05)',
+            '도착 후 P1 토큰 반납 — 못 받았어도 반드시 반납 (I-033)',
+            'shuttle/arrived (Bool) · shuttle/status = WAITING',
+            'WAITING 이 AC-08 · K-05 판정 기준점 — 미션당 1회',
+        ], **{'in': ['granted = true', '베이를 떠나기 전에 얻는다 (방법 B, 순서 기반)']},
+            incolor=SRV, indash=True),
     ])
-    d.box('cx_a', AX + AW / 2 - 21, a_bot + 22, 42, ['①'], 'term', h=34, shape='stadium',
+    d.box('cx_a', A_X + FW / 2 - 21, a_bot + 26, 42, ['①'], 'term', h=42, shape='stadium',
           align='center')
-    d.edge('s5', 'cx_a', '', 'bottom-top', color='#5A5F6A', width=1.3)
+    d.edge('s5', 'cx_a', '', 'bottom@0.5-top@0.5', color=TOPIC, width=1.8)
 
-    # ─────────── 2단 · 재식별 ~ 도킹 ───────────
-    d.text(BX, TOP - 58, '2단  —  합류에서 도킹까지', 12, '#5A5F6A', bold=True)
-    d.box('cx_b', BX + BW / 2 - 21, TOP - 44, 42, ['①'], 'term', h=32, shape='stadium',
+    # ═════════ 2단 · S5 ~ 도킹 ═════════
+    d.text(B_X, TOP - 22, '2단  —  합류에서 도킹 완료까지', 13, '#333840', bold=True)
+    d.box('cx_b', B_X + FW / 2 - 21, TOP - 68, 42, ['①'], 'term', h=42, shape='stadium',
           align='center')
-    b_bot = column(BX, BW, TOP, B_NODE, B_EXC, [
-        ('q3', '재식별 통과?', 'd', 'Y', 'amr_detection', ('E-2  오추종 금지', 'N')),
-        ('s6', 'S5  합류 · 접근', 'r', '', 'follow_target', None),
-        ('s7', 'S6~S8  추종 0.5 m', 'r', '', 'follow_target', None),
-        ('q4', '대상 놓침?', 'd', 'N', 'amr_detection', ('E-1  재탐지', 'Y')),
-        ('q5', '전방 0.30 m?', 'd', 'N', 'safety_watchdog', ('E-4  안전 정지', 'Y')),
-        ('s8', 'S9  작업 종료', 'r', '', 'control_ui', None),
-        ('q6', 'P1 · DOCK 토큰?', 'd', 'Y', 'return_dock', ('E-7  순차 도킹', 'N')),
-        ('s9', 'S10  도킹', 'r', '', 'return_dock', None),
-        ('q7', '도킹 성공?', 'd', 'Y', 'return_dock', ('재시도 2회 → 실패', 'N')),
-        ('end', 'DOCKED · 종료', 't', '', '', None),
+    b_bot = column(B_X, TOP, [
+        dict(id='q3', style='dec', shape='diamond', lines=[
+            '재식별 게이트를 통과했는가?',
+            'amr_detection · 유사도 ≥ 0.6',
+        ], exc=[
+            'E-2   엉뚱한 사람을 따라가지 않기',
+            '임계에 못 미치면 페어링하지 않고 그 자리에서 대기한다.',
+            '잘못된 작업자를 따라가는 일은 0 건이 절대 기준이라,',
+            '확신이 없을 때 멈추는 쪽이 항상 옳다.',
+            '폴백 — 관제 UI 에서 운영자가 대상을 수동으로 지정한다.',
+        ], exclabel=['N  ·  임계 미달']),
+        dict(id='s6', style='st_rob', lines=[
+            'S5   합류 — 배정된 작업자에게 접근',
+            'follow_target → Nav2   navigate_to_pose (액션)',
+            'APPROACH_1 → APPROACH_2 → ARRIVED',
+            'approach/status (String) 로 관제에 보고한다',
+        ], **{'in': ['target/paired · target/worker_id',
+                     'Bool · String → follow_target 이 추종을 시작한다']}),
+        dict(id='s7', style='st_rob', lines=[
+            'S6 ~ S8   추종',
+            '중앙 복도(P3 0.93 m)를 지나 작업공간까지 따라간다',
+            'standoff 0.5 m 유지 · v ≤ 0.3 m/s',
+            'approach/status = FOLLOWING · target/distance 발행',
+            '추종 경로에는 토큰을 두지 않는다 — 기다리면 놓친다',
+        ], **{'in': ['approach/status = ARRIVED', 'std_msgs/String — 합류 완료']}),
+        dict(id='q4', style='dec', shape='diamond', lines=[
+            '대상을 놓쳤는가?   (Target Lost)',
+            'target/visible = false 가 1.0 s 이상',
+        ], **{'in': ['target/distance · target/visible',
+                     'Float32 · Bool — amr_detection 이 10 Hz 로 낸다']},
+            exc=[
+            'E-1   재탐지',
+            '작업공간 안이면 웹캠2 힌트가 있다 → 그 방향으로 회전 탐색.',
+            '중앙 복도는 웹캠2 시야 밖이라 힌트가 없다 → 제자리 탐색.',
+            '두 조건의 재획득 시간을 비교하는 것이 시험 TS-19 다.',
+            'T_lim 을 넘기면 STANDBY 로 들어가 운영자를 기다린다.',
+        ], exclabel=['Y  ·  1.0 s 이상', '웹캠2 힌트로 방향']),
+        dict(id='q5', style='dec', shape='diamond', lines=[
+            '전방 0.30 m 안에 장애물이 있는가?',
+            'safety_watchdog · scan · 전방 ±35°',
+        ], **{'in': ['target/visible = true', '계속 추종한다']},
+            exc=[
+            'E-4   안전 정지',
+            'safety/estop 을 올리고 cmd_vel 에 0 을 20 Hz 로 덮어쓴다.',
+            '0.45 m 밖으로 벗어나면 스스로 재개한다.',
+            '이 정지는 사람이 개입한 것이 아니므로 IPH 에 계상하지 않는다.',
+            '웹캠이나 Wi-Fi 가 죽어도 이 경로는 온보드에서 살아 있다.',
+        ], exclabel=['Y  ·  2프레임 연속', 'safety/estop = true'], exccolor=SAFE),
+        dict(id='s8', style='st_ctl', lines=[
+            'S9   작업 종료',
+            '작업자가 종료 버튼 → control_ui → fleet_manager',
+            'OperatorCommand   RETURN / RETURN_ALL',
+            'mission/finish (Bool) — 추종 즉시 중단 (≤ 1 초)',
+            '페어링 해제 · return_dock 이 복귀를 시작한다',
+        ], **{'in': ['N  —  정상 주행 유지', 'estop 이 풀리면 Nav2 가 이어서 간다']},
+            incolor=PLAIN),
+        dict(id='q6', style='dec', shape='diamond', lines=[
+            '복귀 통로와 도크 토큰을 얻었는가?',
+            'P1 통과 → DOCK 은 한 번에 한 대',
+        ], **{'in': ['mission/finish',
+                     'std_msgs/Bool → follow_target 중단 · return_dock 시작']}),
+        dict(id='s9', style='st_rob', lines=[
+            'S10   도킹',
+            '자기 도크 정면의 접근 지점을 거쳐 도킹한다',
+            'opennav_docking   action  dock · T_ret 180 초',
+            'shuttle/status = RETURNING → DOCK_WAIT → DOCKED',
+        ], **{'in': ['/fleet/zone_token   acquire', 'ZoneToken (서비스) — P1 → DOCK 순서']},
+            incolor=SRV, indash=True,
+            exc=[
+            'E-7   순차 도킹',
+            '도크 두 대의 간격이 0.84 m(도킹점 기준)뿐이라 두 대가 동시에',
+            '들어가면 IR 신호가 서로 간섭한다. DOCK 토큰으로 한 대씩',
+            '들여보내고 나머지는 홀딩 포인트에서 기다린다.',
+            '차폐판은 두지 않는다 — TS-U12 10회 오도킹 0 (9/6).',
+        ], exclabel=['N  ·  다른 로봇이 보유', '홀딩 포인트 대기'], exccolor=SRV),
+        dict(id='q7', style='dec', shape='diamond', lines=[
+            '도킹에 성공했는가?',
+            'dock_status · 재시도 2회까지',
+        ], **{'in': ['action  dock', 'opennav_docking (액션) — 접근 지점에서 호출']},
+            incolor=ACT,
+            exc=[
+            '도킹 실패',
+            '최대 2회까지 다시 시도한다. 그래도 안 되면 FAILED 를 발행하고',
+            '멈춘다. 성공이든 실패든 DOCK 토큰은 반드시 반납한다 —',
+            '반납하지 않으면 다른 로봇이 영영 들어오지 못한다.',
+        ], exclabel=['N  ·  2회 실패']),
+        dict(id='end', style='term', shape='stadium', h=48, lines=[
+            'DOCKED   ·   Phase 1 종료',
+            '두 대 모두 도킹 완료 · KPI 로그 확정',
+        ], **{'in': ['shuttle/status = DOCKED', 'Mission.DONE — 미션이 여기서 확정된다']}),
     ])
-    d.edge('cx_b', 'q3', '', 'bottom-top', color='#5A5F6A', width=1.3)
 
-    # ─────────── 예외 표 ───────────
-    ty = max(a_bot, b_bot) + 74
-    d.text(AX - 186, ty - 16, '예외 처리', 12, '#5A5F6A', bold=True)
-    rows = [
-        ('서술자 유사', '같은 인형끼리와 다른 인형끼리의 유사도 분포가 겹치면 서술자를 손봐야 한다는 신호다. 조명을 맞추고 다시 등록한다.'),
-        ('I-013  맵 좌표계', '각 로봇이 (0,0) 으로 초기화하면 같은 좌표가 다른 장소를 가리킨다. arena.yaml 의 dock_zone.pose 값으로 초기화한다.'),
-        ('오도착 → 재접근', '다시 접근해 마커를 읽는다. T_lim 120 초를 넘기면 FAILED. 늦은 도착은 arrived_late 로 따로 남겨 이중 계상하지 않는다.'),
-        ('E-3  교착 회피', '거절되면 2 초 뒤 다시 요청한다. 구역에 들어가기 전에 얻고 빠져나온 뒤 반납한다. 60 초를 넘겨 쥐면 강제 회수한다.'),
-        ('E-2  오추종 금지', '유사도가 임계에 못 미치면 페어링하지 않고 대기한다. 확신이 없을 때 멈추는 쪽이 항상 옳다. 폴백은 운영자 수동 지정.'),
-        ('E-1  재탐지', '작업공간이면 웹캠2 힌트 방향으로 회전 탐색, 중앙 복도는 시야 밖이라 제자리 탐색. T_lim 초과 시 STANDBY.'),
-        ('E-4  안전 정지', 'safety/estop 을 올리고 cmd_vel 에 0 을 20 Hz 로 덮어쓴다. 0.45 m 밖이면 스스로 재개. 개입(IPH)에 계상하지 않는다.'),
-        ('E-7  순차 도킹', '도크 간격이 0.84 m 뿐이라 동시에 들어가면 IR 이 간섭한다. DOCK 토큰으로 한 대씩, 나머지는 홀딩 포인트 대기.'),
-        ('재시도 2회 → 실패', '최대 2회 재시도 후 FAILED 를 발행하고 멈춘다. 성공이든 실패든 DOCK 토큰은 반드시 반납한다.'),
-    ]
-    for i, (tag, txt) in enumerate(rows):
-        yy = ty + i * 27
-        d.box('tb%d' % i, AX - 186, yy, 150, [tag], X, h=23, align='center')
-        d.text(AX - 24, yy + 16, txt, 11, '#3A3E46')
+    # ═════════ 아래 설명 블록 ═════════
+    def note(nid, px, pw, y0, title, lines):
+        d.band(nid, px, y0, pw, 50 + len(lines) * 20 + 8, '', 'band', dash=True)
+        d.text(px + 18, y0 + 26, title, 13, '#333840', bold=True)
+        for i, ln in enumerate(lines):
+            d.text(px + 18, y0 + 50 + i * 20, ln, 11, '#3A3E46')
+        return y0 + 50 + len(lines) * 20 + 8
 
-    d.text(AX - 186, ty + len(rows) * 27 + 26,
-           '전 구간 공통 — 모든 로그와 CSV 는 ROS 시각을 쓴다. 안전 정지 뒤의 자동 재개는 개입으로 계상하지 않는다.',
-           11, '#5A5F6A')
-    d.text(AX - 186, ty + len(rows) * 27 + 46,
-           '생성: tools/build_diagrams.py   ·   근거: BRD 3.2 시나리오, SDD 3.3, docs/interfaces.md',
+    ny = max(a_bot + 90, b_bot) + 54
+    n1 = note('n1', A_X, FW + CORR + EW, ny, '전 구간 공통', [
+        '· 모든 로그 · CSV · DB 는 ROS 시각을 쓴다 — 벽시계를 섞지 않는다 (계약 2절)',
+        '· safety_watchdog 은 어느 단계에서든 항상 동작한다. estop 중에는 주행 명령을 내지 않는다',
+        '· 안전 정지 뒤의 자동 재개는 사람의 개입이 아니므로 IPH(AC-13) 분자에 넣지 않는다',
+        '· 토큰은 받았든 못 받았든 반드시 반납한다 — 안 하면 대기열에 남아 그 구역이 잠긴다 (I-033)',
+        '· T_lim 120 초를 넘긴 미션은 폐기한다. 늦은 도착은 arrived_late 로 따로 남긴다 (계약 7절)',
+        '· S1 ~ S10 은 로봇 두 대가 동시에 돈다. 두 대가 만나는 곳은 P1 과 DOCK 토큰뿐이다',
+    ])
+    n2 = note('n2', B_X, FW + CORR + EW, ny, '이 순서도가 정하는 KPI 기준점', [
+        '· K-05 리드타임 — S3 의 created_at 에서 S4′ 의 WAITING 까지. 도킹 완료(DONE)와 다르다',
+        '· AC-08 배송 성공 — S4′ 의 WAITING 이 T_lim 안이면 성공. 미션당 한 번만 센다',
+        '· AC-05 추종거리 — S6~S8 의 FOLLOWING 구간만. Nav2 도착 오차 0.25 는 뺀다 (I-029)',
+        '· K-04 재획득 — q4 의 Lost 1건을 성공 · 포기 · 미복귀 중 하나로만 센다 (I-028)',
+        '· K-06 교착 — q2 · q6 의 REJECT → GRANT 가 60 초 안. 그 사이 RECLAIM 이면 미해결 (I-032)',
+        '· AC-13 IPH — 개입 ÷ (undock ~ DOCKED). q5 의 안전 정지는 개입이 아니다',
+    ])
+
+    # ═════════ 범례 ═════════
+    ly = max(n1, n2) + 44
+    d.text(A_X, ly, '읽는 법', 13, '#333840', bold=True)
+    seg = [('토픽  Topic', TOPIC, False, 1.8), ('서비스  Service', SRV, True, 1.8),
+           ('액션  Action', ACT, False, 2.4), ('안전 경로', SAFE, False, 2.8)]
+    lx = A_X
+    for name, col, dash, wd in seg:
+        d.edges.append(dict(a=None, b=None, label='', anchors='', dashed=dash, color=col,
+                            ldx=0, ldy=0, width=wd, arrow=True, mid=None,
+                            via=[(lx, ly + 22), (lx + 54, ly + 22)], lines=None,
+                            lx_fix=None, lanchor='middle', raw=True))
+        d.text(lx + 62, ly + 26, name, 11, '#3A3E46')
+        lx += 62 + d.text_w(name, False) + 34
+    for name, sty in (('웹캠 PC', 'st_cam'), ('관제 PC', 'st_ctl'),
+                      ('로봇 제어 PC', 'st_rob'), ('판단', 'dec'), ('예외 처리', 'exc')):
+        wd = d.text_w(name, True) + 28
+        d.box('lg_' + sty + name[:2], lx, ly + 12, wd, [name], sty, h=26, align='center')
+        lx += wd + 16
+    d.text(A_X, ly + 58,
+           '단계 상자의 채움색이 그 단계를 수행하는 PC 다. 화살표 위 상자는 첫 줄이 토픽 · 서비스 · 액션 이름, '
+           '둘째 줄이 메시지 타입과 그 선이 하는 일이다.', 11, '#3A3E46')
+    d.text(A_X, ly + 78,
+           '오른쪽 빨간 상자는 그 판단에서 갈라지는 예외와 그때의 처리다. 판단의 나머지 한쪽(Y 또는 N)이 '
+           '아래로 이어지는 정상 흐름이다.', 11, '#3A3E46')
+    d.text(A_X, ly + 100,
+           '생성: tools/build_diagrams.py   ·   근거: BRD v3.5 3.2 시나리오, SDD 3.3, docs/interfaces.md',
            10, '#8A8F98')
     return d.autosize()
 # =====================================================================
