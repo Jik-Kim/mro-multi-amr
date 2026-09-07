@@ -12,6 +12,7 @@
 
 CSV 열
   t_ros, source, robot, key, value, x, y, extra
+  구역 이벤트는 source=zone, robot=로봇 네임스페이스, key=zone_id, value=REJECT|GRANT|RELEASE|RECLAIM
 """
 import csv
 import os
@@ -69,8 +70,26 @@ class KpiLogger(Node):
                                  lambda m: self.row('intervention', m.robot_ns, m.kind, 1, extra=m.note), 10)
         self.create_subscription(FleetStatus, '/fleet/status',
                                  lambda m: self.row('fleet', m.robot_ns, m.state, m.battery, m.x, m.y), 10)
+        # 구역 토큰 이벤트 — K-06 원천 (계약 v1.11, I-030). "<zone> <robot> <REJECT|GRANT|RELEASE|RECLAIM>"
+        # 개입이 아니다. Intervention 과 섞으면 IPH 분자가 부풀어 AC-13 이 실제보다 나빠 보인다
+        self.create_subscription(String, '/fleet/zone_event', self.zone_cb, 10)
 
         self.get_logger().info(f'KPI 로그 → {self.path} | 로봇 {robots}')
+
+    def zone_cb(self, message):
+        """세마포어 이벤트 한 줄을 쪼개 CSV 에 적는다. 형식이 어긋나면 원문을 남긴다.
+
+        판정하지 않는다 — K-06 집계는 tools/kpi_report.py 가 한다 (계약 9.2).
+        """
+        parts = message.data.split()
+        if len(parts) == 3:
+            zone, robot, action = parts
+            self.row('zone', robot, zone, action)
+        else:
+            # 발행 측 형식이 바뀌면 여기서 조용히 버리지 않고 원문을 남겨 추적할 수 있게 한다
+            self.row('zone', '', '?', '?', extra=message.data)
+            self.get_logger().warn(f'zone_event 형식이 계약과 다르다: {message.data!r}',
+                                   throttle_duration_sec=10.0)
 
     def row(self, source, robot, key, value, x='', y='', extra=''):
         t = self.get_clock().now().nanoseconds / 1e9
