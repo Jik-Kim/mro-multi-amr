@@ -5,25 +5,23 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 49/92 완료** (███████████░░░░░░░░░)  ·  기준 09/07
+**전체 51/93 완료** (███████████░░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 4/14 | `███░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 15/22 | `███████░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 16/33 | `█████░░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 18/34 | `█████░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 8/13 | `██████░░░░` | — |
 | mro_bringup [PM 김병직] | 3/7 | `████░░░░░░` | — |
 
-**오늘 마감 6건**
+**오늘 마감 4건**
 
 - mro_navigation — 공유기 DHCP 예약 요청 — 지금은 재부팅하면 IP 가 바뀐다
 - mro_navigation — 측위 검증 마커 설치·실측 — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 …
-- mro_navigation — I-013 검증 — TS-U06 때 두 로봇을 베이 B 에 차례로 보내 aruco/distance 비교, 차이 ≤ 10 cm 면…
 - mro_navigation — shuttle_mission_node.py: mission/assigned 트리거, bay waypoint → ArUco 확인 …
 - mro_navigation — shuttle_mission_node.py: shuttle/status 발행 (I-024) — READY/SHUTTLE/AT_B…
-- mro_navigation — 주석 정정 — return_dock_node.py 도크 간격 0.9 → 0.84, zone_semaphore_node.py P1…
 
 > 이 표는 `python3 tools/todo_stats.py` 가 체크박스를 세어 다시 쓴다. 손으로 고치지 않는다.
 
@@ -85,7 +83,7 @@
 - [x] I-004 받침대 돌출폭 실측 (9/6) — P1 없음 · P2 양쪽 3 cm(폭 0.86 정정) · P3 입구 5 cm·안쪽 6.5 cm · 마감 9/7
 - [ ] **`inflation_radius` 0.05 → 0.25 적용 (I-009)** — 주행 합의값. 승인 후 PC-R3·PC-R4 의 `nav2.yaml` 양쪽에 같은 값으로 · 마감 9/8
 - [ ] **측위 검증 마커 설치·실측** — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 23.5 cm), map 좌표를 `arena.yaml` `loc_check_marker.xy` 에 (계약 6절·9.2 ①) · 마감 9/7
-- [ ] **I-013 검증** — TS-U06 때 두 로봇을 베이 B 에 차례로 보내 `aruco/distance` 비교, 차이 ≤ 10 cm 면 map 프레임 일치 · 마감 9/7
+- [x] **I-013 검증 (9/7)** — ArUco 미설치라 도킹 상태 `amcl_pose` 비교로 대체. 밀림 방향이 둘 다 −x 로 같고 차이 5.1 cm, 도크 간격 측정 0.803 대 줄자 0.840 m → **map 프레임 상호 일치 확인**. 개별 20 cm 치우침은 `xy_goal_tolerance` 0.25 에서 오는 것 · 마감 9/7
 - [x] TB4 2대 동시 운용 검증 (9/6) — 네임스페이스 격리 · `odom` 20 Hz · OAK-D 동시 스트리밍 · RPi CPU 21~31 % · **Nav2 2벌 동시 `active`** 확인 (I-011) · 마감 9/6
 - [x] **좌표 보정 3건 (I-001 PM 검증)** — holding ≥1.5m(1.52m), bays 전부 DOCK 폴리곤 밖, P1 폴리곤이 통로를 완전히 가로지르도록 재실측 (9/6) · 마감 9/7
 - [x] 베이 B·C waypoint 확정 실측 (9/6, x=-0.78 로 통일) · 마감 9/7
@@ -94,7 +92,8 @@
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
 - [ ] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
-- [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
+- [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중
+- [ ] **추종거리 분포 실측 (I-029)** — `xy_goal_tolerance` 0.25 고정이라 정지 시 오차 25 cm. TS-U07 로 `target/distance` p95·min 을 재고 미달이면 `cmd_vel` 미세 보정 구현 · 마감 9/8 · 마감 9/8
 - [ ] `follow_target_node.py`: 힌트 구독을 `/webcam2/target_hint`(**TargetHint, sensor_data QoS**) 로 — 지금은 옛 `webcam/car_map_point` PointStamped RELIABLE 이라 BEST_EFFORT 발행자(PR #14)의 힌트를 못 받는다 · 마감 9/8
 - [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (관제 → 주행 이관) · 마감 9/8
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
@@ -102,7 +101,7 @@
 - [x] `safety_watchdog_node.py`: /scan → estop, cmd_vel 0 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: Nav2 goal cancel (액션 클라이언트), TS-14 결함 주입 검증 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: `HIT_FRAMES`·`CLEAR_FRAMES` 를 초 단위 파라미터로 (계약 시간 상수 규칙) · 마감 9/8
-- [ ] 주석 정정 — `return_dock_node.py` 도크 간격 0.9 → 0.84, `zone_semaphore_node.py` P1 통과 방향(창고에서 나올 때·복귀) · 마감 9/7
+- [x] 주석 정정 (9/7) — `return_dock_node.py` 도크 간격 0.84·IR 차폐 폐지 명시, `zone_semaphore_node.py` P1 통과 방향(창고에서 나올 때·복귀)·P3 폭 0.93 · 마감 9/7
 - [x] `return_dock_node.py`: DOCK 토큰 + 재시도 2회 복귀 로직 · 마감 9/8
 - [ ] `return_dock_node.py`: 홀딩 포인트·**도크 정면 접근 지점**으로 goToPose 후 dock (도크 간격 0.84 m 라 필수) · 마감 9/8
 - [ ] `follow_target_node.py`: `mission/finish` 구독 → 즉시 페어링 해제·goal 취소 (≤ 1 s, FR-30) · 마감 9/8
