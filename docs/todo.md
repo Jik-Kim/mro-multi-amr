@@ -5,22 +5,20 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 68/104 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 70/105 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 6/15 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/27 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 22/36 | `██████░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 24/37 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 6/9 | `███████░░░` | — |
 
-**오늘 마감 3건**
+**오늘 마감 1건**
 
 - mro_navigation — 측위 검증 마커 설치·실측 — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 …
-- mro_navigation — shuttle_mission_node.py: mission/assigned 트리거, bay waypoint → ArUco 확인 …
-- mro_navigation — shuttle_mission_node.py: shuttle/status 발행 (I-024) — READY/SHUTTLE/AT_B…
 
 > 이 표는 `python3 tools/todo_stats.py` 가 체크박스를 세어 다시 쓴다. 손으로 고치지 않는다.
 
@@ -93,13 +91,14 @@
 - [x] **좌표 보정 3건 (I-001 PM 검증)** — holding ≥1.5m(1.52m), bays 전부 DOCK 폴리곤 밖, P1 폴리곤이 통로를 완전히 가로지르도록 재실측 (9/6) · 마감 9/7
 - [x] 베이 B·C waypoint 확정 실측 (9/6, x=-0.78 로 통일) · 마감 9/7
 - [x] `arena.yaml` `homography_marks` — cam2 기준점은 `mro_webcam/config/WebCam2/marker_coordinates.json` 이 원본(PR #9), cam1 은 불필요(9/6). arena.yaml 에는 복사하지 않는다 · 마감 9/7
-- [ ] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` — `aruco/id` 는 **1.5 m 안에서만** 나온다 (PR #30 거리 게이트) · 마감 9/7
+- [x] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` — `aruco/id` 는 **1.5 m 안에서만** 나온다 (PR #30 거리 게이트) · 마감 9/7
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
-- [ ] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
+- [x] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
 - [ ] **추종거리 분포 실측 (I-029)** — `xy_goal_tolerance` 0.25 고정이라 정지 시 오차 25 cm. TS-U07 로 `target/distance` p95·min 을 재고 미달이면 `cmd_vel` 미세 보정 구현 (PM: ③→② 순서, 기준 완화는 마지막) · 마감 9/8
 - [ ] `follow_target_node.py`: 힌트 구독을 `/webcam2/target_hint`(**TargetHint, sensor_data QoS**) 로 — 지금은 옛 `webcam/car_map_point` PointStamped RELIABLE 이라 BEST_EFFORT 발행자(PR #14)의 힌트를 못 받는다 · 마감 9/8
+- [ ] `follow_target_node.py`: 시작 신호 구독을 옛 `goto_goal/arrived` → **`shuttle/arrived`** 로 (계약 4절, 옛 토픽은 '쓰지 않는 옛 토픽' 목록). `shuttle_mission` 이 계약 이름으로 발행하도록 바뀌면 이걸 안 고치는 순간 S5 합류가 시작되지 않는다 · 마감 9/8
 - [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (관제 → 주행 이관) · 마감 9/8
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
 - [x] `zone_semaphore_node.py`: 진입 판정은 **순서 기반(방법 B)으로 확정** — 폴리곤 계산 안 함, 폴리곤은 로그 검산용 (PM 결정 9/7) · 마감 9/8
