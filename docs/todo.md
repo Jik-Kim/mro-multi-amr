@@ -5,16 +5,16 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 62/98 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 63/101 완료** (████████████░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 5/14 | `████░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 19/24 | `████████░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 19/25 | `████████░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 21/36 | `██████░░░░` | — |
-| mro_fleet [관제 — 김민준] | 10/13 | `████████░░` | — |
-| mro_bringup [PM 김병직] | 4/8 | `█████░░░░░` | — |
+| mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
+| mro_bringup [PM 김병직] | 5/9 | `██████░░░░` | — |
 
 **오늘 마감 3건**
 
@@ -72,6 +72,7 @@
 - [x] `kpi_report.py`: `--db` 파일은 있는데 `missions` 테이블이 없으면 `OperationalError` 로 통째로 죽는다 — 잡아서 안내문으로 (관제 DB 초기화 전 TS-07 대비) (PR #20, PM 빈 DB 로 exit 0·K-04 계속 출력 확인) · 마감 9/8
 - [x] `kpi_report.py`: IPH 분모를 undock~도킹 완료 구간 합으로 (I-022, BRD 5.3, PR #15) · 마감 9/9
 - [x] `kpi_logger_node.py`: `target/distance` 구독(FR-29), 로봇 네임스페이스 파라미터화, QoS 계약 반영 (PR #8) · 마감 9/9
+- [ ] `kpi_logger_node.py`: `/fleet/zone_event` 구독 → CSV kind ZONE · `kpi_report.py` **K-06 교착 자동 해결률** 산출 (I-030, 계약 9절: REJECT→GRANT 60 s 이내, RECLAIM 은 미해결) · 마감 9/9
 
 ## mro_navigation [주행 — 박병후, 이시율]
 - [x] 아레나 재구성 · 마감 9/5
@@ -100,7 +101,7 @@
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
 - [x] `zone_semaphore_node.py`: 진입 판정은 **순서 기반(방법 B)으로 확정** — 폴리곤 계산 안 함, 폴리곤은 로그 검산용 (PM 결정 9/7) · 마감 9/8
 - [x] `zone_semaphore_node.py`: 반납 시 대기열 누락으로 구역이 영구 차단되는 버그 수정 (9/7) · 마감 9/8
-- [ ] **세마포어 강제 회수 이벤트 (I-030)** — 지금은 로그뿐이라 K-06 을 셀 수 없다. 계약에 토픽·타입 정의가 없어 PM·관제 결정 필요. TS-08(9/10) 전 · 마감 9/9
+- [ ] **`zone_semaphore_node.py`: `/fleet/zone_event` 발행 (I-030, 계약 v1.11)** — `"<zone> <robot> <REJECT|GRANT|RELEASE|RECLAIM>"`. REJECT 는 대기 시작 1건만, GRANT 는 새 획득만 · 마감 9/8
 - [x] `safety_watchdog_node.py`: /scan → estop, cmd_vel 0 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: Nav2 goal cancel (액션 클라이언트), TS-14 결함 주입 검증 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: `HIT_FRAMES`·`CLEAR_FRAMES` 를 초 단위 파라미터로 (계약 시간 상수 규칙) · 마감 9/8
@@ -120,6 +121,7 @@
 - [x] **`FleetStatus.state` 를 approach·shuttle 두 출처로 분리 (I-020)** (PR #12) · 마감 9/7
 - [x] **일시적 `FAILED` 가 미션을 굳히지 않게 (I-026)** — approach FAILED 는 미션 전이에서 빼고, FAILED 를 터미널에서 뺀다 (DONE 만 터미널) (PR #18, 9/7) · 마감 9/8
 - [x] `fleet_manager_node.py`: `/fleet/intervention` 구독 → DB events 기록 (I-021, FR-28) (PR #23, PM 스텁 18/18) · 마감 9/8
+- [ ] `fleet_manager_node.py`: `/fleet/zone_event` 구독 → DB `events` kind `ZONE` 기록 (I-030, 계약 v1.11 §7) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①) · 마감 9/8
 - [x] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') — 1 s 배치 창 + `worker_id` 정렬, W1→robot3·W2→robot4 로 순서 무관 재현 (PR #28, PM 스텁 24/24) · 마감 9/8
@@ -131,6 +133,7 @@
 - [x] 설계도 4장 — `docs/diagrams/` (STEP 1·2·3-1·3-2) · 마감 9/8
 - [x] launch 가 `webcam.yaml` 을 넘기도록 연결 — webcam1/webcam2 launch (9/7) · 마감 9/7
 - [x] webcam1 launch 에서 안 쓰는 `homography_json` 제거 (계약 v1.8, PR #26 노트) · 마감 9/7
+- [x] 계약 v1.11 — 세마포어 이벤트 토픽 `/fleet/zone_event`·DB kind ZONE·K-06 산출 규칙 (I-030 PM 결정) · 마감 9/7
 - [ ] robot.launch 가 `perception.yaml` 을 넘기도록 연결 — 인지 노드가 파라미터를 읽기 시작할 때 같이 · 마감 9/8
 - [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8
 - [ ] 중복 파라미터 한 곳으로 — `reid_threshold`(perception.yaml ↔ robotN.yaml), `follow_standoff_m`·`t_lim_s`(navigation.yaml ↔ robotN.yaml), `t_lim_s`·`t_ret_s`·`dock_retry`(arena.yaml ↔ robotN.yaml). 지금은 노드가 안 읽어 무해하지만 값 확정 때 한쪽만 고치는 사고가 난다 · 마감 9/8

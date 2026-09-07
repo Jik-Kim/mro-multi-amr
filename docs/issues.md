@@ -379,6 +379,7 @@
   ③ `kpi_logger` 가 세마포어 로그를 파싱한다 → 권하지 않는다. 로그 형식이 바뀌면 깨진다.
   **계약(`mro_interfaces` 또는 `docs/interfaces.md`)이 바뀌므로 PM 결정이 필요하다.** 코드에는 `watchdog()` 안에 TODO 로 표시해 두었다.
   K-06 이 필요한 시점은 TS-08 교착 20회(9/10)이므로 그 전에 정해야 한다.
+  **PM 결정 (9/7, 계약 v1.11):** ② 의 변형 — 새 msg 없이 `std_msgs/String` 토픽 `/fleet/zone_event` 로 `"<zone> <robot> <REJECT|GRANT|RELEASE|RECLAIM>"` 를 발행한다. 발행은 주행(세마포어, 9/8), DB 기록은 관제(`events.kind='ZONE'`, 9/8), CSV·K-06 산출은 웹캠(`kpi_logger`·`kpi_report`, 9/9). `Intervention` 에 섞지 않는다(IPH 오염). 산출 규칙은 계약 9절.
   **함께 확인한 것 (9/7)** — 강제 회수는 로봇이 구역을 실제로 빠져나왔는지 보지 않는다. 정상 통과가 10~20 s(P1 이동만 3~9 s)라 60 s 초과는 estop 이 오래 걸린 경우 정도이고, 그때 토큰만 넘어가고 앞 로봇이 아직 안에 있어도 뒤 로봇은 costmap·collision_monitor·safety_watchdog 에 막혀 **충돌하지 않고 구역 앞에서 선다**. 증상은 '토큰은 받았는데 못 들어감' 이다. 갱신(heartbeat) 규칙은 계약에 없고 60 s 가 정상 통과의 3배 이상이라 **HOLD_TIMEOUT 은 그대로 두기로 했다(9/7 팀 판단)**. TS-08 에서 이 증상이 보이면 `watchdog()` 주석을 참고할 것.
 
 ### I-028
