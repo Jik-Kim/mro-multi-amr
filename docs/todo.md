@@ -57,7 +57,7 @@
 - [ ] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) · 마감 9/8
 - [x] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26, PR #20) · 마감 9/8
 - [ ] `webcam_register_node.py`: `webcam.yaml` 파라미터화 — 최소 `webcam_index`·`conf` (9/7 내장 카메라가 잡히고 conf 를 못 낮춰 두 번 막힘, PR #20 노트). yaml 의 `model_path: ""` 는 launch 가 덮으므로 그대로 두되 주석 정정 · 마감 9/8
-- [ ] **웹캠1 출입구 체류 시간 실측** — 작업자가 프레임을 지나는 동안 `register_s` 1.0 s 를 채우는지. 못 채우면 `register_s` 하향 또는 시야를 안쪽 통로까지 (Q-26 남은 확인). TS-U01 은 한 명씩 순차 진입 · 마감 9/8
+- [x] **웹캠1 출입구 체류 시간 (Q-26 해소)** — 전제가 틀렸다. 작업자는 출입구를 '지나가는' 것이 아니라 거기서 **출발**하므로 처음부터 시야 안에 있다 (9/7 확인). 실측 검출→등록 **0.89 s**, 2명 동시 별개 등록 · 마감 9/8
 - [x] **웹캠2 발행 주기 저하 (I-016)** — 캡처 스레드·BUFFERSIZE·주기 분리·CompressedImage 를 `webcam_hint_node.py` 에 병합 (PR #14, 9/7 머지) · 마감 9/7
 - [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 개별 `MutuallyExclusiveCallbackGroup`, `read()` 실패 대기, `stop → join → release` 종료 순서 코드 완료 (PR #21, PM 확정 로직 단위 검사 통과); **실장비 검증** 후 닫는다 · 마감 9/8
 - [ ] `webcam_hint_node.py`: `detection_confirm_count`(3 프레임) → **초 단위** `detection_confirm_s`(0.3) 로 — 계약 「시간 상수 표기」 규칙(프레임 수 금지, `webcam.yaml` 헤더). `process_hz` 를 바꾸면 의미가 조용히 달라진다 (PR #21 PM 노트) · 마감 9/8
