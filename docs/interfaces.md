@@ -92,6 +92,7 @@
 | `target/paired`, `target/worker_id` | amr_detection | follow_target, fleet_manager | Bool, String | 재식별 게이트 통과 여부. **발행자는 amr_detection 하나뿐이다** — 자동이든 명시 페어링이든 (10절) |
 | `target/pair_state` | amr_detection | control_ui, fleet_manager, kpi_logger | String | **v1.12 (FR-13).** `PAIRED` / `GATE_FAIL` / `NO_TARGET`. `GATE_FAIL` 은 **대상은 보이는데 게이트를 못 넘는 상태가 30 s 지속됐을 때만** 낸다 — 10절 |
 | `aruco/id`, `aruco/distance` | aruco_detector | shuttle_mission | Int32, Float32 | `id = -1` 이면 없음 |
+| `aruco/pose` | aruco_detector | shuttle_mission (베이 정렬, 예정) | PoseStamped | 마커 중심의 위치·자세, `frame_id` = 카메라 광학 프레임(x 우·y 하·z 앞). `id` 와 같은 프레임에서만 발행. 위치는 `aruco/distance` 와 같은 자. 좌우 치우침 = x, 방위 = atan2(x, z). 회전(yaw)은 정사각 마커의 두 해 문제로 흔들릴 수 있어 보조로만 (PR #40, **PM 확인 필요**) |
 | `approach/status` | follow_target | fleet_manager, kpi_logger | String | IDLE / SEARCHING / APPROACH_1 / APPROACH_2 / ARRIVED / FOLLOWING / STANDBY / FAILED |
 | `safety/estop` | safety_watchdog | 모든 로봇 노드, fleet_manager | Bool | True 동안 **주행 명령 금지** |
 | `cmd_vel` | safety_watchdog(0), Nav2 | Create3 | TwistStamped | estop 중 20 Hz 로 0 발행 |
