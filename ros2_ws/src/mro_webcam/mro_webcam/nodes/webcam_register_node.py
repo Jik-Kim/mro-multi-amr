@@ -21,8 +21,7 @@ fleet_manager 가 이를 받아 작업자-로봇을 배정하고 언독(S2)으�
   - 웹캠1 은 출입구만 본다 (9/7 결정, 계약 v1.10). 관제탑 구역은 시야 밖이고 map 좌표도 내지 않는다.
     등록은 작업자가 출입구를 지나는 순간에 일어나므로 통과 시간이 register_s 를 채우는지 확인할 것 (Q-26)
 
-TODO([웹캠]) config/webcam.yaml 파라미터화 — 지금은 model_path·target_classes·rematch_threshold
-             셋만 선언한다. 등록 구역 게이트는 두지 않는다 — 시야 전체가 곧 등록 구역이다 (Q-26)
+등록 구역 게이트는 두지 않는다 — 시야 전체가 곧 등록 구역이다 (Q-26)
 
 실행
   ros2 launch mro_bringup webcam1_pc.launch.py
@@ -44,11 +43,14 @@ from ament_index_python.packages import get_package_share_directory
 from mro_interfaces.msg import WorkerDescriptor
 from mro_perception.core.reid import hsv_hist, similarity   # 계약: AMR(amr_detection) 과 반드시 같은 함수
 
-SHARE = get_package_share_directory('mro_webcam')
+# 모델은 mro_perception 이 단일 출처다 (models/README.md, PR #19). 사본을 두면 한쪽만 갱신된다
+PERCEPTION_SHARE = get_package_share_directory('mro_perception')
 # ############################################################################
-MODEL_PATH = os.path.join(SHARE, 'models', 'best.pt')  # TODO: worker.pt 로 교체
-WEBCAM_INDEX = None          # None: 0~4 중 프레임 나오는 첫 장치. 외장 웹캠은 보통 1 또는 2
-CONF = 0.7                   # 단일 클래스 모델이라 오탐 많음 → 높게
+MODEL_PATH = os.path.join(PERCEPTION_SHARE, 'models', 'worker.pt')
+WEBCAM_INDEX = -1            # -1: 자동 탐색(높은 번호부터). 파라미터라 None 을 못 써서 -1 을 쓴다.
+                             # 내장 카메라가 있는 PC 는 자동 탐색이 그걸 고를 수 있다 — 그때 번호를 준다
+CONF = 0.5                   # 인지팀 perception.yaml detect_conf 와 같은 값.
+                             # F1 최적은 0.4 지만 오탐 = 오추종이고 AC-04 는 0건이 절대 기준이다
 PERIOD_S = 0.1               # 처리 주기 (10 Hz). 히스테리시스를 프레임 수로 환산하는 기준
 DETECT_S = 0.3               # 이 시간 동안 연속으로 보이면 True   (10 Hz 기준 3프레임)
 CLEAR_S = 0.5                # 이 시간 동안 연속으로 안 보이면 False (10 Hz 기준 5프레임)
@@ -85,12 +87,16 @@ def open_webcam(index):
 class WebcamDetection(Node):
     def __init__(self):
         super().__init__('webcam_register')   # launch·문서·파라미터 파일과 이름을 맞춘다
-        self.declare_parameter('model_path', MODEL_PATH)   # 9/7 worker.pt 로 교체 예정
+        self.declare_parameter('model_path', MODEL_PATH)
         self.declare_parameter('target_classes', TARGET_CLASSES)
         self.declare_parameter('rematch_threshold', REMATCH_THRESHOLD)
-        model_path = self.get_parameter('model_path').value
+        self.declare_parameter('webcam_index', WEBCAM_INDEX)
+        self.declare_parameter('conf', CONF)
+        model_path = self.get_parameter('model_path').value or MODEL_PATH   # launch 가 빈 값을 넘길 수 있다
         self.target_classes = list(self.get_parameter('target_classes').value)
         self.rematch_threshold = float(self.get_parameter('rematch_threshold').value)
+        self.conf = float(self.get_parameter('conf').value)
+        index = int(self.get_parameter('webcam_index').value)
         self.model = YOLO(model_path)
         self.names = self.model.names
         self.bridge = CvBridge()
@@ -101,11 +107,12 @@ class WebcamDetection(Node):
         # S1 등록 결과. 계약상 명령·상태·미션은 RELIABLE (기본값) — 버리면 안 된다
         self.pub_desc = self.create_publisher(WorkerDescriptor, '/webcam1/worker_descriptor', 10)
 
-        self.cap, idx = open_webcam(WEBCAM_INDEX)
+        self.cap, idx = open_webcam(None if index < 0 else index)
         if self.cap is None:
-            raise RuntimeError('웹캠을 못 열었음. v4l2-ctl --list-devices 로 번호 확인 후 WEBCAM_INDEX 설정')
+            raise RuntimeError('웹캠을 못 열었음. v4l2-ctl --list-devices 로 번호 확인 후 '
+                               '-p webcam_index:=<번호> 로 지정한다')
         self.get_logger().info(f'웹캠 /dev/video{idx} | 모델 {model_path} classes={list(self.names.values())} '
-                               f'| conf={CONF} | 대상 클래스 {self.target_classes} '
+                               f'| conf={self.conf} | 대상 클래스 {self.target_classes} '
                                f'| {DETECT_S}s 연속 → True, {CLEAR_S}s 미검출 → False')
 
         self.detected = False
@@ -127,7 +134,7 @@ class WebcamDetection(Node):
         # ByteTrack 으로 프레임 간 동일 대상에 같은 track_id 를 유지한다 (worker_id 부여의 전제)
         tracks = []
         best = None
-        r = self.model.track(img, persist=True, conf=CONF, verbose=False)[0]
+        r = self.model.track(img, persist=True, conf=self.conf, verbose=False)[0]
         if r.boxes is not None and r.boxes.id is not None:
             for box, tid in zip(r.boxes, r.boxes.id):
                 x1, y1, x2, y2 = map(int, box.xyxy[0])

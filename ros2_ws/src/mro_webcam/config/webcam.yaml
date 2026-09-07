@@ -5,9 +5,13 @@
 
 webcam_register:            # 웹캠1 (PC-W1) — 작업자 등록 S1
   ros__parameters:
-    model_path: ""          # 빈 값이면 패키지 기본 모델. 9/7 worker.pt 경로로 교체
+    model_path: ""          # 빈 값이면 mro_perception/models/worker.pt (단일 출처, PR #19).
+                            # launch 가 절대경로를 넘긴다 — yaml 은 패키지 경로를 못 구한다
     target_classes: ["worker_a", "worker_b"]   # 이 클래스만 등록 대상 (오검출이 등록 자리를 뺏지 않게)
-    conf: 0.7
+    webcam_index: -1        # -1 이면 자동 탐색(높은 번호부터). 내장 카메라가 있는 PC 는
+                            # 자동 탐색이 그걸 고를 수 있다 (9/7 실제로 /dev/video0 을 잡았다) → 번호를 준다
+    conf: 0.5               # 인지팀 perception.yaml 의 detect_conf 와 같은 값.
+                            # F1 최적은 0.4 지만 오탐 = 오추종이라 AC-04(0건) 쪽으로 올려 잡는다
     process_hz: 10.0        # 계약값. YOLO 추론·발행 주기 (캡처 fps 와 다른 값이다)
     capture_fps: 25         # 웹캠1(Jieli) 장치 상한 (9/6 실측). 계약 v1.2 가 '장치 상한 그대로' 로 완화됨.
                             # 지켜야 하는 것은 숫자가 아니라 캡처 >= 발행 이다
