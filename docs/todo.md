@@ -5,16 +5,16 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 77/124 완료** (████████████░░░░░░░░)  ·  기준 09/07
+**전체 78/135 완료** (████████████░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
-| mro_interfaces [PM 김병직] | 5/5 | `██████████` | — |
-| mro_perception [인지 — 정정인, 민범진] | 6/16 | `████░░░░░░` | — |
+| mro_interfaces [PM 김병직] | 6/6 | `██████████` | — |
+| mro_perception [인지 — 정정인, 민범진] | 6/19 | `███░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/28 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 28/50 | `██████░░░░` | — |
-| mro_fleet [관제 — 김민준] | 10/15 | `███████░░░` | — |
-| mro_bringup [PM 김병직] | 7/10 | `███████░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 28/55 | `█████░░░░░` | — |
+| mro_fleet [관제 — 김민준] | 10/16 | `██████░░░░` | — |
+| mro_bringup [PM 김병직] | 7/11 | `██████░░░░` | — |
 
 **오늘 마감 1건**
 
@@ -25,6 +25,7 @@
 <!-- STATS:END -->
 
 ## mro_interfaces [PM 김병직]
+- [x] **계약 v1.13** — `aruco/pose` 비준(회전은 정렬에 쓰지 않는다) · ArUco 발행 한계 2.0 / 수용 조건 1.5 분리 · `cmd_vel` 에 `follow_target` 추가와 estop 전진만 차단 (I-036) · 마감 9/8
 - [x] **SDD v0.13** — FR-13 확정(2.4·E-8·10장·부록 B), 셔틀 노드 개편과 I-033·I-034, K-06 완결·I-030 종결 반영. 노션 🫠 SDD 하위 페이지 생성 완료 · 마감 9/7
 - [x] **계약 v1.12 — 명시 페어링 폴백(FR-13) 확정** (관제 8개 질문 답변) — `target/pair_state` 토픽, `srv/ManualPair`, 개입 종류 `MANUAL_PAIR` 추가. 규칙은 계약 10절 · 마감 9/7
 - [x] msg/srv 8종 정의 · 마감 9/6
@@ -32,6 +33,9 @@
 - [x] `WorkerDescriptor.color_hist` — H16×S8=128, `reid.hsv_hist()` 공유 호출로 확정 · 마감 9/6
 
 ## mro_perception [인지 — 정정인, 민범진]
+- [ ] **TS-U05 독립 점 1개 (I-031 마무리)** — `depth_scale` 0.972·0.990 은 줄자 5점 중 4점으로 맞춘 자기 검증값이다. 배율을 정할 때 안 쓴 거리에서 한 점, 오차 ≤ 2 cm 면 I-031 거리 부분을 닫는다 · 마감 9/8
+- [ ] `core/aruco.py` 가 ROS 비의존이 아니다 — `depth_distance` 를 거쳐 `rclpy` 를 끌고 와 `tools/aruco_offline_check.py` 도 ROS 소싱이 필요하다. `roi_distance` 를 ROS 없는 모듈로 빼거나 주석을 사실대로 · 마감 9/9
+- [ ] `mro_perception` flake8 정리 — main 55건에서 PR #40 으로 80건. 대부분 D400·D403 docstring 형식과 99자 초과라 한 번에 정리된다. **아무도 이 시험을 안 돌리고 있다는 뜻** · 마감 9/9
 - [ ] **`amr_detection_node.py`: 명시 페어링 폴백 서버 (FR-13, 계약 10절)** — ① `target/pair_state` 발행 (`PAIRED`/`GATE_FAIL`/`NO_TARGET`) ② 게이트 미달 30 s 계측 — **대상이 보이는데 못 넘는 경우만 센다**(`NO_TARGET` 은 세지 않음) ③ `/robotN/manual_pair` 서비스 서버 — 거부 사유 6종(10.5 표) ④ `mission/finish` 구독해 명시 페어링 해제 ⑤ 확정 시 `target/paired`·`target/worker_id` 발행은 **여기서만** · 마감 9/9
 - [x] 인형 2종 제작 (상하의 전체, 9/6 결정) · 마감 9/6
 - [x] 데이터 수집·라벨링 (9/6 완료) · 마감 9/6
@@ -80,6 +84,11 @@
 - [ ] `kpi_report.py` K-06 마무리 셋 (PR #34 후속, 막지 않음) — ① `zone_resolution` docstring 의 `[REJECT, GRANT)` 를 양끝 포함으로 정정(안쪽 주석과 어긋남) ② `reclaimed_between(...): pass` 죽은 코드 삭제 ③ **`강제 회수` 라벨을 `강제 회수(구역)` 로** — 이제 구역 전체 RECLAIM 수라 대기자 없이 보유만 초과해도 세어져 `대기 1 · 자동 해결 1 · 강제 회수 1 → 100.0%` 로 읽힌다 (I-032) · 마감 9/9 TS-08 전
 
 ## mro_navigation [주행 — 박병후, 이시율]
+- [ ] **`safety_watchdog_node.py`: estop 중 전진만 막는다 (I-036, 계약 v1.13)** — `linear.x` 를 0 이하로 클램프하고 후진은 통과, 각속도 상한 0.4 rad/s (시야가 전방 ±35° 뿐이라 도는 동안 옆을 못 본다). 전부 0 으로 막으면 Nav2 복구까지 막혀 벽 앞에서 못 빠져나온다 (실주행 95 s). **변경 뒤 TS-04·TS-14 재실행** — 기존 통과 기록은 무효 · 마감 9/8
+- [ ] **`shuttle_mission_node.py`: 초기자세를 노드 기동 시로 (I-035)** — 미션을 받은 뒤 보내면 Nav2 가 이미 활성화에 실패한 뒤다. `dock_pose`·`getDockedStatus()` 는 기동 시에도 안다. Nav2 가 정해진 횟수 안에 `active` 가 안 되면 **T_lim 을 태우지 말고 즉시 FAILED + 사유** · 마감 9/8
+- [ ] **`test_follow_target_fsm.py` 신규 (PR #39 후속)** — 상태기계 검사 18개가 저장소에 없어 재현·회귀 검출이 안 된다. 셔틀의 `test_shuttle_mission_fsm.py` 와 같은 방식으로 · 마감 9/8
+- [ ] **P1 통과 10회 연속 성공 (4단계 게이트, I-009)** — 측위 오차 0.32 m > 통과 여유 0.175 m 인 동안 2대 교행을 잡지 않는다. I-029·I-037 이 선행 · 마감 9/9
+- [ ] `arena.yaml` `loc_check_marker.xy` 실측 — 지금 `[0.0, 0.0]` 은 맵 원점이라 관제가 그대로 읽으면 정상인데도 측위 의심으로 기록한다 (PR #39 지적) · 마감 9/8
 - [x] 아레나 재구성 · 마감 9/5
 - [x] SLAM 맵 재작성, `mro_bringup/maps/auto_map.*` 로 교체 · 마감 9/5
 - [x] 실측 절차·양식 문서화 — `docs/measurement_guide.md` · 마감 9/5
@@ -132,6 +141,7 @@
 - [x] 도킹 반복 시험 TS-U12 (9/6) — 로봇별 10회, 차폐판 없이 오도킹 0 확인 (I-006 종결) · 마감 9/8
 
 ## mro_fleet [관제 — 김민준]
+- [ ] **FR-35 는 `loc_check_marker.xy` 실측 뒤에 켠다** — `[0.0, 0.0]` 인 채로 읽으면 측위가 정상인데도 `localization_suspect` 로 기록된다. 그리고 **`aruco/distance`(카메라 기준)와 `|amcl_pose − xy|`(base_link 기준)의 6 cm 오프셋을 빼고 비교**한다 (TF 실측, `tolerance_m` 0.10 의 60 %) · 마감 9/9
 - [ ] **`control_ui`: 명시 페어링 폴백 버튼 (FR-13, 계약 10절)** — `target/pair_state = GATE_FAIL` 이면 버튼 표시, 운영자가 로봇·작업자 선택 → `fleet_manager` 가 `/robotN/manual_pair` 호출, 응답의 `reason` 을 화면에 그대로 보여준다. 성공 시 `/fleet/intervention` 에 **`kind = MANUAL_PAIR`** 발행 — IPH 에 들어간다(10.7) · 마감 9/9
 - [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8
 - [x] `control_ui`: 작업자별/전체 종료 버튼, `fleet_manager` RETURN_ALL · 마감 9/8
@@ -149,6 +159,7 @@
 - [x] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) (PR #7) · 마감 9/9
 
 ## mro_bringup [PM 김병직]
+- [ ] `v_max` 0.3 m/s 와 Nav2 `max_vel_x` 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘다 (PR #39 TODO ②) · 마감 9/8
 - [x] **셔틀 파라미터 7개를 `robotN.yaml` 로, `arena_yaml` 경로를 `robot.launch.py` 로** (PR #36 주행 요청, 계약 5절 단일 출처) — `bay_advance_m`·`aruco_max_dist_m`·`aruco_valid_s`·`aruco_confirm_s`·`aruco_retry`·`token_retry_s`·`nav2_poll_s`. `arena.yaml` 은 데이터 yaml 이라 파라미터 파일로 못 넘겨 경로만 준다. 노드의 런타임 조회 대체값은 단독 실행용으로 그대로 둔다 · 마감 9/8
 - [x] robot / webcam_pc / fleet_pc launch, params 골격 · 마감 9/7
 - [x] 설계도 4장 — `docs/diagrams/` (STEP 1·2·3-1·3-2) · 마감 9/8

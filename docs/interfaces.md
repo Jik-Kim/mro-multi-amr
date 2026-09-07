@@ -1,9 +1,10 @@
-# Interfaces — 계약 v1.12 (2026-09-07)
+# Interfaces — 계약 v1.13 (2026-09-08)
 
 > v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
 > **v1.11 (9/7 저녁): 세마포어 이벤트 토픽 `/fleet/zone_event` 신설** — 대기·획득·반납·강제 회수를 기록해 K-06(교착 자동 해결률)을 센다 (I-030). `mro_interfaces` 는 바꾸지 않고 `std_msgs/String` 을 쓴다.
 > **v1.12 (9/7 저녁): 명시 페어링 폴백(FR-13) 확정** — 재식별 게이트 미달이 30 s 지속될 때 운영자가 로봇과 작업자를 직접 짝지어 주는 경로다. 상태 토픽 `target/pair_state`, 서비스 `srv/ManualPair`, 개입 종류 `MANUAL_PAIR` 셋이 새로 생겼다. 규칙은 아래 **10절**. 관제가 올린 8개 질문(9/7)에 대한 답을 그대로 계약으로 굳힌 것이다.
-> 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나를 더한 것이 전부다.
+> **v1.13 (9/8 새벽): 실주행이 드러낸 것 셋을 계약에 반영.** ① `aruco/pose` 비준 (PR #40) — 선택 발행, **회전(yaw)은 정렬에 쓰지 않는다.** ② ArUco 는 **발행 한계(2.0 m)와 수용 조건(1.5 m)을 나눈다** — 경계값 마커가 조용히 사라지지 않게 하되 판정은 소비자가 건다. ③ `cmd_vel` 발행자에 `follow_target`(제자리 회전) 추가, **estop 중에는 전진만 막고 후진·저속 회전은 통과** (I-036). estop 이 복구까지 막아 로봇이 벽 앞에서 95 초를 쓴 실주행 기록이 근거다.
+> 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더한 것이 전부다.
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
 
@@ -91,11 +92,11 @@
 | `target/distance` | amr_detection | kpi_logger | Float32 | **추종거리 판정의 기준값**(FR-29). 검출 노드가 산출한 대상 거리, m |
 | `target/paired`, `target/worker_id` | amr_detection | follow_target, fleet_manager | Bool, String | 재식별 게이트 통과 여부. **발행자는 amr_detection 하나뿐이다** — 자동이든 명시 페어링이든 (10절) |
 | `target/pair_state` | amr_detection | control_ui, fleet_manager, kpi_logger | String | **v1.12 (FR-13).** `PAIRED` / `GATE_FAIL` / `NO_TARGET`. `GATE_FAIL` 은 **대상은 보이는데 게이트를 못 넘는 상태가 30 s 지속됐을 때만** 낸다 — 10절 |
-| `aruco/id`, `aruco/distance` | aruco_detector | shuttle_mission | Int32, Float32 | `id = -1` 이면 없음 |
-| `aruco/pose` | aruco_detector | shuttle_mission (베이 정렬, 예정) | PoseStamped | 마커 중심의 위치·자세, `frame_id` = 카메라 광학 프레임(x 우·y 하·z 앞). `id` 와 같은 프레임에서만 발행. 위치는 `aruco/distance` 와 같은 자. 좌우 치우침 = x, 방위 = atan2(x, z). 회전(yaw)은 정사각 마커의 두 해 문제로 흔들릴 수 있어 보조로만 (PR #40, **PM 확인 필요**) |
+| `aruco/id`, `aruco/distance` | aruco_detector | shuttle_mission, fleet_manager | Int32, Float32 | `id = -1` 이면 없음. **거리는 depth 원값 × 로봇별 배율**(0.8 m 이상), 그 아래는 solvePnP × 최근 depth/pnp 비 — 초점거리 결함(I-031)과 무관하다 (PR #40). **발행 한계는 `max_distance_m` 2.0 m 이고 6절의 수용 조건 1.5 m 는 소비자가 건다** |
+| `aruco/pose` | aruco_detector | shuttle_mission (베이 정렬) | PoseStamped | **v1.13 비준. 선택 발행** (`publish_pose`, 기본 켬). 마커 중심의 위치·자세, `frame_id` = 카메라 광학 프레임(x 우·y 하·z 앞). `id` 와 같은 프레임에서만 발행. 좌우 치우침 = x, 방위 = atan2(x, z). **회전(yaw)은 정렬에 쓰지 않는다** — 정사각 마커의 두 해 문제로 PM 합성 검증에서 −30° 가 1.0 m 에서 33°, 2.0 m 에서 20° 로 나왔다. 위치는 `pnp × depth/pnp 비` 라 `aruco/distance` 와 몇 cm 다를 수 있다 |
 | `approach/status` | follow_target | fleet_manager, kpi_logger | String | IDLE / SEARCHING / APPROACH_1 / APPROACH_2 / ARRIVED / FOLLOWING / STANDBY / FAILED |
 | `safety/estop` | safety_watchdog | 모든 로봇 노드, fleet_manager | Bool | True 동안 **주행 명령 금지** |
-| `cmd_vel` | safety_watchdog(0), Nav2 | Create3 | TwistStamped | estop 중 20 Hz 로 0 발행 |
+| `cmd_vel` | safety_watchdog, Nav2, **follow_target**(제자리 회전 전용) | Create3 | TwistStamped | **v1.13.** estop 중 워치독이 20 Hz 로 덮어쓰되 **전진만 막는다** — `linear.x` 를 0 이하로 클램프하고 후진은 통과, 각속도는 0.4 rad/s 상한. 전부 0 으로 만들면 Nav2 복구 행동까지 막혀 벽 앞에서 못 빠져나온다 (I-036, 실주행 95 s). 회전 상한은 워치독 시야가 전방 ±35° 뿐이라 도는 동안 옆을 못 보기 때문이다 |
 
 **쓰지 않는 옛 토픽** (Kn1_mini 이관 잔재): `webcam/detected`, `webcam/car_map_point`, `goto_goal/arrived`. 이관 노드에 남아 있으면 지운다.
 
@@ -128,7 +129,16 @@
 | 10~19 | *(예약)* KOZ 바닥 마커 — Phase 2. Phase 1 에서는 쓰지 않는다 |
 | **4** | **측위 검증 마커** (9/6 신설) — 웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 23.5 cm. 베이 마커와 달리 **AMCL 이 맞는지 확인하는 용도**다. 로봇이 P1 을 나와 남쪽으로 대기공간에 접근하는 구간에서 정면에 들어온다 (턴 시점 ≈ 1.36 m · robot3 정차 1.08 m · robot4 정차 0.58 m, 9/6 실측). map 좌표는 `arena.yaml` `loc_check_marker` (주행 실측 9/7). 규칙은 9.2 |
 
-검출 조건: 거리 ≤ 1.5 m, 정면 ±30°.
+**검출 조건 — 발행과 수용을 나눈다 (v1.13).**
+
+| | 값 | 누가 |
+|---|---|---|
+| 발행 한계 | `max_distance_m` **2.0 m** · 넘으면 `id = -1` | `aruco_detector` |
+| **수용 조건** | **거리 ≤ 1.5 m, 정면 ±30°** | **소비자** — 주행 `aruco_max_dist_m` 1.5, 관제 FR-35 도 같은 게이트를 걸어야 한다 |
+
+발행을 1.5 로 자르면 **정확히 1.5 m 에 둔 마커가 1.52 로 걸러진다**(I-031 PM 재현). 그래서 발행은 느슨하게 두고 판정을 소비자에 맡긴다 — **계약만 보고 짜면 1.8 m 값을 받게 되므로 이 표를 반드시 볼 것.**
+
+**정면 ±30° 는 기계로 검사하지 않는다.** `aruco/pose` 의 기운각은 거리가 멀수록 두 해 문제로 흔들려(PM 합성 검증: 1.0 m 에서 −30° 가 33°, 2.0 m 에서 20°) 게이트로 쓸 수 없다. **시험 절차에서 사람이 지킨다** — 마커 정면 접근을 회차 조건에 적는다.
 
 ---
 
