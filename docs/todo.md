@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 60/96 완료** (████████████░░░░░░░░)  ·  기준 09/07
+**전체 62/98 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 5/14 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 19/24 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 19/34 | `██████░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 21/36 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/13 | `████████░░` | — |
 | mro_bringup [PM 김병직] | 4/8 | `█████░░░░░` | — |
 
@@ -98,7 +98,9 @@
 - [ ] `follow_target_node.py`: 힌트 구독을 `/webcam2/target_hint`(**TargetHint, sensor_data QoS**) 로 — 지금은 옛 `webcam/car_map_point` PointStamped RELIABLE 이라 BEST_EFFORT 발행자(PR #14)의 힌트를 못 받는다 · 마감 9/8
 - [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (관제 → 주행 이관) · 마감 9/8
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
-- [ ] `zone_semaphore_node.py`: 로봇 측 진입 판정 연결 (폴리곤 vs 로봇 위치 비교) · 마감 9/8
+- [x] `zone_semaphore_node.py`: 진입 판정은 **순서 기반(방법 B)으로 확정** — 폴리곤 계산 안 함, 폴리곤은 로그 검산용 (PM 결정 9/7) · 마감 9/8
+- [x] `zone_semaphore_node.py`: 반납 시 대기열 누락으로 구역이 영구 차단되는 버그 수정 (9/7) · 마감 9/8
+- [ ] **세마포어 강제 회수 이벤트 (I-030)** — 지금은 로그뿐이라 K-06 을 셀 수 없다. 계약에 토픽·타입 정의가 없어 PM·관제 결정 필요. TS-08(9/10) 전 · 마감 9/9
 - [x] `safety_watchdog_node.py`: /scan → estop, cmd_vel 0 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: Nav2 goal cancel (액션 클라이언트), TS-14 결함 주입 검증 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: `HIT_FRAMES`·`CLEAR_FRAMES` 를 초 단위 파라미터로 (계약 시간 상수 규칙) · 마감 9/8
