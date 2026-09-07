@@ -1,8 +1,20 @@
-# amr_detection_node / aruco_detector_node 파라미터 (TODO: 노드가 declare_parameter 로 읽도록 전환)
+# mro_perception 노드 파라미터 — 계약 5절이 지정한 인지 소유 파일. 담당 정정인·민범진
+# launch 가 이 파일을 넘긴다 (mro_bringup/launch/robot.launch.py)
 /**:
   ros__parameters:
-    detect_conf: 0.5
-    max_core_gap_mm: 150
-    sync_slop_s: 0.1
-    reid_threshold: 0.6        # Q-13 [팀 확정 필요]
-    marker_size_m: 0.10
+    # --- amr_detection_node (TODO([인지]): 노드가 declare_parameter 로 읽도록 전환, 마감 9/8) ---
+    detect_conf: 0.5           # 학습 conf 스윕의 F1 최적은 0.4 지만 올려 쓴다.
+                               # 미탐은 Lost 후 재탐지 절차가 있고 K-04 로 측정되지만, 오탐은 오추종이고
+                               # AC-04 는 0건이 절대 기준이다. 0.4→0.6 에서 오탐 6→2, 재현율은 1 %p 만 하락
+    max_core_gap_mm: 150       # ROI 핵심부(p20~median) 가 이 이상 벌어지면 거리값 불신 → map 좌표 폐기
+    sync_slop_s: 0.1           # RGB·depth ApproximateTimeSynchronizer 허용 시차.
+                               # 9/7 실측 stamp 차 median 0.1 ms 지만 robot3 최댓값이 99.9 ms 로 이 값에
+                               # 붙어 있다. 통합 때 쌍 성립률(9/7 기준 98.4 %)이 떨어지면 올린다
+    reid_threshold: 0.6        # Q-13 [팀 확정 필요] — 같은/다른 인형 유사도 분포로 결정, 마감 9/8.
+                               # robotN.yaml 과 중복이라 PM 이 단일 출처로 정리 예정
+
+    # --- aruco_detector_node ---
+    marker_size_m: 0.10        # 인쇄된 검은 사각형 한 변 실측값. 인쇄 배율이 틀리면 거리가 정비례로 틀린다
+    marker_ids: [1, 2, 3, 4]   # 1·2·3 베이 A/B/C (FR-08) · 4 대기공간 측위 검증 (FR-35, 계약 9.2 ①).
+                               # **4 를 빼면 관제의 측위 검증이 죽는다.** 10~19 는 Phase 2 예약이라 넣지 않는다
+    publish_pose_log: true     # 검출 로그에 거리·기운각 남김 (TS-U05 대조용). 통합 때 시끄러우면 false
