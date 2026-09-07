@@ -336,7 +336,7 @@
 `mro_webcam` · 심각도 중 · 담당 웹캠 한세교·김학민 · 등록 2026-09-07 (PR #14 PM 검증)
 
 - **내용·재현** — PR #14 의 `webcam_hint_node.py` 는 YOLO 처리 타이머(10 Hz)와 압축 발행 타이머(10 Hz)를 **하나의 `ReentrantCallbackGroup`** 에 두고 `MultiThreadedExecutor(num_threads=2)` 로 돈다. Reentrant 그룹은 **같은 콜백의 동시 실행**도 허용하므로, `model.track()` 한 번이 100 ms 를 넘는 순간(CPU 추론 640×480 이면 흔하다) 다음 틱이 두 번째 스레드에서 같은 모델을 다시 부른다. ultralytics 의 `persist=True` 추적기는 스레드 안전하지 않고, `self.last_frame_number` 도 잠금 없이 두 스레드가 쓴다. 증상은 간헐적 예외·트랙 ID 튐·힌트 좌표 튐이라 재현이 어렵다
-- **조치·남은 것** — **9/7 코드 조치 완료 (`43e0b54`).** YOLO·압축 발행 타이머에 각각 `MutuallyExclusiveCallbackGroup`을 적용해 같은 YOLO 콜백의 중복 실행을 차단했다. `read()` 실패 루프에 50 ms 대기를 추가했고, 정상 종료 순서를 `stop → join → release`로 변경했다. 문법·종료 순서·추적 상태 단위 검사 통과. 남은 것: 실장비에서 YOLO 추론과 압축 발행을 동시 실행하여 재진입·CPU 과점유·종료 행을 확인한다.
+- **조치·남은 것** — **9/7 코드 조치 완료 (`43e0b54`).** YOLO·압축 발행 타이머에 각각 `MutuallyExclusiveCallbackGroup`을 적용해 같은 YOLO 콜백의 중복 실행을 차단했다. `read()` 실패 루프에 50 ms 대기를 추가했고, 정상 종료 순서를 `stop → join → release`로 변경했다. 문법·종료 순서·추적 상태 단위 검사 통과. PM 검증 (PR #21): 그룹 분리·sleep·종료 순서 diff 확인, 트랙 확정 로직(3회 확정·0.5 s 유지·1.0 s 정리) 가짜 시각으로 단위 검사 일치. 남은 것: 실장비에서 YOLO 추론과 압축 발행을 동시 실행하여 재진입·CPU 과점유·종료 행을 확인한다 (9/8). 덧붙여 `detection_confirm_count` 는 프레임 수라 계약 시간 상수 규칙에 어긋난다 — 초 단위로 (todo).
 
 ### I-028
 

@@ -5,13 +5,13 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 49/91 완료** (███████████░░░░░░░░░)  ·  기준 09/07
+**전체 49/92 완료** (███████████░░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 4/14 | `███░░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 15/21 | `███████░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 15/22 | `███████░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 16/33 | `█████░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 8/13 | `██████░░░░` | — |
 | mro_bringup [PM 김병직] | 3/7 | `████░░░░░░` | — |
@@ -59,7 +59,8 @@
 - [ ] `webcam_register_node.py`: `webcam.yaml` 파라미터화 — 최소 `webcam_index`·`conf` (9/7 내장 카메라가 잡히고 conf 를 못 낮춰 두 번 막힘, PR #20 노트). yaml 의 `model_path: ""` 는 launch 가 덮으므로 그대로 두되 주석 정정 · 마감 9/8
 - [ ] **웹캠1 출입구 체류 시간 실측** — 작업자가 프레임을 지나는 동안 `register_s` 1.0 s 를 채우는지. 못 채우면 `register_s` 하향 또는 시야를 안쪽 통로까지 (Q-26 남은 확인). TS-U01 은 한 명씩 순차 진입 · 마감 9/8
 - [x] **웹캠2 발행 주기 저하 (I-016)** — 캡처 스레드·BUFFERSIZE·주기 분리·CompressedImage 를 `webcam_hint_node.py` 에 병합 (PR #14, 9/7 머지) · 마감 9/7
-- [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 개별 `MutuallyExclusiveCallbackGroup`, `read()` 실패 대기, `stop → join → release` 종료 순서 코드 완료(`43e0b54`); 실장비 검증 대기 · 마감 9/8
+- [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 개별 `MutuallyExclusiveCallbackGroup`, `read()` 실패 대기, `stop → join → release` 종료 순서 코드 완료 (PR #21, PM 확정 로직 단위 검사 통과); **실장비 검증** 후 닫는다 · 마감 9/8
+- [ ] `webcam_hint_node.py`: `detection_confirm_count`(3 프레임) → **초 단위** `detection_confirm_s`(0.3) 로 — 계약 「시간 상수 표기」 규칙(프레임 수 금지, `webcam.yaml` 헤더). `process_hz` 를 바꾸면 의미가 조용히 달라진다 (PR #21 PM 노트) · 마감 9/8
 - [ ] `webcam2.py`·`webcam2_subscriber.py` 정리 — 캡처가 힌트 노드로 옮겨져 같은 `/dev/video` 를 두 번 여는 잔재. 삭제하거나 subscriber 를 `CompressedImage` 뷰어로 바꾸고 `setup.py` 진입점 정리 · 마감 9/8
 - [x] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 (PR #14) · 마감 9/8
 - [ ] `webcam_hint_node.py`: `worker.pt` 교체 후 **TS-U02** — 힌트 map 좌표 vs 실측 ≤ 0.3 m, 지연 ≤ 0.2 s (손 흔들기 → 화면) · 마감 9/8
