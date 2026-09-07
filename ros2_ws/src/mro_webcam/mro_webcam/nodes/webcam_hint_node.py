@@ -28,8 +28,8 @@ from mro_interfaces.msg import TargetHint, WorkerDescriptor
 from mro_webcam.core.homography import bbox_to_map, load_homography
 
 
-SHARE = get_package_share_directory('mro_webcam')
-DEFAULT_MODEL_PATH = os.path.join(SHARE, 'models', 'best.pt')
+PERCEPTION_SHARE = get_package_share_directory('mro_perception')
+DEFAULT_MODEL_PATH = os.path.join(PERCEPTION_SHARE, 'models', 'worker.pt')
 DEFAULT_CLASSES = ['worker_a', 'worker_b']
 
 

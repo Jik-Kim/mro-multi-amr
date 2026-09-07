@@ -5,13 +5,13 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 64/102 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 66/104 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 5/14 | `████░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 20/26 | `████████░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 22/28 | `████████░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 21/36 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 5/9 | `██████░░░░` | — |
@@ -54,14 +54,16 @@
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [x] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) — PR #26 실기동: 등록 0.90 s · W1/W2 별개 · 재등록 15/15 (체류 시간은 Q-26 todo 별도) · 마감 9/8
 - [x] `webcam_register_node.py`: `mean_hist()` 스케일 정정 — 평균 뒤 **L2 정규화**로 바꿨다(`hsv_hist` 가 `cv2.normalize` 기본값 NORM_L2 라 L2=1 이다). 종전에는 합을 128 로 맞춰 발행 `color_hist` 의 L2 가 **31.6** 이었다. 유사도는 Bhattacharyya 척도 불변이라 영향 없음을 실측 확인(차이 5e-09) — 오늘 낸 측정값은 그대로 유효하다 (PR #26 PM 노트) · 마감 9/8
-- [ ] `webcam_hint_node.py`: `DEFAULT_MODEL_PATH` 를 `mro_perception/models/worker.pt` 로, `mro_webcam/models/best.pt` 사본 삭제 (단일 출처, PR #26 노트) · 마감 9/8
+- [x] `webcam_hint_node.py`: `DEFAULT_MODEL_PATH` 를 단일 출처인 `mro_perception/models/worker.pt` 로 변경 · 마감 9/8
+- [ ] `mro_webcam/models/best.pt` 구형 사본 삭제 — 실행 참조는 `worker.pt`로 전환 완료 · 마감 9/8
 - [x] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26, PR #20) · 마감 9/8
 - [x] `webcam_register_node.py`: `webcam.yaml` 파라미터화 — `webcam_index`·`conf` (PR #26) (9/7 내장 카메라가 잡히고 conf 를 못 낮춰 두 번 막힘, PR #20 노트). yaml 의 `model_path: ""` 는 launch 가 덮으므로 그대로 두되 주석 정정 · 마감 9/8
 - [x] **웹캠1 출입구 체류 시간 실측 (Q-26 해소)** — 실측 결과 문제 없다. 등록 없는 상태에서 시작해 **첫 통과에 두 명 다 등록**(0.90 / 0.91 s). 체류 구간 **18.99 · 16.30 s** 로 필요한 **1.3 s** 의 10배 이상 여유. 재등록 3/3(sim 0.71·0.75·0.77) · 마감 9/8
 - [x] **웹캠2 발행 주기 저하 (I-016)** — 캡처 스레드·BUFFERSIZE·주기 분리·CompressedImage 를 `webcam_hint_node.py` 에 병합 (PR #14, 9/7 머지) · 마감 9/7
 - [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 개별 `MutuallyExclusiveCallbackGroup`, `read()` 실패 대기, `stop → join → release` 종료 순서 코드 완료 (PR #21, PM 확정 로직 단위 검사 통과); **실장비 검증** 후 닫는다 · 마감 9/8
 - [x] `webcam_hint_node.py`: `detection_confirm_count`(3 프레임) → **초 단위** `detection_confirm_s`(0.3) 로 변경 — `process_hz`가 바뀌어도 확정 시간이 같은 의미를 유지하도록 실행 시 횟수로 환산 (`6679782`) · 마감 9/8
-- [ ] `webcam2.py`·`webcam2_subscriber.py` 정리 — 캡처가 힌트 노드로 옮겨져 같은 `/dev/video` 를 두 번 여는 잔재. 삭제하거나 subscriber 를 `CompressedImage` 뷰어로 바꾸고 `setup.py` 진입점 정리 · 마감 9/8
+- [x] `webcam2_subscriber.py` 삭제·`setup.py` 진입점 정리 — 폐기된 raw `/webcam2/image_raw` 구독 잔재 제거 · 마감 9/8
+- [ ] `webcam2.py` 정리 — 호모그래피 클릭·Nav2 실험 도구로 보존 중. 실행 용도와 기본 파라미터를 통합 전 확정 · 마감 9/8
 - [x] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 (PR #14) · 마감 9/8
 - [ ] `webcam_hint_node.py`: `worker.pt` 교체 후 **TS-U02** — 힌트 map 좌표 vs 실측 ≤ 0.3 m, 지연 ≤ 0.2 s (손 흔들기 → 화면) · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
