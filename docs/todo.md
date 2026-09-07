@@ -5,13 +5,13 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 67/103 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 68/103 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 6/15 | `████░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 20/26 | `████████░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 21/26 | `████████░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 22/36 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 6/9 | `███████░░░` | — |
@@ -50,7 +50,7 @@
 
 ## mro_webcam [웹캠 — 한세교, 김학민]
 - [x] **새 아레나 호모그래피 (I-002)** — cam2 완료 (PR #9, AMCL 기준점 13개, RMSE 2.8 cm). **cam1 은 하지 않는다 (9/6)** — 웹캠1 은 등록만, map 좌표 없음 · 마감 9/6
-- [ ] **웹캠2 호모그래피 실주행 오차 재검증 (I-002)** — 픽셀 13개↔TurtleBot4 LiDAR 중심 AMCL `map` 좌표 재매핑 완료. 클릭 Nav2 주행에서 약 15 cm 오차를 확인하고 중단; 측정·AMCL·제어 오차를 분리해 TS-U02(`≤ 0.3 m`) 재검증 · 마감 9/8
+- [ ] **웹캠2 호모그래피 재검증 (I-002 · TS-U02)** — 재캘리 완료(PR #32: LiDAR 중심 AMCL 13점, RMSE 2.8 cm, PM LOO 평균 4.0 cm·max 8.1 cm). 검증은 **held-out 3점 — 로봇을 새 지점에 세우고 `amcl_pose` vs 픽셀 변환 대조 (≤ 0.3 m)**. **Nav2 도착 위치로는 판정하지 않는다** — `xy_goal_tolerance` 0.25(I-029) 안의 15 cm 는 호모그래피 오차의 근거가 못 된다 (PM 9/7) · 마감 9/8
 - [x] `webcam2.py` USB 캡처 + `calibrate_cam2_markers.py` 마커 캘리브레이션 도구 (PR #2) · 마감 9/6
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [x] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) — PR #26 실기동: 등록 0.90 s · W1/W2 별개 · 재등록 15/15 (체류 시간은 Q-26 todo 별도) · 마감 9/8
@@ -74,7 +74,7 @@
 - [x] `kpi_report.py`: `--db` 파일은 있는데 `missions` 테이블이 없으면 `OperationalError` 로 통째로 죽는다 — 잡아서 안내문으로 (관제 DB 초기화 전 TS-07 대비) (PR #20, PM 빈 DB 로 exit 0·K-04 계속 출력 확인) · 마감 9/8
 - [x] `kpi_report.py`: IPH 분모를 undock~도킹 완료 구간 합으로 (I-022, BRD 5.3, PR #15) · 마감 9/9
 - [x] `kpi_logger_node.py`: `target/distance` 구독(FR-29), 로봇 네임스페이스 파라미터화, QoS 계약 반영 (PR #8) · 마감 9/9
-- [ ] `kpi_logger_node.py`: `/fleet/zone_event` 구독 → CSV kind ZONE · `kpi_report.py` **K-06 교착 자동 해결률** 산출 (I-030, 계약 9절: REJECT→GRANT 60 s 이내, RECLAIM 은 미해결) · 마감 9/9
+- [x] `kpi_logger_node.py`: `/fleet/zone_event` 구독 → CSV kind ZONE · `kpi_report.py` **K-06 교착 자동 해결률** 산출 (I-030, 계약 9절: REJECT→GRANT 60 s 이내, RECLAIM 은 미해결) — PR #33 (`zone_cb` CSV source=zone · `zone_resolution()`; **RECLAIM 판정은 I-032 로 보정 필요**) · 마감 9/9
 
 ## mro_navigation [주행 — 박병후, 이시율]
 - [x] 아레나 재구성 · 마감 9/5
