@@ -5,13 +5,13 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 68/103 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 68/104 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 6/15 | `████░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 21/26 | `████████░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 21/27 | `████████░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 22/36 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 6/9 | `███████░░░` | — |
@@ -74,7 +74,8 @@
 - [x] `kpi_report.py`: `--db` 파일은 있는데 `missions` 테이블이 없으면 `OperationalError` 로 통째로 죽는다 — 잡아서 안내문으로 (관제 DB 초기화 전 TS-07 대비) (PR #20, PM 빈 DB 로 exit 0·K-04 계속 출력 확인) · 마감 9/8
 - [x] `kpi_report.py`: IPH 분모를 undock~도킹 완료 구간 합으로 (I-022, BRD 5.3, PR #15) · 마감 9/9
 - [x] `kpi_logger_node.py`: `target/distance` 구독(FR-29), 로봇 네임스페이스 파라미터화, QoS 계약 반영 (PR #8) · 마감 9/9
-- [x] `kpi_logger_node.py`: `/fleet/zone_event` 구독 → CSV kind ZONE · `kpi_report.py` **K-06 교착 자동 해결률** 산출 (I-030, 계약 9절: REJECT→GRANT 60 s 이내, RECLAIM 은 미해결) — PR #33 (`zone_cb` CSV source=zone · `zone_resolution()`; **RECLAIM 판정은 I-032 로 보정 필요**) · 마감 9/9
+- [x] `kpi_logger_node.py`: `/fleet/zone_event` 구독 → CSV kind ZONE · `kpi_report.py` **K-06 교착 자동 해결률** 산출 (I-030, 계약 9절: REJECT→GRANT 60 s 이내, RECLAIM 은 미해결) — PR #33 (`zone_cb` CSV source=zone · `zone_resolution()`) + **PR #34 로 RECLAIM 을 구역 단위 판정으로 보정, I-032 해결** (PM 재대조 8 시나리오 일치 · 무관 로그 400건 차등 퍼즈 불일치 0) · 마감 9/9
+- [ ] `kpi_report.py` K-06 마무리 셋 (PR #34 후속, 막지 않음) — ① `zone_resolution` docstring 의 `[REJECT, GRANT)` 를 양끝 포함으로 정정(안쪽 주석과 어긋남) ② `reclaimed_between(...): pass` 죽은 코드 삭제 ③ **`강제 회수` 라벨을 `강제 회수(구역)` 로** — 이제 구역 전체 RECLAIM 수라 대기자 없이 보유만 초과해도 세어져 `대기 1 · 자동 해결 1 · 강제 회수 1 → 100.0%` 로 읽힌다 (I-032) · 마감 9/9 TS-08 전
 
 ## mro_navigation [주행 — 박병후, 이시율]
 - [x] 아레나 재구성 · 마감 9/5
