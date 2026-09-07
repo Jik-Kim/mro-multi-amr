@@ -5,13 +5,13 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 63/102 완료** (████████████░░░░░░░░)  ·  기준 09/07
+**전체 64/102 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 5/14 | `████░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 19/26 | `███████░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 20/26 | `████████░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 21/36 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 5/9 | `██████░░░░` | — |
@@ -60,7 +60,7 @@
 - [x] **웹캠1 출입구 체류 시간 실측 (Q-26 해소)** — 실측 결과 문제 없다. 등록 없는 상태에서 시작해 **첫 통과에 두 명 다 등록**(0.90 / 0.91 s). 체류 구간 **18.99 · 16.30 s** 로 필요한 **1.3 s** 의 10배 이상 여유. 재등록 3/3(sim 0.71·0.75·0.77) · 마감 9/8
 - [x] **웹캠2 발행 주기 저하 (I-016)** — 캡처 스레드·BUFFERSIZE·주기 분리·CompressedImage 를 `webcam_hint_node.py` 에 병합 (PR #14, 9/7 머지) · 마감 9/7
 - [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 개별 `MutuallyExclusiveCallbackGroup`, `read()` 실패 대기, `stop → join → release` 종료 순서 코드 완료 (PR #21, PM 확정 로직 단위 검사 통과); **실장비 검증** 후 닫는다 · 마감 9/8
-- [ ] `webcam_hint_node.py`: `detection_confirm_count`(3 프레임) → **초 단위** `detection_confirm_s`(0.3) 로 — 계약 「시간 상수 표기」 규칙(프레임 수 금지, `webcam.yaml` 헤더). `process_hz` 를 바꾸면 의미가 조용히 달라진다 (PR #21 PM 노트) · 마감 9/8
+- [x] `webcam_hint_node.py`: `detection_confirm_count`(3 프레임) → **초 단위** `detection_confirm_s`(0.3) 로 변경 — `process_hz`가 바뀌어도 확정 시간이 같은 의미를 유지하도록 실행 시 횟수로 환산 (`6679782`) · 마감 9/8
 - [ ] `webcam2.py`·`webcam2_subscriber.py` 정리 — 캡처가 힌트 노드로 옮겨져 같은 `/dev/video` 를 두 번 여는 잔재. 삭제하거나 subscriber 를 `CompressedImage` 뷰어로 바꾸고 `setup.py` 진입점 정리 · 마감 9/8
 - [x] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 (PR #14) · 마감 9/8
 - [ ] `webcam_hint_node.py`: `worker.pt` 교체 후 **TS-U02** — 힌트 map 좌표 vs 실측 ≤ 0.3 m, 지연 ≤ 0.2 s (손 흔들기 → 화면) · 마감 9/8
