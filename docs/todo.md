@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 63/101 완료** (████████████░░░░░░░░)  ·  기준 09/07
+**전체 64/101 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 5/14 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 19/25 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 21/36 | `██████░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 22/36 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 5/9 | `██████░░░░` | — |
 
@@ -101,7 +101,7 @@
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
 - [x] `zone_semaphore_node.py`: 진입 판정은 **순서 기반(방법 B)으로 확정** — 폴리곤 계산 안 함, 폴리곤은 로그 검산용 (PM 결정 9/7) · 마감 9/8
 - [x] `zone_semaphore_node.py`: 반납 시 대기열 누락으로 구역이 영구 차단되는 버그 수정 (9/7) · 마감 9/8
-- [ ] **`zone_semaphore_node.py`: `/fleet/zone_event` 발행 (I-030, 계약 v1.11)** — `"<zone> <robot> <REJECT|GRANT|RELEASE|RECLAIM>"`. REJECT 는 대기 시작 1건만, GRANT 는 새 획득만 · 마감 9/8
+- [x] **`zone_semaphore_node.py`: `/fleet/zone_event` 발행 (I-030, 계약 v1.11)** — `"<zone> <robot> <REJECT|GRANT|RELEASE|RECLAIM>"`. REJECT 는 대기 시작 1건만, GRANT 는 새 획득만 · 마감 9/8
 - [x] `safety_watchdog_node.py`: /scan → estop, cmd_vel 0 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: Nav2 goal cancel (액션 클라이언트), TS-14 결함 주입 검증 · 마감 9/8
 - [ ] `safety_watchdog_node.py`: `HIT_FRAMES`·`CLEAR_FRAMES` 를 초 단위 파라미터로 (계약 시간 상수 규칙) · 마감 9/8
