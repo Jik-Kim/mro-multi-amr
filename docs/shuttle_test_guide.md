@@ -106,6 +106,31 @@ ros2 launch turtlebot4_viz view_navigation.launch.py namespace:=/robot3
 ros2 launch turtlebot4_navigation nav2.launch.py namespace:=/robot3
 ```
 
+**T3 직후 · Nav2 활성화 확인 — 건너뛰면 T_lim 120 초를 날린다 (I-035)**
+
+Nav2 는 초기자세가 없으면 `global_costmap` 활성화에 실패하고 **스스로 재시도하지 않는다.**
+셔틀 노드는 미션을 받은 뒤에야 초기자세를 보내므로, 그때 보내도 Nav2 는 `inactive` 그대로다.
+
+```bash
+tools/shuttle_preflight.sh nav
+```
+
+`bt_navigator = active [3]` 이면 넘어간다. **`inactive [2]` 면 아래 둘 중 하나를 한다.**
+
+```bash
+# ① 초기자세를 먼저 주고 활성화를 다시 건다 (지금 상태에서 복구)
+ros2 topic pub --once /robot3/initialpose geometry_msgs/msg/PoseWithCovarianceStamped \
+  "{header: {frame_id: 'map'}, pose: {pose: {position: {x: 0.019, y: -0.795}, orientation: {z: 0.066451, w: 0.997790}}}}"
+ros2 service call /robot3/lifecycle_manager_navigation/manage_nodes nav2_msgs/srv/ManageLifecycleNodes "{command: 2}"
+```
+
+② 아예 겪지 않으려면 **T3 를 띄우기 전에** 위 `initialpose` 발행을 먼저 한다. Nav2 가 기동할 때
+TF 가 이미 있어 정상 활성화된다.
+
+> 좌표는 `robot3.yaml` 의 `dock_pose` `[0.019, -0.795, 0.133]` 이다 (yaw 0.133 rad → z 0.066451,
+> w 0.997790). **RViz 의 2D Pose Estimate 로 대신하지 않는다** — 사람이 찍은 값이 들어가면
+> 두 로봇의 map 프레임이 어긋난다 (I-013).
+
 **T4 · 시험 리그** — 세마포어 + 안전 감시 + 마커 주입을 한 터미널로 (옛 T4·T5·T6)
 ```bash
 ros2 launch mro_navigation shuttle_step1_rig.launch.py
@@ -398,6 +423,30 @@ ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -p bay_
 **'완전한 이름이 같은 것'** 이다. 단, T1·T3 를 `namespace:=` 없이 띄우면 그때는 진짜로 충돌한다 —
 **항상 네임스페이스를 준다.**
 
+### D-6. `bt_navigator` 가 `inactive [2]` 에서 안 올라온다 (I-035)
+
+**노드별로 찍어보면 어디서 막혔는지 바로 보인다.**
+
+```bash
+for n in amcl controller_server planner_server bt_navigator \
+         global_costmap/global_costmap local_costmap/local_costmap; do
+  printf '%-32s ' "$n"; ros2 lifecycle get /robot3/$n
+done
+```
+
+9/7 저녁 robot3 의 실제 출력:
+
+| 노드 | 상태 | 뜻 |
+|---|---|---|
+| `amcl` | `active [3]` | 떠 있지만 **초기자세를 못 받아 `map→odom` 을 안 낸다** |
+| `local_costmap` | `active [3]` | `odom` 프레임만 쓰므로 영향 없음 |
+| **`global_costmap`** | **`inactive [2]`** | **`map→base_link` 를 못 얻어 여기서 막혔다** |
+| `planner_server` 이하 | `inactive [2]` | 앞이 막혀 순서가 진행되지 않음 |
+
+**초기자세를 나중에 보내도 저절로 낫지 않는다** — `lifecycle_manager` 가 재시도하지 않는 것을
+실측으로 확인했다(초기자세 발행 후 `amcl_pose` 는 나왔으나 8 초 뒤에도 `global_costmap` 은
+`inactive`). 위 B-3 의 `RESUME` 으로 복구한다.
+
 ### D-4. 그 밖
 
 | 증상 | 판별 | 대응 |
@@ -407,6 +456,39 @@ ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -p bay_
 | `P1 반납` 이 없다 | T4 에도 반납 로그 없음 | Ctrl+C 후 `P1 반납 (노드 종료)` 확인 |
 | 소요 시간 100 s 초과 | 판정 6 아슬아슬 | 도크→베이 1.23 m, 베이→대기공간 0.83 m 라 여유가 크지 않다. Nav2 재계획이 잦은지 T3 로그 확인 |
 | 언독에서 멈춘 듯 | `언독` 뒤 몇 초 정지 | 정상. `undock()` 이 블로킹이다 |
+
+---
+
+## F. 회차 기록과 다음 회차 계획
+
+### F-1. 9/7 실주행 (robot3, 1단계)
+
+| 회차 | 결과 | 베이 오차 | 대기공간 | 소요 | 비고 |
+|---|---|---|---|---|---|
+| 1 | 완주 | **0.72 m** | 도착 (오차 0.26 m · **줄자 실측 0.32 m**) | 40.4 s | 판정 3 불합격. 나머지는 노드 로그 기준 충족 |
+| 2 | **T_lim 포기** | **0.84 m** | 미도달 | 120 s 초과 | `(-0.92, 0.27)` 벽 앞 교착 95 s (I-036) |
+
+**2회차에서 토픽으로 확인한 것** — `shuttle/status` 는 `SHUTTLE→AT_BAY→SHUTTLE→FAILED→READY` 로 **`WAITING` 을 내지 않았고**, `shuttle/arrived` 도 **발행되지 않았다.** 포기한 미션이 도착으로 계상되지 않는다는 계약 7절이 실물에서 지켜졌다 — **2단계 합격 조건을 부수적으로 충족했다.**
+`/fleet/zone_event` 는 `P1 /robot3 GRANT`(21:22:29) → `P1 /robot3 RECLAIM`(21:23:28)으로, 세마포어의 60 초 강제 회수가 설계대로 동작했다.
+
+**오늘 새로 등록한 이슈** — I-035(Nav2 초기자세 선후) · I-036(estop 중 복구 불가) · I-037(AMCL 과 TF 0.65 m 불일치). I-009 에는 P1 통과 실주행 결과를 더했다.
+
+### F-2. 다음 회차 계획 — 변인통제
+
+**한 번에 하나만 바꾼다.** 두 개를 같이 바꾸면 어느 것이 효과를 냈는지 영원히 모른다.
+저장소 밖 파일(`turtlebot4_ws`)을 고칠 때는 **먼저 `.orig_<날짜시각>` 로 백업**한다.
+
+| 순서 | 무엇 | 왜 · 무엇을 확인하나 |
+|---|---|---|
+| **1** | **아무것도 바꾸지 않고 줄자 실측** | `적재 체류 5.0 s` 5 초 동안 베이에서 로봇 실제 위치를 잰다. **I-037 을 가르는 유일한 방법** — 다른 것을 바꾸기 전에 해야 기준선이 생긴다 |
+| 2 | `inflation_radius` 0.25 → **0.15** | P1 자유폭이 0.29 → 0.49 m 로 넓어져 통과가 쉬워지는지. **주의 아래** |
+| 3 | **robot4 로 같은 시험** | 개체차·도크 차이·측위 차이를 가른다. `bay:=A`, `-r __ns:=/robot4`, `robot4.yaml` |
+| 4 | `localization.yaml` 튜닝 | `update_min_a`(0.2) · `resample_interval`(1) · `recovery_alpha_slow/fast`(0.0). `update_min_d` 는 9/7 에 0.25→0.05 로 이미 바꿨다 (I-029) |
+| 5 | Nav2 플러그인 튜닝 | `controller_server`(DWB/MPPI 파라미터) · `progress_checker` · `general_goal_checker` |
+
+> **2번 주의 — `inflation_radius` 0.15 는 양날이다.** 통로 자유폭은 넓어지지만, **로봇 footprint 의 내접 반지름이 0.175 m 라 0.15 는 그보다 작다.** 즉 벽에서 로봇 표면까지 완충이 0 이 되어 몸통이 긁힐 수 있다. I-009 가 "받침대 6.5 cm 를 덮으려면 r ≥ 0.24" 로 0.25 를 고른 근거도 무효가 된다. **P1 통과만 보는 한 회차용 실험으로 쓰고, 결과를 I-009 에 적은 뒤 되돌릴지 결정한다.**
+
+**매 회차 공통** — 기록 5종(`shuttle/status`·`shuttle/arrived`·`/fleet/zone_event`·`amcl_pose`·`tf2_echo map base_link`)을 걸고 시작한다. 2회차에 `amcl_pose` 를 남긴 덕에 교착 좌표와 I-037 이 잡혔다.
 
 ---
 

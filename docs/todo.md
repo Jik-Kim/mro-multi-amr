@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 75/116 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 75/120 완료** (████████████░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 6/15 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/28 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 28/46 | `██████░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 28/50 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 7/10 | `███████░░░` | — |
 
@@ -94,6 +94,10 @@
 - [x] `arena.yaml` `homography_marks` — cam2 기준점은 `mro_webcam/config/WebCam2/marker_coordinates.json` 이 원본(PR #9), cam1 은 불필요(9/6). arena.yaml 에는 복사하지 않는다 · 마감 9/7
 - [x] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` — `aruco/id` 는 **1.5 m 안에서만** 나온다 (PR #30 거리 게이트) · 마감 9/7
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
+- [ ] **estop 중 Nav2 복구 행동이 막히는 문제 (I-036)** — 벽 앞에서 후진·회전까지 0 으로 덮여 95 초를 못 빠져나왔다. 후보 ①전진 성분만 차단 ②N초 후 워치독이 후진 ③goal cancel — **PM·안전 검토 필요** · 마감 9/8
+- [ ] **도착 오차 수치 신뢰성 확인 (I-037)** — 노드 TF 0.84 m vs 같은 순간 `amcl_pose` 0.18 m. 3회차에 `tf2_echo` 기록 + **베이에서 줄자 실측**으로 가른다 · 마감 9/8
+- [ ] **P1 통과 실주행 확인 (I-009)** — 여유 0.175 m < 실측 측위 오차 0.32 m 라 통과가 운에 좌우된다. `inflation_radius` 0.15 실험 후 결정. **PC-R3 는 0.25 적용 확인됨, PC-R4 미확인** · 마감 9/8
+- [ ] **Nav2 초기자세 선후 문제 해결 (I-035)** — 초기자세 없이 뜬 Nav2 가 `global_costmap` 활성화에 실패하고 재시도하지 않아 셔틀이 T_lim 을 날린다. 조치 후보 ①절차 ②노드가 RESUME ③`t0` 이동 — **PM 판단 필요** · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
 - [x] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
