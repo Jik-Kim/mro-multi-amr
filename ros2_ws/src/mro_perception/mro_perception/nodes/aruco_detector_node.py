@@ -17,6 +17,10 @@
 판정 기준이 10 cm 라 그 오차를 감당할 수 없다. solvePnP 는 네 꼭짓점으로 평면 자세를 풀어 각도와
 무관하게 거리를 낸다. 카메라 왜곡계수(CameraInfo.d)도 함께 쓴다.
 
+카메라 행렬은 그대로 쓰지 않고 core/camera.py 로 보정한다. OAK-D 가 704×704 로 잘라낸 영상에
+자르기 전 초점거리를 실어 보내서, 보정 없이는 거리가 1.74 배 작게 나온다 (9/7 실측). 이유는
+core/camera.py 참고.
+
 정확도는 TS-U05 에서 줄자로 대조한다 — 값을 만드는 쪽이 자를 검증한다 (계약 9.1, FR-34).
 
 실행: ros2 run mro_perception aruco_detector_node --ros-args -r __ns:=/robot3
@@ -31,6 +35,8 @@ from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import CompressedImage, CameraInfo
 from std_msgs.msg import Int32, Float32
 
+from mro_perception.core.camera import corrected_K, read_fx_scale
+
 DICT = cv2.aruco.DICT_4X4_50   # 계약 6절. ID 1/2/3 = 베이 A/B/C, 4 = 측위 검증, 10~19 = Phase 2 예약
 
 
@@ -40,10 +46,13 @@ class ArucoDetector(Node):
         # 값은 mro_perception/config/perception.yaml 이 단일 출처다 (계약 5절)
         self.declare_parameter('marker_size_m', 0.10)
         self.declare_parameter('marker_ids', [1, 2, 3, 4])
+        self.declare_parameter('max_distance_m', 1.5)
         self.declare_parameter('publish_pose_log', True)
         self.size = float(self.get_parameter('marker_size_m').value)
         self.allowed = set(int(v) for v in self.get_parameter('marker_ids').value)
+        self.max_dist = float(self.get_parameter('max_distance_m').value)
         self.pose_log = bool(self.get_parameter('publish_pose_log').value)
+        self.fx_scale = read_fx_scale(self)
 
         self.K = None
         self.D = np.zeros((5, 1))
@@ -61,14 +70,16 @@ class ArucoDetector(Node):
                                  self.img_cb, qos_profile_sensor_data)
         self.pub_id = self.create_publisher(Int32, 'aruco/id', 10)
         self.pub_dist = self.create_publisher(Float32, 'aruco/distance', 10)
-        self.get_logger().info(f'마커 {self.size * 100:.1f} cm · 허용 ID {sorted(self.allowed)} · solvePnP')
+        self.get_logger().info(f'마커 {self.size * 100:.1f} cm · 허용 ID {sorted(self.allowed)} · '
+                               f'거리 한계 {self.max_dist} m · solvePnP')
 
     def info_cb(self, msg):
         if self.K is None:
-            self.K = np.array(msg.k, dtype=np.float64).reshape(3, 3)
+            self.K = corrected_K(msg, self.fx_scale)
             d = np.array(msg.d, dtype=np.float64)
             self.D = d.reshape(-1, 1) if d.size else np.zeros((5, 1))
-            self.get_logger().info(f'CameraInfo 수신 — fx {self.K[0, 0]:.1f} · 왜곡계수 {self.D.size}개')
+            self.get_logger().info(f'CameraInfo 수신 — fx {msg.k[0]:.1f} → {self.K[0, 0]:.1f} '
+                                   f'(×{self.fx_scale:.4f} 보정) · 왜곡계수 {self.D.size}개')
 
     def solve(self, corner):
         """마커 하나의 (거리 m, 정면 대비 기운 각 deg). 실패하면 (nan, nan)."""
@@ -103,9 +114,20 @@ class ArucoDetector(Node):
         mid, corner = max(cand, key=lambda p: cv2.contourArea(p[1].reshape(-1, 2)))
         dist, angle = self.solve(corner)
 
+        # 자세를 못 풀었거나 계약 6절 검출 조건(≤ 1.5 m) 밖이면 '못 봤다'로 낸다. 이유가 둘이다.
+        #   · NaN 거리를 유효한 ID 와 함께 내보내면 관제의 FR-35 비교가 조용히 깨진다
+        #   · 멀리 있는 베이 마커를 내보내면 주행이 도착 전에 도착으로 볼 수 있다 (FR-08 오도착 0건)
+        # 못 본 쪽으로 트는 것이 안전한 방향이다 — 놓친 프레임은 10 Hz 라 곧 다시 오지만,
+        # 틀린 ID 한 번은 오도착이다
+        if not np.isfinite(dist) or dist > self.max_dist:
+            self.pub_id.publish(Int32(data=-1))
+            self.get_logger().warn(f'ID {mid} 버림 — 거리 {dist:.2f} m (한계 {self.max_dist} m)',
+                                   throttle_duration_sec=2.0)
+            return
+
         self.pub_id.publish(Int32(data=mid))
         self.pub_dist.publish(Float32(data=dist))
-        if self.pose_log and np.isfinite(dist):
+        if self.pose_log:
             self.get_logger().info(f'ID {mid} · {dist:.3f} m · 기운각 {angle:.0f}°',
                                    throttle_duration_sec=1.0)
 
