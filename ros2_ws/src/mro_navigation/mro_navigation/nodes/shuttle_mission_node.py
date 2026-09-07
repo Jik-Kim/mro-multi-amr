@@ -11,9 +11,14 @@
   (계약 4절 '쓰지 않는 옛 토픽'), standoff_goal 기반 목표 선택.
 
 입력  mission/assigned(Mission) · aruco/id(Int32) · aruco/distance(Float32) · safety/estop(Bool)
-      TF map→base_link · arena.yaml(베이·대기공간·P1 폴리곤) · robotN.yaml(dock_pose 등)
+      TF map→base_link · arena.yaml(베이 waypoint·aruco_id, 대기공간) · robotN.yaml(dock_pose 등)
 출력  shuttle/status(String: READY/SHUTTLE/AT_BAY/WAITING/FAILED) · shuttle/arrived(Bool)
-협조  /fleet/zone_token 의 P1 토큰 — 폴리곤 진입 전 획득, 완전히 빠져나온 뒤 반납 (계약 3절)
+협조  /fleet/zone_token 의 P1 토큰 — 베이를 떠나기 전 획득, 대기공간 도착 후 반납 (계약 3절)
+      **순서 기반 판정 (방법 B, 9/7 팀 회의).** 경로가 베이 → P1 → 대기공간으로 고정돼 있으므로
+      좌표를 매 tick 폴리곤과 대조하지 않는다. 획득 시점(베이)과 반납 시점(대기공간)이 둘 다
+      폴리곤 밖이면 '진입 전 획득·이탈 후 반납' 이 성립한다 — 그 전제는 arena.yaml 좌표로
+      test_shuttle_mission_fsm.py 가 확인한다. 좌표 감시(방법 A)는 계산이 복잡하고 경로가
+      폴리곤 가장자리를 스치면 진입을 놓쳐 버그가 나기 쉬워 폐기했다
 
 판정 관련 규칙 (어기면 KPI 가 조용히 틀어진다)
   · shuttle/status = WAITING 은 **대기공간 도착이 확정된 시점에 한 번만**. fleet_manager 가
@@ -23,14 +28,15 @@
   · T_lim 초과로 포기한 미션은 폐기한다 — 그 뒤 늦게 도착해도 WAITING·arrived 를 내지 않는다
     (계약 7절, 이중 계상 금지). 늦은 도착은 관제가 arrived_late 로 따로 남긴다.
 
-TODO([주행]): ① 신규 파라미터 9개(bay_advance_m·aruco_*·token_retry_s·p1_*·nav2_poll_s)를
+TODO([주행]): ① 신규 파라미터 7개(bay_advance_m·aruco_* 4종·token_retry_s·nav2_poll_s)를
   mro_bringup/params/robotN.yaml 로 옮길 것 — 파라미터 단일 출처는 params 다 (계약 5절). PM 요청 필요
 ② follow_target_node.py 가 아직 옛 goto_goal/arrived 를 구독한다. shuttle/arrived 로 바꾸지 않으면
   S5 합류가 시작되지 않는다 (docs/todo.md 에 등록)
 ③ ArUco '정면 ±30°'(계약 6절)는 검사하지 않는다 — aruco_detector 가 자세를 발행하지 않아
   검출된 사실 자체가 그 조건의 결과다. 인지의 solvePnP 도입 후 재검토
-④ P1 폴리곤 진입이 실주행에서 실제로 잡히는지 확인할 것 — 경로가 폴리곤 가장자리를 스치면
-  못 잡을 수 있다. 지금은 목표 완료 시점 반납이 그 경우를 덮는다
+④ 대기공간 정차 중에도 로봇 몸통이 P1 폴리곤에 살짝 걸친다 — robot3 정차점이 폴리곤에서
+  0.20 m 인데 반지름은 0.22 m 다. 반납 시점이 계약상 '완전 이탈' 인지 실주행에서 확인할 것
+  (2대 시험 때 다른 로봇이 P1 을 지날 수 있는지가 실제 판단 기준)
 ⑤ navigator.undock()/dock() 은 블로킹이라 그 동안 이 노드의 콜백·T_lim 검사가 멈춘다
   (수 초 규모라 그대로 둔다)
 """
@@ -67,36 +73,6 @@ class MissionAbort(Exception):
     """미션을 포기하는 유일한 경로. 사유를 담아 FAILED 로 빠진다."""
 
 
-def point_in_polygon(x, y, poly):
-    """Ray casting. arena.yaml 폴리곤은 지금 축정렬 사각형이지만 일반 폴리곤으로 다룬다."""
-    inside = False
-    n = len(poly)
-    for i in range(n):
-        x1, y1 = poly[i]
-        x2, y2 = poly[(i + 1) % n]
-        if (y1 > y) != (y2 > y):
-            xc = x1 + (y - y1) * (x2 - x1) / (y2 - y1)
-            if x < xc:
-                inside = not inside
-    return inside
-
-
-def dist_to_polygon(x, y, poly):
-    """폴리곤 경계까지의 최단 거리. 안에 있으면 0."""
-    if point_in_polygon(x, y, poly):
-        return 0.0
-    best = float('inf')
-    n = len(poly)
-    for i in range(n):
-        x1, y1 = poly[i]
-        x2, y2 = poly[(i + 1) % n]
-        dx, dy = x2 - x1, y2 - y1
-        L2 = dx * dx + dy * dy
-        t = 0.0 if L2 == 0 else max(0.0, min(1.0, ((x - x1) * dx + (y - y1) * dy) / L2))
-        best = min(best, math.hypot(x - (x1 + t * dx), y - (y1 + t * dy)))
-    return best
-
-
 class ShuttleMission(Node):
     def __init__(self):
         super().__init__('shuttle_mission')
@@ -121,12 +97,9 @@ class ShuttleMission(Node):
         self.declare_parameter('aruco_confirm_s', 3.0)
         self.declare_parameter('aruco_retry', 1)
         self.declare_parameter('token_retry_s', 2.0)           # 계약 3절 '거절되면 2초 후 재요청'
-        self.declare_parameter('p1_exit_hold_s', 0.5)
-        self.declare_parameter('p1_exit_margin_m', 0.05)
         self.declare_parameter('nav2_poll_s', 5.0)
 
         self.arena = self._load_arena(self.p('arena_yaml'))
-        self.p1_poly = self._p1_polygon()
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -140,8 +113,6 @@ class ShuttleMission(Node):
         self.estop = False
         self.last_status = None
         self.token_held = False
-        self.p1_entered = False
-        self.p1_out_since = None
 
         self.create_subscription(Mission, MISSION_TOPIC, self.mission_cb, 10)
         self.create_subscription(Int32, ARUCO_ID_TOPIC, self.aruco_id_cb, 1)
@@ -168,16 +139,6 @@ class ShuttleMission(Node):
         except Exception as e:
             self.get_logger().error(
                 f'arena.yaml 적재 실패 — 미션을 받아도 수행할 수 없다 ({path}): {e}')
-            return None
-
-    def _p1_polygon(self):
-        try:
-            return [(float(a), float(b))
-                    for a, b in self.arena['semaphore_zones'][ZONE_P1]['polygon']]
-        except Exception:
-            self.get_logger().warn(
-                'arena.yaml 에 semaphore_zones.P1.polygon 이 없다 — '
-                'P1 통과 감시를 건너뛰고 목표 완료 시점에 반납한다')
             return None
 
     # ── 콜백: 값만 저장한다 (navigator 호출 금지) ────────────────────
@@ -234,7 +195,7 @@ class ShuttleMission(Node):
     def tf_pose(self, warn=True):
         """(x, y, yaw) 또는 None. yaw 식은 계약 2절 FleetStatus.yaw 와 같다.
 
-        warn=False 는 주행 폴링(track_p1)용 — 매 tick 부르므로 실패 로그를 남기지 않는다.
+        warn=False 는 도착 로그용 — 좌표를 못 얻어도 미션에 지장이 없으니 경고를 남기지 않는다.
         """
         try:
             t = self.tf_buffer.lookup_transform(MAP_FRAME, BASE_FRAME, Time())
@@ -260,7 +221,7 @@ class ShuttleMission(Node):
         self.get_logger().info(f'{label} → ({gx:.2f}, {gy:.2f}) 이동 시작')
         if not self.navigator.goToPose(pose):
             raise MissionAbort(f'{label} 목표 거부됨')
-        self.wait(self.navigator.isTaskComplete, on_tick=self.track_p1)
+        self.wait(self.navigator.isTaskComplete)
         result = self.navigator.getResult().name
         if result != 'SUCCEEDED':
             raise MissionAbort(f'{label} 이동 실패: {result}')
@@ -292,32 +253,12 @@ class ShuttleMission(Node):
         return bool(res.granted)
 
     def release_token(self, reason):
-        """성공·실패와 무관하게 반드시 반납한다 (계약 3절)."""
+        """성공·실패와 무관하게 반드시 반납한다 (계약 3절). 두 번 불려도 안전하다."""
         if not self.token_held:
             return
         self.token(False)
         self.token_held = False
         self.get_logger().info(f'P1 반납 ({reason})')
-
-    def track_p1(self):
-        """주행 폴링 중 매 tick. 폴리곤을 완전히 빠져나온 뒤에 반납한다 (계약 3절)."""
-        if not self.token_held or self.p1_poly is None:
-            return
-        pose = self.tf_pose(warn=False)
-        if pose is None:
-            return
-        x, y, _ = pose
-        if point_in_polygon(x, y, self.p1_poly):
-            self.p1_entered = True
-            self.p1_out_since = None
-            return
-        if not self.p1_entered:
-            return
-        if self.p1_out_since is None:
-            self.p1_out_since = self.now()
-        if (self.now() - self.p1_out_since >= self.p('p1_exit_hold_s')
-                and dist_to_polygon(x, y, self.p1_poly) > self.p('p1_exit_margin_m')):
-            self.release_token('폴리곤 완전 이탈')
 
     def aruco_ok(self, expect_id):
         """마커 ID 와 거리는 헤더가 없어 짝을 맞출 수 없다 → 각자 수신 시각으로 신선도를 본다."""
@@ -345,8 +286,6 @@ class ShuttleMission(Node):
         self.mission = m
         self.t0 = self.now()
         self.token_held = False
-        self.p1_entered = False
-        self.p1_out_since = None
         try:
             bay, waiting = self.mission_targets(m)
             self.init_pose()
@@ -364,7 +303,8 @@ class ShuttleMission(Node):
 
             self.set_status('SHUTTLE')
             self.goto(self.pose_of(*waiting), '대기공간')
-            self.release_token('목표 완료 — 안전망')  # 진입이 안 잡힌 경우 대비
+            # 방법 B — 대기공간 도착이 곧 'P1 을 빠져나왔다' 는 뜻이다 (경로가 고정돼 있다)
+            self.release_token('대기공간 도착 — P1 통과 완료')
 
             self.set_status('WAITING')               # AC-08 판정 기준점, 미션당 한 번
             self.pub_arrived.publish(Bool(data=True))
@@ -454,7 +394,11 @@ class ShuttleMission(Node):
         self.wait(lambda: False, timeout=dwell_s)
 
     def acquire_p1(self):
-        """P1 폴리곤에 들어가기 전에 획득한다. 거절은 정상이므로 실패로 세지 않는다 (계약 3절)."""
+        """베이를 떠나기 전에 획득한다 — 여기서부터 대기공간까지가 P1 을 지나는 구간이다.
+
+        거절은 정상이므로 실패로 세지 않는다 (계약 3절). 무한 대기는 T_lim 이 끊고,
+        세마포어에도 60 초 강제 회수가 있다.
+        """
         while not self.token(True):
             self.get_logger().info(f"P1 대기 — {self.p('token_retry_s')} s 후 재요청")
             self.wait(lambda: False, timeout=self.p('token_retry_s'))  # 무한 대기는 T_lim 이 끊는다

@@ -8,11 +8,13 @@
   · 정상 미션: SHUTTLE → AT_BAY → SHUTTLE → WAITING (WAITING 은 대기공간 도착 때 한 번)
   · ArUco 불일치·T_lim 초과: FAILED 로 끝나고 WAITING·shuttle/arrived 를 내지 않는다
     (계약 7절 이중 계상 금지 — 포기한 미션은 폐기한다)
-  · P1 토큰: 폴리곤 진입 전 획득, 이탈 후 반납, 거절 중에는 AT_BAY 유지
+  · P1 토큰: 베이를 떠나기 전 획득, 대기공간 도착 후 반납, 거절 중에는 AT_BAY 유지
+    (순서 기반 판정 = 방법 B, 9/7 팀 회의. 그 전제인 '베이·대기공간이 P1 폴리곤 밖' 을
+     arena.yaml 좌표로 함께 확인한다)
   · dock_pose 가 (0,0,0) 이면 거부한다 (I-013 — 두 로봇의 맵 좌표계가 어긋난다)
 
 **보장하지 못하는 것 — 실주행에서만 확인된다.**
-  · Nav2 가 실제로 P1 폴리곤을 지나는 경로를 그리는지. 여기서는 좌표를 주입해 로직만 본다
+  · Nav2 가 실제로 베이 → P1 → 대기공간 순서로 지나는지. 방법 B 는 이 순서를 전제로 한다
   · 실제 `fleet_manager` 가 이 상태열을 받아 `missions.result` 를 옳게 확정하는지 (TS-07 9/9)
   · 베이 전진 0.3 m 가 선반과 부딪히지 않는지, ArUco 를 실제로 1.5 m 안에서 읽는지
   · undock/dock 블로킹 구간의 동작 (스텁은 즉시 반환한다)
@@ -43,7 +45,6 @@ BASE = {
     'aruco_confirm_s': 0.5,
     'aruco_retry': 1,
     'token_retry_s': 0.1,
-    'p1_exit_hold_s': 0.05,
 }
 
 
@@ -143,6 +144,7 @@ def make_node(**params):
     node.status_log = []
     node.arrived_log = []
     node.token_log = []
+    node.token_marks = []
     pub_status, pub_arrived = node.pub_status.publish, node.pub_arrived.publish
     node.pub_status.publish = lambda m: (node.status_log.append(m.data), pub_status(m))
     node.pub_arrived.publish = lambda m: (node.arrived_log.append(m.data), pub_arrived(m))
@@ -156,7 +158,10 @@ def stub_token(node, granted_sequence):
     answers = iter(granted_sequence)
 
     def token(acquire):
-        node.token_log.append('acquire' if acquire else 'release')
+        action = 'acquire' if acquire else 'release'
+        node.token_log.append(action)
+        # 몇 번째 목표까지 보낸 뒤에 불렸는지 같이 남긴다 (방법 B 의 시점 검증용)
+        node.token_marks.append((action, len(node.navigator.goals())))
         return next(answers, True) if acquire else True
 
     node.token = token
@@ -254,32 +259,17 @@ def test_token_retry_keeps_at_bay(ros):
     node.destroy_node()
 
 
-def test_p1_released_after_leaving_polygon(ros):
-    """폴리곤 안을 지나 밖으로 나온 시점에 토큰을 반납한다 (계약 3절)."""
-    StubNavigator.nav_ticks = 40                 # 통과를 관찰할 만큼 주행을 길게
-    try:
-        node = make_node(aruco_valid_s=60.0)     # 신선도는 별도 테스트에서 본다
-        stub_token(node, [True])
-        fresh_marker(node)
-        step = {'n': 0}
-
-        def fake_tf(warn=True):
-            step['n'] += 1
-            if step['n'] < 20:
-                return (-0.78, 0.138, math.radians(-174.8))   # 베이 (폴리곤 밖)
-            if step['n'] < 32:
-                return (-0.4, 0.7, 1.57)                      # P1 안
-            return (-0.998, 1.4, 1.57)                        # 빠져나옴
-
-        node.tf_pose = fake_tf
-        node.run_mission(assigned('A', 'M6'))
-        assert node.p1_entered is True
-        assert node.token_log.count('release') == 1
-        assert node.status_log[-2:] == ['WAITING', 'READY']
-        assert node.arrived_log == [True]
-        node.destroy_node()
-    finally:
-        StubNavigator.nav_ticks = 3
+def test_p1_token_spans_bay_to_waiting(ros):
+    """방법 B — 토큰은 베이를 떠나기 전에 잡고 대기공간에 도착한 뒤 푼다 (9/7 팀 회의)."""
+    node = make_node()
+    stub_token(node, [True])
+    fresh_marker(node)
+    node.run_mission(assigned('A', 'M6'))
+    # 목표 3건: ① 베이 ② 창고 안쪽 전진 ③ 대기공간.
+    #   획득은 ②까지 끝난 뒤(=베이를 아직 안 떠남), 반납은 ③까지 끝난 뒤여야 한다
+    assert node.token_marks == [('acquire', 2), ('release', 3)]
+    assert node.token_log.count('release') == 1     # finally 에서 두 번 풀지 않는다
+    node.destroy_node()
 
 
 def test_aruco_ok(ros):
@@ -301,26 +291,32 @@ def test_aruco_ok(ros):
     node.destroy_node()
 
 
-def test_polygon_helpers_against_arena():
-    """실제 arena.yaml 좌표로 폴리곤 판정을 확인한다 — 좌표가 바뀌면 여기서 먼저 드러난다."""
+def _inside(x, y, poly):
+    """Ray casting — 방법 B 의 전제를 확인하기 위한 테스트 전용 헬퍼."""
+    hit = False
+    for i in range(len(poly)):
+        x1, y1 = poly[i]
+        x2, y2 = poly[(i + 1) % len(poly)]
+        if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1):
+            hit = not hit
+    return hit
+
+
+def test_method_b_premise_holds_in_arena():
+    """방법 B 가 계약 3절을 만족하려면 베이와 대기공간이 둘 다 P1 폴리곤 밖이어야 한다.
+
+    좌표 감시를 없앤 대신, 그 근거가 되는 전제를 arena.yaml 로 여기서 지킨다.
+    베이가 폴리곤 안이면 '진입 전 획득' 이 깨지고, 대기공간이 안이면 '이탈 후 반납' 이 깨진다.
+    """
     import yaml
-    module = sys.modules[_shuttle_mission_class().__module__]
     arena = yaml.safe_load(ARENA.read_text(encoding='utf-8'))['arena']
     poly = [(float(a), float(b)) for a, b in arena['semaphore_zones']['P1']['polygon']]
 
-    assert module.point_in_polygon(-0.4, 0.7, poly) is True
-    assert module.point_in_polygon(-0.85, 0.7, poly) is False
+    assert _inside(-0.4, 0.7, poly) is True          # 헬퍼 자체가 맞는지
     for name, bay in arena['bays'].items():
-        assert module.point_in_polygon(bay['waypoint'][0], bay['waypoint'][1], poly) is False, name
+        assert _inside(bay['waypoint'][0], bay['waypoint'][1], poly) is False, f'베이 {name}'
     for robot, spot in arena['waiting_zone'].items():
-        assert module.point_in_polygon(spot[0], spot[1], poly) is False, robot
-
-    assert module.dist_to_polygon(-0.4, 0.7, poly) == 0.0
-    assert abs(module.dist_to_polygon(-0.85, 0.7, poly) - 0.05) < 1e-9
-    # robot3 정차점은 폴리곤에서 0.20 m 뿐이라 이탈 마진을 로봇 반지름(0.22)만큼 줄 수 없다.
-    # 기본 p1_exit_margin_m 0.05 는 넘으므로 이탈 판정은 성립한다.
-    spot3 = arena['waiting_zone']['robot3']
-    assert 0.05 < module.dist_to_polygon(spot3[0], spot3[1], poly) < 0.22
+        assert _inside(spot[0], spot[1], poly) is False, f'대기공간 {robot}'
 
 
 if __name__ == '__main__':
