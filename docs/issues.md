@@ -19,7 +19,7 @@
 | [I-021](#i-021) | 중 | **열림** | 관제 김민준 | 개입 이벤트가 DB(events)에 기록되지 않는다 (FR-28) |
 | [I-024](#i-024) | 상 | **열림** | 주행 박병후·이시율 | `shuttle/status` 발행자가 없어 배송 성공률이 구조적으로 0 % |
 | [I-025](#i-025) | 상 | **열림** | 주행 박병후·이시율 | 베이 A·B 정차점이 도크 접근 지점과 물리적으로 겹친다 |
-| [I-027](#i-027) | 중 | **열림** | 웹캠 한세교·김학민 | webcam_hint 의 YOLO 타이머가 겹쳐 돌 수 있다 (Reentrant 그룹) |
+| [I-027](#i-027) | 중 | **진행중** | 웹캠 한세교·김학민 | webcam_hint 의 YOLO 타이머가 겹쳐 돌 수 있다 (Reentrant 그룹) |
 
 ## 해결된 이슈
 
@@ -336,7 +336,7 @@
 `mro_webcam` · 심각도 중 · 담당 웹캠 한세교·김학민 · 등록 2026-09-07 (PR #14 PM 검증)
 
 - **내용·재현** — PR #14 의 `webcam_hint_node.py` 는 YOLO 처리 타이머(10 Hz)와 압축 발행 타이머(10 Hz)를 **하나의 `ReentrantCallbackGroup`** 에 두고 `MultiThreadedExecutor(num_threads=2)` 로 돈다. Reentrant 그룹은 **같은 콜백의 동시 실행**도 허용하므로, `model.track()` 한 번이 100 ms 를 넘는 순간(CPU 추론 640×480 이면 흔하다) 다음 틱이 두 번째 스레드에서 같은 모델을 다시 부른다. ultralytics 의 `persist=True` 추적기는 스레드 안전하지 않고, `self.last_frame_number` 도 잠금 없이 두 스레드가 쓴다. 증상은 간헐적 예외·트랙 ID 튐·힌트 좌표 튐이라 재현이 어렵다
-- **조치·남은 것** — 두 타이머에 **각각 `MutuallyExclusiveCallbackGroup`** 을 준다 — 자기 자신과는 안 겹치고 둘 사이는 병렬. 코드 세 줄. 같이 볼 것: `_capture_loop` 가 `read()` 실패 때 `sleep` 없이 `continue` 라 카메라가 빠지면 CPU 100 % 로 돈다(짧은 sleep 추가), `close()` 는 `release()` 전에 `join()` 이 안전하다. 마감 9/8 (TS-U02 전)
+- **조치·남은 것** — **9/7 코드 조치 완료 (`43e0b54`).** YOLO·압축 발행 타이머에 각각 `MutuallyExclusiveCallbackGroup`을 적용해 같은 YOLO 콜백의 중복 실행을 차단했다. `read()` 실패 루프에 50 ms 대기를 추가했고, 정상 종료 순서를 `stop → join → release`로 변경했다. 문법·종료 순서·추적 상태 단위 검사 통과. 남은 것: 실장비에서 YOLO 추론과 압축 발행을 동시 실행하여 재진입·CPU 과점유·종료 행을 확인한다.
 
 ### I-028
 
@@ -347,4 +347,3 @@
 - **내용·재현** — `kpi_report.py` 가 Lost 를 두 함수에서 따로 센다. `reacquisition()` 은 `visible` 0→1 이면 무조건 **성공**으로 넣고, `reacq_failures_by_state()` 는 그 구간 안에 `STANDBY`/`FAILED` 가 있으면 **실패**로 넣는다. 로봇이 탐색을 포기해 STANDBY 로 빠진 뒤 작업자가 다시 시야에 들어오면(현장에서 흔하다) 같은 Lost 1건이 양쪽에 다 들어간다. PM 합성 로그: Lost 3회(성공 1·STANDBY 후 재출현 1·미복귀 1) 참값 성공률 33.3 % → 리포트 **Lost 4회 · 성공 2 · 50.0 %**, 재획득 p95 도 3.0 s → 17.2 s. 게다가 실패 함수는 `LOST_MIN_S` 1.0 s 필터가 없어 짧은 끊김도 실패로 센다. `reacquisition()` 끝의 `for a in appr:` 루프는 아무것도 하지 않는 잔재다
 - **조치·남은 것** — 한 함수로 합친다: 0→1 로 닫을 때 **그 구간 안에 STANDBY/FAILED 가 있었으면 실패, 없으면 성공**, 두 경우 모두 `dur ≥ LOST_MIN_S` 일 때만 Lost 로 센다. `reacq_failures_by_state()` 와 잔재 루프는 지운다. 검증은 위 합성 로그(성공 1·실패 2·p95 3.0 s). 마감 9/9 (TS-19 전). 다른 네 지표(AC-05·AC-08·K-05·AC-13)는 대조 결과 정확하다
   **해결 (9/7, PR #17 김학민).** 한 함수에서 구간을 닫을 때 포기(STANDBY/FAILED 있었음)·성공·미복귀로 판정, 세 경우 모두 `LOST_MIN_S` 적용. PM 합성 로그 재대조: Lost 3 · 재획득 1 · 실패 2(포기 1·미복귀 1) → 33.3 %, p95 3.0 s — 손계산과 일치
-

@@ -24,8 +24,13 @@ webcam_register:            # 웹캠1 (PC-W1) — 작업자 등록 S1
 
 webcam_hint:                # 웹캠2 (PC-W2) — 재탐지 힌트 E-1. 한세교 담당, 값 확정 필요
   ros__parameters:
+    fps: 30.0               # 카메라 캡처 주기
+    process_hz: 10.0        # YOLO 처리 주기(0.1 s, 0.3 s 동안 약 3회)
     hint_valid_s: 2.0       # 계약값 — 이 시간 지난 힌트는 쓰지 않는다
     image_publish_hz: 10.0  # YOLO process_hz와 독립적인 압축 영상 발행 주기
     compressed_topic: "/webcam2/image_raw/compressed"
     image_frame_id: "webcam2_optical_frame"
     jpeg_quality: 80
+    detection_confirm_count: 3 # 동일 track ID가 3회 검출되면 최초 확정
+    detection_hold_s: 0.5     # 순간 누락 시 기존 트랙 연속성 유지 시간
+    lost_confirm_s: 1.0       # 이 시간 이상 미검출 시 Lost 확정
