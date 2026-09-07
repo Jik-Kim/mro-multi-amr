@@ -1,7 +1,7 @@
 """미션 생성·배정, 상태 집계, DB 기록, 종료 명령을 담당한다.
 
 서비스: /fleet/request_mission, /fleet/operator_command
-구독: /webcam1/worker_descriptor, /fleet/intervention,
+구독: /webcam1/worker_descriptor, /fleet/intervention, /fleet/zone_event,
       로봇별 상태·배터리·pose·estop
 발행: /fleet/mission, 로봇별 mission/assigned·mission/finish,
       /fleet/status
@@ -61,6 +61,8 @@ APPROACH_MISSION_PHASES = {
     Mission.STANDBY,
 }
 TERMINAL_MISSION_STATES = {Mission.DONE}
+ZONE_IDS = {'P1', 'DOCK'}
+ZONE_EVENT_ACTIONS = {'REJECT', 'GRANT', 'RELEASE', 'RECLAIM'}
 
 
 class FleetManager(Node):
@@ -140,6 +142,12 @@ class FleetManager(Node):
             Intervention,
             '/fleet/intervention',
             self._intervention_cb,
+            10,
+        )
+        self.create_subscription(
+            String,
+            '/fleet/zone_event',
+            self._zone_event_cb,
             10,
         )
         for namespace in self.robots:
@@ -223,6 +231,34 @@ class FleetManager(Node):
             'INTERVENTION',
             message.kind,
             message.note,
+        )
+
+    def _zone_event_cb(self, message):
+        """구역 세마포어 이벤트를 SQLite의 ZONE 이벤트로 기록한다."""
+        parts = message.data.split()
+        if len(parts) != 3:
+            self.get_logger().warn(
+                f'zone_event 형식이 계약과 다르다: {message.data!r}'
+            )
+            return
+
+        zone_id, robot_ns, action = parts
+        if (
+            zone_id not in ZONE_IDS
+            or robot_ns not in self.robot
+            or action not in ZONE_EVENT_ACTIONS
+        ):
+            self.get_logger().warn(
+                f'zone_event 값이 계약과 다르다: {message.data!r}'
+            )
+            return
+
+        self.db.event(
+            self._now_s(),
+            robot_ns,
+            'ZONE',
+            action,
+            zone_id,
         )
 
     def _set_robot_value(self, namespace, key, value):
