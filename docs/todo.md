@@ -5,20 +5,19 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 46/88 완료** (██████████░░░░░░░░░░)  ·  기준 09/07
+**전체 49/91 완료** (███████████░░░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
-| mro_perception [인지 — 정정인, 민범진] | 3/12 | `██░░░░░░░░` | — |
-| mro_webcam [웹캠 — 한세교, 김학민] | 13/20 | `██████░░░░` | — |
+| mro_perception [인지 — 정정인, 민범진] | 4/14 | `███░░░░░░░` | — |
+| mro_webcam [웹캠 — 한세교, 김학민] | 15/21 | `███████░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 16/33 | `█████░░░░░` | — |
 | mro_fleet [관제 — 김민준] | 8/13 | `██████░░░░` | — |
 | mro_bringup [PM 김병직] | 3/7 | `████░░░░░░` | — |
 
-**오늘 마감 7건**
+**오늘 마감 6건**
 
-- mro_perception — models/worker.pt 학습·검증, 색 편향 점검 (I-003) — 9/6 밤새 학습 중, 9/7 아침 완료 예정 (PM…
 - mro_navigation — 공유기 DHCP 예약 요청 — 지금은 재부팅하면 IP 가 바뀐다
 - mro_navigation — 측위 검증 마커 설치·실측 — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 …
 - mro_navigation — I-013 검증 — TS-U06 때 두 로봇을 베이 B 에 차례로 보내 aruco/distance 비교, 차이 ≤ 10 cm 면…
@@ -38,8 +37,10 @@
 ## mro_perception [인지 — 정정인, 민범진]
 - [x] 인형 2종 제작 (상하의 전체, 9/6 결정) · 마감 9/6
 - [x] 데이터 수집·라벨링 (9/6 완료) · 마감 9/6
-- [ ] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) — **9/6 밤새 학습 중, 9/7 아침 완료 예정** (PM 확인 21:30) · 마감 9/7
-- [ ] `amr_detection_node.py`: `DETECT_CLASS` → worker_a/b, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9
+- [x] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) — PR #19, yolo26s@640 · val mAP50-95 0.816 · 밝기 차 0.6 % (PM 체크포인트 대조 일치) · 마감 9/7
+- [ ] **배포 PC 4대(W1·W2·R3·R4)에서 `tools/bench_yolo.py` 로 `worker.pt` 10 Hz 확인** — max 가 100 ms 넘으면 nano(`yolo26n`@640) 로 교체. PM 노트북 CPU 는 track 9 ms (PR #19) · 마감 9/8
+- [ ] **TS-U04 측면·후면** — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·`outfit_class` 유지 확인 (AC-10 근거, SDD 부록 B). 판정 기준은 SDD v0.10 · 마감 9/8
+- [ ] `amr_detection_node.py`: `MODEL_PATH` → `worker.pt`, `DETECT_CLASS` → worker_a/b (이름으로 거른다, 인덱스 아님), **`ONLY_OUR_CAR` 흰차 필터 해제**, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9
 - [ ] `amr_detection_node.py`: **`target/distance` 발행 (FR-29)** — 추종거리 판정의 기준값. kpi_logger 는 이미 구독 중이라 이것만 붙으면 AC-05 가 측정된다 · 마감 9/8
 - [ ] **TS-U05 줄자 대조** — `target/distance` 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오차 < 기준의 1/3). 이게 없으면 AC-05 를 그 값으로 채점할 근거가 없다 · 마감 9/8
 - [ ] 시험 절차 — 대기공간 로봇이 서향이므로 S5 페어링 때 **RC카를 로봇 정면(서쪽)으로 돌아 들어오게** 조종 (FR-14 정면 1 m). 작업자는 P2(남쪽)로 온다 · 마감 9/9
@@ -54,7 +55,8 @@
 - [x] `webcam2.py` USB 캡처 + `calibrate_cam2_markers.py` 마커 캘리브레이션 도구 (PR #2) · 마감 9/6
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [ ] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) · 마감 9/8
-- [ ] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26) · 마감 9/8
+- [x] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26, PR #20) · 마감 9/8
+- [ ] `webcam_register_node.py`: `webcam.yaml` 파라미터화 — 최소 `webcam_index`·`conf` (9/7 내장 카메라가 잡히고 conf 를 못 낮춰 두 번 막힘, PR #20 노트). yaml 의 `model_path: ""` 는 launch 가 덮으므로 그대로 두되 주석 정정 · 마감 9/8
 - [ ] **웹캠1 출입구 체류 시간 실측** — 작업자가 프레임을 지나는 동안 `register_s` 1.0 s 를 채우는지. 못 채우면 `register_s` 하향 또는 시야를 안쪽 통로까지 (Q-26 남은 확인). TS-U01 은 한 명씩 순차 진입 · 마감 9/8
 - [x] **웹캠2 발행 주기 저하 (I-016)** — 캡처 스레드·BUFFERSIZE·주기 분리·CompressedImage 를 `webcam_hint_node.py` 에 병합 (PR #14, 9/7 머지) · 마감 9/7
 - [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 두 타이머를 각각 `MutuallyExclusiveCallbackGroup` 으로. 지금은 한 `Reentrant` 그룹이라 `model.track` 이 겹쳐 돌 수 있다 · 마감 9/8
@@ -67,7 +69,7 @@
 - [x] `kpi_report.py`: 추종거리를 FOLLOWING 구간으로 자르고 `|d−0.5|` p95 와 **최소 이격** 출력 (I-022, AC-05, PR #15) · 마감 9/9
 - [x] `kpi_report.py`: Lost 를 `target/visible` 전이로 잡고 재획득 **성공률** 산출 — SEARCHING 은 정상 절차에도 쓰인다 (I-022, K-04, PR #15) · 마감 9/9
 - [x] `kpi_report.py`: **K-04 이중 계상 수정 (I-028)** — 포기/성공/미복귀를 한 함수에서 판정 (PR #17, PM 합성 로그 재대조 일치) · 마감 9/9
-- [ ] `kpi_report.py`: `--db` 파일은 있는데 `missions` 테이블이 없으면 `OperationalError` 로 통째로 죽는다 — 잡아서 안내문으로 (관제 DB 초기화 전 TS-07 대비) · 마감 9/8
+- [x] `kpi_report.py`: `--db` 파일은 있는데 `missions` 테이블이 없으면 `OperationalError` 로 통째로 죽는다 — 잡아서 안내문으로 (관제 DB 초기화 전 TS-07 대비) (PR #20, PM 빈 DB 로 exit 0·K-04 계속 출력 확인) · 마감 9/8
 - [x] `kpi_report.py`: IPH 분모를 undock~도킹 완료 구간 합으로 (I-022, BRD 5.3, PR #15) · 마감 9/9
 - [x] `kpi_logger_node.py`: `target/distance` 구독(FR-29), 로봇 네임스페이스 파라미터화, QoS 계약 반영 (PR #8) · 마감 9/9
 

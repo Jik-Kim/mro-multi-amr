@@ -87,7 +87,7 @@
 `mro_perception` · 심각도 상 · 담당 인지 정정인·민범진 · 등록 2026-09-04 (PM)
 
 - **내용·재현** — 시나리오 검출 불가
-- **조치·남은 것** — **9/6 라벨링 완료, 밤새 학습 중 — 9/7 아침 완료 예정** (PM 확인 21:30). 끝나면 `webcam_register`·`amr_detection` 의 모델 경로 교체 → TS-U01·U03
+- **조치·남은 것** — **9/7 `worker.pt` 수령 (PR #19)** — yolo26s @ 640, 클래스 `amr`/`worker_b`/`worker_a`, val mAP50 0.995 · mAP50-95 0.816, test 0.803, 혼동행렬 amr↔작업자 0건, 색 편향 점검 밝기 차 0.6 % (PM 이 체크포인트 열어 클래스·파라미터 708 텐서·지표 대조 일치). 웹캠1·2 launch 가 `mro_perception/models/worker.pt` 를 `model_path` 로 넘김 (PM, 같은 날). PM 노트북 CPU 로 track 호출 9 ms. **남은 것:** `amr_detection` 모델 경로·클래스 교체 + `ONLY_OUR_CAR` 해제 (9/9) · 배포 PC 4대 `tools/bench_yolo.py` 10 Hz 확인 (9/8) · TS-U01·U03 통과 시 닫는다
 
 ### I-004
 
