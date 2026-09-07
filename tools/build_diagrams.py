@@ -250,6 +250,24 @@ class Diagram:
                         and ly < n['y'] + n['h'] and ly + lh > n['y']):
                     warn.append('라벨 "%s" 이 상자 %s 를 가린다' % (e['lines'][0], n['id']))
                     break
+        # 라벨이 화살촉을 덮는지 — 선은 보이는데 화살표 머리만 사라진다
+        heads = []
+        for e in self.edges:
+            if not e.get('arrow'):
+                continue
+            pts, _lx, _ly = self.path_of(e)
+            heads.append((pts[-1], e))
+        for e in self.edges:
+            r = self.label_rect(e)
+            if r is None:
+                continue
+            lx, ly, lw, lh = r
+            for (hx, hy), he in heads:
+                if lx - 4 < hx < lx + lw + 4 and ly - 4 < hy < ly + lh + 4:
+                    warn.append('라벨 "%s" 이 화살표 "%s" 의 화살촉을 덮는다'
+                                % (e['lines'][0],
+                                   (he['lines'] or [he['label'] or '이름 없음'])[0]))
+                    break
         # 라벨끼리 겹치는지
         rects = [(self.label_rect(e), e) for e in self.edges]
         rects = [(r, e) for r, e in rects if r]
@@ -1313,19 +1331,20 @@ def step3b():
     for tag, px, pw in (('a', L1X, L1W), ('b', L2X, L2W)):
         pc = tag + 'pc'
         xs = [px + 150 + i * ((pw - 300) / 2) for i in range(3)]
-        r1, r2 = BY - 128, BY - 66
+        r1, r2 = BY - 128, BY - 66          # 아래로 가는 화살표: 화살촉이 버스 위 모서리라 여유가 있다
+        u1, u2 = BY - 102, BY - 44          # 위로 가는 화살표: 화살촉이 패널 아래 모서리(BY-150)라 더 내린다
         link(pc, 'bus', xs[0], ['shuttle/status · approach/status', 'std_msgs/String  → 관제'],
              TOPIC, ylab=r1)
         link(pc, 'bus', xs[1], ['/fleet/zone_token   (서비스)', 'ZoneToken  P1 · DOCK'],
              SRV, dashed=True, ylab=r1)
         link('bus', pc, xs[2], ['mission/assigned · mission/finish', 'Mission  ← 관제'],
-             TOPIC, ylab=r1, updown='up')
+             TOPIC, ylab=u1, updown='up')
         link(pc, 'bus', xs[0] + 78, ['battery_state · safety/estop', 'sensor_msgs · Bool  → 관제'],
              TOPIC, ylab=r2)
         link(pc, 'bus', xs[1] + 78, ['target/distance · visible', 'amcl_pose  → kpi_logger'],
              TOPIC, ylab=r2)
         link('bus', pc, xs[2] + 78, ['/webcam1/worker_descriptor', '/webcam2/target_hint  ← 웹캠'],
-             TOPIC, ylab=r2, updown='up')
+             TOPIC, ylab=u2, updown='up')
 
     # ── 관제 ↔ 버스 ──
     link('pc_f', 'bus', CX + 170, ['mission/assigned · mission/finish', 'Mission  → 두 로봇'],
