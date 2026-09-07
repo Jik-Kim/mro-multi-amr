@@ -53,7 +53,7 @@
 - [x] `webcam2.py` USB 캡처 + `calibrate_cam2_markers.py` 마커 캘리브레이션 도구 (PR #2) · 마감 9/6
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [x] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) — PR #26 실기동: 등록 0.90 s · W1/W2 별개 · 재등록 15/15 (체류 시간은 Q-26 todo 별도) · 마감 9/8
-- [ ] `webcam_register_node.py`: `mean_hist()` 스케일 정정 — `hsv_hist` 는 L2 정규화(합 ≠ 128)라 "합을 원래대로" 주석이 틀렸다. 유사도는 Bhattacharyya 라 영향 없음(PM 수치 확인)이지만 발행되는 `color_hist` 척도가 AMR 과 달라지므로 평균 뒤 L2 정규화로 (PR #26 PM 노트) · 마감 9/8
+- [x] `webcam_register_node.py`: `mean_hist()` 스케일 정정 — 평균 뒤 **L2 정규화**로 바꿨다(`hsv_hist` 가 `cv2.normalize` 기본값 NORM_L2 라 L2=1 이다). 종전에는 합을 128 로 맞춰 발행 `color_hist` 의 L2 가 **31.6** 이었다. 유사도는 Bhattacharyya 척도 불변이라 영향 없음을 실측 확인(차이 5e-09) — 오늘 낸 측정값은 그대로 유효하다 (PR #26 PM 노트) · 마감 9/8
 - [ ] `webcam_hint_node.py`: `DEFAULT_MODEL_PATH` 를 `mro_perception/models/worker.pt` 로, `mro_webcam/models/best.pt` 사본 삭제 (단일 출처, PR #26 노트) · 마감 9/8
 - [x] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26, PR #20) · 마감 9/8
 - [x] `webcam_register_node.py`: `webcam.yaml` 파라미터화 — `webcam_index`·`conf` (PR #26) (9/7 내장 카메라가 잡히고 conf 를 못 낮춰 두 번 막힘, PR #20 노트). yaml 의 `model_path: ""` 는 launch 가 덮으므로 그대로 두되 주석 정정 · 마감 9/8
