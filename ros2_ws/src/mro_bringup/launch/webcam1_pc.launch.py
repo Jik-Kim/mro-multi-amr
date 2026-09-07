@@ -15,6 +15,5 @@ def generate_launch_description():
     return LaunchDescription([
         Node(package='mro_webcam', executable='webcam_register_node', name='webcam_register', output='screen',
              parameters=[os.path.join(cfg, 'webcam.yaml'),   # 노드 이름별 ros__parameters (interfaces.md 5절)
-                         {'homography_json': os.path.join(cfg, 'WebCam1', 'homography_cam1.json'),
-                          'model_path': os.path.join(models, 'worker.pt')}]),
+                         {'model_path': os.path.join(models, 'worker.pt')}]),   # 웹캠1 은 호모그래피를 쓰지 않는다 (계약 v1.8) — 노드가 선언하지 않는 파라미터라 넘기지 않는다
     ])

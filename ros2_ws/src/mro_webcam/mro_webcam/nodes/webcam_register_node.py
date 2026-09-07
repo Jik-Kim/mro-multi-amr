@@ -21,8 +21,7 @@ fleet_manager 가 이를 받아 작업자-로봇을 배정하고 언독(S2)으�
   - 웹캠1 은 출입구만 본다 (9/7 결정, 계약 v1.10). 관제탑 구역은 시야 밖이고 map 좌표도 내지 않는다.
     등록은 작업자가 출입구를 지나는 순간에 일어나므로 통과 시간이 register_s 를 채우는지 확인할 것 (Q-26)
 
-TODO([웹캠]) config/webcam.yaml 파라미터화 — 지금은 model_path·target_classes·rematch_threshold
-             셋만 선언한다. 등록 구역 게이트는 두지 않는다 — 시야 전체가 곧 등록 구역이다 (Q-26)
+등록 구역 게이트는 두지 않는다 — 시야 전체가 곧 등록 구역이다 (Q-26)
 
 실행
   ros2 launch mro_bringup webcam1_pc.launch.py
@@ -31,8 +30,10 @@ TODO([웹캠]) config/webcam.yaml 파라미터화 — 지금은 model_path·targ
   ros2 topic echo /webcam1/worker_descriptor
 """
 import os
+from collections import deque
 
 import cv2
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -44,28 +45,66 @@ from ament_index_python.packages import get_package_share_directory
 from mro_interfaces.msg import WorkerDescriptor
 from mro_perception.core.reid import hsv_hist, similarity   # 계약: AMR(amr_detection) 과 반드시 같은 함수
 
-SHARE = get_package_share_directory('mro_webcam')
+# 모델은 mro_perception 이 단일 출처다 (models/README.md, PR #19). 사본을 두면 한쪽만 갱신된다
+PERCEPTION_SHARE = get_package_share_directory('mro_perception')
 # ############################################################################
-MODEL_PATH = os.path.join(SHARE, 'models', 'best.pt')  # TODO: worker.pt 로 교체
-WEBCAM_INDEX = None          # None: 0~4 중 프레임 나오는 첫 장치. 외장 웹캠은 보통 1 또는 2
-CONF = 0.7                   # 단일 클래스 모델이라 오탐 많음 → 높게
+MODEL_PATH = os.path.join(PERCEPTION_SHARE, 'models', 'worker.pt')
+WEBCAM_INDEX = -1            # -1: 자동 탐색(높은 번호부터). 파라미터라 None 을 못 써서 -1 을 쓴다.
+                             # 내장 카메라가 있는 PC 는 자동 탐색이 그걸 고를 수 있다 — 그때 번호를 준다
+CONF = 0.5                   # 인지팀 perception.yaml detect_conf 와 같은 값.
+                             # F1 최적은 0.4 지만 오탐 = 오추종이고 AC-04 는 0건이 절대 기준이다
 PERIOD_S = 0.1               # 처리 주기 (10 Hz). 히스테리시스를 프레임 수로 환산하는 기준
 DETECT_S = 0.3               # 이 시간 동안 연속으로 보이면 True   (10 Hz 기준 3프레임)
 CLEAR_S = 0.5                # 이 시간 동안 연속으로 안 보이면 False (10 Hz 기준 5프레임)
 REGISTER_S = 1.0             # 트랙이 이 시간 연속 유지되면 등록 확정 (TS-U01: 등록 <= 10 s)
+DESCRIPTOR_FRAMES = 10       # 서술자를 최근 이만큼의 프레임 평균으로 만든다 (10 Hz 기준 1초).
+                             # 한 프레임만 쓰면 그게 멀거나 흐릴 때 그대로 나간다. 평균을 내면
+                             # 그 잡음이 씻겨 같은 인형끼리의 유사도가 올라간다 — 데이터셋 실측
+                             # (9/7, tools/reid_threshold.py 기준 crop 702+648):
+                             #   k=1  같은 인형 p5 0.256 / 다른 인형 p95 0.610  → 겹침 0.353
+                             #   k=10 같은 인형 p5 0.411 / 다른 인형 p95 0.602  → 겹침 0.192
+                             # 다른 인형 쪽은 거의 안 움직이고 같은 인형 쪽만 올라간다.
+                             # REGISTER_S 동안 어차피 기다리므로 그 프레임을 버리지 않고 쓴다.
+                             # 계약은 그대로다 — color_hist 는 여전히 hsv_hist() 로 만든 길이 128 이다
 PUBLISH_HZ = 1.0             # 등록된 작업자 재발행 주기. 관제가 늦게 켜져도 받게 한다
 MAX_WORKERS = 2              # SOT 확정: 작업자 2명
 TARGET_CLASSES = ['worker_a', 'worker_b']   # 이 클래스만 등록 대상. 빈 리스트면 전체 허용
                                             # (테스트: -p target_classes:="['person']")
-REMATCH_THRESHOLD = 0.7      # 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용).
+REMATCH_THRESHOLD = 0.45     # 끊긴 트랙이 기존 등록자와 같은 사람인지 판정 (등록 슬롯 재사용).
                              # robotN.yaml 의 reid_threshold(로봇의 페어링 허용 판정)와는 다른 결정이라
                              # 이름을 분리한다. 같게 두면 나중에 값을 통일해 버려 한쪽이 깨진다.
-                             # [잠정값] 계약 v1.3 — crop 이 인형 전체라 하의·머리가 공통이고,
-                             # 다른 인형끼리도 유사도가 0.5 안팎에서 시작한다. 어림값을 그대로 쓰면
-                             # 두 인형이 같은 사람으로 판정될 수 있다. worker.pt 수령 후
-                             # 인형 2체로 분포를 실제로 재서 확정할 것 (눈대중 금지)
+                             # 9/7 실측으로 확정 (tools/reid_threshold.py, 계약 v1.3 '눈대중 금지').
+                             #   서술자 평균화(DESCRIPTOR_FRAMES) 후 실기동 sim 0.55~0.91
+                             #   (n=15, 최솟값 0.55, 중앙 0.81) → 0.45 는 0.10 여유, 15건 전부 통과
+                             #   평균화 전에는 0.52~0.86 (n=6, 중앙 0.73) 이었다
+                             #   종전 0.70 은 재등록 기회 5회 중 1회만 성공했고, 평균화 후에도
+                             #   15건 중 2건이 미달이다. 실패해도 REG 2/2 가 그대로 떠 있고 발행도
+                             #   계속돼 겉으로 드러나지 않는다 — 그래서 놓치는 쪽이 더 위험하다
+                             # 낮춰서 생기는 위험(다른 인형을 같은 사람으로 봄)은 두 겹으로 막혀 있다:
+                             #   ① 같은 복장 클래스끼리만 비교한다 (아래 outfit != cls_name)
+                             #   ② 복장 상호 오분류 0/410 = 0.00 % (인지팀 실측 9/7, conf 0.5)
 SHOW_WINDOW = True
 # ############################################################################
+
+
+def mean_hist(hists):
+    """최근 프레임들의 히스토그램 평균. 한 장의 잡음(먼 거리·흐림)을 씻는다.
+
+    hsv_hist() 는 cv2.normalize(h, None) — 기본값이 NORM_L2 라 **L2 노름이 1** 이다
+    (합이 아니다). 평균을 내면 그 성질이 깨지므로 다시 L2 정규화해서 돌려준다.
+    발행되는 color_hist 가 AMR 이 만드는 것과 같은 척도여야 하기 때문이다 (계약 2절).
+
+    유사도만 보면 척도는 상관없다 — Bhattacharyya 가 척도 불변이라 어떤 배율이어도
+    같은 값이 나온다(실측 차이 5e-09). 그래서 이 정정 전후로 측정값은 바뀌지 않는다.
+    문제는 AMR 이 similarity() 말고 다른 것을 할 때다 (PR #26 PM 지적).
+    """
+    if len(hists) == 1:
+        return hists[0]
+    m = np.mean(np.stack(hists), axis=0).astype(np.float32)
+    norm = float(np.linalg.norm(m))
+    if norm <= 0:
+        return m
+    return (m / norm).astype(np.float32)
 
 
 def open_webcam(index):
@@ -85,12 +124,16 @@ def open_webcam(index):
 class WebcamDetection(Node):
     def __init__(self):
         super().__init__('webcam_register')   # launch·문서·파라미터 파일과 이름을 맞춘다
-        self.declare_parameter('model_path', MODEL_PATH)   # 9/7 worker.pt 로 교체 예정
+        self.declare_parameter('model_path', MODEL_PATH)
         self.declare_parameter('target_classes', TARGET_CLASSES)
         self.declare_parameter('rematch_threshold', REMATCH_THRESHOLD)
-        model_path = self.get_parameter('model_path').value
+        self.declare_parameter('webcam_index', WEBCAM_INDEX)
+        self.declare_parameter('conf', CONF)
+        model_path = self.get_parameter('model_path').value or MODEL_PATH   # launch 가 빈 값을 넘길 수 있다
         self.target_classes = list(self.get_parameter('target_classes').value)
         self.rematch_threshold = float(self.get_parameter('rematch_threshold').value)
+        self.conf = float(self.get_parameter('conf').value)
+        index = int(self.get_parameter('webcam_index').value)
         self.model = YOLO(model_path)
         self.names = self.model.names
         self.bridge = CvBridge()
@@ -101,17 +144,19 @@ class WebcamDetection(Node):
         # S1 등록 결과. 계약상 명령·상태·미션은 RELIABLE (기본값) — 버리면 안 된다
         self.pub_desc = self.create_publisher(WorkerDescriptor, '/webcam1/worker_descriptor', 10)
 
-        self.cap, idx = open_webcam(WEBCAM_INDEX)
+        self.cap, idx = open_webcam(None if index < 0 else index)
         if self.cap is None:
-            raise RuntimeError('웹캠을 못 열었음. v4l2-ctl --list-devices 로 번호 확인 후 WEBCAM_INDEX 설정')
+            raise RuntimeError('웹캠을 못 열었음. v4l2-ctl --list-devices 로 번호 확인 후 '
+                               '-p webcam_index:=<번호> 로 지정한다')
         self.get_logger().info(f'웹캠 /dev/video{idx} | 모델 {model_path} classes={list(self.names.values())} '
-                               f'| conf={CONF} | 대상 클래스 {self.target_classes} '
+                               f'| conf={self.conf} | 대상 클래스 {self.target_classes} '
                                f'| {DETECT_S}s 연속 → True, {CLEAR_S}s 미검출 → False')
 
         self.detected = False
         self.hit = self.miss = 0
         self.tracks = []          # (x1,y1,x2,y2,conf,cls_name,track_id) — 다음 단계(서술자·등록)에서 쓴다
         self.hists = {}           # track_id -> color_hist (float32[128]). interfaces.md: H16 x S8
+        self.hist_buf = {}        # track_id -> 최근 DESCRIPTOR_FRAMES 개 히스토그램 (평균용)
         self.track_seen = {}      # track_id -> 연속 관측 프레임 수
         self.workers = {}         # track_id -> (worker_id, outfit_class)
         self.last_logged = None
@@ -127,7 +172,7 @@ class WebcamDetection(Node):
         # ByteTrack 으로 프레임 간 동일 대상에 같은 track_id 를 유지한다 (worker_id 부여의 전제)
         tracks = []
         best = None
-        r = self.model.track(img, persist=True, conf=CONF, verbose=False)[0]
+        r = self.model.track(img, persist=True, conf=self.conf, verbose=False)[0]
         if r.boxes is not None and r.boxes.id is not None:
             for box, tid in zip(r.boxes, r.boxes.id):
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
@@ -151,9 +196,11 @@ class WebcamDetection(Node):
             if crop.size == 0:
                 continue
             h = hsv_hist(crop)
-            if tid not in self.hists:
+            if tid not in self.hist_buf:
+                self.hist_buf[tid] = deque(maxlen=DESCRIPTOR_FRAMES)
                 self.get_logger().info(f'서술자 생성 ID{tid} len={len(h)}')
-            self.hists[tid] = h
+            self.hist_buf[tid].append(h)
+            self.hists[tid] = mean_hist(self.hist_buf[tid])
 
         # 등록 판정: 트랙이 REGISTER_S 동안 끊기지 않고 보이면 worker_id 를 배정한다
         alive = {t[6] for t in tracks}

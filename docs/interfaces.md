@@ -1,7 +1,8 @@
-# Interfaces — 계약 v1.10 (2026-09-07)
+# Interfaces — 계약 v1.11 (2026-09-07)
 
 > v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
-> 토픽·메시지·서비스 정의는 v1.0 그대로이므로 구현에 영향 없다.
+> **v1.11 (9/7 저녁): 세마포어 이벤트 토픽 `/fleet/zone_event` 신설** — 대기·획득·반납·강제 회수를 기록해 K-06(교착 자동 해결률)을 센다 (I-030). `mro_interfaces` 는 바꾸지 않고 `std_msgs/String` 을 쓴다.
+> 토픽·메시지·서비스 정의는 v1.0 그대로이므로 구현에 영향 없다 (v1.11 의 토픽 하나는 추가).
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
 
@@ -61,7 +62,8 @@
 **규칙**
 - 획득: `acquire=true`. 비어 있고 대기열 선두면 `granted=true`, 아니면 `false` + `holder` 반환. 거절되면 **2초 후 재요청**한다.
 - 반납: `acquire=false`. **성공·실패와 무관하게 반드시 반납한다** (도킹 실패 시에도).
-- 강제 회수: 보유 60초 초과 시 세마포어가 회수하고 이벤트를 남긴다.
+- 강제 회수: 보유 60초 초과 시 세마포어가 회수하고 `/fleet/zone_event` 에 `RECLAIM` 을 남긴다.
+- **이벤트 (v1.11, I-030):** 세마포어는 `/fleet/zone_event`(String) 로 `"<zone_id> <robot_ns> <REJECT|GRANT|RELEASE|RECLAIM>"` 한 줄을 발행한다. `REJECT` 는 **대기가 시작될 때 1건**만(2초 재요청의 연속 거절은 발행하지 않음), `GRANT` 는 새로 획득할 때만(보유자 재요청 제외). `fleet_manager` 가 DB `events`(kind `ZONE`) 에, `kpi_logger` 가 CSV 에 남긴다. K-06 원천이며 `Intervention` 에 섞지 않는다.
 - 폴리곤 진입 **전에** 획득하고, 완전히 빠져나온 **후에** 반납한다.
 
 ---
@@ -78,6 +80,7 @@
 | `/fleet/mission` | fleet_manager | kpi_logger, UI | Mission | 상태 전이마다 |
 | `/fleet/status` | fleet_manager | control_ui, kpi_logger | FleetStatus | 1 Hz |
 | `/fleet/intervention` | control_ui | kpi_logger, fleet_manager | Intervention | 운영자 버튼 |
+| `/fleet/zone_event` | zone_semaphore | kpi_logger, fleet_manager | String | **v1.11 (I-030).** `"<zone_id> <robot_ns> <REJECT\|GRANT\|RELEASE\|RECLAIM>"`. K-06 원천 — 3절 이벤트 규칙 |
 | `mission/assigned` | fleet_manager | shuttle_mission | Mission | **S4 트리거.** 옛 `webcam/detected` 는 쓰지 않는다 |
 | `mission/finish` | fleet_manager | return_dock, **follow_target** | Bool | S9. follow_target 은 **즉시 페어링 해제·추종 중단**(≤ 1 s), return_dock 은 복귀 시작 |
 | `shuttle/status` | shuttle_mission, return_dock | fleet_manager, kpi_logger | String | READY / SHUTTLE / AT_BAY / WAITING / RETURNING / DOCK_WAIT / DOCKING / DOCKED / FAILED |
@@ -132,6 +135,7 @@
 **판정 규칙**
 - `missions.result` 는 **T_lim 기준으로 확정**한다. T_lim 초과 후 도착하면 실패로 두고 도착 사실은 `arrived_late` 로 따로 남긴다 — 이중 계상하지 않는다.
 - 개입은 `events.kind='INTERVENTION'`. **안전 정책 기인 정지(E-4·E-6) 후의 자동 재개는 개입이 아니다.**
+- 구역 토큰 이벤트는 `events.kind='ZONE'`, `value`=`REJECT|GRANT|RELEASE|RECLAIM`, `note`=zone_id. `fleet_manager` 가 `/fleet/zone_event` 를 받아 그대로 적는다 (v1.11). 개입이 아니므로 IPH 분자에 넣지 않는다.
 
 ---
 
@@ -154,6 +158,7 @@
 | **AC-05** 추종거리 · 최소 이격 | 샘플 1개 | **`approach/status == FOLLOWING` 인 동안만** | CSV `target/distance` |
 | **K-04** 재획득 | Lost 1건 | `target/visible` 1→0 (1.0 s 이상 지속) → 0→1 | CSV `target/visible` |
 | **AC-13 · K-07** IPH | 개입 1건 ÷ 시간 | 분모 = undock → 도킹 완료 **구간의 합** | 분자 DB `events` · 분모 CSV `shuttle/status` |
+| **AC-09 · K-06** 교착 자동 해결 | 대기 1건 (`REJECT` 로 시작) | `REJECT` → 같은 로봇·구역의 `GRANT` | DB `events` kind `ZONE` (CSV 동일) |
 | **AC-03 · K-01** 추종 성공률 | 유효 미션 1건 | 페어링 확정(S5) → 종료 발행(S9) | CSV 시계열 + **웹캠2 영상 판독** |
 | **AC-04 · K-03** ID Swap | 교차 1건 | 교차 이벤트 단위 | **웹캠2 영상 판독** |
 
@@ -163,6 +168,7 @@
 
 - **배송 성공률** = `result='SUCCESS'` / 전체 미션. **`result IS NULL` 도 분모에 남긴다** — 판정이 없다고 빼면 못 간 미션일수록 성공률이 올라간다. `Mission.DONE` 도달 여부로 세지 않는다 (T_lim 을 넘겨 도착해도 결국 DONE 이 된다).
 - **추종거리** = `|distance − follow_standoff_m|` 의 **p95 ≤ 0.2 m** **AND** `min(distance)` **≥ 0.3 m**. 거리 원값의 p95 가 아니고, 접근 단계(standoff 1.0·0.3 m)와 STANDBY 구간을 포함하지 않는다.
+- **교착 자동 해결률** = 60 s 안에 `GRANT` 로 끝난 대기 / 전체 대기. 그 사이 같은 구역에 `RECLAIM` 이 있었거나 60 s 를 넘긴 건은 미해결로 센다(사람 개입 없이 60 s 이내 재개 — BRD 5.3). 같은 로봇·구역의 연속 `REJECT` 는 한 건이다.
 - **IPH** = 개입 건수 / 운용 시간(h). `SAFETY_POLICY` 는 개입이 아니다 (BRD 5.3). **로그 전체 구간을 분모로 쓰지 않는다** — 미션 사이 대기가 들어가면 IPH 가 실제보다 작게 나온다.
 - **재획득** = Lost 후 게이트를 다시 통과한 건이 성공. **STANDBY·FAILED 로 끝난 건은 실패로 따로 센다.** 느린 성공으로 섞으면 K-04 의 성공률이 사라진다. `approach/status == 'SEARCHING'` 은 Lost 신호가 아니다 — 사이클 시작과 2단계 접근에도 쓰인다.
 
