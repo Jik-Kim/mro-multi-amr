@@ -148,7 +148,7 @@ def make_node(**params):
     pub_status, pub_arrived = node.pub_status.publish, node.pub_arrived.publish
     node.pub_status.publish = lambda m: (node.status_log.append(m.data), pub_status(m))
     node.pub_arrived.publish = lambda m: (node.arrived_log.append(m.data), pub_arrived(m))
-    node.nav2_ready = lambda: True
+    node.nav2_state = lambda: (True, 'active')
     node.set_parameters([Parameter(k, value=v) for k, v in {**BASE, **params}.items()])
     return node
 

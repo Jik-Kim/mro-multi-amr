@@ -288,13 +288,26 @@ class ShuttleMission(Node):
         return (self.aruco_id[0] == expect_id
                 and self.aruco_dist[0] <= self.p('aruco_max_dist_m'))
 
-    def nav2_ready(self):
+    def nav2_state(self):
+        """bt_navigator 의 준비 여부를 (준비됨, 사유) 로 돌려준다.
+
+        사유까지 남기는 이유 — '미준비' 한 줄만으로는 서비스가 아예 없는 것인지, 응답이
+        없는 것인지, 라이프사이클이 active 가 아닌 것인지 구분되지 않아 원인을 짚는 데
+        시간이 걸린다 (9/7 실주행에서 120 초를 그렇게 썼다).
+        """
         if not self.cli_state.wait_for_service(timeout_sec=2.0):
-            return False
+            return False, f'{self.ns}/bt_navigator/get_state 서비스가 없다 — Nav2 미기동'
         fut = self.cli_state.call_async(GetState.Request())
         rclpy.spin_until_future_complete(self, fut, timeout_sec=3.0)
         res = fut.result()
-        return res is not None and res.current_state.label == 'active'
+        if res is None:
+            return False, ('get_state 가 응답하지 않는다 — 같은 네임스페이스에 Nav2 가 '
+                           '중복으로 떠 있는지 확인할 것 (ros2 node list)')
+        label = res.current_state.label
+        if label != 'active':
+            return False, (f"bt_navigator 가 '{label}' 이다 — 라이프사이클 활성화가 끝나지 "
+                           '않았다. lifecycle_manager 로그를 볼 것')
+        return True, label
 
     # ── 미션 시퀀스 (메인 루프에서만 호출) ───────────────────────────
     def run_mission(self, m):
@@ -372,9 +385,15 @@ class ShuttleMission(Node):
             f'초기자세 ({x:.2f}, {y:.2f}, {math.degrees(yaw):.0f}°) 전송 — 자신의 도크 map 좌표')
 
     def wait_nav2(self):
-        while not self.nav2_ready():
-            self.get_logger().warn('Nav2(bt_navigator) 미준비 — 복구 스크립트 Step 1 후 자동 진행')
+        ready, reason = self.nav2_state()
+        while not ready:
+            # 경과 시간을 같이 남긴다 — 같은 문구가 반복되면 진행 중인지 멈춘 건지 알 수 없다
+            self.get_logger().warn(
+                f"Nav2 미준비 ({self.now() - self.t0:.0f} s 경과 / T_lim {self.p('t_lim_s'):.0f} s): "
+                f'{reason}')
             self.wait(lambda: False, timeout=self.p('nav2_poll_s'))
+            ready, reason = self.nav2_state()
+        self.get_logger().info('Nav2 준비됨 (bt_navigator active)')
 
     def confirm_aruco(self, bay):
         """베이 도착 확정. 마커를 확인하지 못하면 전진·체류하지 않고 포기한다 (FR-08 오도착 0건)."""
