@@ -46,6 +46,8 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
   켜지면 곧바로 검출·발행한다. 결과를 "언제부터 쓸지" 는 follow_target 이 shuttle/arrived·target/paired 로 정한다
   (계약 v1.10). 옛 goto_goal/arrived 게이트는 interfaces.md '쓰지 않는 옛 토픽' 에 따라 제거했다.
 
+사용법·시험 절차(TS-U03·U04·U05·Q-13)·오버레이 읽는 법: 패키지 루트 README.md (ros2_ws/src/mro_perception/README.md)
+
 실행: ros2 launch mro_bringup robot.launch.py            (namespace·tf 리맵·robotN.yaml 을 launch 가 붙인다)
 단독: ros2 run mro_perception amr_detection_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static
 
