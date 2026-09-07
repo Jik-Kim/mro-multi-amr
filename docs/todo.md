@@ -57,7 +57,7 @@
 - [ ] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26) · 마감 9/8
 - [ ] **웹캠1 출입구 체류 시간 실측** — 작업자가 프레임을 지나는 동안 `register_s` 1.0 s 를 채우는지. 못 채우면 `register_s` 하향 또는 시야를 안쪽 통로까지 (Q-26 남은 확인). TS-U01 은 한 명씩 순차 진입 · 마감 9/8
 - [x] **웹캠2 발행 주기 저하 (I-016)** — 캡처 스레드·BUFFERSIZE·주기 분리·CompressedImage 를 `webcam_hint_node.py` 에 병합 (PR #14, 9/7 머지) · 마감 9/7
-- [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 두 타이머를 각각 `MutuallyExclusiveCallbackGroup` 으로. 지금은 한 `Reentrant` 그룹이라 `model.track` 이 겹쳐 돌 수 있다 · 마감 9/8
+- [ ] `webcam_hint_node.py`: **YOLO 타이머 재진입 차단 (I-027)** — 개별 `MutuallyExclusiveCallbackGroup`, `read()` 실패 대기, `stop → join → release` 종료 순서 코드 완료(`43e0b54`); 실장비 검증 대기 · 마감 9/8
 - [ ] `webcam2.py`·`webcam2_subscriber.py` 정리 — 캡처가 힌트 노드로 옮겨져 같은 `/dev/video` 를 두 번 여는 잔재. 삭제하거나 subscriber 를 `CompressedImage` 뷰어로 바꾸고 `setup.py` 진입점 정리 · 마감 9/8
 - [x] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 (PR #14) · 마감 9/8
 - [ ] `webcam_hint_node.py`: `worker.pt` 교체 후 **TS-U02** — 힌트 map 좌표 vs 실측 ≤ 0.3 m, 지연 ≤ 0.2 s (손 흔들기 → 화면) · 마감 9/8
