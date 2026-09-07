@@ -382,6 +382,57 @@ def test_safety_policy_is_recorded_without_filtering():
     ]
 
 
+def test_zone_events_are_recorded_with_contract_fields():
+    """구역 이벤트 4종이 계약의 DB 필드로 기록되는지 확인한다."""
+    database = FakeDatabase()
+    fake = SimpleNamespace(
+        robot={'/robot3': {}, '/robot4': {}},
+        db=database,
+        _now_s=lambda: 42.5,
+        get_logger=lambda: FakeLogger(),
+    )
+    messages = (
+        'P1 /robot3 REJECT',
+        'P1 /robot3 GRANT',
+        'DOCK /robot4 RELEASE',
+        'DOCK /robot4 RECLAIM',
+    )
+
+    for data in messages:
+        FleetManager._zone_event_cb(fake, SimpleNamespace(data=data))
+
+    assert database.events == [
+        (42.5, '/robot3', 'ZONE', 'REJECT', 'P1'),
+        (42.5, '/robot3', 'ZONE', 'GRANT', 'P1'),
+        (42.5, '/robot4', 'ZONE', 'RELEASE', 'DOCK'),
+        (42.5, '/robot4', 'ZONE', 'RECLAIM', 'DOCK'),
+    ]
+
+
+def test_invalid_zone_events_are_not_recorded():
+    """형식·구역·로봇·동작이 계약과 다르면 DB에 기록하지 않는다."""
+    database = FakeDatabase()
+    logger = FakeLogger()
+    fake = SimpleNamespace(
+        robot={'/robot3': {}, '/robot4': {}},
+        db=database,
+        _now_s=lambda: 42.5,
+        get_logger=lambda: logger,
+    )
+    invalid_messages = (
+        'P1 /robot3',
+        'P2 /robot3 GRANT',
+        'P1 /robot5 GRANT',
+        'P1 /robot3 WAIT',
+    )
+
+    for data in invalid_messages:
+        FleetManager._zone_event_cb(fake, SimpleNamespace(data=data))
+
+    assert database.events == []
+    assert len(logger.warnings) == len(invalid_messages)
+
+
 def test_docked_is_not_overwritten_by_periodic_following():
     """DOCKED 뒤 FOLLOWING 재발행이 화면과 미션 완료를 못 덮는지 확인한다."""
     fake = make_status_manager()
