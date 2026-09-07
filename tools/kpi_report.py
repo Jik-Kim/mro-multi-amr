@@ -17,7 +17,8 @@
                   approach/status 의 SEARCHING 은 정상 절차에서도 쓰이므로 Lost 신호가 아니다
   K-05  리드타임  waiting_at - created_at (요청 -> 대기공간 도착). DONE 은 도킹 완료라 다르다
   K-06  교착해결  /fleet/zone_event 의 REJECT -> 같은 로봇·구역 GRANT 가 60 s 안.
-                  RECLAIM(강제 회수)은 미해결. 개입이 아니므로 IPH 에 넣지 않는다 (v1.11)
+                  단 그 사이 그 구역에 RECLAIM 이 있으면 미해결 — RECLAIM 은 보유자 ns 로
+                  오므로 구역 단위로 본다 (I-032). 개입이 아니라 IPH 에 넣지 않는다 (v1.11)
 
 kpi_logger 는 거르지 않고 받아적는다. 구간을 자르고 세는 것은 여기서만 한다.
 """
@@ -183,20 +184,42 @@ def zone_resolution(rows, t_end):
     계약 3절이 REJECT 는 대기 시작 1건만, GRANT 는 새 획득만 내도록 정했으므로
     한 REJECT 와 그 뒤의 GRANT 하나가 짝이 된다.
 
-      해결   같은 로봇·같은 구역의 GRANT 가 ZONE_RESOLVE_S 안에 왔다
-      미해결 RECLAIM 이 왔다(세마포어가 강제로 뺏음) · 시간 초과 · 로그 끝까지 안 옴
+      해결   같은 로봇·구역의 GRANT 가 ZONE_RESOLVE_S 안에 왔고,
+             그 사이 그 구역에 RECLAIM 이 없었다
+      미해결 [REJECT, GRANT) 구간에 그 구역의 RECLAIM 이 있었다 · 시간 초과 ·
+             로그 끝까지 GRANT 가 안 옴
 
-    RELEASE 는 보유자가 정상 반납한 것이라 대기와 짝짓지 않는다.
+    RECLAIM 은 구역 단위로 본다 (I-032). 세마포어가 RECLAIM 을 **보유자** ns 로 내기
+    때문이다 (zone_semaphore_node.py: self.event(z, h, 'RECLAIM'), h = holder).
+    대기자 열만 보면 RECLAIM 이 절대 오지 않아, 강제로 뺏어서 넘어간 것을
+    '자동 해결' 로 세고 강제 회수 카운트도 항상 0 이 된다.
+
+    RELEASE 는 보유자의 정상 반납이라 대기와 짝짓지 않는다.
     이것은 개입이 아니다 — Intervention 과 섞으면 IPH 분자가 부풀어 AC-13 이 나빠 보인다.
     """
-    ev = defaultdict(list)                    # (robot, zone) -> [(t, action)]
+    per_robot = defaultdict(list)             # (robot, zone) -> [(t, action)]  대기 짝짓기용
+    reclaims = defaultdict(list)              # zone -> [t]                      구역 단위
     for r in rows:
         if r['source'] != 'zone':
             continue
-        ev[(r['robot'], r['key'])].append((r['t'], r['value']))
+        if r['value'] == 'RECLAIM':
+            reclaims[r['key']].append(r['t'])
+        else:
+            per_robot[(r['robot'], r['key'])].append((r['t'], r['value']))
+    for ts in reclaims.values():
+        ts.sort()
 
-    waits, resolved, reclaimed, spans = 0, 0, 0, []
-    for seq in ev.values():
+    def reclaimed_between(zone, t0, t1):
+        """[t0, t1] 에 그 구역의 강제 회수가 있었나.
+
+        끝점을 포함한다. 세마포어는 보유자에게서 뺏은 뒤 곧바로 대기자에게 넘기므로
+        RECLAIM 과 GRANT 의 시각이 같게 찍힌다 (PM 재현: 둘 다 t=61). 반열린 구간으로
+        두면 그 RECLAIM 이 빠져 '강제로 뺏어서 넘어간 것' 이 자동 해결로 잡힌다.
+        """
+        return any(t0 <= t <= t1 for t in reclaims.get(zone, ()))
+
+    waits, resolved, spans = 0, 0, []
+    for (_robot, zone), seq in per_robot.items():
         seq.sort(key=lambda x: x[0])
         rejected_at = None
         for t, action in seq:
@@ -208,13 +231,14 @@ def zone_resolution(rows, t_end):
                 continue                      # 대기 없이 온 GRANT/RELEASE 는 K-06 대상이 아니다
             elif action == 'GRANT':
                 dur = t - rejected_at
-                if dur <= ZONE_RESOLVE_S:
+                if dur <= ZONE_RESOLVE_S and not reclaimed_between(zone, rejected_at, t):
                     resolved += 1
                     spans.append(dur)
-                rejected_at = None            # 시간 초과면 미해결로 두고 대기를 닫는다
-            elif action == 'RECLAIM':
-                reclaimed += 1                # 스스로 못 풀어 세마포어가 뺏었다
-                rejected_at = None
+                rejected_at = None            # 시간 초과·강제 회수면 미해결로 두고 대기를 닫는다
+        if rejected_at is not None and reclaimed_between(zone, rejected_at, t_end):
+            pass                              # 끝까지 GRANT 가 안 온 대기 — 이미 미해결이다
+
+    reclaimed = sum(len(ts) for ts in reclaims.values())
     return waits, resolved, reclaimed, spans
 
 
