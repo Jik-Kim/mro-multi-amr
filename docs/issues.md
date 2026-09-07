@@ -319,7 +319,8 @@
   **TS-07 배송 20회를 9/9 에 미리 빼므로 그날 바로 드러난다.**
 - **조치·남은 것** — `shuttle_mission` 이 계약 4절의 값(`READY / SHUTTLE / AT_BAY / WAITING / FAILED`)을 상태가 바뀔 때 발행한다. **`WAITING` 은 대기공간 waypoint 도착이 확정된 시점에 한 번** 낸다 — 이 시각이 K-05 리드타임의 끝이자 AC-08 판정 기준점이다. `shuttle/arrived` 는 `follow_target` 용이라 그대로 두고 별개로 낸다.
   **코드 조치 (9/7, 주행).** `shuttle_mission_node.py` 를 개편해 상태 전이마다 발행하도록 했다 — 기동 `READY`, undock 후 `SHUTTLE`, 베이 도착 `AT_BAY`(ArUco 확인·전진·체류·P1 토큰 대기 동안 유지), 토큰 획득 후 `SHUTTLE`, **대기공간 도착 확정 시 `WAITING` 한 번**, 포기 시 `FAILED`. P1 토큰 대기 중에 `WAITING` 을 내지 않는 것이 핵심이다 — 그러면 창고에 있는 로봇이 도착으로 기록돼 리드타임이 짧게 찍힌다.
-  **확인한 것** — navigator 만 스텁으로 바꿔 상태 머신을 돌린 단위 검증 7건 통과: 정상 미션의 상태열 `SHUTTLE→AT_BAY→SHUTTLE→WAITING`, ArUco 불일치 시 `WAITING`·`arrived` 미발행, T_lim 초과 시 미션 폐기(늦은 도착을 계상하지 않음, 계약 7절), 토큰 거절 후 재요청 중 `AT_BAY` 유지, P1 폴리곤 이탈 시점 반납, `dock_pose` (0,0,0) 거부(I-013), ArUco 신선도·거리 판정. **확인하지 못한 것 — 실주행·실제 `fleet_manager` 연동은 아직이다** (TS-07 9/9). 그때까지 진행중으로 둔다.
+  **확인한 것** — navigator 만 스텁으로 바꿔 상태 머신을 돌린 단위 검증 8건 통과: 정상 미션의 상태열 `SHUTTLE→AT_BAY→SHUTTLE→WAITING`, ArUco 불일치 시 `WAITING`·`arrived` 미발행, T_lim 초과 시 미션 폐기(늦은 도착을 계상하지 않음, 계약 7절), 토큰 거절 후 재요청 중 `AT_BAY` 유지, 토큰을 베이 출발 전에 잡고 대기공간 도착 후 푸는 시점(방법 B, 목표 순번으로 확인)과 그 전제(베이·대기공간이 P1 폴리곤 밖), `dock_pose` (0,0,0) 거부(I-013), ArUco 신선도·ID·거리 판정.
+  **확인하지 못한 것** — ① **실주행 안정성.** 9/7 에 세 번 시도했으나 환경 문제로 주행 실패가 자주 있었다 (발행 터미널의 디스커버리 설정 누락, 같은 로봇을 문 중복 세션 때문에 `bt_navigator` 가 `active` 미도달). 겪은 것은 `docs/shuttle_test_guide.md` 절차로 옮겼다. ② **실제 `fleet_manager` 연동** (TS-07 9/9). ③ **대기공간 정차 중 로봇 몸통이 P1 을 막는지** — robot3 정차점이 폴리곤에서 0.20 m 인데 반지름은 0.22 m 다. 2대 시험에서 판단한다. 위 셋이 남아 있어 진행중으로 둔다.
 
 ### I-025
 
