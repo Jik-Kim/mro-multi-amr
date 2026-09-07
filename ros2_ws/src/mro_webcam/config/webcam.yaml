@@ -31,6 +31,6 @@ webcam_hint:                # 웹캠2 (PC-W2) — 재탐지 힌트 E-1. 한세�
     compressed_topic: "/webcam2/image_raw/compressed"
     image_frame_id: "webcam2_optical_frame"
     jpeg_quality: 80
-    detection_confirm_count: 3 # 동일 track ID가 3회 검출되면 최초 확정
+    detection_confirm_s: 0.3     # 동일 track ID가 이 시간 검출되면 최초 확정
     detection_hold_s: 0.5     # 순간 누락 시 기존 트랙 연속성 유지 시간
     lost_confirm_s: 1.0       # 이 시간 이상 미검출 시 Lost 확정

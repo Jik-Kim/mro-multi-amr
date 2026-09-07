@@ -7,6 +7,7 @@
 
 웹캠2 정보는 재탐지 힌트와 KPI 계측에만 사용하고 안전 판단에는 쓰지 않는다.
 """
+import math
 import os
 import threading
 import time
@@ -57,7 +58,7 @@ class NodeConfig:
     homography_path: str
     confidence: float
     target_classes: list
-    detection_confirm_count: int
+    detection_confirm_s: float
     detection_hold_s: float
     lost_confirm_s: float
     hint_valid_s: float
@@ -173,7 +174,9 @@ class WebcamHint(Node):
         self.jpeg_quality = config.jpeg_quality
         self.confidence = config.confidence
         self.target_classes = config.target_classes
-        self.detection_confirm_count = config.detection_confirm_count
+        self.detection_confirm_count = math.ceil(
+            config.detection_confirm_s * config.process_hz
+        )
         self.detection_hold_s = config.detection_hold_s
         self.lost_confirm_s = config.lost_confirm_s
         self.hint_valid_s = config.hint_valid_s
@@ -227,7 +230,7 @@ class WebcamHint(Node):
             homography_path=str(self.declare_parameter('homography_json', '').value),
             confidence=float(self.declare_parameter('confidence', 0.5).value),
             target_classes=list(self.declare_parameter('target_classes', DEFAULT_CLASSES).value),
-            detection_confirm_count=int(self.declare_parameter('detection_confirm_count', 3).value),
+            detection_confirm_s=float(self.declare_parameter('detection_confirm_s', 0.3).value),
             detection_hold_s=float(self.declare_parameter('detection_hold_s', 0.5).value),
             lost_confirm_s=float(self.declare_parameter('lost_confirm_s', 1.0).value),
             hint_valid_s=float(self.declare_parameter('hint_valid_s', 2.0).value),
@@ -245,7 +248,7 @@ class WebcamHint(Node):
         if not 1 <= self.jpeg_quality <= 100:
             raise ValueError('jpeg_quality는 1~100 범위여야 합니다.')
         if self.detection_confirm_count <= 0 or self.detection_hold_s < 0.0 or self.lost_confirm_s <= 0.0 or self.hint_valid_s <= 0.0:
-            raise ValueError('detection_confirm_count는 1 이상이고 추적 시간 파라미터는 음수일 수 없습니다.')
+            raise ValueError('탐지 확정 횟수는 1 이상이고 추적 시간 파라미터는 음수일 수 없습니다.')
         if not homography_path:
             raise ValueError('homography_json 경로가 필요합니다.')
 
