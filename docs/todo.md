@@ -5,16 +5,16 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 71/106 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 72/109 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 6/15 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/27 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 25/38 | `███████░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 25/40 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
-| mro_bringup [PM 김병직] | 6/9 | `███████░░░` | — |
+| mro_bringup [PM 김병직] | 7/10 | `███████░░░` | — |
 
 **오늘 마감 1건**
 
@@ -98,6 +98,8 @@
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
 - [ ] **추종거리 분포 실측 (I-029)** — `xy_goal_tolerance` 0.25 고정이라 정지 시 오차 25 cm. TS-U07 로 `target/distance` p95·min 을 재고 미달이면 `cmd_vel` 미세 보정 구현 (PM: ③→② 순서, 기준 완화는 마지막) · 마감 9/8
 - [ ] `follow_target_node.py`: 힌트 구독을 `/webcam2/target_hint`(**TargetHint, sensor_data QoS**) 로 — 지금은 옛 `webcam/car_map_point` PointStamped RELIABLE 이라 BEST_EFFORT 발행자(PR #14)의 힌트를 못 받는다 · 마감 9/8
+- [ ] **`shuttle_mission_node.py`: P1 대기 중 포기해도 반납을 부를 것 (I-033)** — 거절당하면 세마포어 대기열에 들어가는데 `token_held` 가 False 라 `release_token` 이 그냥 돌아온다. T_lim 으로 끊기면 유령 대기열이 남아 **P1 이 영구히 잠기고 watchdog 도 못 푼다**. `token_requested` 플래그 추가. 거절만 반복하다 T_lim 으로 끝나는 단위 시험도 함께 · 마감 9/8
+- [ ] **`shuttle_mission_node.py`: 성공 직후 `READY` 를 내지 말 것 (I-034)** — `kpi_report` 의 `DOCKED_STATES` 에 `READY` 가 있어 AC-13 운용시간이 대기공간에서 끊긴다. 한 사이클 재현에서 분모 390 s → 150 s, IPH 27.7 → 72.0 회/h (K-07 목표 ≤ 1.0). 성공 경로는 `WAITING` 유지, 포기 경로의 `FAILED`→`READY` 는 그대로 · 마감 9/8
 - [ ] `follow_target_node.py`: 시작 신호 구독을 옛 `goto_goal/arrived` → **`shuttle/arrived`** 로 (계약 4절, 옛 토픽은 '쓰지 않는 옛 토픽' 목록). `shuttle_mission` 이 계약 이름으로 발행하도록 바뀌면 이걸 안 고치는 순간 S5 합류가 시작되지 않는다 · 마감 9/8
 - [x] **셔틀 실주행 시험 절차 문서화** — `docs/shuttle_test_guide.md`. 단계별 설계, 1단계 절차, 로그 해석·증상별 판별. `fleet_manager`·마커 없이 주행 골격만 떼어 확인하는 방법과 **그래서 무엇이 확인되지 않는지**를 같이 적었다 · 마감 9/8
 - [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (관제 → 주행 이관) · 마감 9/8
@@ -132,6 +134,7 @@
 - [x] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) (PR #7) · 마감 9/9
 
 ## mro_bringup [PM 김병직]
+- [x] **셔틀 파라미터 7개를 `robotN.yaml` 로, `arena_yaml` 경로를 `robot.launch.py` 로** (PR #36 주행 요청, 계약 5절 단일 출처) — `bay_advance_m`·`aruco_max_dist_m`·`aruco_valid_s`·`aruco_confirm_s`·`aruco_retry`·`token_retry_s`·`nav2_poll_s`. `arena.yaml` 은 데이터 yaml 이라 파라미터 파일로 못 넘겨 경로만 준다. 노드의 런타임 조회 대체값은 단독 실행용으로 그대로 둔다 · 마감 9/8
 - [x] robot / webcam_pc / fleet_pc launch, params 골격 · 마감 9/7
 - [x] 설계도 4장 — `docs/diagrams/` (STEP 1·2·3-1·3-2) · 마감 9/8
 - [x] launch 가 `webcam.yaml` 을 넘기도록 연결 — webcam1/webcam2 launch (9/7) · 마감 9/7
