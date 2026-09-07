@@ -13,7 +13,7 @@
   AC-13 IPH       개입 / 운용시간 <= 1.0. 운용시간은 undock~DOCKED 의 합이지
                   로그 전체 구간이 아니다. SAFETY_POLICY 는 개입이 아니다
   K-04  재획득    Lost 는 target/visible 1->0 (LOST_MIN_S 이상 지속).
-                  재획득은 0->1. STANDBY/FAILED 로 끝난 건은 실패로 센다.
+                  재획득은 0->1. 단 그 구간에 STANDBY/FAILED 가 있었으면 실패로만 센다 (I-028).
                   approach/status 의 SEARCHING 은 정상 절차에서도 쓰이므로 Lost 신호가 아니다
   K-05  리드타임  waiting_at - created_at (요청 -> 대기공간 도착). DONE 은 도킹 완료라 다르다
 
@@ -128,43 +128,18 @@ def operating_seconds(rows, t_end):
 
 # ── K-04 Lost / 재획득 ────────────────────────────────────────────
 def reacquisition(rows, t_end):
-    """target/visible 1->0 (LOST_MIN_S 이상) 을 Lost 로, 0->1 을 재획득으로 센다."""
-    vis = defaultdict(list)
-    for r in rows:
-        if r['source'] == 'visible':
-            try:
-                vis[r['robot']].append((r['t'], int(r['value'])))
-            except ValueError:
-                pass
-    appr = [r for r in rows if r['source'] == 'status' and r['key'] == 'approach']
+    """Lost 1건을 성공·실패 어느 한쪽으로만 센다 (I-028).
 
-    ok_spans, failed = [], 0
-    for ns, seq in vis.items():
-        lost_at = None
-        for t, v in seq:
-            if v == 0 and lost_at is None:
-                lost_at = t
-            elif v == 1 and lost_at is not None:
-                dur = t - lost_at
-                if dur >= LOST_MIN_S:
-                    ok_spans.append(dur)
-                lost_at = None                # 짧은 끊김은 Lost 로 세지 않는다
-        if lost_at is not None and t_end - lost_at >= LOST_MIN_S:
-            failed += 1                       # 끝까지 못 찾음
-            lost_at_final = lost_at
-        else:
-            lost_at_final = None
-        # 재획득 구간 안에서 STANDBY/FAILED 로 빠진 건은 성공이 아니다
-        for a in appr:
-            if a['robot'] != ns or a['value'] not in FAIL_STATES:
-                continue
-            if lost_at_final is not None and a['t'] >= lost_at_final:
-                continue                      # 위에서 이미 실패로 셈
-    return ok_spans, failed
+    Lost      target/visible 1->0 이 LOST_MIN_S 이상 지속된 것. 짧은 끊김은 세지 않는다
+    실패      그 구간 안에 approach/status 가 STANDBY/FAILED 였다 — 로봇이 탐색을 포기했다.
+              그 뒤 대상이 다시 보여도 로봇이 재획득한 것이 아니다
+    성공      포기 없이 0->1 로 돌아온 것. 걸린 시간을 p95 에 넣는다
+    미복귀    로그 끝까지 0 인 채로 끝난 것
 
-
-def reacq_failures_by_state(rows, t_end):
-    """Lost 구간 중 STANDBY/FAILED 로 끝난 건 수."""
+    종전에는 성공을 reacquisition() 이, 실패를 reacq_failures_by_state() 가 각자
+    로그를 훑어 같은 Lost 가 양쪽에 들어갔다. 두 함수를 하나로 합쳐 구간을 닫는
+    그 자리에서 판정한다. 실패 쪽에 LOST_MIN_S 필터가 없던 것도 함께 고쳤다.
+    """
     vis = defaultdict(list)
     for r in rows:
         if r['source'] == 'visible':
@@ -176,17 +151,25 @@ def reacq_failures_by_state(rows, t_end):
     for r in rows:
         if r['source'] == 'status' and r['key'] == 'approach':
             appr[r['robot']].append((r['t'], r['value']))
-    fails = 0
+
+    ok_spans, gave_up, unfinished = [], 0, 0
     for ns, seq in vis.items():
+        states = appr.get(ns, [])
         lost_at = None
         for t, v in seq:
             if v == 0 and lost_at is None:
                 lost_at = t
             elif v == 1 and lost_at is not None:
-                if any(lost_at <= at <= t and st in FAIL_STATES for at, st in appr.get(ns, [])):
-                    fails += 1
-                lost_at = None
-    return fails
+                dur = t - lost_at
+                if dur >= LOST_MIN_S:
+                    if any(lost_at <= at <= t and st in FAIL_STATES for at, st in states):
+                        gave_up += 1
+                    else:
+                        ok_spans.append(dur)
+                lost_at = None                # 짧은 끊김은 Lost 로 세지 않는다
+        if lost_at is not None and t_end - lost_at >= LOST_MIN_S:
+            unfinished += 1
+    return ok_spans, gave_up, unfinished
 
 
 # ── AC-08 / K-05 : 관제 DB ────────────────────────────────────────
@@ -276,9 +259,8 @@ def main():
             print('  리드타임: waiting_at 이 기록된 미션 없음')
 
     # K-04
-    ok, unfinished = reacquisition(rows, t_end)
-    by_state = reacq_failures_by_state(rows, t_end)
-    fails = unfinished + by_state
+    ok, gave_up, unfinished = reacquisition(rows, t_end)
+    fails = gave_up + unfinished
     print('\nK-04 Lost 재획득 — visible 1→0 (≥%.1f s) 기준' % LOST_MIN_S)
     tot = len(ok) + fails
     if tot == 0:
@@ -286,7 +268,7 @@ def main():
     else:
         rate = len(ok) / tot * 100
         print(f'  Lost {tot} 회 · 재획득 {len(ok)} · 실패 {fails}'
-              f'(STANDBY/FAILED {by_state}, 미복귀 {unfinished}) '
+              f'(포기 {gave_up}, 미복귀 {unfinished}) '
               f'→ 성공률 {rate:.1f}% [{"PASS" if rate >= 90 else "FAIL"} ≥90]')
         if ok:
             print(f'  재획득 시간(s)  평균 {sum(ok)/len(ok):.1f}  p50 {percentile(ok, 50):.1f}  '
