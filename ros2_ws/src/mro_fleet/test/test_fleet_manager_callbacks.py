@@ -13,6 +13,7 @@ class FakeDatabase:
         """빈 이벤트 목록을 준비한다."""
         self.events = []
         self.overdue = []
+        self.workers = []
 
     def event(self, *values):
         """전달된 이벤트 값을 순서대로 보관한다."""
@@ -21,6 +22,10 @@ class FakeDatabase:
     def expire_overdue(self, now, t_lim_s):
         """타이머에 전달할 기한 초과 미션 목록을 반환한다."""
         return self.overdue
+
+    def upsert_worker(self, *values):
+        """확정된 작업자 배정 값을 순서대로 보관한다."""
+        self.workers.append(values)
 
 
 def make_status_manager(mission_state=Mission.FOLLOWING):
@@ -73,6 +78,167 @@ class FakePublisher:
         self.messages.append(message)
 
 
+class FakeTimer:
+    """등록 배치 타이머의 취소 여부를 보관하는 테스트 대역."""
+
+    def __init__(self, callback):
+        """호출할 콜백과 초기 상태를 저장한다."""
+        self.callback = callback
+        self.cancelled = False
+
+    def cancel(self):
+        """타이머가 취소됐음을 기록한다."""
+        self.cancelled = True
+
+
+class FakeLogger:
+    """관제 로그 메시지를 보관하는 테스트 대역."""
+
+    def __init__(self):
+        """로그 목록을 준비한다."""
+        self.infos = []
+        self.warnings = []
+
+    def info(self, message):
+        """정보 로그를 보관한다."""
+        self.infos.append(message)
+
+    def warn(self, message):
+        """경고 로그를 보관한다."""
+        self.warnings.append(message)
+
+
+def make_worker_manager(assigned=None, batteries=None):
+    """작업자 배정 콜백 검증에 필요한 최소 관제 객체를 만든다."""
+    robots = ['/robot3', '/robot4']
+    database = FakeDatabase()
+    logger = FakeLogger()
+    fake = SimpleNamespace(
+        robots=robots,
+        robot={
+            namespace: {
+                'battery': (batteries or {}).get(namespace, 1.0),
+            }
+            for namespace in robots
+        },
+        worker_robot=dict(assigned or {}),
+        pending_workers={},
+        worker_assignment_timer=None,
+        worker_assignment_window_s=1.0,
+        db=database,
+        _now_s=lambda: 15.0,
+        get_logger=lambda: logger,
+    )
+
+    def create_timer(_period, callback):
+        return FakeTimer(callback)
+
+    def destroy_timer(_timer):
+        return True
+
+    fake.create_timer = create_timer
+    fake.destroy_timer = destroy_timer
+    for method_name in ('_available_robots', '_flush_pending_workers'):
+        setattr(
+            fake,
+            method_name,
+            MethodType(getattr(FleetManager, method_name), fake),
+        )
+    return fake, database, logger
+
+
+def worker_descriptor(worker_id):
+    """배정 테스트용 작업자 서술자를 만든다."""
+    outfit_class = {
+        'W1': 'worker_a',
+        'W2': 'worker_b',
+    }[worker_id]
+    return SimpleNamespace(
+        worker_id=worker_id,
+        outfit_class=outfit_class,
+    )
+
+
+def register_workers(worker_ids):
+    """지정 순서로 작업자를 등록하고 최종 배정을 반환한다."""
+    fake, database, _logger = make_worker_manager()
+    for worker_id in worker_ids:
+        FleetManager._worker_cb(fake, worker_descriptor(worker_id))
+    if fake.worker_assignment_timer is not None:
+        fake.worker_assignment_timer.callback()
+    return fake.worker_robot, database
+
+
+def test_workers_are_assigned_by_id_for_w1_then_w2():
+    """W1, W2 입력이 worker_id 순서대로 배정되는지 확인한다."""
+    assignments, _database = register_workers(['W1', 'W2'])
+
+    assert assignments == {'W1': '/robot3', 'W2': '/robot4'}
+
+
+def test_workers_are_assigned_by_id_for_w2_then_w1():
+    """W2가 먼저 와도 W1이 robot3에 배정되는지 확인한다."""
+    assignments, _database = register_workers(['W2', 'W1'])
+
+    assert assignments == {'W1': '/robot3', 'W2': '/robot4'}
+
+
+def test_worker_assignment_is_independent_of_callback_order():
+    """같은 작업자 집합의 배정 결과가 입력 순서와 무관한지 확인한다."""
+    forward, _database = register_workers(['W1', 'W2'])
+    reverse, _database = register_workers(['W2', 'W1'])
+
+    assert forward == reverse
+
+
+def test_single_worker_is_assigned_after_batch_window():
+    """작업자 한 명도 배치 창이 끝나면 기존 첫 로봇에 배정되는지 확인한다."""
+    assignments, database = register_workers(['W1'])
+
+    assert assignments == {'W1': '/robot3'}
+    assert database.workers == [
+        ('W1', 'worker_a', 15.0, '/robot3')
+    ]
+
+
+def test_existing_worker_is_not_reassigned_by_new_registration():
+    """기존 배정을 유지하면서 새 작업자에게 남은 로봇을 배정하는지 확인한다."""
+    fake, database, _logger = make_worker_manager(
+        assigned={'W2': '/robot3'}
+    )
+
+    FleetManager._worker_cb(fake, worker_descriptor('W1'))
+    fake.worker_assignment_timer.callback()
+
+    assert fake.worker_robot == {
+        'W2': '/robot3',
+        'W1': '/robot4',
+    }
+    assert database.workers == [
+        ('W1', 'worker_a', 15.0, '/robot4')
+    ]
+
+
+def test_pending_worker_request_keeps_low_battery_rejection():
+    """배치 대기 중 요청도 먼저 배정한 뒤 기존 FR-06을 적용하는지 확인한다."""
+    fake, database, _logger = make_worker_manager(
+        batteries={'/robot3': 0.24}
+    )
+    fake.battery_min = 0.25
+    FleetManager._worker_cb(fake, worker_descriptor('W1'))
+    request = SimpleNamespace(worker_id='W1', bay='A')
+    response = SimpleNamespace(accepted=True, mission_id='', message='')
+
+    result = FleetManager._request_cb(fake, request, response)
+
+    assert fake.worker_robot == {'W1': '/robot3'}
+    assert result.accepted is False
+    assert '배터리 임계 미만' in result.message
+    assert database.events == [
+        (15.0, '/robot3', 'ASSIGN_REFUSED_BATTERY', 0.24)
+    ]
+
+
 def test_return_all_accepts_empty_robot_namespace():
     """RETURN_ALL이 빈 robot_ns여도 두 로봇에 발행되는지 확인한다."""
     fake = SimpleNamespace(
@@ -100,6 +266,7 @@ def test_low_battery_rejects_mission_and_records_reason():
     """배터리 25% 미만 요청이 거부되고 사유가 남는지 확인한다."""
     fake = SimpleNamespace(
         worker_robot={'W1': '/robot3'},
+        pending_workers={},
         robot={'/robot3': {'battery': 0.24}},
         battery_min=0.25,
         db=FakeDatabase(),
