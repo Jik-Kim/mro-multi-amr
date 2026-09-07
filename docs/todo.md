@@ -44,12 +44,12 @@
 - [ ] `reid_threshold` 확정 — 같은/다른 인형 유사도 분포를 그려 결정 (SOT Q-13). 추출 영역이 인형 전체라 다른 인형끼리도 0.5 안팎에서 시작한다 · 마감 9/8
 
 ## mro_webcam [웹캠 — 한세교, 김학민]
-- [ ] **새 아레나 호모그래피 cam1/cam2 캘리브레이션 (I-002)** — 맵은 9/5 에 나왔다 · 마감 9/6
+- [ ] **새 아레나 호모그래피 cam1/cam2 캘리브레이션 (I-002)** — WebCam2 캘리브레이션 완료, 재투영 오차 검증 대기; WebCam1 상태 확인 필요 · 마감 9/6
 - [x] `webcam2.py` USB 캡처 + `calibrate_cam2_markers.py` 마커 캘리브레이션 도구 (PR #2) · 마감 9/6
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [ ] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) · 마감 9/8
 - [ ] `webcam_register_node.py`: 등록 구역 게이트 — 관제탑 위치 확정 후 · 마감 9/8
-- [ ] **웹캠2 발행 주기 저하 (I-016)** — `webcam2.py` 에도 `BUFFERSIZE=1`·주기 분리·Compressed 적용 · 마감 9/7
+- [ ] **웹캠2 발행 주기 저하 (I-016)** — `webcam_hint_node.py` 캡처·YOLO·Compressed 발행 분리 코드 완료; `buffer_size=1`, 10 Hz 유지, 반응 지연 ≤ 0.2 s 실장비 검증 대기 · 마감 9/7
 - [ ] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
 - [x] `tools/kpi_report.py`: 추종거리·IPH·리드타임·성공률·재획득 계산 구현 (PR #8) · 마감 9/10
