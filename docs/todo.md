@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 72/110 완료** (█████████████░░░░░░░)  ·  기준 09/07
+**전체 75/114 완료** (█████████████░░░░░░░)  ·  기준 09/07
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 3/3 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 6/15 | `████░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/28 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 25/40 | `██████░░░░` | — |
+| mro_navigation [주행 — 박병후, 이시율] | 28/44 | `██████░░░░` | — |
 | mro_fleet [관제 — 김민준] | 10/14 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 7/10 | `███████░░░` | — |
 
@@ -103,6 +103,10 @@
 - [ ] **`shuttle_mission_node.py`: 성공 직후 `READY` 를 내지 말 것 (I-034)** — `kpi_report` 의 `DOCKED_STATES` 에 `READY` 가 있어 AC-13 운용시간이 대기공간에서 끊긴다. 한 사이클 재현에서 분모 390 s → 150 s, IPH 27.7 → 72.0 회/h (K-07 목표 ≤ 1.0). 성공 경로는 `WAITING` 유지, 포기 경로의 `FAILED`→`READY` 는 그대로 · 마감 9/8
 - [ ] `follow_target_node.py`: 시작 신호 구독을 옛 `goto_goal/arrived` → **`shuttle/arrived`** 로 (계약 4절, 옛 토픽은 '쓰지 않는 옛 토픽' 목록). `shuttle_mission` 이 계약 이름으로 발행하도록 바뀌면 이걸 안 고치는 순간 S5 합류가 시작되지 않는다 · 마감 9/8
 - [x] **셔틀 실주행 시험 절차 문서화** — `docs/shuttle_test_guide.md`. 단계별 설계, 1단계 절차, 로그 해석·증상별 판별. `fleet_manager`·마커 없이 주행 골격만 떼어 확인하는 방법과 **그래서 무엇이 확인되지 않는지**를 같이 적었다 · 마감 9/8
+- [x] **셔틀 시험 환경 스크립트** — `source tools/shuttle_env.sh [build|nav2]`. source 4종 + 빌드 + T3 전용 `ROS_SUPER_CLIENT=False` 를 한 줄로. 9/7 실패 1번(디스커버리 설정 누락)이 여기서 사라진다 · 마감 9/8
+- [x] **셔틀 시험 사전 점검 스크립트** — `tools/shuttle_preflight.sh [pre|nav|mission]`. `is_docked` 실측·중복 노드·**네임스페이스 없는 스택·유령 노드**·`bt_navigator active`·토큰 서비스·마커 주기·미션 구독을 한 번에 본다. 9/7 실패 세 번이 전부 '환경을 확인하지 않아서' 였다 · 마감 9/8
+- [x] **셔틀 1단계 시험 리그 launch** — `mro_navigation/launch/shuttle_step1_rig.launch.py`. 옛 T4·T5·T6(세마포어·안전감시·마커주입)을 한 터미널로. 셔틀·Nav2 는 로그 관찰 대상이라 묶지 않는다 · 마감 9/8
+- [ ] **셔틀 실주행 1단계 완주** — 판정 7항목 (I-024 '확인하지 못한 것' ①) · 마감 9/8
 - [x] `zone_semaphore_node.py`: P1·DOCK 토큰, FIFO, 타임아웃 회수 (관제 → 주행 이관) · 마감 9/8
 - [x] `zone_semaphore_node.py`: `arena.yaml` 구역 폴리곤 좌표 입력 (9/6) · 마감 9/8
 - [x] `zone_semaphore_node.py`: 진입 판정은 **순서 기반(방법 B)으로 확정** — 폴리곤 계산 안 함, 폴리곤은 로그 검산용 (PM 결정 9/7) · 마감 9/8

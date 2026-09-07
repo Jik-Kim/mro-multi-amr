@@ -42,16 +42,39 @@
 - [ ] **로봇을 도크에 물려서 시작** — 초기자세 설정이 도킹 상태를 전제한다
 - [ ] E-stop 손 닿는 위치, 감시자 배치
 - [ ] **PC-F 디스커버리 서버를 로봇 전원보다 먼저** — `fastdds discovery -i 1 -l 0.0.0.0 -p 11811`
-
-### B-1. 빌드
+- [ ] **사전 점검 스크립트** — 위를 사람이 눈으로 확인하는 대신 돌린다 (B-1·B-2 를 마친 터미널에서)
 
 ```bash
-cd ~/rokey_intel1/main_project/mro-multi-amr/ros2_ws && colcon build --symlink-install --packages-select mro_interfaces mro_bringup mro_navigation mro_fleet
+tools/shuttle_preflight.sh pre
 ```
 
-### B-2. 모든 터미널의 첫 줄
+`is_docked` 실측·중복 노드·네임스페이스 없는 스택·이전 세션 잔재까지 본다. **FAIL 이 있으면
+고치기 전에 T1 로 넘어가지 않는다** — 9/7 실패 세 번이 전부 여기서 걸렸을 것들이다.
 
-**네 가지를 전부 source 한다.** 하나라도 빠지면 증상이 제각각으로 나타난다.
+### B-1 · B-2. 모든 터미널의 첫 줄 — 빌드와 source 를 한 줄로
+
+**시험에 쓰는 모든 터미널에서 이 한 줄로 시작한다.** 빌드까지 겸한다.
+
+```bash
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh build
+```
+
+빌드가 이미 끝났으면 `build` 를 뺀다. **T3(Nav2) 터미널만** `nav2` 를 붙인다 —
+그 터미널만 `ROS_SUPER_CLIENT=False` 여야 한다.
+
+```bash
+source tools/shuttle_env.sh          # T1·T2·T4·T7·T8 및 명령을 치는 모든 터미널
+source tools/shuttle_env.sh nav2     # T3 전용
+source tools/shuttle_env.sh build    # 코드를 고친 뒤 (빌드 후 source 까지)
+```
+
+`환경 준비됨 — ROS_DOMAIN_ID=3 · …` 이 찍히면 된 것이다.
+
+> **`source` 로 실행해야 한다.** `./tools/shuttle_env.sh` 처럼 실행하면 자식 프로세스의
+> 환경만 바뀌고 지금 터미널에는 아무 효과가 없다. 같은 이유로 `tools/shuttle_preflight.sh` 는
+> 환경을 **검사만** 하고 고치지 못한다 — 둘을 분리한 이유다.
+
+<details><summary>이 스크립트가 하는 일 — 손으로 할 때</summary>
 
 ```bash
 source /etc/turtlebot4_discovery/setup.bash && source /home/hv-04/turtlebot4_ws/install/setup.bash && source ~/rokey_intel1/main_project/mro-multi-amr/ros2_ws/install/setup.bash
@@ -63,8 +86,8 @@ source /etc/turtlebot4_discovery/setup.bash && source /home/hv-04/turtlebot4_ws/
 | `turtlebot4_ws` | 셔틀 노드가 `turtlebot4_navigation` 임포트에 실패해 즉사 |
 | `mro-multi-amr/ros2_ws` | `Package 'mro_navigation' not found` |
 
-> 프롬프트에 `(rokey_venv)` 가 보이는지로 대강 가늠할 수 있다 — `.bashrc` 가 venv 활성화와
-> 디스커버리 설정을 같이 하기 때문이다. 확실히 하려면 `env | grep ROS_DOMAIN_ID` 로 본다.
+빌드는 `colcon build --symlink-install --packages-select mro_interfaces mro_bringup mro_navigation mro_fleet`.
+</details>
 
 ### B-3. 터미널 기동 — 순서를 지킬 것
 
@@ -78,25 +101,32 @@ ros2 launch turtlebot4_navigation localization.launch.py namespace:=/robot3 map:
 ros2 launch turtlebot4_viz view_navigation.launch.py namespace:=/robot3
 ```
 
-**T3 · Nav2** — 이 터미널만 `ROS_SUPER_CLIENT=False`
+**T3 · Nav2** — 이 터미널만 `ROS_SUPER_CLIENT=False` (`shuttle_env.sh nav2` 가 해준다)
 ```bash
-export ROS_SUPER_CLIENT=False && ros2 launch turtlebot4_navigation nav2.launch.py namespace:=/robot3
+ros2 launch turtlebot4_navigation nav2.launch.py namespace:=/robot3
 ```
 
-**T4 · 구역 세마포어** — **기동 로그가 없다.** 화면이 빈 것이 정상
+**T4 · 시험 리그** — 세마포어 + 안전 감시 + 마커 주입을 한 터미널로 (옛 T4·T5·T6)
 ```bash
-ros2 run mro_fleet zone_semaphore_node
+ros2 launch mro_navigation shuttle_step1_rig.launch.py
 ```
 
-**T5 · 안전 감시** — 셔틀보다 먼저 (estop 은 전이 시점에만 발행된다)
-```bash
-ros2 run mro_navigation safety_watchdog_node --ros-args -r __ns:=/robot3
-```
+세 노드는 시험 중에 볼 로그가 사실상 없어서 묶었다. 화면에는 워치독 기동 한 줄과 세마포어의
+토큰 2줄만 나온다 — **마커 주입의 `publishing #N` 은 로그 파일로 보내 화면을 비웠다.**
+베이를 바꾸려면 `bay:=B` (주입 ID 는 `arena.yaml` 의 `bays.<bay>.aruco_id` 에서 읽는다).
+실물 마커를 쓰는 3단계에서는 `inject_aruco:=false`.
 
-**T6 · ArUco 주입** — 베이 A = ID 1. 두 토픽 모두 5 Hz (노드의 신선도 판정이 1.0 s)
+> **셔틀(T7)과 Nav2(T3)는 묶지 않았다.** 셔틀은 판정 7항목이 전부 나오는 주 관찰 대상이고,
+> Nav2 는 실패 원인이 자기 로그에 있다. 합치면 costmap 경고에 판정 로그가 묻힌다.
+
+<details><summary>리그가 안 뜰 때 — 옛 방식 (터미널 3개)</summary>
+
 ```bash
+ros2 run mro_fleet zone_semaphore_node                                        # 기동 로그 없음이 정상
+ros2 run mro_navigation safety_watchdog_node --ros-args -r __ns:=/robot3      # 셔틀보다 먼저
 ros2 topic pub -r 5 /robot3/aruco/id std_msgs/msg/Int32 "{data: 1}" & ros2 topic pub -r 5 /robot3/aruco/distance std_msgs/msg/Float32 "{data: 0.9}"
 ```
+</details>
 
 **T7 · 셔틀 미션** — `robot.launch.py` 대신 단독 실행(그쪽은 아직 준비 안 된 인지 노드까지 띄운다)
 ```bash
@@ -109,6 +139,14 @@ ros2 topic echo /robot3/shuttle/status
 ```
 
 ### B-4. 미션 발행 — 확인하고 보낼 것
+
+**⓪ 한 번에 확인** — 아래 ①②③ 과 마커 주기까지 전부 본다
+
+```bash
+tools/shuttle_preflight.sh mission
+```
+
+**FAIL 이 없으면 ④ 발행으로 간다.** 손으로 확인하려면 아래를 차례로 한다.
 
 **① 노드·세마포어가 떴는지**
 
@@ -123,6 +161,11 @@ ros2 service list | grep zone_token
 ```
 
 **② Nav2 가 '떴다' 가 아니라 'active' 인지** — 셔틀 노드는 후자만 인정한다
+
+> **⚠ 아래 `grep -c` 만으로는 부족하다 (9/7 저녁 발견).** 이 패턴은 `robot3/` 로 시작하는 것만
+> 세므로 **네임스페이스 없이 뜬 스택**(`/amcl`·`/map_server`·`/lifecycle_manager_localization`)과
+> **죽은 세션이 남긴 유령 노드**를 못 잡는다. 실제로 그 상태에서 `1` 이 나와 통과했다.
+> 위 스크립트는 둘 다 본다 (D-5).
 
 ```bash
 ros2 node list | grep -c "robot3/lifecycle_manager_localization"
@@ -165,9 +208,9 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 ### B-6. 중단·복구
 
 - **T7 중단**: `Ctrl+C` → `P1 반납 (노드 종료)` 후 깔끔히 종료된다
-- **T4·T5 중단**: `Ctrl+C` 에 **트레이스백이 뜬다. 정상이다** — 두 노드는 아직 종료 예외를
-  잡지 않는다 (셔틀만 처리했다). 동작에는 지장 없다
-- **토큰이 남았을 때**: T4 재시작. 또는 60 초 뒤 세마포어가 `강제 회수` 로그와 함께 회수한다
+- **T4 리그 중단**: `Ctrl+C` 에 **세마포어·워치독이 트레이스백을 뱉는다. 정상이다** — 두 노드는
+  아직 종료 예외를 잡지 않는다 (셔틀만 처리했다). 동작에는 지장 없다
+- **토큰이 남았을 때**: T4 리그 재시작. 또는 60 초 뒤 세마포어가 `강제 회수` 로그와 함께 회수한다
 - **PC·세션을 바꿀 때**: 이전 노드를 반드시 내린다 — `pkill -INT -f "ros2 launch|nav2_|rviz2"`
 
 ---
@@ -181,8 +224,8 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 | 터미널 | 로그의 노드 이름 | 볼 것 |
 |---|---|---|
 | **T7 셔틀** | `[robot3.shuttle_mission]` | **주 관찰 대상.** 모든 판정이 여기서 나온다 |
-| T4 세마포어 | `[zone_semaphore]` (네임스페이스 없음) | 토큰 왕복 2줄. 기동 로그는 없다 |
-| T5 워치독 | `[robot3.safety_watchdog]` | `ESTOP:` 이 뜨면 즉시 |
+| T4 리그 | `[zone_semaphore]` (네임스페이스 없음) | 토큰 왕복 2줄 — **판정 5** |
+| T4 리그 | `[robot3.safety_watchdog]` | `ESTOP:` 이 뜨면 즉시 |
 | T3 Nav2 | `[robot3.*]` | **실패했을 때만.** 목표 거부·경로 실패 원인이 여기 있다 |
 
 ### C-2. 정상 진행 로그 (T7)
@@ -326,6 +369,21 @@ ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -p bay_
 
 전진 목표에서만 `이동 실패: FAILED` 가 나면 `progress_checker` 를 의심한다 — 10 초 안에
 0.5 m 이동을 요구하는데 목표가 0.3 m 뿐이다.
+
+### D-5. 노드 이름은 보이는데 서비스가 응답하지 않는다 (유령 노드)
+
+`ros2 node list` 에 `/robot3/bt_navigator` 가 있는데 `ros2 lifecycle get /robot3/bt_navigator` 가
+**아무것도 출력하지 않는** 경우다. 9/7 저녁에 실제로 있었다.
+
+- **원인** — 죽은 세션의 등록이 디스커버리 서버에 남아 있다. `controller_server`·`planner_server`
+  같은 나머지 Nav2 서버가 함께 안 보이면 유령이 거의 확실하다.
+- **왜 위험한가** — 이 상태에서 T3 를 띄우면 같은 이름이 둘이 되어 라이프사이클 활성화가
+  끝나지 않는다. **9/7 에 T_lim 120 초를 날린 것이 이 증상이다.**
+- **판별** — `tools/shuttle_preflight.sh pre` 가 잡는다. 손으로 하면
+  `ros2 node list | grep -E '^/(amcl|map_server|lifecycle_manager_localization|bt_navigator)$'`
+  (네임스페이스 없는 스택) 과 위 `lifecycle get` 무응답 두 가지를 본다.
+- **조치** — ① 그 노드를 띄운 PC 를 찾아 내린다 ② 못 찾으면 **PC-F 의 `fastdds discovery` 를
+  재시작**해 등록을 비우고 로봇을 재부팅한다.
 
 ### D-4. 그 밖
 
