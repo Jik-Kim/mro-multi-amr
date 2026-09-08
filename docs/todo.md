@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 95/159 완료** (████████████░░░░░░░░)  ·  기준 09/08
+**전체 97/160 완료** (████████████░░░░░░░░)  ·  기준 09/08
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 6/6 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 15/26 | `██████░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/31 | `███████░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 34/67 | `█████░░░░░` | **1** |
+| mro_navigation [주행 — 박병후, 이시율] | 36/68 | `█████░░░░░` | **1** |
 | mro_fleet [관제 — 김민준] | 12/18 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 7/11 | `██████░░░░` | — |
 
@@ -20,7 +20,7 @@
 
 - `9/7` mro_navigation — 측위 검증 마커 설치·실측 — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 …
 
-**오늘 마감 36건**
+**오늘 마감 34건**
 
 - mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - mro_perception — TS-U05 줄자 대조 — target/distance 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오…
@@ -32,11 +32,9 @@
 - mro_webcam — webcam2.py 는 호모그래피 검증 도구로 유지 (PR #32: 클릭·수동 픽셀 → map 변환 → Nav2 goal. 프로…
 - mro_webcam — webcam_hint_node.py: worker.pt 교체 후 TS-U02 — 9/8 통신 구간 부분 통과: 압축 영상 9.9…
 - mro_navigation — Nav2 복구 행동에서 후진(BackUp)을 뺀다 (계약 2절 후진 금지) — 우리 코드에는 linear.x < 0 이 없지만 …
-- mro_navigation — safety_watchdog_node.py: estop 중 병진 전부 차단 · 저속 회전만 통과 · CLEAR_DIST 0.45…
 - mro_navigation — arena.yaml loc_check_marker.xy 실측 — 지금 [0.0, 0.0] 은 맵 원점이라 관제가 그대로 읽으면 …
 - mro_navigation — inflation_radius 0.05 → 0.25 적용 (I-009) — 주행 합의값. 승인 후 PC-R3·PC-R8 의 na…
 - mro_navigation — 베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025) — 접근 지점과 0.31/0.38 m…
-- mro_navigation — estop 중 Nav2 복구 행동이 막히는 문제 (I-036) — 벽 앞에서 후진·회전까지 0 으로 덮여 95 초를 못 빠져나왔…
 - mro_navigation — 도착 오차 수치 신뢰성 확인 (I-037) — 노드 TF 0.84 m vs 같은 순간 amcl_pose 0.18 m. 3회차에 …
 - mro_navigation — P1 통과 실주행 확인 (I-009) — 여유 0.175 m < 실측 측위 오차 0.32 m 라 통과가 운에 좌우된다. infl…
 - mro_navigation — follow_target_node.py: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, est…
@@ -133,6 +131,7 @@
 - [ ] `kpi_report.py` K-06 마무리 셋 (PR #34 후속, 막지 않음) — ① `zone_resolution` docstring 의 `[REJECT, GRANT)` 를 양끝 포함으로 정정(안쪽 주석과 어긋남) ② `reclaimed_between(...): pass` 죽은 코드 삭제 ③ **`강제 회수` 라벨을 `강제 회수(구역)` 로** — 이제 구역 전체 RECLAIM 수라 대기자 없이 보유만 초과해도 세어져 `대기 1 · 자동 해결 1 · 강제 회수 1 → 100.0%` 로 읽힌다 (I-032) · 마감 9/9 TS-08 전
 
 ## mro_navigation [주행 — 박병후, 이시율]
+- [ ] **TS-04·TS-14 재실행 (I-036)** — `clear_dist` 를 0.45 → 0.38 로 낮췄으므로 기존 통과 기록은 무효다. **해제가 너무 일러 estop 재진입이 반복되지 않는지**를 특히 본다 · 마감 9/9
 - [ ] **베이 접근 잔차 규명 (I-044, 상)** — 여유 0.095 m 가 관측 잔차 0.275 m 보다 작다. `d3e0568` 로그로 다음 회차에 가리거나, 못 가리면 `bay_marker_range_m` 을 1.1 m 이상으로. **둘 중 하나를 하고 TS-07 에 들어간다** · 마감 9/9
 - [ ] **`bay_align_min_range_m` 을 0.80 으로 (PR #52 후속)** — 지금 0.45(노드 기본값 0.35)라 자기가 잰 하드 바닥보다 낮다. 잘못된 목표를 거르는 유일한 방어인데 8회차로 배운 것을 못 막는다 · 마감 9/9
 - [ ] **접근·재탐지 파라미터의 단일 출처는 `common.yaml`** (PR #52) — `bay_marker_range_m`·`bay_align_*`·`bay_exit_*`. 노드 기본값은 단독 실행용 대체값 · 마감 —
@@ -143,7 +142,7 @@
 - [ ] (곁가지, 공짜면 한다) 받침대가 이미 통로 바깥인지 실측 확인 → 맞으면 `inflation_radius` 0.25 → 0.20 한 줄 변경. **12 cm 를 공짜로 얻지만 P1 을 풀지는 못한다** · 마감 9/9
 - [ ] `Smac`·`MPPI` 교체와 지도 덧칠은 **하지 않는다** (9/8 PM) — 원인이 플래너도 지도도 아니라 측위다. Phase 2 후보로만 적어둔다 · 마감 —
 - [ ] **Nav2 복구 행동에서 후진(`BackUp`)을 뺀다 (계약 2절 후진 금지)** — 우리 코드에는 `linear.x < 0` 이 없지만 **Nav2 기본 BT 의 복구가 후진을 낸다.** 로봇 PC 의 `turtlebot4_navigation/config/nav2.yaml` 과 BT xml 소관이라 저장소 밖이다 — `nav2.yaml`·`localization.yaml` 과 같은 종류의 문제로, PC-R3·R4 둘 다 손으로 맞추고 무엇을 바꿨는지 적어둔다. 제자리 회전(`Spin`)과 `Wait` 만 남긴다 · 마감 9/8
-- [ ] **`safety_watchdog_node.py`: estop 중 병진 전부 차단 · 저속 회전만 통과 · `CLEAR_DIST` 0.45 → 0.38 (I-036, 계약 v1.13)** — **후진은 쓰지 않는다**(계약 2절 확정: 범퍼·클리프가 전방에만 있다). 각속도 상한 0.4 rad/s — 제자리 회전이 쓸고 가는 폭은 1.4 cm 뿐이고 유일한 탈출 수단이다. `CLEAR_DIST` 0.45 는 **P1 반폭 0.395 m 보다 커서 통로 안에서는 어느 방향으로 돌아도 해제가 안 된다.** Nav2 goal cancel 도 함께. **변경 뒤 TS-04·TS-14 재실행** — 해제가 너무 일러 재진입이 반복되지 않는지 특히 본다 · 마감 9/8
+- [x] **`safety_watchdog_node.py`: estop 중 병진 전부 차단 · 저속 회전만 통과 · `CLEAR_DIST` 0.45 → 0.38 (I-036, 계약 v1.13)** — **후진은 쓰지 않는다**(계약 2절 확정: 범퍼·클리프가 전방에만 있다). 각속도 상한 0.4 rad/s — 제자리 회전이 쓸고 가는 폭은 1.4 cm 뿐이고 유일한 탈출 수단이다. `CLEAR_DIST` 0.45 는 **P1 반폭 0.395 m 보다 커서 통로 안에서는 어느 방향으로 돌아도 해제가 안 된다.** Nav2 goal cancel 도 함께. **변경 뒤 TS-04·TS-14 재실행** — 해제가 너무 일러 재진입이 반복되지 않는지 특히 본다 · 마감 9/8  **→ 완료 9/8 (PR #52) — 파라미터화까지. **TS-04·TS-14 재실행이 남았다****
 - [ ] **I-035 실주행 확인** — 새 기동 순서(T1 → 리그 → T7 → T3)로 `global_costmap` 이 곧바로 `active` 가 되는지. 9/8 에는 로봇을 쓰지 못해 단위 검증까지만 했다. **TS-07(9/9) 전에** · 마감 9/9
 - [x] **신규 파라미터 2개 `robotN.yaml` 이관 요청 (I-035)** — `nav2_poll_max`(3) · `dock_status_wait_s`(5.0) 가 아직 코드 기본값뿐이다. 값의 단일 출처는 params 다 (계약 5절). **PM 요청 필요** · 마감 9/9  **→ 완료 9/8 (PM) — `robotN.yaml` 이 아니라 **`common.yaml`** 이 맞는 자리였다**
 - [x] **`shuttle_mission_node.py`: 초기자세를 노드 기동 시로 (I-035)** — 미션을 받은 뒤 보내면 Nav2 가 이미 활성화에 실패한 뒤다. `dock_pose`·`getDockedStatus()` 는 기동 시에도 안다. Nav2 가 정해진 횟수 안에 `active` 가 안 되면 **T_lim 을 태우지 말고 즉시 FAILED + 사유** · 마감 9/8
@@ -167,7 +166,7 @@
 - [x] `arena.yaml` `homography_marks` — cam2 기준점은 `mro_webcam/config/WebCam2/marker_coordinates.json` 이 원본(PR #9), cam1 은 불필요(9/6). arena.yaml 에는 복사하지 않는다 · 마감 9/7
 - [x] `shuttle_mission_node.py`: `mission/assigned` 트리거, bay waypoint → ArUco 확인 → 체류 → 대기공간, zone_token, `shuttle/arrived` — `aruco/id` 는 **1.5 m 안에서만** 나온다 (PR #30 거리 게이트) · 마감 9/7
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
-- [ ] **estop 중 Nav2 복구 행동이 막히는 문제 (I-036)** — 벽 앞에서 후진·회전까지 0 으로 덮여 95 초를 못 빠져나왔다. 후보 ①전진 성분만 차단 ②N초 후 워치독이 후진 ③goal cancel — **PM·안전 검토 필요** · 마감 9/8
+- [x] **estop 중 Nav2 복구 행동이 막히는 문제 (I-036)** — 벽 앞에서 후진·회전까지 0 으로 덮여 95 초를 못 빠져나왔다. 후보 ①전진 성분만 차단 ②N초 후 워치독이 후진 ③goal cancel — **PM·안전 검토 필요** · 마감 9/8  **→ 코드 조치 완료 9/8 (PR #52). 남은 것은 TS-04·TS-14 재실행과 Nav2 goal cancel**
 - [ ] **도착 오차 수치 신뢰성 확인 (I-037)** — 노드 TF 0.84 m vs 같은 순간 `amcl_pose` 0.18 m. 3회차에 `tf2_echo` 기록 + **베이에서 줄자 실측**으로 가른다 · 마감 9/8
 - [ ] **P1 통과 실주행 확인 (I-009)** — 여유 0.175 m < 실측 측위 오차 0.32 m 라 통과가 운에 좌우된다. `inflation_radius` 0.15 실험 후 결정. **PC-R3 는 0.25 적용 확인됨, PC-R8 미확인** · 마감 9/8
 - [x] **I-035 조치 결정** — PM 이 ①(절차+코드)로 확정하고 ②(노드가 RESUME)·③(`t0` 이동)은 반려했다 (9/8). ③은 T_lim 기준점이 요청 접수 시각이라(계약 9절·FR-09) 옮기면 AC-08 이 실제보다 좋게 나온다. 구현은 위 줄 · 마감 9/8
