@@ -7,7 +7,10 @@
 흐름
   1. `shuttle/arrived` 수신 → SEARCHING. 로봇은 이미 작업자 쪽(서향)을 보고 서 있다
   2. 작업자 좌표를 일관성 검사로 확정 + `target/paired` 게이트 통과
-  3. `approach_skip_m` 안이면 바로 FOLLOWING · 멀면 APPROACH_1 → APPROACH_2 → ARRIVED
+  3. `approach_skip_m` 안이면 바로 FOLLOWING · 멀면 **남은 거리의 절반씩 좁히는 점진 접근**
+     (`next_standoff`) 으로 최종 이격까지 붙은 뒤 ARRIVED. 회차 수는 정해두지 않는다 —
+     목표가 `max(follow_standoff_m, gap/2)` 라 gap 이 반씩 줄고 하한에서 저절로 끝난다.
+     상태는 계약 4절의 두 값으로 낸다: **APPROACH_1 = 중간 목표, APPROACH_2 = 최종 목표**
   4. FOLLOWING — `follow_standoff_m` 를 유지하며 따라간다. **추종거리 채점 구간은 여기뿐이다**
   5. `lost_s` 안 보이면 주행 취소·제자리 대기 → 8 초면 회전 탐색 → `standby_s` 면 STANDBY
   6. 재등장하면 게이트를 다시 통과해야 재개 (계약 3절 재획득)
@@ -75,7 +78,6 @@ SEARCH_WAIT_S = 3.0           # 회전 후 이만큼 기다려도 못 찾으면 
                               #   최소 필요치 = SETTLE_S + CONSIST_DT + 검출 몇 프레임 ≈ 2.7 s
 VISIBLE_WAIT_S = 8.0          # 보이는데 좌표가 계속 걸러지면 이만큼만 기다리고 회전 (화각 63.7°)
 
-STANDOFF_FAR = 1.0            # 먼 데서 올 때 1단계 목표 거리
 SEARCH_ROTATE_DEG = 30.0      # 재탐색 때 한 번에 도는 각도 (부호 = 방향, 힌트가 있으면 힌트가 정한다)
 SEARCH_ROTATE_SPEED = 1.5     # rad/s. Nav2 Spin 은 behavior_server max_rotational_vel(1.0)에 묶이고
                               #   액션 왕복 지연도 있어 cmd_vel 로 직접 돌린다
@@ -130,7 +132,11 @@ class FollowTarget(Node):
 
         # ---- 상태 ----
         self.state = 'IDLE'
-        self.stage = 1                # 접근 단계 (1 = 먼 목표, 2 = 가까운 목표)
+        # **몇 단계인지 세지 않는다.** 세어 두면 그 값이 실제 거리와 어긋난 채 굳는다
+        #   (9/8 실주행: on_paired 가 매번 1 로 되돌려 APPROACH_1 이 무한 반복).
+        #   드는 것은 '지금 보낸 목표가 최종 이격인가' 하나뿐이고, 목표를 보낼 때마다
+        #   그 시점의 실측 거리로 다시 정해진다 — 굳을 수가 없다
+        self.approach_final = False
         self.start_req = False        # shuttle/arrived 를 받았다
         self.finish_req = False       # mission/finish 를 받았다
         self.estop = False
@@ -249,7 +255,7 @@ class FollowTarget(Node):
     def begin_cycle(self):
         """대기공간 도착 신호를 받은 시점. 여기서부터가 S5 다."""
         self.start_req = False
-        self.stage = 1
+        self.approach_final = False
         self.search_tries = 0
         self.follow_est = None
         self.follow_goal = None
@@ -368,8 +374,7 @@ class FollowTarget(Node):
             self.last_target = (tx, ty)
             self.get_logger().info(f'작업자 확인 ({tx:.2f},{ty:.2f}) {gap:.2f} m — 접근 없이 바로 추종')
             return self.enter_follow()
-        self.get_logger().info(f'작업자 확인 ({tx:.2f},{ty:.2f}) {gap:.2f} m — 멀어서 2단계 접근')
-        self.stage = 1
+        self.get_logger().info(f'작업자 확인 ({tx:.2f},{ty:.2f}) {gap:.2f} m — 멀어서 점진 접근')
         self.send_standoff(tx, ty)
 
     # ---- 힌트 → 회전 부호 ----
@@ -509,24 +514,56 @@ class FollowTarget(Node):
             self.publish_wz(0.0)
             rclpy.spin_once(self, timeout_sec=0.02)
 
-    # ---- 2단계 접근 (작업자가 멀 때만) ----
+    # ---- 점진 접근 (작업자가 멀 때만) ----
+
+    def next_standoff(self, gap):
+        """다음 목표를 작업자로부터 얼마 앞에 둘지 — 남은 거리의 절반, 최종 이격이 하한.
+
+        멀리서 잰 좌표는 0.5~0.7 m 틀린다. 그래서 한 번에 최종 목표를 잡지 않고 절반만
+        가서 다시 잰다. 가까워질수록 좌표도 정확해지므로 회차마다 목표가 나아진다.
+
+        **단계를 세지 않는 이유가 여기 있다.** 목표는 항상 `max(최종, gap/2)` 이므로
+        `gap` 은 회차마다 반으로 줄고, 최종 이격에 닿으면 하한에 걸려 루프가 끝난다.
+        회차 수를 못 박지 않으니 3 m 에서 오든 1.2 m 에서 오든 같은 규칙 하나로 수렴한다.
+        1단계 목표를 1.0 m 로 고정했던 종전 방식은 gap 1.0~1.25 m 에서 목표가 도착 판정
+        (`xy_goal_tolerance` 0.25) 안에 들어가 로봇이 한 발도 안 움직였다 (9/8 실주행).
+
+        하한이 `follow_standoff_m` 인 것은 최소 이격(`min_separation_m` 0.3) 을 접근
+        단계에서 침범하지 않기 위한 것이다 — AC-04 오추종·접촉 0건이 절대 기준이다.
+
+        **기본값에서는 APPROACH_2 가 나오지 않는다.** 목표가 최종이 되는 조건은
+        `gap <= 2 x follow_standoff_m`(= 1.0) 인데, `gap <= approach_skip_m`(= 1.0) 이면
+        접근을 아예 건너뛰고 FOLLOWING 으로 가기 때문에 두 조건이 겹치는 구간이 없다.
+        마지막 0.5 m 붙이기를 FOLLOWING 이 맡는 것이므로 기능상 빠지는 것은 없다
+        (추종거리 채점 구간도 FOLLOWING 뿐이다 — AC-05). APPROACH_2 는
+        `approach_skip_m < 2 x follow_standoff_m` 로 두면 나온다. 값을 그렇게 바꿀지는
+        실주행 뒤 판단할 일이라 지금은 계약 4절의 값으로 남겨만 둔다.
+        """
+        return max(self.p('follow_standoff_m'), gap / 2)
 
     def send_standoff(self, tx, ty):
         rob = robot_xy(self.tf_buffer, self.get_logger())
         if rob is None:
             self.get_logger().warn('로봇 위치 TF 없음 — 접근 보류')
             return
-        standoff = STANDOFF_FAR if self.stage == 1 else self.p('follow_standoff_m')
+        gap = math.hypot(tx - rob[0], ty - rob[1])
+        standoff = self.next_standoff(gap)
+        # 상태 이름은 계약 4절이 정한 8개 그대로 쓰되 뜻을 이렇게 읽는다 —
+        #   APPROACH_1 = 중간 목표, APPROACH_2 = 최종 목표. 관제·kpi_logger 는 둘을
+        #   구분하지 않고 '접근 중' 집합으로만 쓰므로(fleet_manager APPROACH_ACTIVE_STATES)
+        #   회차가 몇 번이든 이 두 값으로 표현된다. 규격을 바꾸지 않는다
+        self.approach_final = standoff <= self.p('follow_standoff_m')
         goal, dist, yaw = standoff_goal(*rob, tx, ty, standoff, self.get_clock().now().to_msg())
         if not self.navigator.goToPose(goal):
             self.get_logger().warn('접근 목표 거부됨 — 탐색으로 돌아간다')
             return self.set_state('SEARCHING', '목표 거부 — 재탐색')
         self.nav_started = time.time()
         self.last_target = (tx, ty)
-        self.set_state(f'APPROACH_{self.stage}',
-                       f'작업자 ({tx:.2f},{ty:.2f}) {dist:.2f} m → 앞 {standoff} m '
+        self.set_state('APPROACH_2' if self.approach_final else 'APPROACH_1',
+                       f'작업자 ({tx:.2f},{ty:.2f}) {dist:.2f} m → 앞 {standoff:.2f} m '
                        f'({goal.pose.position.x:.2f},{goal.pose.position.y:.2f},'
-                       f'{math.degrees(yaw):.0f}°)')
+                       f'{math.degrees(yaw):.0f}°)'
+                       f'{" · 최종" if self.approach_final else " · 중간"}')
 
     def step_approach(self):
         if not self.gate_ok():
@@ -542,11 +579,12 @@ class FollowTarget(Node):
             return
         if self.navigator.getResult().name != 'SUCCEEDED':
             self.rearm()
-            return self.set_state('SEARCHING', f'{self.stage}단계 주행 실패 — 재탐색')
-        if self.stage == 1:
-            self.stage = 2
+            return self.set_state('SEARCHING', '접근 주행 실패 — 재탐색')
+        if not self.approach_final:
+            # 중간 목표에 닿았다 — 여기서 다시 재고 또 좁힌다. 다음 목표 거리는 그때의
+            #   실측 gap 이 정한다 (next_standoff). 몇 회차인지는 아무도 세지 않는다
             self.rearm()
-            return self.set_state('SEARCHING', '1단계 도착 — 정지 후 재검출 대기')
+            return self.set_state('SEARCHING', '중간 목표 도착 — 정지 후 재검출 대기')
         self.set_state('ARRIVED', f'작업자 앞 {self.p("follow_standoff_m")} m 도착')
         self.enter_follow()
 
@@ -601,7 +639,6 @@ class FollowTarget(Node):
             return self.enter_standby(lost)
         if lost > FOLLOW_RESEARCH_S:
             self.navigator.cancelTask()
-            self.stage = 2
             self.search_tries = 0
             self.rearm()
             return self.set_state('SEARCHING', f'표적 {lost:.0f} s 안 보임 — 회전 탐색')
@@ -670,7 +707,8 @@ class FollowTarget(Node):
             self.get_logger().info('작업자 재등장 — target/paired 대기 중',
                                    throttle_duration_sec=5.0)
             return
-        self.stage = 2
+        # 여기서 '가까우니 최종 목표로 가라' 고 지정하지 않는다 — 재획득 시점의 거리를
+        #   next_standoff 가 다시 재서 정한다. 재등장한 작업자가 멀어졌을 수도 있다
         self.search_tries = 0
         self.rearm()
         self.set_state('SEARCHING', '작업자 재등장 + 게이트 통과 — 재획득 시작')
