@@ -68,10 +68,17 @@ def _follow_target_class():
     return mod.FollowTarget
 
 
+ROBOT = 'robot3'                    # 노드가 ns 로 자기 로봇을 정한다
+
+
 @pytest.fixture(scope='module')
 def ros():
-    """rclpy 를 한 번 띄우고 모듈 전체가 함께 쓴다."""
-    rclpy.init()
+    """단위 시험용으로 rclpy 를 한 번 띄우고 모듈 전체가 함께 쓴다.
+
+    `__ns` 를 주는 것은 노드가 **네임스페이스 없이는 뜨지 않기** 때문이다 — ns 로 Nav2 액션
+    서버를 잡으므로 대체값을 쓰면 남의 로봇을 움직인다 (9/8, main). 셔틀 시험도 같은 방식이다.
+    """
+    rclpy.init(args=['--ros-args', '-r', f'__ns:=/{ROBOT}'])
     yield
     rclpy.shutdown()
 
@@ -309,7 +316,7 @@ def test_finish_returns_to_idle_not_failed(ros):
 
 
 def test_estop_holds_state_and_resumes(ros):
-    """estop 중에는 목표를 취소하고 상태를 유지한다. 해제되면 이어간다 (실패가 아니다)."""
+    """비상정지(estop) 중에는 목표를 취소하고 상태를 유지한다. 해제되면 이어간다 (실패가 아니다)."""
     node = make_node()
     reach_following(node)
     before = node.state

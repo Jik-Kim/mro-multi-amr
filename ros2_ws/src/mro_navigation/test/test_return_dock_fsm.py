@@ -33,6 +33,7 @@
 """
 from pathlib import Path
 import sys
+import types
 
 import pytest
 import rclpy
@@ -42,6 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import stub_navigator                                          # noqa: E402
 
 ARENA = Path(__file__).resolve().parents[2] / 'mro_bringup' / 'params' / 'arena.yaml'
+ROBOT = 'robot3'                    # 접근 지점·도크 좌표를 robot3 기준으로 본다
 APPROACH_R3 = (-0.435, -0.71)      # arena.yaml dock_zone.approach.robot3 (9/6 실측)
 HOLDING = (-0.422, 1.501)          # arena.yaml dock_zone.holding (9/6 재실측)
 BASE = {
@@ -60,8 +62,14 @@ def _return_dock_class():
 
 @pytest.fixture(scope='module')
 def ros():
-    """arena.yaml 경로를 전역 파라미터로 넘긴 채 rclpy 를 띄운다 (install 공간에 의존하지 않게)."""
-    rclpy.init(args=['--ros-args', '-p', f'arena_yaml:={ARENA}'])
+    """경기장 파일 경로와 네임스페이스를 넘긴 채 rclpy 를 띄운다.
+
+    `arena_yaml` 을 전역 파라미터로 주는 것은 `install` 공간에 의존하지 않기 위한 것이고,
+    `__ns` 는 노드가 **네임스페이스 없이는 뜨지 않기** 때문이다 — 대체값을 쓰면 남의 이름으로
+    토큰을 반납해 다른 로봇의 구역 점유를 풀어 버리므로 노드가 여기서 죽는다 (9/8, main).
+    실물도 `robot.launch.py namespace:=/robotN` 으로 같은 값을 받는다.
+    """
+    rclpy.init(args=['--ros-args', '-p', f'arena_yaml:={ARENA}', '-r', f'__ns:=/{ROBOT}'])
     yield
     rclpy.shutdown()
 
@@ -92,6 +100,48 @@ def stub_token(node, grants):
         granted = seq.get(zone, []).pop(0) if seq.get(zone) else True
         node.held[zone] = granted
         return granted
+
+    node.token = token
+
+
+class _FakeFuture:
+    """`call_async` 가 돌려주는 future 대역 — `result()` 만 필요하다."""
+
+    def __init__(self, answer):
+        self._answer = answer
+
+    def result(self):
+        """`None` 이면 응답 시간초과, 아니면 granted 를 담은 응답."""
+        if self._answer is None:
+            return None
+        return types.SimpleNamespace(granted=self._answer)
+
+
+def stub_token_service(node, monkeypatch, answers):
+    """`token()` 의 **실제 코드**를 태우면서 서비스 응답만 갈아끼운다.
+
+    `answers` 는 획득 요청 순서대로 `True`/`False`/`None` — `None` 은 **응답 시간초과**다
+    (요청은 세마포어에 닿아 대기열에 들어갔는데 응답만 2 s 를 넘긴 경우).
+    반납 요청은 항상 성공으로 답한다.
+
+    `spin_until_future_complete` 는 `monkeypatch` 로 갈아끼운다 — 직접 대입하면 rclpy 모듈이
+    프로세스 전체에서 바뀌어 뒤에 도는 시험들이 같이 망가진다.
+    """
+    import mro_navigation.nodes.return_dock_node as mod
+
+    seq = iter(answers)
+    monkeypatch.setattr(node.cli_token, 'wait_for_service', lambda timeout_sec=None: True)
+    monkeypatch.setattr(
+        node.cli_token, 'call_async',
+        lambda req: _FakeFuture(next(seq, True) if req.acquire else True))
+    monkeypatch.setattr(mod.rclpy, 'spin_until_future_complete',
+                        lambda n, f, timeout_sec=None: None)
+
+    real_token = node.token
+
+    def token(zone, acquire):
+        node.token_log.append((zone, 'acquire' if acquire else 'release'))
+        return real_token(zone, acquire)
 
     node.token = token
 
@@ -201,6 +251,35 @@ def test_denied_token_is_released_on_timeout(ros):
     node.destroy_node()
 
 
+def test_token_timeout_still_marks_for_release(ros, monkeypatch):
+    """응답 시간초과(`fut.result()` 가 None)여도 반납 대상으로 남는가 (PM 리뷰 9/8).
+
+    요청은 세마포어에 닿아 대기열에 들어갔는데 응답만 2 s 를 넘긴 경우다. `requested` 를
+    `call_async` **뒤에** 세우면 이 경로에서 False 로 남아 `release()` 가 반납을 보내지 않고,
+    그 로봇이 FIFO 선두로 남아 구역이 영구히 잠긴다 — 60 s 강제 회수는 보유자만 대상이라
+    자동 복구도 안 된다. `release()` 로 막은 I-033 이 이 경로로 되살아나는 것을 막는다.
+    """
+    node = make_node(t_ret_s=0.4)
+    stub_token_service(node, monkeypatch, [None] * 200)       # 계속 응답 없음
+    node.run_return()
+
+    assert node.status_log[-1] == 'FAILED'
+    assert released(node, 'DOCK'), '응답을 못 받아도 요청은 나갔으니 반납해야 한다'
+    node.destroy_node()
+
+
+def test_token_timeout_flag_set_before_call(ros, monkeypatch):
+    """플래그가 `call_async` 앞에서 세워지는가 — 한 번의 시간초과만으로 확인한다."""
+    node = make_node()
+    stub_token_service(node, monkeypatch, [None])
+    granted = node.token('DOCK', True)
+
+    assert granted is False, '응답이 없으면 획득 실패다'
+    assert node.requested['DOCK'] is True, '요청은 나갔다 — 반납 대상이다'
+    assert node.held['DOCK'] is False, '보유하지는 않았다'
+    node.destroy_node()
+
+
 # ── 도킹 재시도 ─────────────────────────────────────────────────────
 
 def test_dock_retry_returns_to_approach_not_undock(ros):
@@ -279,7 +358,7 @@ def test_goal_rejected_releases_both_tokens(ros):
 
 
 def test_estop_blocks_goal_until_cleared(ros):
-    """estop 중에는 주행 명령을 내지 않는다. 해제되면 이어간다 — 실패가 아니다."""
+    """비상정지(estop) 중에는 주행 명령을 내지 않는다. 해제되면 이어간다 — 실패가 아니다."""
     node = make_node()
     stub_token(node, {})
     node.estop = True

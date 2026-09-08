@@ -224,14 +224,19 @@ class ReturnDock(Node):
             return True
         req = ZoneToken.Request()
         req.robot_ns, req.zone_id, req.acquire = self.ns, zone, acquire
+        if acquire:
+            # **요청을 보내기 전에** 세운다. 응답이 2 s 를 넘기면 요청은 세마포어에 닿아
+            #   대기열에 들어갔는데 이 플래그가 False 로 남아 release() 가 반납을 안 보낸다.
+            #   그러면 그 로봇이 FIFO 선두로 남아 구역이 영구히 잠긴다 — release() 로 막은
+            #   I-033 이 이 경로로 되살아난다 (PM 리뷰 9/8, PR #46)
+            self.requested[zone] = True
         fut = self.cli_token.call_async(req)
         rclpy.spin_until_future_complete(self, fut, timeout_sec=2.0)
         res = fut.result()
         if res is None:
-            self.get_logger().warn(f'{zone} 토큰 응답 없음')
+            self.get_logger().warn(f'{zone} 토큰 응답 없음 — 요청은 나갔으니 반납 대상으로 남긴다')
             return False
         if acquire:
-            self.requested[zone] = True          # 거절당해도 대기열에 들어간다 — 반납 대상이다
             self.held[zone] = bool(res.granted)
         return bool(res.granted)
 
