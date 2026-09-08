@@ -213,8 +213,15 @@ class ShuttleMission(Node):
         (turtlebot4_navigator.py: `while self.is_docked is None`). 로봇이 안 떠 있으면 거기서
         영영 멈추고, 미션 경로에서는 T_lim 조차 돌지 않아 FAILED 도 안 나온다 (가이드 D-2).
         구독은 navigator 의 것을 그대로 쓰되 기다리는 시간에 상한을 둔다.
+
+        **먼저 무조건 한 번 spin 한다** — 원본과 같은 순서다. `is_docked` 는 `_dockCallback`
+        으로만 바뀌고 `dock()`·`undock()` 은 건드리지 않으므로(turtlebot4_navigator.py 확인),
+        조건부로 건너뛰면 묵은 값을 돌려준다. 특히 `startup()` 과 첫 미션 사이에는 navigator 를
+        spin 하는 곳이 하나도 없어, 그 사이에 사람이 로봇을 도크에서 내리면 캐시된 True 를 믿고
+        `dock()` 을 건너뛴 채 도크 밖에서 dock_pose 를 초기자세로 보내게 된다 (I-013, PR #44 PM 지적).
         """
         deadline = self.now() + float(timeout_s)
+        rclpy.spin_once(self.navigator, timeout_sec=0.1)   # 원본과 같게: 먼저 한 번 받아온다
         while self.navigator.is_docked is None and self.now() < deadline:
             rclpy.spin_once(self.navigator, timeout_sec=0.1)
         return self.navigator.is_docked

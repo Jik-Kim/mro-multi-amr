@@ -37,6 +37,7 @@ import types
 from mro_interfaces.msg import Mission
 import pytest
 import rclpy
+from rclpy.node import Node
 from rclpy.parameter import Parameter
 
 ARENA = Path(__file__).resolve().parents[2] / 'mro_bringup' / 'params' / 'arena.yaml'
@@ -50,19 +51,31 @@ BASE = {
 }
 
 
-class StubNavigator:
-    """TurtleBot4Navigator 대역. 호출을 기록하고 목표를 nav_ticks 뒤 완료로 만든다."""
+class StubNavigator(Node):
+    """TurtleBot4Navigator 대역. 호출을 기록하고 목표를 nav_ticks 뒤 완료로 만든다.
+
+    **실물과 같이 rclpy Node 다.** 노드의 `docked_status()` 가 `rclpy.spin_once(navigator)` 를
+    부르기 때문에 대역도 Node 여야 한다.
+    **`is_docked` 는 실물과 같이 구독 콜백으로만 바뀐다** — `dock()`·`undock()` 은 건드리지 않는다
+    (turtlebot4_navigator.py 확인). 대역이 여기서 값을 직접 바꾸면 '묵은 값을 돌려주는' 결함을
+    시험이 못 잡는다 (PR #44 PM 지적). 콜백 도착은 `deliver_dock_status()` 로 흉내낸다.
+    """
 
     nav_ticks = 3
 
     def __init__(self, namespace=''):
         """호출 기록과 도킹 상태를 초기화한다."""
+        super().__init__('stub_navigator', namespace=namespace)
         self.ns = namespace
         self.calls = []
         self.is_docked = True     # 실물 TurtleBot4Navigator 와 같은 이름 (노드가 직접 읽는다)
         self.result_name = 'SUCCEEDED'
         self.goal_accepted = True
         self._ticks = 0
+
+    def deliver_dock_status(self, value):
+        """실물의 _dockCallback 이 도착한 것과 같다 — is_docked 는 이 경로로만 바뀐다."""
+        self.is_docked = value
 
     def getPoseStamped(self, position, rotation):  # noqa: N802 (원본 API 이름)
         """실물과 같은 규약으로 PoseStamped 를 만든다 — rotation 은 도 단위."""
@@ -80,14 +93,12 @@ class StubNavigator:
         return self.is_docked
 
     def dock(self):
-        """도킹."""
+        """도킹. 실물과 같이 is_docked 를 직접 바꾸지 않는다 (구독 콜백만 바꾼다)."""
         self.calls.append('dock')
-        self.is_docked = True
 
     def undock(self):
-        """언독."""
+        """언독. 실물과 같이 is_docked 를 직접 바꾸지 않는다 (구독 콜백만 바꾼다)."""
         self.calls.append('undock')
-        self.is_docked = False
 
     def setInitialPose(self, pose):  # noqa: N802
         """초기자세 전송을 기록한다."""
@@ -324,6 +335,57 @@ def test_wait_nav2_without_mission_does_not_crash(ros):
     from mro_navigation.nodes.shuttle_mission_node import MissionAbort
     with pytest.raises(MissionAbort):
         node.wait_nav2()
+    node.destroy_node()
+
+
+def test_docked_status_does_not_return_stale_cache(ros, monkeypatch):
+    """docked_status() 는 캐시가 아니라 새로 받아온 값을 준다 (PR #44 PM 지적).
+
+    `is_docked` 는 구독 콜백으로만 바뀌고 dock()·undock() 은 건드리지 않는다. 조건부로 spin 을
+    건너뛰면 묵은 값이 나온다. 특히 startup() 과 첫 미션 사이에는 navigator 를 spin 하는 곳이
+    하나도 없어, 그 사이 사람이 로봇을 도크에서 내리면 캐시된 True 를 그대로 믿게 된다.
+    """
+    node = make_node()
+    node.startup()
+    assert node.navigator.is_docked is True          # 기동 시 캐시된 값
+
+    real_spin = rclpy.spin_once
+
+    def spin_once(target, timeout_sec=None):
+        # navigator 를 spin 할 때 '도크에서 내려졌다' 는 콜백이 도착한 것으로 만든다
+        if target is node.navigator:
+            target.deliver_dock_status(False)
+            return
+        return real_spin(target, timeout_sec=timeout_sec)
+
+    monkeypatch.setattr(rclpy, 'spin_once', spin_once)
+    assert node.docked_status(1.0) is False          # 캐시(True)를 돌려주면 실패한다
+    node.destroy_node()
+
+
+def test_init_pose_docks_again_when_robot_left_the_dock(ros, monkeypatch):
+    """도크 밖이면 init_pose() 가 dock() 을 먼저 부른다 — 캐시를 믿으면 건너뛴다 (I-013).
+
+    건너뛰면 대기공간에 선 채로 dock_pose 를 초기자세로 보내 측위가 통째로 어긋난다.
+    """
+    node = make_node()
+    node.startup()
+    node.navigator.calls.clear()
+
+    real_spin = rclpy.spin_once
+
+    def spin_once(target, timeout_sec=None):
+        if target is node.navigator:
+            target.deliver_dock_status(False)
+            return
+        return real_spin(target, timeout_sec=timeout_sec)
+
+    monkeypatch.setattr(rclpy, 'spin_once', spin_once)
+    node.init_pose()
+    assert 'dock' in node.navigator.calls                       # 먼저 도킹하고
+    assert ('initpose', 0.019, -0.795) in node.navigator.calls  # 그 다음 초기자세
+    assert node.navigator.calls.index('dock') < [
+        i for i, c in enumerate(node.navigator.calls) if c[0] == 'initpose'][0]
     node.destroy_node()
 
 
