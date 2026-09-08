@@ -1,4 +1,4 @@
-# Interfaces — 계약 v1.15 (2026-09-08)
+# Interfaces — 계약 v1.16 (2026-09-08)
 
 > v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
 > **v1.11 (9/7 저녁): 세마포어 이벤트 토픽 `/fleet/zone_event` 신설** — 대기·획득·반납·강제 회수를 기록해 K-06(교착 자동 해결률)을 센다 (I-030). `mro_interfaces` 는 바꾸지 않고 `std_msgs/String` 을 쓴다.
@@ -7,6 +7,8 @@
 > **v1.14 (9/8 오후, PR #45): `amr_detection` 이 실제 노드가 되면서 드러난 셋.** ① `target/image`(raw `Image`) → **`target/image/compressed`**(CompressedImage) — raw 는 **구독자가 없는데** 대역폭만 먹었다. 계약이 `follow_target` 을 수신자로 적어둔 것이 틀렸다. 사람이 보는 용도이고 안전 판단·KPI 에 쓰지 않는다. ② **`target/visible` 의 의미를 바꾼다** — 「작업자가 보이나」에서 **「내 담당이 보이나」** 로. K-04 Lost 의 원천이라 그냥 둘 수 없다: 재획득은 *대상* 재획득이지 아무나 재획득이 아니다. ③ `mission/assigned` 수신자에 `amr_detection` 추가 — 이 로봇이 누구를 맡았는지는 여기서만 안다 (`WorkerDescriptor.robot_ns` 는 채워지지 않는다).
 >
 > **v1.15 (9/8): FR-13 관제 내부 전달 경로를 명시.** 기존 `srv/ManualPair` 형식은 바꾸지 않고 `control_ui` 가 `/fleet/manual_pair` 로 `fleet_manager` 에 요청하면, `fleet_manager` 가 선택된 `/robotN/manual_pair` 로 전달한다. 최종 판정과 확정 발행은 계속 `amr_detection` 하나가 맡는다.
+> **v1.16 (9/8, PR #49): `approach/status` 의 접근 두 값에 뜻을 붙인다.** 값 목록은 그대로다. `APPROACH_1` = 중간 목표 · `APPROACH_2` = 최종 목표이며, **기본값에서는 후자가 발행되지 않는다** — 값이 안 보이는 것이 고장이 아님을 적어 두지 않으면 나중에 그것을 찾느라 시간을 쓴다.
+>
 > 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더했고, v1.14 는 하나를 갈고 하나의 뜻을 바꿨으며, v1.15 는 기존 서비스 형식의 관제 내부 경로 하나를 명시했다.
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
@@ -100,7 +102,7 @@
 | `target/pair_state` | amr_detection | control_ui, fleet_manager, kpi_logger | String | **v1.12 (FR-13).** `PAIRED` / `GATE_FAIL` / `NO_TARGET`. `GATE_FAIL` 은 **대상은 보이는데 게이트를 못 넘는 상태가 30 s 지속됐을 때만** 낸다 — 10절 |
 | `aruco/id`, `aruco/distance` | aruco_detector | shuttle_mission, fleet_manager | Int32, Float32 | `id = -1` 이면 없음. **거리는 depth 원값에 로봇별 시차 편향 보정(역깊이 k, 9/8)**(0.8 m 이상), 그 아래는 solvePnP × 최근 depth/pnp 비 — 초점거리 결함(I-031)과 무관하다 (PR #40). **발행 한계는 `max_distance_m` 2.0 m 이고 6절의 수용 조건 1.5 m 는 소비자가 건다** |
 | `aruco/pose` | aruco_detector | shuttle_mission (베이 정렬) | PoseStamped | **v1.13 비준. 선택 발행** (`publish_pose`, 기본 켬). 마커 중심의 위치·자세, `frame_id` = 카메라 광학 프레임(x 우·y 하·z 앞). `id` 와 같은 프레임에서만 발행. 좌우 치우침 = x, 방위 = atan2(x, z). **회전(yaw)은 정렬에 쓰지 않는다** — 정사각 마커의 두 해 문제로 PM 합성 검증에서 −30° 가 1.0 m 에서 33°, 2.0 m 에서 20° 로 나왔다. 위치는 `pnp × depth/pnp 비` 라 `aruco/distance` 와 몇 cm 다를 수 있다 |
-| `approach/status` | follow_target | fleet_manager, kpi_logger | String | IDLE / SEARCHING / APPROACH_1 / APPROACH_2 / ARRIVED / FOLLOWING / STANDBY / FAILED |
+| `approach/status` | follow_target | fleet_manager, kpi_logger | String | IDLE / SEARCHING / APPROACH_1 / APPROACH_2 / ARRIVED / FOLLOWING / STANDBY / FAILED. **v1.16 — 접근 두 값의 뜻 (PR #49):** `APPROACH_1` = **중간 목표**, `APPROACH_2` = **최종 목표**. 접근은 단계를 세지 않고 남은 거리의 절반씩 좁힌다(`max(follow_standoff_m, gap/2)`) — 회차 수가 정해져 있지 않으므로 이 두 값은 *몇 번째*가 아니라 *어떤 목표*를 뜻한다. **기본값에서는 `APPROACH_2` 가 발행되지 않는다**: 목표가 최종이 되는 조건 `gap ≤ 2×follow_standoff_m`(1.0)과 접근을 쓰는 조건 `gap > approach_skip_m`(1.0)이 겹치지 않는다. 마지막 0.5 m 는 `FOLLOWING` 이 맡고 AC-05 채점 구간도 `FOLLOWING` 뿐이라 기능상 빠지는 것은 없다. **없다고 고장이 아니다** |
 | `safety/estop` | safety_watchdog | 모든 로봇 노드, fleet_manager | Bool | True 동안 **주행 명령 금지** |
 | `cmd_vel` | safety_watchdog, Nav2, **follow_target**(제자리 회전 전용) | Create3 | TwistStamped | **v1.13.** estop 중 워치독이 20 Hz 로 덮어쓴다. **병진은 전부 0** — 전진은 장애물 쪽이라 막고, **후진은 애초에 쓰지 않는다**(2절 확정: 범퍼·클리프가 전방에만 있다). **각속도만 0.4 rad/s 상한으로 통과시킨다** — 제자리 회전은 footprint 내접 0.175 / 외접 0.189 라 쓸고 가는 폭이 1.4 cm 뿐이고, 이것이 유일한 탈출 수단이다. 해제 거리 **`CLEAR_DIST` 0.38 m**(0.45 에서 내림) — 0.45 는 P1 반폭 0.395 m 보다 커서 통로 안에서는 어느 방향으로 돌아도 해제 조건이 성립하지 않는다 (I-036) |
 
