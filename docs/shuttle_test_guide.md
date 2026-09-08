@@ -598,7 +598,8 @@ done
 | 2 | **재탐지가 도는지** | 일부러 로봇을 15~30° 틀어 놓고 시작한다. `마커 N 재탐지 성공 — 기준 방위에서 +X°` 가 나와야 한다. 찾은 각도를 매 회차 적는다 |
 | 3 | `bay_align_use_marker_yaw` **true** | 2번에서 모은 `마커 법선 오차` 가 안정적일 때만. 켜면 AMCL 방위 오차까지 지워진다. 게이트(25°) 밖이면 자동으로 측량값으로 되돌아간다 |
 | 4 | **robot8 로 같은 시험** | 개체차·도크 차이·측위 차이를 가른다. `bay:=A`, `-r __ns:=/robot8`, `robot8.yaml`. **카메라가 달라 `depth_k` 재실측이 먼저다** |
-| 5 | `localization.yaml` 튜닝 | `update_min_a`(0.2) · `resample_interval`(1) · `recovery_alpha_slow/fast`(0.0). `update_min_d` 는 9/7 에 0.25→0.05 로 이미 바꿨다 (I-029) |
+| 5 | `general_goal_checker.stateful` **true → false** | 지금 `nav2.yaml` 37·69 행이 둘 다 `true` 다. **위치 도달을 한 번 선언하면 래치**하고 그 뒤로는 yaw 만 본다 — 래치 직후 AMCL 보정 점프가 오면 로봇이 그 자리에 서 버린다. 9/8 T6 의 오차 0.39 m 중 TF 지연으로 설명되는 것은 약 0.19 m 뿐이고, 남는 0.2 m 의 유력한 후보다. **한 줄만 바꾸면 되고 되돌리기도 쉽다** |
+| 6 | `localization.yaml` 튜닝 | `update_min_a`(0.2) · `resample_interval`(1) · `recovery_alpha_slow/fast`(0.0). `update_min_d` 는 9/7 에 0.25→0.05 로 이미 바꿨다 (I-029) |
 
 > **선반 여유 — 3단계 전에 확인할 것.** 마커는 선반 뒤 벽면에 있으므로 **선반 앞면이 마커보다 로봇에 가깝다.** 주행 보고로 최근접점이 0.32 m 라 워치독 `stop_dist` 0.30 m 에는 안 걸리지만 여유가 2 cm 뿐이다. `bay_marker_range_m` 을 0.5 에서 **0.6** 으로 올려 둔 이유다. 선반 위치가 바뀌면 이 값을 먼저 다시 잡는다.
 
