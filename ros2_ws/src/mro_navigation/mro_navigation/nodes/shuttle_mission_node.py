@@ -260,6 +260,7 @@ class ShuttleMission(Node):
         self.aruco_dist = None   # (m, 수신 시각)
         # aruco/pose 원본을 그대로 쌓는다 — TF 변환은 메인 루프에서 한다 (콜백은 값만 저장)
         self.aruco_poses = deque(maxlen=30)
+        self.cam_tf = None       # (프레임 이름, base_link←카메라 변환) — 고정이라 한 번만 찾는다
         self.estop = False
         self.last_status = None
         self.token_held = False
@@ -761,7 +762,39 @@ class ShuttleMission(Node):
         return False
 
     # ── 베이 접근·정렬 (마커 기준 상대 이동) ─────────────────────────
-    def marker_in_base(self, msg):
+    def camera_transform(self, frame):
+        """base_link ← 카메라 광학 프레임. 고정 변환이라 **한 번만 찾아 들고 있는다**.
+
+        기다리는 이유 — `tf_static` 은 늦게 도착한다. 9/8 실측에서 `tf2_echo` 도 처음 몇 초는
+        `Invalid frame ID "base_link" ... frame does not exist` 를 내다가 그 뒤에 값을 냈다.
+        기다리지 않으면 그 창에 걸린 회차가 '마커 표본 없음' 으로 미션을 포기한다.
+        robot3 실측값: 병진 [-0.060, 0, 0.244] · 회전 (xyzw) [-0.5, 0.5, -0.5, 0.5].
+        """
+        if self.cam_tf is not None and self.cam_tf[0] == frame:
+            return self.cam_tf[1]
+        found = None
+
+        def ready():
+            nonlocal found
+            try:
+                found = self.tf_buffer.lookup_transform(BASE_FRAME, frame, Time())
+            except Exception:
+                return False
+            return True
+
+        if not self.wait(ready, timeout=self.positive_parameter('tf_pose_timeout_s')):
+            self.get_logger().warn(
+                f'카메라 TF({BASE_FRAME}←{frame}) 를 못 찾았다 — 프레임 이름과 '
+                'tf_static 발행을 확인할 것 (ros2 run tf2_ros tf2_echo)')
+            return None
+        t = found.transform.translation
+        self.get_logger().info(
+            f'카메라 TF 확보 ({BASE_FRAME}←{frame}) — '
+            f'병진 [{t.x:.3f}, {t.y:.3f}, {t.z:.3f}]')
+        self.cam_tf = (frame, found)
+        return found
+
+    def marker_in_base(self, msg, tf):
         """aruco/pose 한 장을 base_link 로 옮겨 (앞, 왼쪽, 법선 방위) 로 돌려준다.
 
         마커 법선은 마커 좌표계의 +z 를 base_link 로 옮긴 것이다(회전행렬 3열). 로봇이 벽을
@@ -769,13 +802,6 @@ class ShuttleMission(Node):
         solvePnP 의 두 해 중 법선이 반대로 나온 해는 부호를 되돌려 흡수한다 — 이건 뒤집힘이
         분명해 안전하지만, 남는 기울기 모호성까지 지우지는 못한다 (그래서 기본은 안 쓴다).
         """
-        frame = msg.header.frame_id or CAMERA_FRAME_FALLBACK
-        try:
-            tf = self.tf_buffer.lookup_transform(BASE_FRAME, frame, Time())
-        except Exception as e:
-            self.get_logger().warn(f'카메라 TF({BASE_FRAME}←{frame}): {e}',
-                                   throttle_duration_sec=2.0)
-            return None
         p = do_transform_pose(msg.pose, tf)
         q = p.orientation
         nx = 2.0 * (q.x * q.z + q.w * q.y)
@@ -800,9 +826,15 @@ class ShuttleMission(Node):
         window = self.positive_parameter('bay_align_sample_s')
         self.aruco_poses.clear()
         self.wait(lambda: len(self.aruco_poses) >= want, timeout=window)
+        frames = list(self.aruco_poses)
+        if not frames:
+            return None
+        tf = self.camera_transform(frames[0][0].header.frame_id or CAMERA_FRAME_FALLBACK)
+        if tf is None:
+            return None
         rows, last = [], None
-        for msg, recv in list(self.aruco_poses):
-            row = self.marker_in_base(msg)
+        for msg, recv in frames:
+            row = self.marker_in_base(msg, tf)
             if row is not None:
                 rows.append(row)
                 last = recv

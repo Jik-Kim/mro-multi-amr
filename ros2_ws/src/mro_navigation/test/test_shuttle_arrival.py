@@ -81,6 +81,39 @@ def test_stale_or_future_pose_is_not_arrival(age):
         node.destroy_node()
 
 
+def test_camera_tf_arriving_late_does_not_lose_the_run():
+    """tf_static 이 늦게 와도 기다렸다가 접근한다 — 9/8 실측에서 처음 몇 초는 조회가 실패했다.
+
+    기다리지 않으면 그 창에 걸린 회차가 '마커 표본 없음' 으로 통째로 날아간다.
+    """
+    yaw_ref = -3.050
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1, tf_pose_timeout_s=2.0)
+    late = {'ready': False}
+    real = _camera_transform
+
+    def lookup(target, source, *args, **kwargs):
+        if source == CAMERA_FRAME:
+            if not late['ready']:
+                raise LookupError('frame does not exist')     # tf_static 아직 안 옴
+            return real()
+        transform = TransformStamped()
+        transform.header.stamp = Time(seconds=node.now()).to_msg()
+        transform.transform.translation.x = -0.65
+        transform.transform.translation.y = -0.02
+        transform.transform.rotation.z = math.sin(yaw_ref / 2)
+        transform.transform.rotation.w = math.cos(yaw_ref / 2)
+        return transform
+
+    node.tf_buffer.lookup_transform = lookup
+    node.create_timer(0.3, lambda: late.__setitem__('ready', True))
+    marker_frames(node, fwd=1.0, lat=0.0)
+    try:
+        node.approach_and_align(node.arena['bays']['A'])
+        assert node.navigator.moves() == [('drive', 0.4)]
+    finally:
+        node.destroy_node()
+
+
 def test_missing_pose_cannot_start_approach():
     """자기 위치를 모르면 마커가 보여도 접근을 시작하지 않는다.
 
