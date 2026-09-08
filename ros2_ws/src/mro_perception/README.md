@@ -148,6 +148,8 @@ nvidia-smi                                                 # YOLO 가 GPU 를 �
 | `cb rgb` ≪ `topic hz` 입력 | **콜백이 굶음** — 노드가 메시지를 못 꺼냄 | `tf` 콜백 수가 높으면 TF 리스너를 별도 스레드로(`spin_thread=True`) |
 | `age` 큰데 `topic delay` 도 큼 | **입력이 늦게 옴** — RPi·Wi-Fi | 로봇 Wi-Fi, RPi 부하. 단 `/scan` 지연도 같은 값이면 **시계 어긋남**(지연 아님) |
 | `proc max` 가 **1000·2000 ms** | **TF 대기 블로킹** — `to_map` 이 실행기를 세움 | 9/8 수정(`timeout=0`)이 든 빌드인지. 탐지될 때만 렉이 나는 게 지문 |
+| `cb rgb/depth` 는 오는데 `synced 0` | **동기화 실패** — depth 가 rgb 보다 늦게 와 큐를 넘음 | 도구 표의 depth 지연 ≫ rgb 지연이면 depth 스트림 과부하. 아래 줄 |
+| depth 지연만 크다, 도구가 `구독자 2 이상` | **중복 노드** — 탐지 노드가 여러 개 떠서 RPi 가 스트림을 N 번 전송 | `pkill -f amr_detection_node` 후 하나만. GPU 에 python 이 여럿이면 의심 |
 | 노드 `age` 는 작은데 rqt 만 늦음 | **출력 대역폭** — JPEG 로 ≈ 6 MB/s (raw 였으면 27, 9/8 압축으로 전환) | rqt 를 다른 PC 에서 보면 그래도 Wi-Fi 부담. `bw` 확인, rqt 끄고 `age` 재확인 |
 
 한 번에 하나씩 끄면서 본다: ① rqt 끄기 → ② `show_window:=false` → ③ 그래도 `age` 크면 `cb` 와 `topic hz` 비교.

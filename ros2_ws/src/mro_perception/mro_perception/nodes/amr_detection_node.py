@@ -121,7 +121,10 @@ MAX_CORE_GAP_MM = 150
 
 # ── 입력·표시 (파라미터 기본값) ──────────────────────────────────────────────────────────────────────
 SYNC_SLOP_S = 0.1            # RGB 와 depth 의 타임스탬프 차이가 이 안(초)이면 "같은 순간" 으로 묶는다
-SYNC_QUEUE = 3               # 동기화기가 짝을 기다리며 들고 있는 프레임 수. 크면 묵은 프레임을 재생한다
+# 동기화기가 짝을 기다리며 들고 있는 프레임 수 = rgb·depth 도착 시차 허용치 (20 ≈ 2 s). 작으면(3 으로 뒀다가 9/8 synced 0)
+# depth 가 rgb 보다 늦게 오는 순간 짝이 영영 안 맞는다. 묵은 프레임 재생 방지는 CAMERA_QOS depth 1 이 맡는다 — 이 큐는
+# 이미 받은 것만 들고 있다
+SYNC_QUEUE = 20
 # 카메라 구독 QoS — "최신 한 장만". 처리가 잠깐 밀려도 전송 계층이 묵은 프레임을 버려 화면이 '몇 초 전' 이 되지 않는다.
 # RELIABLE·큐 10 이던 이관 설정은 밀린 10장을 순서대로 재생했다 (9/8 렉 분석). BEST_EFFORT 구독은 RELIABLE 발행자도 받는다
 CAMERA_QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST, depth=1)

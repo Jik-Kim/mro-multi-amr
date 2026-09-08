@@ -31,8 +31,9 @@ from std_msgs.msg import Bool
 from tf2_msgs.msg import TFMessage
 
 
-def find_node_pid(exe_name):
-    """실행 파일 이름이 exe_name 인 프로세스의 PID. pgrep -f 는 명령줄에 그 문자열이 든 셸까지 잡으므로 쓰지 않는다."""
+def find_node_pids(exe_name):
+    """실행 파일 이름이 exe_name 인 프로세스 PID 전부. pgrep -f 는 명령줄에 그 문자열이 든 셸까지 잡으므로 쓰지 않는다."""
+    found = []
     for d in os.listdir('/proc'):
         if not d.isdigit() or int(d) == os.getpid():
             continue
@@ -42,8 +43,8 @@ def find_node_pid(exe_name):
             continue
         # ros2 run 은 ".../lib/mro_perception/amr_detection_node" 스크립트를 python 이 실행한다
         if any(a.decode(errors='ignore').rstrip('.py').endswith(exe_name) for a in argv[:2] if a):
-            return d
-    return ''
+            found.append(d)
+    return found
 
 
 def sh(cmd):
@@ -114,11 +115,15 @@ def main():
           f"| DISCOVERY={env('ROS_DISCOVERY_SERVER', '')} | SUPER_CLIENT={env('ROS_SUPER_CLIENT', '')}")
     print(f"SSH 접속={'예' if os.environ.get('SSH_CONNECTION') else '아니오'} | DISPLAY={os.environ.get('DISPLAY', '(없음)')}"
           f" — SSH 로 창을 띄우면 X 포워딩이라 imshow 가 느리다")
-    pid = find_node_pid('amr_detection_node')
-    if pid:
-        print(f"amr_detection PID {pid} | " + sh(f"ps -o %cpu=,%mem=,nlwp= -p {pid}").strip() + '  (%CPU %MEM 스레드수)')
-    else:
+    pids = find_node_pids('amr_detection_node')
+    if not pids:
         print('amr_detection 프로세스가 이 PC 에 없다 — 노드가 도는 PC 에서 실행할 것')
+    for pid in pids:
+        stat = sh(f'ps -o %cpu=,%mem=,nlwp=,etimes= -p {pid}').strip()
+        print(f'amr_detection PID {pid} | {stat}  (%CPU %MEM 스레드 실행초)')
+    if len(pids) > 1:
+        print(f'!! amr_detection 이 {len(pids)} 개 떠 있다 — 카메라 스트림을 그 수만큼 Wi-Fi 로 중복 전송하고 target/* 도 겹쳐 발행한다. '
+              f'하나만 남길 것: pkill -f amr_detection_node 후 다시 실행')
     if shutil.which('nvidia-smi'):
         print('GPU: ' + sh('nvidia-smi --query-gpu=name,utilization.gpu,memory.used --format=csv,noheader'))
         apps = sh('nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader')
@@ -131,6 +136,13 @@ def main():
     time.sleep(0.5)                                   # 디스커버리가 노드 목록을 채울 시간
     names = sorted({f'{ns}/{n}'.replace('//', '/') for n, ns in node.get_node_names_and_namespaces()})
     print('보이는 노드: ' + ', '.join(x for x in names if 'diag_lag' not in x)[:400])
+    for short in ('oakd/rgb/image_raw/compressed', 'oakd/stereo/image_raw/compressedDepth'):
+        subs = node.get_subscriptions_info_by_topic(f'{node.ns}/{short}')
+        others = [s for s in subs if 'diag_lag' not in s.node_name]
+        rel = sum(1 for s in others if s.qos_profile.reliability.name == 'RELIABLE')
+        print(f'{short:<42} 구독자 {len(others)} (이 도구 제외)  RELIABLE {rel}'
+              + ('   !! 둘 이상 = RPi 가 그 수만큼 중복 전송' if len(others) > 1 else '')
+              + ('   !! RELIABLE 독자 = 9/8 렉 원인 ②' if rel else ''))
     print(f'\n=== 첫 메시지를 기다린 뒤 {a.seconds:.0f} 초 측정 ... (디스커버리 서버 경유라 맞물리는 데 몇 초 걸린다) ===')
     wait_until = time.monotonic() + 20.0                       # 20 s 안에 아무것도 안 오면 포기
     try:
@@ -165,6 +177,21 @@ def main():
         if rgb_hz == 0:
             print('입력이 0 Hz — 이 PC 에 카메라 토픽이 안 온다. 네임스페이스(--ns)·Discovery 확인')
         else:
+            synced = max((float(m.group(1)) for line in node.diag_lines
+                          for m in [re.search(r'synced ([\d.]+)/s', line)] if m), default=None)
+            rgb_cb = max((float(m.group(1)) for line in node.diag_lines
+                          for m in [re.search(r'cb rgb ([\d.]+)', line)] if m), default=None)
+            depth_delay = sorted(d['depth'])[len(d['depth']) // 2] if d['depth'] else None
+            if synced is not None and rgb_cb and synced < rgb_cb * 0.5:
+                gap = (f'{(depth_delay - rgb_delay) * 1000:.0f} ms'
+                       if (depth_delay is not None and rgb_delay is not None) else '?')
+                print(f'⑥ 동기화 실패 — rgb/depth 콜백은 오는데 짝이 안 맞음 (synced {synced:.1f}/s). '
+                      f'rgb·depth 도착 시차 {gap} 가 '
+                      f'sync 큐(SYNC_QUEUE 프레임)를 넘으면 생긴다. depth 지연이 큰 이유(중복 독자·대역폭)를 먼저 없앨 것')
+            if depth_delay is not None and rgb_delay is not None and depth_delay > rgb_delay + 0.4:
+                print(f'⑦ depth 만 늦다 — rgb {rgb_delay * 1000:.0f} vs depth {depth_delay * 1000:.0f} ms. '
+                      f'depth(PNG 1.5 MB/s)가 '
+                      f'제일 무거워 Wi-Fi 가 차면 먼저 밀린다 → 독자 수(위) 와 다른 노드의 대역폭을 줄일 것')
             if proc_max >= 900:
                 print(f'⑤ TF 대기 블로킹 — process 최대 {proc_max} ms (1 s 단위 = to_map timeout 횟수). '
                       f'탐지된 프레임마다 실행기가 멈춘다. to_map(timeout=0) 이 적용된 빌드인지 확인 (9/8 수정)')
