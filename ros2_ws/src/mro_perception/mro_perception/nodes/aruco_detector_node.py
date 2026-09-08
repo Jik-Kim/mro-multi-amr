@@ -7,9 +7,12 @@ import cv2
 import numpy as np
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage, CameraInfo
 from std_msgs.msg import Int32, Float32
 
+CAMERA_QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST, depth=1)
+# 카메라 구독 QoS — amr_detection 과 동일. 로봇당 RGB 구독자가 둘(amr_detection·aruco)이라 Wi-Fi 부담 2× 는 남는다 (NR-03)
 MARKER_SIZE_M = 0.10          # 베이 마커 한 변 (BRD 3.2 파라미터). TODO: 파라미터화
 DICT = cv2.aruco.DICT_4X4_50  # ID 체계: A=1, B=2, C=3. ID 10~ 는 KOZ 용 예약(Phase 2, 미사용)
 
@@ -21,7 +24,9 @@ class ArucoDetector(Node):
         self.dist = np.zeros(5)
         self.det = cv2.aruco.ArucoDetector(cv2.aruco.getPredefinedDictionary(DICT), cv2.aruco.DetectorParameters())
         self.create_subscription(CameraInfo, 'oakd/rgb/camera_info', self.info_cb, 10)
-        self.create_subscription(CompressedImage, 'oakd/rgb/image_raw/compressed', self.img_cb, 5)
+        # 최신 한 장만 (BEST_EFFORT·depth 1). RELIABLE 로 구독하면 Wi-Fi 손실 재전송이 송신 큐를 채워
+        # 같은 스트림을 보는 모든 독자가 1~2 s 밀린다 — 9/8 amr_detection 렉 실측 (링크 자체는 20 ms)
+        self.create_subscription(CompressedImage, 'oakd/rgb/image_raw/compressed', self.img_cb, CAMERA_QOS)
         self.pub_id = self.create_publisher(Int32, 'aruco/id', 10)
         self.pub_dist = self.create_publisher(Float32, 'aruco/distance', 10)
 
