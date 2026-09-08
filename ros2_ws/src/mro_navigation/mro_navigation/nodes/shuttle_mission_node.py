@@ -844,13 +844,17 @@ class ShuttleMission(Node):
         """
         want = max(1, int(self.p('bay_align_samples')))
         window = self.positive_parameter('bay_align_sample_s')
+        self.aruco_poses.clear()
+        # ID 일치를 **기다리는 조건에 넣는다.** 미리 한 번 보고 없다고 곧장 포기하면, 회전 직후
+        #   한두 프레임 놓친 것만으로 미션이 죽는다 (9/8 T15·T16 이 그랬다)
+        self.wait(lambda: (len(self.aruco_poses) >= want
+                           and (expect_id is None or self.aruco_ok(expect_id))),
+                  timeout=window)
         if expect_id is not None and not self.aruco_ok(expect_id):
             self.get_logger().warn(
-                f'마커 {expect_id} 가 지금 보이지 않는다 — 자세 표본을 쓰지 않는다 '
+                f'마커 {expect_id} 를 {window:.1f} s 안에 못 봤다 — 자세 표본을 쓰지 않는다 '
                 '(aruco/pose 에는 ID 가 없어 옆 베이 마커일 수 있다)')
             return None
-        self.aruco_poses.clear()
-        self.wait(lambda: len(self.aruco_poses) >= want, timeout=window)
         frames = list(self.aruco_poses)
         if not frames:
             return None
@@ -1052,6 +1056,11 @@ class ShuttleMission(Node):
         for i in range(1, iters + 1):
             sample = self.marker_sample(bay['aruco_id'])
             if sample is None:
+                if i > 1:
+                    # 이미 접근은 했다. 다듬지 못할 뿐이라 미션을 죽일 이유가 없다 (I-026)
+                    self.get_logger().warn(
+                        f'접근 {i}/{iters} 에서 마커를 못 봤다 — {i - 1}회 접근한 자리에서 멈춘다')
+                    return
                 raise MissionAbort(
                     f'{ARUCO_POSE_TOPIC} 표본 없음 — 접근할 기준이 없다. aruco_detector 가 떠 '
                     '있는지, publish_pose 가 true 인지, 카메라 TF 가 있는지 확인할 것')

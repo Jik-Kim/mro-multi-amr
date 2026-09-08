@@ -513,6 +513,29 @@ def test_pose_without_matching_marker_id_is_not_used(ros):
     node.destroy_node()
 
 
+def test_losing_the_marker_after_first_approach_does_not_kill_the_mission(ros):
+    """1회차 접근을 마친 뒤 마커를 놓치면 **거기서 멈추되 미션은 계속한다** (I-026).
+
+    회전 직후 한두 프레임을 놓치는 일이 실주행에서 반복됐다 (9/8 T15·T16). 이미 접근은
+    끝났으므로 다듬지 못할 뿐이고, 그것 때문에 미션을 죽이면 회차가 통째로 날아간다.
+    """
+    node = make_node(bay_align_enable=True)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.5, lat=0.0)        # 1회차는 크게 접근한다
+    original = node.marker_sample
+
+    def once(expect_id=None):
+        node.marker_sample = lambda expect_id=None: None   # 2회차부터는 못 본다
+        return original(expect_id)
+
+    node.marker_sample = once
+    node.run_mission(assigned('A'))
+    assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
+    assert approach_moves(node) == [('drive', 0.6)]     # 1회차 접근은 실행됐다
+    node.destroy_node()
+
+
 def test_bay_approach_refuses_oversized_move(ros):
     """이동량이 상한을 넘으면 움직이지 않고 포기한다 — 선반 충돌을 막는 마지막 방어다."""
     node = make_node(bay_align_enable=True, bay_align_max_step_m=0.6)
