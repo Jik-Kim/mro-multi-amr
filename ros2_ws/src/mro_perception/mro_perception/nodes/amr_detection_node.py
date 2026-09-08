@@ -110,6 +110,7 @@ PAIR_OFF_S = 3.0             # 이 시간 연속 실패·미검출이면 paired=
 PUBLISH_HZ = 1.0             # paired·worker_id 재발행 주기. 늦게 켜진 노드도 받게 한다
 JPEG_QUALITY = 80            # 모니터 영상 압축 품질. 웹캠 노드와 같은 값 (webcam.yaml jpeg_quality)
 DIAG_LOG_S = 1.0             # 계측 로그 주기(초). 0 이면 끔. 렉 원인 분리용 — 처리 프레임 나이·루프/콜백/처리 속도
+TF_WAIT_S = 0.0              # to_map 이 TF 를 기다리는 시간. 0 = 즉시 판정(정상). 1.0 이면 9/8 렉(프레임당 2 s)이 재현된다 — 시연·검증용
 
 # ── 거리 측정 (파라미터 기본값) ──────────────────────────────────────────────────────────────────────
 BBOX_INNER = 0.5             # bbox 중심부 50 % 만 depth 를 읽는다. 가장자리는 인형 뒤 바닥·벽의 depth 가 섞인다
@@ -173,6 +174,7 @@ class AmrDetection(Node):
         self.declare_parameter('show_window', SHOW_WINDOW)
         self.declare_parameter('diag_log_s', DIAG_LOG_S)
         self.declare_parameter('jpeg_quality', JPEG_QUALITY)
+        self.declare_parameter('tf_wait_s', TF_WAIT_S)
         p = lambda k: self.get_parameter(k).value  # noqa: E731
         self.detect_conf = float(p('detect_conf'))
         self.max_core_gap_mm = float(p('max_core_gap_mm'))
@@ -181,6 +183,7 @@ class AmrDetection(Node):
         # 계측 — 렉이 '입력이 늦게 오는 것'인지 '노드가 못 따라가는 것'인지 가른다 (README 7절)
         self.diag_log_s = float(p('diag_log_s'))
         self.jpeg_quality = int(p('jpeg_quality'))
+        self.tf_wait = Duration(seconds=float(p('tf_wait_s')))   # 0 이 아니면 실행기가 그만큼 멈춘다 (재현용)
         self.diag = dict(t0=time.monotonic(), loops=0, rgb_cb=0, depth_cb=0, synced=0, processed=0,
                          age_sum=0.0, age_max=0.0, proc_ms_sum=0.0, proc_ms_max=0.0, tf_cb=0)
 
@@ -368,7 +371,7 @@ class AmrDetection(Node):
                     self.pub_distance.publish(Float32(data=dist))
                     # 같은 점을 map 좌표로. timeout=0 — 기다리면 실행기가 멈춰 /tf 가 못 들어오므로(단일 스레드)
                     # 즉시 판정. 없으면 이 프레임만 건너뛴다. 1 s 대기 두 번이 탐지 프레임마다 2 s 렉을 만들었다 (9/8)
-                    pm = to_map(self.tf_buffer, pt, self.get_logger(), timeout=Duration())
+                    pm = to_map(self.tf_buffer, pt, self.get_logger(), timeout=self.tf_wait)
                     if pm is not None:                       # TF 가 아직 없으면(기동 직후·시계 어긋남) 건너뛴다
                         # ⑧ follow_target 이 받아 "이 앞 0.5 m" 를 목표로 삼는다 (paired 일 때만 쓴다 — 주행 TODO ④)
                         self.pub_point.publish(pm)

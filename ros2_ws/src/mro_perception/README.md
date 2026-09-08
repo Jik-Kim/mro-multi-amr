@@ -151,3 +151,14 @@ nvidia-smi                                                 # YOLO 가 GPU 를 �
 | 노드 `age` 는 작은데 rqt 만 늦음 | **출력 대역폭** — JPEG 로 ≈ 6 MB/s (raw 였으면 27, 9/8 압축으로 전환) | rqt 를 다른 PC 에서 보면 그래도 Wi-Fi 부담. `bw` 확인, rqt 끄고 `age` 재확인 |
 
 한 번에 하나씩 끄면서 본다: ① rqt 끄기 → ② `show_window:=false` → ③ 그래도 `age` 크면 `cb` 와 `topic hz` 비교.
+
+### 렉 재현 (전/후 비교·시연용)
+
+두 원인 모두 코드 수정 없이 스위치로 재현된다. 노드는 인형이 **보이는** 상태여야 한다(탐지가 없으면 `to_map` 이 안 불린다).
+
+| 원인 | 재현 | 되돌리기 | `[diag]` 에서 보이는 것 |
+|---|---|---|---|
+| ① TF 대기 블로킹 | 노드 실행에 `-p tf_wait_s:=1.0` (localization 없이) | 플래그 빼기 (기본 0) | `proc max` ≈ 2000, `processed` ≈ 3/s, `loop` 2/s ↔ 180/s 요동 |
+| ② RELIABLE 구독 | PC 다른 터미널에서 `ros2 topic echo --qos-reliability reliable --qos-depth 10 --no-arr /robot3/oakd/rgb/image_raw/compressed` | 그 터미널 Ctrl+C | `age` 가 수백 ms → 1~2 s 로 올라감. `proc` 는 그대로 |
+
+②는 옛 노드가 하던 구독을 흉내 낸 것이다 — 손실 재전송이 송신 큐를 채워 best-effort 독자까지 밀린다. 링크 상태에 따라 수십 초 걸릴 수 있다.
