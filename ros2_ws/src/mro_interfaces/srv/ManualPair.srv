@@ -1,0 +1,8 @@
+# 명시 페어링 폴백 (FR-13). 재식별 게이트 미달이 30 s 지속되면 관제 UI 가 버튼을 띄우고,
+# 운영자가 로봇과 작업자를 고르면 fleet_manager 가 그 로봇의 amr_detection 에 이 서비스를 부른다.
+# 서버는 로봇마다 하나다 — /robotN/manual_pair. 확정 발행은 서버(amr_detection)만 한다.
+string robot_ns         # 어느 로봇이 (요청 대상 확인용, 서버 자신의 ns 와 달라야 거부)
+string worker_id        # 누구를 따라갈지. 웹캠1 이 등록한 ID
+---
+bool accepted
+string reason           # 거부 사유. ALREADY_PAIRED | NO_TARGET | TOO_FAR | WRONG_ROBOT | GATE_OK

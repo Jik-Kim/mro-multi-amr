@@ -16,6 +16,9 @@
                   재획득은 0->1. 단 그 구간에 STANDBY/FAILED 가 있었으면 실패로만 센다 (I-028).
                   approach/status 의 SEARCHING 은 정상 절차에서도 쓰이므로 Lost 신호가 아니다
   K-05  리드타임  waiting_at - created_at (요청 -> 대기공간 도착). DONE 은 도킹 완료라 다르다
+  K-06  교착해결  /fleet/zone_event 의 REJECT -> 같은 로봇·구역 GRANT 가 60 s 안.
+                  단 그 사이 그 구역에 RECLAIM 이 있으면 미해결 — RECLAIM 은 보유자 ns 로
+                  오므로 구역 단위로 본다 (I-032). 개입이 아니라 IPH 에 넣지 않는다 (v1.11)
 
 kpi_logger 는 거르지 않고 받아적는다. 구간을 자르고 세는 것은 여기서만 한다.
 """
@@ -29,6 +32,7 @@ NOT_INTERVENTION = {'SAFETY_POLICY'}          # 개입으로 세지 않는다 (B
 LOST_MIN_S = 1.0                              # 이 시간 이상 안 보여야 Lost (SOT Lost 1.0 s)
 FAIL_STATES = {'STANDBY', 'FAILED'}           # 재획득 실패로 끝난 상태
 DOCKED_STATES = {'DOCKED', 'READY'}           # 운용시간에서 제외 (undock 전 / 도킹 완료 후)
+ZONE_RESOLVE_S = 60.0                         # REJECT 후 이 시간 안에 GRANT 면 자동 해결 (계약 3절)
 
 
 def percentile(values, q):
@@ -172,6 +176,73 @@ def reacquisition(rows, t_end):
     return ok_spans, gave_up, unfinished
 
 
+# ── K-06 : 교착 자동 해결 ─────────────────────────────────────────
+def zone_resolution(rows, t_end):
+    """대기(REJECT) 가 사람 손 없이 풀렸는지 센다 — K-06 (계약 v1.11, I-030).
+
+    세마포어가 /fleet/zone_event 로 "<zone> <robot> <REJECT|GRANT|RELEASE|RECLAIM>" 을 낸다.
+    계약 3절이 REJECT 는 대기 시작 1건만, GRANT 는 새 획득만 내도록 정했으므로
+    한 REJECT 와 그 뒤의 GRANT 하나가 짝이 된다.
+
+      해결   같은 로봇·구역의 GRANT 가 ZONE_RESOLVE_S 안에 왔고,
+             그 사이 그 구역에 RECLAIM 이 없었다
+      미해결 [REJECT, GRANT] 구간에 그 구역의 RECLAIM 이 있었다 · 시간 초과 ·
+             로그 끝까지 GRANT 가 안 옴
+
+    RECLAIM 은 구역 단위로 본다 (I-032). 세마포어가 RECLAIM 을 **보유자** ns 로 내기
+    때문이다 (zone_semaphore_node.py: self.event(z, h, 'RECLAIM'), h = holder).
+    대기자 열만 보면 RECLAIM 이 절대 오지 않아, 강제로 뺏어서 넘어간 것을
+    '자동 해결' 로 세고 강제 회수 카운트도 항상 0 이 된다.
+
+    RELEASE 는 보유자의 정상 반납이라 대기와 짝짓지 않는다.
+    이것은 개입이 아니다 — Intervention 과 섞으면 IPH 분자가 부풀어 AC-13 이 나빠 보인다.
+    """
+    per_robot = defaultdict(list)             # (robot, zone) -> [(t, action)]  대기 짝짓기용
+    reclaims = defaultdict(list)              # zone -> [t]                      구역 단위
+    for r in rows:
+        if r['source'] != 'zone':
+            continue
+        if r['value'] == 'RECLAIM':
+            reclaims[r['key']].append(r['t'])
+        else:
+            per_robot[(r['robot'], r['key'])].append((r['t'], r['value']))
+    for ts in reclaims.values():
+        ts.sort()
+
+    def reclaimed_between(zone, t0, t1):
+        """[t0, t1] 에 그 구역의 강제 회수가 있었나.
+
+        끝점을 포함한다. 세마포어는 보유자에게서 뺏은 뒤 곧바로 대기자에게 넘기므로
+        RECLAIM 과 GRANT 의 시각이 같게 찍힌다 (PM 재현: 둘 다 t=61). 반열린 구간으로
+        두면 그 RECLAIM 이 빠져 '강제로 뺏어서 넘어간 것' 이 자동 해결로 잡힌다.
+        """
+        return any(t0 <= t <= t1 for t in reclaims.get(zone, ()))
+
+    waits, resolved, spans = 0, 0, []
+    for (_robot, zone), seq in per_robot.items():
+        seq.sort(key=lambda x: x[0])
+        rejected_at = None
+        for t, action in seq:
+            if action == 'REJECT':
+                if rejected_at is None:       # 계약상 대기 시작 1건만 오지만 방어해 둔다
+                    rejected_at = t
+                    waits += 1
+            elif rejected_at is None:
+                continue                      # 대기 없이 온 GRANT/RELEASE 는 K-06 대상이 아니다
+            elif action == 'GRANT':
+                dur = t - rejected_at
+                if dur <= ZONE_RESOLVE_S and not reclaimed_between(zone, rejected_at, t):
+                    resolved += 1
+                    spans.append(dur)
+                rejected_at = None            # 시간 초과·강제 회수면 미해결로 두고 대기를 닫는다
+        # 끝까지 GRANT 가 안 온 대기는 resolved 에 들어가지 않으므로 이미 미해결이다
+
+    # 구역 전체의 RECLAIM 수다 — 대기자가 없는데 보유만 60 s 를 넘겨도 세어지므로
+    # 대기 건수와 짝이 맞지 않을 수 있다. 출력에 '(구역)' 을 붙여 그 뜻을 밝힌다
+    reclaimed = sum(len(ts) for ts in reclaims.values())
+    return waits, resolved, reclaimed, spans
+
+
 # ── AC-08 / K-05 : 관제 DB ────────────────────────────────────────
 def missions_from_db(db_path):
     """(행, 안내문) 을 돌려준다. 행이 None 이면 안내문에 못 읽은 이유가 담긴다.
@@ -284,6 +355,20 @@ def main():
         if ok:
             print(f'  재획득 시간(s)  평균 {sum(ok)/len(ok):.1f}  p50 {percentile(ok, 50):.1f}  '
                   f'p95 {percentile(ok, 95):.1f} [{"PASS" if percentile(ok, 95) <= 5 else "FAIL"} ≤5]')
+
+    # K-06
+    waits, resolved, reclaimed, spans = zone_resolution(rows, t_end)
+    print('\nK-06 교착 자동 해결 — /fleet/zone_event 기준')
+    if waits == 0:
+        print('  대기 기록 없음 — zone_semaphore 가 /fleet/zone_event 를 발행하는지 확인 (I-030)')
+    else:
+        rate = resolved / waits * 100
+        print(f'  대기(REJECT) {waits} 회 · 자동 해결 {resolved} · 강제 회수(구역) {reclaimed}'
+              f' → {rate:.1f}%')
+        if spans:
+            print(f'  해결까지(s)  평균 {sum(spans)/len(spans):.1f}  p50 {percentile(spans, 50):.1f}  '
+                  f'p95 {percentile(spans, 95):.1f}   [{ZONE_RESOLVE_S:.0f} s 안이면 해결]')
+        print('  ※ 자동 해결은 개입이 아닙니다 — IPH(AC-13) 분자에 넣지 않습니다 (계약 v1.11)')
 
 
 if __name__ == '__main__':

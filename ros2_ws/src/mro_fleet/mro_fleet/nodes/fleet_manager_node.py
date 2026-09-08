@@ -1,7 +1,7 @@
 """미션 생성·배정, 상태 집계, DB 기록, 종료 명령을 담당한다.
 
 서비스: /fleet/request_mission, /fleet/operator_command
-구독: /webcam1/worker_descriptor, /fleet/intervention,
+구독: /webcam1/worker_descriptor, /fleet/intervention, /fleet/zone_event,
       로봇별 상태·배터리·pose·estop
 발행: /fleet/mission, 로봇별 mission/assigned·mission/finish,
       /fleet/status
@@ -61,6 +61,8 @@ APPROACH_MISSION_PHASES = {
     Mission.STANDBY,
 }
 TERMINAL_MISSION_STATES = {Mission.DONE}
+ZONE_IDS = {'P1', 'DOCK'}
+ZONE_EVENT_ACTIONS = {'REJECT', 'GRANT', 'RELEASE', 'RECLAIM'}
 
 
 class FleetManager(Node):
@@ -76,10 +78,16 @@ class FleetManager(Node):
         self.declare_parameter('robot_namespaces', DEFAULT_ROBOTS)
         self.declare_parameter('battery_min', 0.25)
         self.declare_parameter('t_lim_s', 120.0)
+        self.declare_parameter('worker_assignment_window_s', 1.0)
 
         self.robots = list(self.get_parameter('robot_namespaces').value)
         self.battery_min = float(self.get_parameter('battery_min').value)
         self.t_lim_s = float(self.get_parameter('t_lim_s').value)
+        self.worker_assignment_window_s = float(
+            self.get_parameter('worker_assignment_window_s').value
+        )
+        if self.worker_assignment_window_s <= 0.0:
+            raise ValueError('worker_assignment_window_s must be positive')
         schema_path = os.path.join(share, 'config', 'schema.sql')
         self.db = FleetDB(
             self.get_parameter('db_path').value,
@@ -103,6 +111,8 @@ class FleetManager(Node):
             for namespace in self.robots
         }
         self.worker_robot = {}
+        self.pending_workers = {}
+        self.worker_assignment_timer = None
 
         self.pub_mission = self.create_publisher(
             Mission, '/fleet/mission', 10
@@ -132,6 +142,12 @@ class FleetManager(Node):
             Intervention,
             '/fleet/intervention',
             self._intervention_cb,
+            10,
+        )
+        self.create_subscription(
+            String,
+            '/fleet/zone_event',
+            self._zone_event_cb,
             10,
         )
         for namespace in self.robots:
@@ -215,6 +231,34 @@ class FleetManager(Node):
             'INTERVENTION',
             message.kind,
             message.note,
+        )
+
+    def _zone_event_cb(self, message):
+        """구역 세마포어 이벤트를 SQLite의 ZONE 이벤트로 기록한다."""
+        parts = message.data.split()
+        if len(parts) != 3:
+            self.get_logger().warn(
+                f'zone_event 형식이 계약과 다르다: {message.data!r}'
+            )
+            return
+
+        zone_id, robot_ns, action = parts
+        if (
+            zone_id not in ZONE_IDS
+            or robot_ns not in self.robot
+            or action not in ZONE_EVENT_ACTIONS
+        ):
+            self.get_logger().warn(
+                f'zone_event 값이 계약과 다르다: {message.data!r}'
+            )
+            return
+
+        self.db.event(
+            self._now_s(),
+            robot_ns,
+            'ZONE',
+            action,
+            zone_id,
         )
 
     def _set_robot_value(self, namespace, key, value):
@@ -458,35 +502,78 @@ class FleetManager(Node):
             )
 
     def _worker_cb(self, descriptor):
-        if descriptor.worker_id in self.worker_robot:
+        worker_id = descriptor.worker_id
+        if worker_id in self.worker_robot:
             return
 
+        if not self._available_robots():
+            self.get_logger().warn(
+                f'{worker_id}: 배정 가능한 로봇 없음'
+            )
+            return
+
+        if worker_id not in self.pending_workers:
+            self.pending_workers[worker_id] = (
+                descriptor,
+                self._now_s(),
+            )
+
+        if len(self.pending_workers) >= len(self.robots):
+            self._flush_pending_workers()
+        elif self.worker_assignment_timer is None:
+            self.worker_assignment_timer = self.create_timer(
+                self.worker_assignment_window_s,
+                self._flush_pending_workers,
+            )
+
+    def _available_robots(self):
+        """기존 순서를 유지하며 아직 배정되지 않은 로봇을 반환한다."""
         assigned = set(self.worker_robot.values())
-        free = [
+        return [
             namespace
             for namespace in self.robots
             if namespace not in assigned
         ]
-        if not free:
-            self.get_logger().warn(
-                f'{descriptor.worker_id}: 배정 가능한 로봇 없음'
-            )
-            return
 
-        namespace = free[0]
-        self.worker_robot[descriptor.worker_id] = namespace
-        self.db.upsert_worker(
-            descriptor.worker_id,
-            descriptor.outfit_class,
-            self._now_s(),
-            namespace,
-        )
-        self.get_logger().info(
-            f'{descriptor.worker_id}({descriptor.outfit_class}) '
-            f'→ {namespace}'
-        )
+    def _flush_pending_workers(self):
+        """동시 등록 후보를 worker_id 순서로 로봇에 확정 배정한다."""
+        timer = self.worker_assignment_timer
+        if timer is not None:
+            timer.cancel()
+            self.destroy_timer(timer)
+            self.worker_assignment_timer = None
+
+        pending = self.pending_workers
+        self.pending_workers = {}
+        for worker_id in sorted(pending):
+            if worker_id in self.worker_robot:
+                continue
+
+            free = self._available_robots()
+            if not free:
+                self.get_logger().warn(
+                    f'{worker_id}: 배정 가능한 로봇 없음'
+                )
+                continue
+
+            descriptor, registered_at = pending[worker_id]
+            namespace = free[0]
+            self.worker_robot[worker_id] = namespace
+            self.db.upsert_worker(
+                worker_id,
+                descriptor.outfit_class,
+                registered_at,
+                namespace,
+            )
+            self.get_logger().info(
+                f'{worker_id}({descriptor.outfit_class}) '
+                f'→ {namespace}'
+            )
 
     def _request_cb(self, request, response):
+        if request.worker_id in self.pending_workers:
+            self._flush_pending_workers()
+
         namespace = self.worker_robot.get(request.worker_id)
         if namespace is None:
             response.accepted = False

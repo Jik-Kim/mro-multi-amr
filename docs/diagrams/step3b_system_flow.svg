@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="2340" height="2322" viewBox="0 0 2340 2322" font-family="'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="2620" height="1829" viewBox="0 0 2620 1829" font-family="'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif">
 <defs>
 <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#5A5F6A"/></marker>
 <marker id="arR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#C0392B"/></marker>
@@ -8,152 +8,224 @@
 <marker id="arG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2E8B57"/></marker>
 </defs>
 <rect width="100%" height="100%" fill="#FFFFFF"/>
-<text x="24" y="34" font-size="19" font-weight="700" fill="#1A1D22">STEP 3-2 — 전체 기능 흐름: PC·노드 내부 처리와 그 사이를 오가는 토픽</text>
-<text x="24" y="55" font-size="12" fill="#5A5F6A">위쪽 통로 = 관제·웹캠에서 로봇으로 내려가는 명령 · 아래쪽 통로 = 로봇에서 올라오는 상태와 센서 · SDD 3.3</text>
-<rect x="30" y="364" width="390" height="791" rx="6" fill="#F7FAFE" stroke="#3576C8" stroke-width="1.6"/><text x="42" y="383" font-size="12" font-weight="700" fill="#1B4F91">PC-W1 / PC-W2 — 웹캠 PC 2대</text>
-<rect x="480" y="364" width="390" height="976" rx="6" fill="#FFFBF3" stroke="#B06810" stroke-width="1.6"/><text x="492" y="383" font-size="12" font-weight="700" fill="#8A4F0B">PC-F — 관제 PC (192.168.108.41 · Discovery Server ID 1)</text>
-<rect x="930" y="364" width="1040" height="1471" rx="6" fill="#F7FAFE" stroke="#3576C8" stroke-width="1.6"/><text x="942" y="383" font-size="12" font-weight="700" fill="#1B4F91">PC-R3 — 로봇3 제어 PC  (namespace = /robot3)</text>
-<rect x="2030" y="364" width="280" height="356" rx="6" fill="#FAFAFB" stroke="#8A8F98" stroke-width="1.6"/><text x="2042" y="383" font-size="12" font-weight="700" fill="#333840">로봇 온보드</text>
-<rect x="42" y="398" width="366" height="367" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="54" y="417" font-size="12" font-weight="700" fill="#1B4F91">webcam_register  (PC-W1)</text>
-<rect x="42" y="791" width="366" height="255" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="54" y="810" font-size="12" font-weight="700" fill="#1B4F91">webcam_hint  (PC-W2)</text>
-<rect x="492" y="398" width="366" height="190" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="504" y="417" font-size="12" font-weight="700" fill="#1B4F91">control_ui  (Flask :5000)</text>
-<rect x="492" y="612" width="366" height="302" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="504" y="631" font-size="12" font-weight="700" fill="#1B4F91">fleet_manager</text>
-<rect x="492" y="938" width="366" height="237" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="504" y="957" font-size="12" font-weight="700" fill="#1B4F91">zone_semaphore  (소유: 주행)</text>
-<rect x="492" y="1199" width="366" height="125" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="504" y="1218" font-size="12" font-weight="700" fill="#1B4F91">kpi_logger</text>
-<rect x="952" y="398" width="450" height="302" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="964" y="417" font-size="12" font-weight="700" fill="#1B4F91">amr_detection  (mro_perception)</text>
-<rect x="952" y="722" width="450" height="255" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="964" y="741" font-size="12" font-weight="700" fill="#1B4F91">shuttle_mission  (mro_navigation)</text>
-<rect x="952" y="999" width="450" height="302" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="964" y="1018" font-size="12" font-weight="700" fill="#1B4F91">follow_target  (mro_navigation)</text>
-<rect x="952" y="1323" width="450" height="237" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="964" y="1342" font-size="12" font-weight="700" fill="#1B4F91">return_dock  (mro_navigation)</text>
-<rect x="952" y="1582" width="450" height="237" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="964" y="1601" font-size="12" font-weight="700" fill="#1B4F91">safety_watchdog  (온보드 안전)</text>
-<rect x="1532" y="398" width="416" height="360" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="1544" y="417" font-size="12" font-weight="700" fill="#1B4F91">Nav2 스택  (turtlebot4_navigation)</text>
-<rect x="1532" y="782" width="416" height="125" rx="6" fill="#FFFFFF" stroke="#A9C3E3" stroke-width="1.6"/><text x="1544" y="801" font-size="12" font-weight="700" fill="#1B4F91">opennav_docking</text>
-<rect x="2030" y="398" width="280" height="306" rx="6" fill="#FAFAFB" stroke="#8A8F98" stroke-width="1.6"/><text x="2042" y="417" font-size="12" font-weight="700" fill="#333840">robot3  (TurtleBot4)</text>
-<path d="M 225 480 L 225 493" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 225 527 L 225 540" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 225 574 L 225 587" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 225 639 L 225 652" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 225 704 L 225 717" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 225 873 L 225 886" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 225 920 L 225 933" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 225 967 L 225 980" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 462 L 675 475" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 509 L 675 522" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 694 L 675 707" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 759 L 675 772" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 806 L 675 819" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 853 L 675 866" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 1002 L 675 1015" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 1067 L 675 1080" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 1114 L 675 1127" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 1263 L 675 1276" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 1177 462 L 1177 475" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 1177 509 L 1177 522" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 1177 574 L 1177 587" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 1177 639 L 1177 652" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 1177 786 L 1177 799" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 833 L 1177 846" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 898 L 1177 911" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 1063 L 1177 1076" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 1110 L 1177 1123" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 1157 L 1177 1170" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 1222 L 1177 1235" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 1387 L 1177 1400" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 1434 L 1177 1447" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 1499 L 1177 1512" fill="none" stroke="#3576C8" stroke-width="1.2" marker-end="url(#arB)"/>
-<path d="M 1177 1646 L 1177 1659" fill="none" stroke="#C0392B" stroke-width="1.2" marker-end="url(#arR)"/>
-<path d="M 1177 1693 L 1177 1706" fill="none" stroke="#C0392B" stroke-width="1.2" marker-end="url(#arR)"/>
-<path d="M 1177 1758 L 1177 1771" fill="none" stroke="#C0392B" stroke-width="1.2" marker-end="url(#arR)"/>
-<path d="M 1740 462 L 1740 475" fill="none" stroke="#6B4FA8" stroke-width="1.2" marker-end="url(#arP)"/>
-<path d="M 1740 509 L 1740 522" fill="none" stroke="#6B4FA8" stroke-width="1.2" marker-end="url(#arP)"/>
-<path d="M 1740 556 L 1740 569" fill="none" stroke="#6B4FA8" stroke-width="1.2" marker-end="url(#arP)"/>
-<path d="M 1740 603 L 1740 616" fill="none" stroke="#6B4FA8" stroke-width="1.2" marker-end="url(#arP)"/>
-<path d="M 1740 650 L 1740 663" fill="none" stroke="#6B4FA8" stroke-width="1.2" marker-end="url(#arP)"/>
-<path d="M 1740 697 L 1740 710" fill="none" stroke="#6B4FA8" stroke-width="1.2" marker-end="url(#arP)"/>
-<path d="M 1740 846 L 1740 859" fill="none" stroke="#6B4FA8" stroke-width="1.2" marker-end="url(#arP)"/>
-<path d="M 2170 480 L 2170 493" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 2170 545 L 2170 558" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 2170 625 L 2170 638" fill="none" stroke="#5A5F6A" stroke-width="1.2" marker-end="url(#ar)"/>
-<path d="M 675 612 L 675 106 L 1177 106 L 1177 999" fill="none" stroke="#B06810" stroke-width="1.6" marker-end="url(#arO)"/><rect x="1034.45" y="67" width="291.1" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#B06810" stroke-width="0.8"/><text x="1041.45" y="82" font-size="10.5" fill="#B06810" font-weight="600">mission/finish</text><text x="1041.45" y="95" font-size="10.5" fill="#3A3E46">std_msgs/Bool — S9 종료. 즉시 추종 중단 (≤ 1 s)</text>
-<path d="M 755.52 612 L 755.52 148 L 1276 148 L 1276 1323" fill="none" stroke="#B06810" stroke-width="1.6" marker-end="url(#arO)"/><rect x="1412.35" y="109" width="175.3" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#B06810" stroke-width="0.8"/><text x="1419.35" y="124" font-size="10.5" fill="#B06810" font-weight="600">mission/finish</text><text x="1419.35" y="137" font-size="10.5" fill="#3A3E46">같은 신호가 복귀를 시작시킨다</text>
-<path d="M 594.48 612 L 594.48 190 L 1087 190 L 1087 722" fill="none" stroke="#B06810" stroke-width="1.6" marker-end="url(#arO)"/><rect x="1057.05" y="151" width="245.9" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#B06810" stroke-width="0.8"/><text x="1064.05" y="166" font-size="10.5" fill="#B06810" font-weight="600">mission/assigned</text><text x="1064.05" y="179" font-size="10.5" fill="#3A3E46">mro_interfaces/Mission — S4 셔틀 트리거</text>
-<path d="M 225 791 L 225 232 L 1312 232 L 1312 999" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/><rect x="897.75" y="193" width="304.5" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#3576C8" stroke-width="0.8"/><text x="904.75" y="208" font-size="10.5" fill="#3576C8" font-weight="600">/webcam2/target_hint</text><text x="904.75" y="221" font-size="10.5" fill="#3A3E46">mro_interfaces/TargetHint — 재탐지 방향. 유효 2 s</text>
-<path d="M 170.1 398 L 170.1 274 L 1051 274 L 1051 398" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/><rect x="625.15" y="235" width="349.7" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#3576C8" stroke-width="0.8"/><text x="632.15" y="250" font-size="10.5" fill="#3576C8" font-weight="600">/webcam1/worker_descriptor</text><text x="632.15" y="263" font-size="10.5" fill="#3A3E46">mro_interfaces/WorkerDescriptor — 로봇이 대조할 등록 외형</text>
-<path d="M 298.2 398 L 298.2 316 L 543.24 316 L 543.24 612" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/><rect x="368.3" y="277" width="203.4" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#3576C8" stroke-width="0.8"/><text x="375.3" y="292" font-size="10.5" fill="#3576C8" font-weight="600">/webcam1/worker_descriptor</text><text x="375.3" y="305" font-size="10.5" fill="#3A3E46">관제는 이것을 보고 로봇을 배정한다</text>
-<path d="M 1087 977 L 1087 1881 L 601.8 1881 L 601.8 1175" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/><rect x="830.65" y="1842" width="338.7" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#3576C8" stroke-width="0.8"/><text x="837.65" y="1857" font-size="10.5" fill="#3576C8" font-weight="600">/fleet/zone_token   (서비스)</text><text x="837.65" y="1870" font-size="10.5" fill="#3A3E46">mro_interfaces/ZoneToken — P1 병목. S4 창고에서 나올 때</text>
-<path d="M 1199.5 1560 L 1199.5 1925 L 693.3 1925 L 693.3 1175" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/><rect x="907.6" y="1886" width="244.8" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#3576C8" stroke-width="0.8"/><text x="914.6" y="1901" font-size="10.5" fill="#3576C8" font-weight="600">/fleet/zone_token   (서비스)</text><text x="914.6" y="1914" font-size="10.5" fill="#3A3E46">DOCK 구역. 한 번에 한 대 → E-7 순차 도킹</text>
-<path d="M 1312 977 L 1312 1969 L 784.8 1969 L 784.8 914" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/><rect x="969.8" y="1930" width="320.4" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#5A5F6A" stroke-width="0.8"/><text x="976.8" y="1945" font-size="10.5" fill="#5A5F6A" font-weight="600">shuttle/status · approach/status</text><text x="976.8" y="1958" font-size="10.5" fill="#3A3E46">std_msgs/String — 상태 보고. FleetStatus 로 집계된다</text>
-<path d="M 2114 704 L 2114 2013 L 1199.5 2013 L 1199.5 700" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/><rect x="1586.75" y="1974" width="226.5" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#5A5F6A" stroke-width="0.8"/><text x="1593.75" y="1989" font-size="10.5" fill="#5A5F6A" font-weight="600">oakd/rgb · stereo · camera_info</text><text x="1593.75" y="2002" font-size="10.5" fill="#3A3E46">압축 전송 · 로봇당 구독자 1개 (NR-03)</text>
-<path d="M 2184 704 L 2184 2057 L 1312 2057 L 1312 1819" fill="none" stroke="#C0392B" stroke-width="1.6" marker-end="url(#arR)"/><rect x="1485" y="2018" width="350" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#C0392B" stroke-width="0.8"/><text x="1492" y="2033" font-size="10.5" fill="#C0392B" font-weight="600">scan   sensor_msgs/LaserScan</text><text x="1492" y="2046" font-size="10.5" fill="#3A3E46">안전 감시가 직접 구독한다 — 인지도 웹캠도 관제도 끼지 않는다</text>
-<path d="M 1087 1819 L 1087 2101 L 2254 2101 L 2254 704" fill="none" stroke="#C0392B" stroke-width="2.4" marker-end="url(#arR)"/><rect x="1558.65" y="2062" width="282.7" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#C0392B" stroke-width="0.8"/><text x="1565.65" y="2077" font-size="10.5" fill="#C0392B" font-weight="600">cmd_vel = 0  @ 20 Hz</text><text x="1565.65" y="2090" font-size="10.5" fill="#3A3E46">estop 동안 Nav2 출력을 덮어쓴다 — 이쪽이 이긴다</text>
-<path d="M 1402 798.5 L 1467 798.5 L 1467 506 L 1532 506" fill="none" stroke="#6B4FA8" stroke-width="1.6" marker-end="url(#arP)"/>
-<path d="M 1402 1165.1 L 1467 1165.1 L 1467 596 L 1532 596" fill="none" stroke="#6B4FA8" stroke-width="1.6" marker-end="url(#arP)"/>
-<path d="M 1402 1500.75 L 1467 1500.75 L 1467 668 L 1532 668" fill="none" stroke="#6B4FA8" stroke-width="1.6" marker-end="url(#arP)"/>
-<path d="M 1402 1536.3 L 1467 1536.3 L 1467 894.5 L 1532 894.5" fill="none" stroke="#6B4FA8" stroke-width="1.6" marker-end="url(#arP)"/>
-<path d="M 1948 722 L 1989 722 L 1989 505.1 L 2030 505.1" fill="none" stroke="#6B4FA8" stroke-width="1.8" marker-end="url(#arP)"/><rect x="1902.7" y="574.55" width="172.6" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#6B4FA8" stroke-width="0.8"/><text x="1909.7" y="589.55" font-size="10.5" fill="#6B4FA8" font-weight="600">cmd_vel</text><text x="1909.7" y="602.55" font-size="10.5" fill="#3A3E46">geometry_msgs/TwistStamped</text>
-<path d="M 952 549 L 936 549 L 936 1104.7 L 952 1104.7" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/><rect x="958.75" y="800.85" width="166.5" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#3576C8" stroke-width="0.8"/><text x="965.75" y="815.85" font-size="10.5" fill="#3576C8" font-weight="600">target/paired · map_point</text>
-<path d="M 952 926 L 918 926 L 918 1195.3 L 952 1195.3" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/><rect x="969.25" y="1034.65" width="105.5" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.94" stroke="#3576C8" stroke-width="0.8"/><text x="976.25" y="1049.65" font-size="10.5" fill="#3576C8" font-weight="600">shuttle/arrived</text>
-<rect x="56" y="428" width="338" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="225" y="449.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">웹캠1 프레임</text><text x="225" y="468.5" font-size="11" fill="#3A3E46" text-anchor="middle">캡처 30 fps → 처리 10 Hz</text>
-<polygon points="225,493 394,510 225,527 56,510" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="225" y="515" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">사람이 보이는가?</text>
-<rect x="56" y="540" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="225" y="562" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">ByteTrack 으로 트랙 ID 부여</text>
-<polygon points="225,587 394,613 225,639 56,613" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="225" y="608.5" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">0.3 s 연속으로 잡히는가?</text><text x="225" y="627.5" font-size="11" fill="#3A3E46" text-anchor="middle">아니오 → 무시 (오검출 억제)</text>
-<rect x="56" y="652" width="338" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="225" y="673.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">인형 전체(머리~바지 밑단)에서</text><text x="225" y="692.5" font-size="11" fill="#3A3E46" text-anchor="middle">HSV 히스토그램 H16×S8 = 128</text>
-<rect x="56" y="717" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="225" y="739" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">WorkerDescriptor 발행</text>
-<rect x="56" y="821" width="338" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="225" y="842.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">웹캠2 프레임</text><text x="225" y="861.5" font-size="11" fill="#3A3E46" text-anchor="middle">작업공간 + P3 입구 (중앙 복도는 시야 밖)</text>
-<polygon points="225,886 394,903 225,920 56,903" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="225" y="908" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">등록된 트랙이 보이는가?</text>
-<rect x="56" y="933" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="225" y="955" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">호모그래피로 바닥 좌표 환산</text>
-<rect x="56" y="980" width="338" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="225" y="1001.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">TargetHint 발행</text><text x="225" y="1020.5" font-size="11" fill="#3A3E46" text-anchor="middle">10 Hz · 유효 2 s</text>
-<rect x="42" y="1072" width="366" height="67" rx="5" fill="#F7F8FA" stroke="#C9CFD6" stroke-width="1.6"/><text x="54" y="1093" font-size="12.5" font-weight="700" fill="#333840">웹캠은 안전에 관여하지 않는다</text><text x="54" y="1112" font-size="11" fill="#3A3E46">여기서 나온 좌표는 재탐지 방향과 KPI 계측에만 쓴다.</text><text x="54" y="1127" font-size="11" fill="#3A3E46">정지·회피 판단에 쓰지 않는 것이 설계 원칙이다 (NF-07).</text>
-<rect x="506" y="428" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="450" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">운영자 화면 — 2대 상태 표시 (뷰어)</text>
-<rect x="506" y="475" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="497" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">자재 요청 → RequestMission</text>
-<rect x="506" y="522" width="338" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="543.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">종료 버튼 → OperatorCommand</text><text x="675" y="562.5" font-size="11" fill="#3A3E46" text-anchor="middle">RETURN / RETURN_ALL</text>
-<rect x="506" y="642" width="338" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="663.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">서술자 수신 → 로봇 배정</text><text x="675" y="682.5" font-size="11" fill="#3A3E46" text-anchor="middle">트랙 ID 작은 쪽 먼저 (결정론적)</text>
-<polygon points="675,707 844,733 675,759 506,733" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="675" y="728.5" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">배터리 25 % 이상인가?</text><text x="675" y="747.5" font-size="11" fill="#3A3E46" text-anchor="middle">아니오 → 미션 거부 · 사유 기록</text>
-<rect x="506" y="772" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="794" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">mission/assigned 발행</text>
-<rect x="506" y="819" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="841" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">종료 명령 수신 시 mission/finish 발행</text>
-<rect x="506" y="866" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="888" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">FleetStatus 1 Hz 발행</text>
-<rect x="506" y="968" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="990" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">ZoneToken 요청 수신 — 구역은 P1 · DOCK 둘뿐</text>
-<polygon points="675,1015 844,1041 675,1067 506,1041" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="675" y="1036.5" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">구역이 비어 있는가?</text><text x="675" y="1055.5" font-size="11" fill="#3A3E46" text-anchor="middle">아니오 → 대기열 등록, 2 s 후 재요청</text>
-<rect x="506" y="1080" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="1102" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">granted 반환</text>
-<rect x="506" y="1127" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="1149" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">보유 60 s 초과 시 강제 회수</text>
-<rect x="506" y="1229" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="1251" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">상태 · 미션 · 개입 · 힌트 구독</text>
-<rect x="506" y="1276" width="338" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="675" y="1298" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">CSV + SQLite 기록 — 전부 ROS 시각 기준</text>
-<rect x="966" y="428" width="422" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="450" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">RGB + Depth 동기화 (slop 0.1 s)</text>
-<polygon points="1177,475 1388,492 1177,509 966,492" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="1177" y="497" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">worker 를 검출했는가?</text>
-<rect x="966" y="522" width="422" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="543.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">ROI p20 역깊이 보정 → 거리</text><text x="1177" y="562.5" font-size="11" fill="#3A3E46" text-anchor="middle">amcl_pose 로 map 좌표 변환</text>
-<polygon points="1177,587 1388,613 1177,639 966,613" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="1177" y="608.5" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">등록 서술자와 유사도 ≥ 임계?</text><text x="1177" y="627.5" font-size="11" fill="#3A3E46" text-anchor="middle">아니오 → 페어링하지 않고 대기</text>
-<rect x="966" y="652" width="422" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="674" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">target/paired · map_point · distance 발행</text>
-<polygon points="1177,752 1388,769 1177,786 966,769" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="1177" y="774" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">mission/assigned 를 받았는가?</text>
-<rect x="966" y="799" width="422" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="821" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">베이 waypoint 로 이동 (도크·창고 사이는 토큰 없음)</text>
-<polygon points="1177,846 1388,872 1177,898 966,872" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="1177" y="867.5" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">ArUco ID 가 요청 베이와 같은가?</text><text x="1177" y="886.5" font-size="11" fill="#3A3E46" text-anchor="middle">아니오 → 재접근, T_lim 초과 시 실패</text>
-<rect x="966" y="911" width="422" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="932.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">5 s 체류 → P1 토큰 → 대기공간 → 반납</text><text x="1177" y="951.5" font-size="11" fill="#3A3E46" text-anchor="middle">shuttle/arrived 발행</text>
-<polygon points="1177,1029 1388,1046 1177,1063 966,1046" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="1177" y="1051" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">도착했고 페어링됐는가?</text>
-<rect x="966" y="1076" width="422" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="1098" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">APPROACH → 간격 0.5 m 유지 → FOLLOWING</text>
-<polygon points="1177,1123 1388,1140 1177,1157 966,1140" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="1177" y="1145" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">대상을 놓쳤는가?</text>
-<rect x="966" y="1170" width="422" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="1191.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">힌트 방향으로 회전 탐색</text><text x="1177" y="1210.5" font-size="11" fill="#3A3E46" text-anchor="middle">없으면 제자리 탐색 → STANDBY</text>
-<rect x="966" y="1235" width="422" height="52" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="1256.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">mission/finish 수신 시</text><text x="1177" y="1275.5" font-size="11" fill="#3A3E46" text-anchor="middle">즉시 페어링 해제 (≤ 1 s)</text>
-<rect x="966" y="1353" width="422" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="1375" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">P1 → DOCK 토큰 (한 번에 한 대)</text>
-<rect x="966" y="1400" width="422" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="1422" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">도크 정면 접근 지점 → dock</text>
-<polygon points="1177,1447 1388,1473 1177,1499 966,1473" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="1177" y="1468.5" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">도킹에 성공했는가?</text><text x="1177" y="1487.5" font-size="11" fill="#3A3E46" text-anchor="middle">아니오 → 최대 2회 재시도</text>
-<rect x="966" y="1512" width="422" height="34" rx="5" fill="#EEF4FD" stroke="#7FA6D6" stroke-width="1.6"/><text x="1177" y="1534" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">성공·실패와 무관하게 토큰 반납</text>
-<rect x="966" y="1612" width="422" height="34" rx="5" fill="#FCECEC" stroke="#D98A80" stroke-width="1.6"/><text x="1177" y="1634" font-size="12.5" font-weight="700" fill="#8E2A1F" text-anchor="middle">scan 만 구독 · 전방 ±35°</text>
-<polygon points="1177,1659 1388,1676 1177,1693 966,1676" fill="#FFF8DE" stroke="#B8912B" stroke-width="1.6"/><text x="1177" y="1681" font-size="12.5" font-weight="700" fill="#6F5610" text-anchor="middle">0.30 m 이내가 2프레임 연속인가?</text>
-<rect x="966" y="1706" width="422" height="52" rx="5" fill="#FCECEC" stroke="#D98A80" stroke-width="1.6"/><text x="1177" y="1727.5" font-size="12.5" font-weight="700" fill="#8E2A1F" text-anchor="middle">safety/estop = True</text><text x="1177" y="1746.5" font-size="11" fill="#3A3E46" text-anchor="middle">cmd_vel 에 0 을 20 Hz 로 덮어쓴다</text>
-<rect x="966" y="1771" width="422" height="34" rx="5" fill="#FCECEC" stroke="#D98A80" stroke-width="1.6"/><text x="1177" y="1793" font-size="12.5" font-weight="700" fill="#8E2A1F" text-anchor="middle">0.45 m 밖 5프레임 → 스스로 해제</text>
-<rect x="1546" y="428" width="388" height="34" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1740" y="450" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">map_server — auto_map.yaml</text>
-<rect x="1546" y="475" width="388" height="34" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1740" y="497" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">amcl — scan + odom → amcl_pose</text>
-<rect x="1546" y="522" width="388" height="34" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1740" y="544" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">bt_navigator — action  navigate_to_pose</text>
-<rect x="1546" y="569" width="388" height="34" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1740" y="591" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">planner_server — 전역 경로</text>
-<rect x="1546" y="616" width="388" height="34" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1740" y="638" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">costmap — inflation 0.25 (받침대 덮기, P1 하드 자유폭 0.44)</text>
-<rect x="1546" y="663" width="388" height="34" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1740" y="685" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">controller_server — 지역 경로 추종</text>
-<rect x="1546" y="710" width="388" height="34" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1740" y="732" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">velocity_smoother → cmd_vel</text>
-<rect x="1546" y="812" width="388" height="34" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1740" y="834" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">action  undock  (S2 기동)</text>
-<rect x="1546" y="859" width="388" height="34" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1740" y="881" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">action  dock  (S10 복귀)</text>
-<rect x="1532" y="931" width="416" height="82" rx="5" fill="#F7F8FA" stroke="#C9CFD6" stroke-width="1.6"/><text x="1544" y="952" font-size="12.5" font-weight="700" fill="#333840">PC-R4 / robot4 는 그림을 생략한다</text><text x="1544" y="971" font-size="11" fill="#3A3E46">네임스페이스가 /robot4 인 것 말고는 구성이 완전히 같다.</text><text x="1544" y="986" font-size="11" fill="#3A3E46">두 대가 만나는 곳은 zone_semaphore 의 P1 · DOCK 토큰뿐이고,</text><text x="1544" y="1001" font-size="11" fill="#3A3E46">그 경합이 E-3 교착과 E-7 순차 도킹이다.</text>
-<rect x="2044" y="428" width="252" height="52" rx="5" fill="#F1F2F4" stroke="#9AA0A8" stroke-width="1.6"/><text x="2170" y="449.5" font-size="12.5" font-weight="700" fill="#333840" text-anchor="middle">OAK-D Pro</text><text x="2170" y="468.5" font-size="11" fill="#3A3E46" text-anchor="middle">rgb · depth · camera_info</text>
-<rect x="2044" y="493" width="252" height="52" rx="5" fill="#F1F2F4" stroke="#9AA0A8" stroke-width="1.6"/><text x="2170" y="514.5" font-size="12.5" font-weight="700" fill="#333840" text-anchor="middle">RPLIDAR A1</text><text x="2170" y="533.5" font-size="11" fill="#3A3E46" text-anchor="middle">scan  10 Hz</text>
-<rect x="2044" y="558" width="252" height="67" rx="5" fill="#F1F2F4" stroke="#9AA0A8" stroke-width="1.6"/><text x="2170" y="579.5" font-size="12.5" font-weight="700" fill="#333840" text-anchor="middle">Create3</text><text x="2170" y="598.5" font-size="11" fill="#3A3E46" text-anchor="middle">odom · tf · battery_state</text><text x="2170" y="613.5" font-size="11" fill="#3A3E46" text-anchor="middle">범퍼 · 클리프</text>
-<rect x="2044" y="638" width="252" height="52" rx="5" fill="#F1F2F4" stroke="#9AA0A8" stroke-width="1.6"/><text x="2170" y="659.5" font-size="12.5" font-weight="700" fill="#333840" text-anchor="middle">구동부</text><text x="2170" y="678.5" font-size="11" fill="#3A3E46" text-anchor="middle">v ≤ 0.3 m/s</text>
-<rect x="1408" y="368" width="118" height="67" rx="5" fill="#F3EEFA" stroke="#A992CE" stroke-width="1.6"/><text x="1467" y="389.5" font-size="12.5" font-weight="700" fill="#4B357A" text-anchor="middle">Nav2 액션</text><text x="1467" y="408.5" font-size="11" fill="#3A3E46" text-anchor="middle">navigate_to_pose</text><text x="1467" y="423.5" font-size="11" fill="#3A3E46" text-anchor="middle">dock · undock</text>
-<rect x="30" y="2141" width="2280" height="127" rx="5" fill="#F7F8FA" stroke="#C9CFD6" stroke-width="1.6"/><text x="42" y="2162" font-size="12.5" font-weight="700" fill="#333840">읽는 법</text><text x="42" y="2181" font-size="11" fill="#3A3E46">· 화살표 위 상자의 첫 줄이 토픽·서비스 이름, 둘째 줄이 메시지 타입과 그 선이 하는 일이다. PC 를 넘는 것은 토픽과 서비스뿐이며 직접 호출도 소켓 통신도 없다 (NR-06).</text><text x="42" y="2196" font-size="11" fill="#3A3E46">· 색 — 주황: 관제가 내리는 명령 · 파랑: 인지·웹캠 데이터 · 보라: Nav2 액션 · 빨강: 안전 경로 · 회색: 상태 보고와 센서</text><text x="42" y="2211" font-size="11" fill="#3A3E46">· 위쪽 통로는 관제·웹캠에서 로봇으로 내려가는 흐름, 아래쪽 통로는 로봇에서 올라오는 상태와 센서다. 선이 겹치지 않도록 각 신호에 통로를 하나씩 줬다.</text><text x="42" y="2226" font-size="11" fill="#3A3E46"></text><text x="42" y="2241" font-size="11" fill="#3A3E46">이 그림이 말하는 것 — 빨간 경로(scan → safety_watchdog → cmd_vel)만 로봇 온보드에서 닫힌 고리를 이룬다. 파란 웹캠 경로도 주황 관제 경로도 그 고리 밖에 있다.</text><text x="42" y="2256" font-size="11" fill="#3A3E46">                     그래서 Wi-Fi 가 끊기거나 웹캠 PC 가 죽어도 로봇은 여전히 멈춘다. 이것이 무사고 0 건(NF-06)을 지탱하는 구조다.</text>
-<text x="30" y="2288" font-size="10" fill="#8A8F98">생성: tools/build_diagrams.py   ·   근거: docs/architecture.md, docs/interfaces.md 4절, SDD 2.4 FR 표</text>
+<text x="24" y="34" font-size="19" font-weight="700" fill="#1A1D22">STEP 3-2 — 전체 기능 흐름 (Functional Process Flow)</text>
+<text x="24" y="55" font-size="12" fill="#5A5F6A">PC = 채움색 · 화살표 색 = 통신 종류(토픽 / 서비스 / 액션 / 안전) · SDD 3.3 · 계약 v1.11</text>
+<rect x="20" y="96" width="860" height="675" rx="6" fill="#EDF3FC" stroke="#7C8794" stroke-width="1.6"/><text x="32" y="115" font-size="12" font-weight="700" fill="#1B4F91">PC-R3 — 로봇3 제어 PC   (namespace /robot3)</text>
+<rect x="1740" y="96" width="860" height="675" rx="6" fill="#F4EFFB" stroke="#7C8794" stroke-width="1.6"/><text x="1752" y="115" font-size="12" font-weight="700" fill="#4B357A">PC-R4 — 로봇4 제어 PC   (namespace /robot4)</text>
+<rect x="900" y="96" width="820" height="475" rx="6" fill="#FFF9EC" stroke="#7C8794" stroke-width="1.6"/><text x="912" y="115" font-size="12" font-weight="700" fill="#8A4F0B">PC-F — 관제 PC   (Discovery Server ID 1)</text>
+<rect x="20" y="1071" width="2580" height="196" rx="6" fill="#F7F8FA" stroke="#5A5F6A" stroke-width="1.6"/>
+<rect x="900" y="1457" width="820" height="155" rx="6" fill="#EDF7F1" stroke="#7C8794" stroke-width="1.6"/><text x="912" y="1476" font-size="12" font-weight="700" fill="#1E6B40">PC-W1 / PC-W2 — 웹캠 PC</text>
+<rect x="908" y="128" width="804" height="253" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/><text x="920" y="147" font-size="12" font-weight="700" fill="#5A5F6A">관제 시스템 / Control Server</text>
+<rect x="908" y="419" width="804" height="128" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/><text x="920" y="438" font-size="12" font-weight="700" fill="#5A5F6A">관측 · 기록 / Observability</text>
+<rect x="46" y="1129" width="794" height="94" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/>
+<rect x="1780" y="1129" width="794" height="94" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/>
+<rect x="813" y="1129" width="994" height="94" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/>
+<rect x="20" y="1457" width="860" height="178" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/>
+<rect x="1740" y="1457" width="860" height="178" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/>
+<path d="M 167.321 218 L 167.333 255.5 L 167.333 257.5 L 167.333 264" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 450 218 L 450 255.5 L 450 257.5 L 450 264" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 732.679 218 L 732.667 255.5 L 732.667 257.5 L 732.667 264" fill="none" stroke="#C0392B" stroke-width="2.2" marker-end="url(#arR)"/>
+<path d="M 167.333 346 L 167.333 387.5 L 167.333 389.5 L 167.329 400" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 450 346 L 450 387.5 L 450 389.5 L 368.22 543" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 732.667 346 L 732.667 387.5 L 732.667 389.5 L 732.671 400" fill="none" stroke="#C0392B" stroke-width="2.2" marker-end="url(#arR)"/>
+<path d="M 97.02 497 L 97.02 534.5 L 97.02 536.5 L 97.02 543" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 701.28 610 L 701.28 669 L 701.28 671 L 701.28 671" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 375 429.1 L 525 429.1" fill="none" stroke="#6B4FA8" stroke-width="2" marker-end="url(#arP)"/>
+<path d="M 375 571.7 L 450 571.7 L 450 482.45 L 525 482.45" fill="none" stroke="#6B4FA8" stroke-width="2" marker-end="url(#arP)"/>
+<path d="M 375 695.6 L 450 695.6 L 450 596.6 L 525 596.6" fill="none" stroke="#6B4FA8" stroke-width="2" marker-end="url(#arP)"/>
+<path d="M 1887.32 218 L 1887.33 255.5 L 1887.33 257.5 L 1887.33 264" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 2170 218 L 2170 255.5 L 2170 257.5 L 2170 264" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 2452.68 218 L 2452.67 255.5 L 2452.67 257.5 L 2452.67 264" fill="none" stroke="#C0392B" stroke-width="2.2" marker-end="url(#arR)"/>
+<path d="M 1887.33 346 L 1887.33 387.5 L 1887.33 389.5 L 1887.33 400" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 2170 346 L 2170 387.5 L 2170 389.5 L 2088.22 543" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 2452.67 346 L 2452.67 387.5 L 2452.67 389.5 L 2452.67 400" fill="none" stroke="#C0392B" stroke-width="2.2" marker-end="url(#arR)"/>
+<path d="M 1817.02 497 L 1817.02 534.5 L 1817.02 536.5 L 1817.02 543" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 2421.28 610 L 2421.28 669 L 2421.28 671 L 2421.28 671" fill="none" stroke="#3576C8" stroke-width="1.6" marker-end="url(#arB)"/>
+<path d="M 2095 429.1 L 2245 429.1" fill="none" stroke="#6B4FA8" stroke-width="2" marker-end="url(#arP)"/>
+<path d="M 2095 571.7 L 2170 571.7 L 2170 482.45 L 2245 482.45" fill="none" stroke="#6B4FA8" stroke-width="2" marker-end="url(#arP)"/>
+<path d="M 2095 695.6 L 2170 695.6 L 2170 596.6 L 2245 596.6" fill="none" stroke="#6B4FA8" stroke-width="2" marker-end="url(#arP)"/>
+<path d="M 1539.5 359 L 1539.5 410 L 1539.5 412 L 1539.5 455" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+<path d="M 1415 493 L 1330 493 L 1330 488.5 L 1245 488.5" fill="none" stroke="#5A5F6A" stroke-width="1.6" marker-end="url(#ar)"/>
+<path d="M 1245 186.7 L 1310 186.7 L 1310 191.95 L 1375 191.95" fill="none" stroke="#B06810" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#arO)"/>
+<path d="M 71.6 771 L 71.6 789 L 131 789 L 131 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 136.1 771 L 136.1 810 L 287 810 L 287 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 200.6 771 L 200.6 831 L 443 831 L 443 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 265.1 771 L 265.1 852 L 599 852 L 599 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 329.6 771 L 329.6 873 L 755 873 L 755 1155" fill="none" stroke="#C0392B" stroke-width="2.1" marker-end="url(#arR)"/>
+<path d="M 2256 771 L 2256 789 L 1865 789 L 1865 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 2320.5 771 L 2320.5 810 L 2021 810 L 2021 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 2385 771 L 2385 831 L 2177 831 L 2177 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 2449.5 771 L 2449.5 852 L 2333 852 L 2333 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 2514 771 L 2514 873 L 2489 873 L 2489 1155" fill="none" stroke="#C0392B" stroke-width="2.1" marker-end="url(#arR)"/>
+<path d="M 101.8 1155 L 101.8 894 L 941 894 L 941 571" fill="none" stroke="#3576C8" stroke-width="1.5" marker-end="url(#arB)"/>
+<path d="M 1894.2 1155 L 1894.2 894 L 1105 894 L 1105 571" fill="none" stroke="#3576C8" stroke-width="1.5" marker-end="url(#arB)"/>
+<path d="M 257.8 1155 L 257.8 915 L 973.8 915 L 973.8 571" fill="none" stroke="#3576C8" stroke-width="1.5" marker-end="url(#arB)"/>
+<path d="M 2050.2 1155 L 2050.2 915 L 1137.8 915 L 1137.8 571" fill="none" stroke="#3576C8" stroke-width="1.5" marker-end="url(#arB)"/>
+<path d="M 413.8 1155 L 413.8 936 L 1006.6 936 L 1006.6 571" fill="none" stroke="#3576C8" stroke-width="1.5" marker-end="url(#arB)"/>
+<path d="M 2206.2 1155 L 2206.2 936 L 1170.6 936 L 1170.6 571" fill="none" stroke="#3576C8" stroke-width="1.5" marker-end="url(#arB)"/>
+<path d="M 569.8 1155 L 569.8 957 L 1039.4 957 L 1039.4 571" fill="none" stroke="#3576C8" stroke-width="1.5" marker-end="url(#arB)"/>
+<path d="M 2362.2 1155 L 2362.2 957 L 1203.4 957 L 1203.4 571" fill="none" stroke="#3576C8" stroke-width="1.5" marker-end="url(#arB)"/>
+<path d="M 725.8 1155 L 725.8 978 L 1072.2 978 L 1072.2 571" fill="none" stroke="#C0392B" stroke-width="1.5" marker-end="url(#arR)"/>
+<path d="M 2518.2 1155 L 2518.2 978 L 1236.2 978 L 1236.2 571" fill="none" stroke="#C0392B" stroke-width="1.5" marker-end="url(#arR)"/>
+<path d="M 1326.4 571 L 1326.4 999 L 918 999 L 918 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 1375.6 571 L 1375.6 1020 L 1114 1020 L 1114 1155" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 1424.8 571 L 1424.8 1041 L 1702 1041 L 1702 1155" fill="none" stroke="#B06810" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arO)"/>
+<path d="M 865.92 1155 L 865.92 999 L 759.6 999 L 759.6 771" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 1061.92 1155 L 1061.92 1020 L 716.6 1020 L 716.6 771" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 1649.92 1155 L 1649.92 1041 L 673.6 1041 L 673.6 771" fill="none" stroke="#B06810" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arO)"/>
+<path d="M 1257.92 1155 L 1257.92 1062 L 630.6 1062 L 630.6 771" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 1453.92 1155 L 1453.92 1062 L 587.6 1062 L 587.6 771" fill="none" stroke="#3576C8" stroke-width="1.7" stroke-dasharray="6 4" marker-end="url(#arB)"/>
+<path d="M 970.08 1155 L 970.08 999 L 1860.4 999 L 1860.4 771" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 1166.08 1155 L 1166.08 1020 L 1903.4 1020 L 1903.4 771" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 1754.08 1155 L 1754.08 1041 L 1946.4 1041 L 1946.4 771" fill="none" stroke="#B06810" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arO)"/>
+<path d="M 1362.08 1155 L 1362.08 1062 L 1989.4 1062 L 1989.4 771" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 1558.08 1155 L 1558.08 1062 L 2032.4 1062 L 2032.4 771" fill="none" stroke="#3576C8" stroke-width="1.7" stroke-dasharray="6 4" marker-end="url(#arB)"/>
+<path d="M 1310 1155 L 1310 1062 L 1670.8 1062 L 1670.8 571" fill="none" stroke="#3576C8" stroke-width="1.5" marker-end="url(#arB)"/>
+<path d="M 1146 1457 L 1146 1333 L 1310 1333 L 1310 1209" fill="none" stroke="#3576C8" stroke-width="1.7" marker-end="url(#arB)"/>
+<path d="M 1474 1457 L 1474 1375 L 1506 1375 L 1506 1209" fill="none" stroke="#3576C8" stroke-width="1.7" stroke-dasharray="6 4" marker-end="url(#arB)"/>
+<path d="M 26 1701 L 80 1701" fill="none" stroke="#3576C8" stroke-width="1.8" marker-end="url(#arB)"/>
+<path d="M 186.7 1701 L 240.7 1701" fill="none" stroke="#B06810" stroke-width="1.8" stroke-dasharray="6 4" marker-end="url(#arO)"/>
+<path d="M 370.6 1701 L 424.6 1701" fill="none" stroke="#6B4FA8" stroke-width="2.4" marker-end="url(#arP)"/>
+<path d="M 537.4 1701 L 591.4 1701" fill="none" stroke="#C0392B" stroke-width="2.8" marker-end="url(#arR)"/>
+<rect x="36" y="136" width="828" height="82" rx="5" fill="#FFFFFF" stroke="#9FB4CE" stroke-width="1.6"/><text x="48" y="157" font-size="12.5" font-weight="700" fill="#1B4F91">TurtleBot4 · OAK-D Pro 드라이버</text><text x="48" y="176" font-size="11" fill="#3A3E46">oakd/rgb · stereo/depth · camera_info   704×704 crop · BEST_EFFORT</text><text x="48" y="191" font-size="11" fill="#3A3E46">scan 10 Hz · odom · tf · battery_state · dock_status</text><text x="48" y="206" font-size="11" fill="#3A3E46">cmd_vel (geometry_msgs/TwistStamped) 로 구동한다</text>
+<rect x="36" y="264" width="262.667" height="82" rx="5" fill="#FFFFFF" stroke="#9FB4CE" stroke-width="1.6"/><text x="48" y="285" font-size="12.5" font-weight="700" fill="#1B4F91">aruco_detector</text><text x="48" y="304" font-size="11" fill="#3A3E46">camera_fx_scale 1.7778 보정 (I-031)</text><text x="48" y="319" font-size="11" fill="#3A3E46">solvePnP IPPE_SQUARE · 1.5 m 게이트</text><text x="48" y="334" font-size="11" fill="#3A3E46">aruco/id · aruco/distance</text>
+<rect x="318.667" y="264" width="262.667" height="82" rx="5" fill="#FFFFFF" stroke="#9FB4CE" stroke-width="1.6"/><text x="330.667" y="285" font-size="12.5" font-weight="700" fill="#1B4F91">amr_detection</text><text x="330.667" y="304" font-size="11" fill="#3A3E46">RGB+Depth 동기 slop 0.1 s</text><text x="330.667" y="319" font-size="11" fill="#3A3E46">worker.pt · 재식별 임계 0.6</text><text x="330.667" y="334" font-size="11" fill="#3A3E46">target/paired · map_point</text>
+<rect x="601.333" y="264" width="262.667" height="82" rx="5" fill="#FDF0EF" stroke="#D98A80" stroke-width="1.6"/><text x="613.333" y="285" font-size="12.5" font-weight="700" fill="#8E2A1F">safety_watchdog  (온보드)</text><text x="613.333" y="304" font-size="11" fill="#3A3E46">scan 만 구독 · 전방 ±35°</text><text x="613.333" y="319" font-size="11" fill="#3A3E46">0.30 m 2프레임 → estop</text><text x="613.333" y="334" font-size="11" fill="#3A3E46">cmd_vel 0 을 20 Hz 로 덮어씀</text>
+<rect x="36" y="400" width="339" height="97" rx="5" fill="#FFFFFF" stroke="#9FB4CE" stroke-width="1.6"/><text x="48" y="421" font-size="12.5" font-weight="700" fill="#1B4F91">shuttle_mission    S4 셔틀</text><text x="48" y="440" font-size="11" fill="#3A3E46">READY → SHUTTLE → AT_BAY → WAITING</text><text x="48" y="455" font-size="11" fill="#3A3E46">ArUco 확인 → 적재 5 s → P1 토큰 → 대기공간</text><text x="48" y="470" font-size="11" fill="#3A3E46">T_lim 120 s 초과 → 미션 폐기 (계약 7절)</text><text x="48" y="485" font-size="11" fill="#3A3E46">WAITING 은 도착 확정 시 1회 — AC-08 기준점</text>
+<rect x="525" y="400" width="339" height="97" rx="5" fill="#FFFFFF" stroke="#9FB4CE" stroke-width="1.6"/><text x="537" y="421" font-size="12.5" font-weight="700" fill="#1B4F91">Nav2 / AMCL   turtlebot4_navigation</text><text x="537" y="440" font-size="11" fill="#3A3E46">map_server · amcl · bt_navigator</text><text x="537" y="455" font-size="11" fill="#3A3E46">planner_server · controller_server</text><text x="537" y="470" font-size="11" fill="#3A3E46">velocity_smoother → cmd_vel</text><text x="537" y="485" font-size="11" fill="#3A3E46">xy_goal_tolerance 0.25 (I-029)</text>
+<rect x="36" y="543" width="339" height="82" rx="5" fill="#FFFFFF" stroke="#9FB4CE" stroke-width="1.6"/><text x="48" y="564" font-size="12.5" font-weight="700" fill="#1B4F91">follow_target      S5~S8 추종</text><text x="48" y="583" font-size="11" fill="#3A3E46">APPROACH_1 / 2 → ARRIVED → FOLLOWING</text><text x="48" y="598" font-size="11" fill="#3A3E46">standoff 0.5 m · 놓치면 힌트 방향 탐색</text><text x="48" y="613" font-size="11" fill="#3A3E46">T_lim 초과 → STANDBY (운영자 대기)</text>
+<rect x="525" y="543" width="339" height="67" rx="5" fill="#FFFFFF" stroke="#9FB4CE" stroke-width="1.6"/><text x="537" y="564" font-size="12.5" font-weight="700" fill="#1B4F91">opennav_docking</text><text x="537" y="583" font-size="11" fill="#3A3E46">action  undock  — S2 기동</text><text x="537" y="598" font-size="11" fill="#3A3E46">action  dock     — S10 복귀</text>
+<rect x="36" y="671" width="339" height="82" rx="5" fill="#FFFFFF" stroke="#9FB4CE" stroke-width="1.6"/><text x="48" y="692" font-size="12.5" font-weight="700" fill="#1B4F91">return_dock       S10 복귀</text><text x="48" y="711" font-size="11" fill="#3A3E46">P1 → DOCK 토큰 (한 번에 한 대, E-7)</text><text x="48" y="726" font-size="11" fill="#3A3E46">도크 정면 접근 지점 경유 → dock</text><text x="48" y="741" font-size="11" fill="#3A3E46">T_ret 180 s · 재시도 2회 · 실패해도 반납</text>
+<rect x="525" y="671" width="339" height="52" rx="5" fill="#FFFFFF" stroke="#AAB0B8" stroke-width="1.6"/><text x="537" y="692" font-size="12.5" font-weight="700" fill="#333840">Create3 구동부</text><text x="537" y="711" font-size="11" fill="#3A3E46">v ≤ 0.3 m/s · 범퍼 · 클리프 · 도크 IR</text>
+<rect x="1756" y="136" width="828" height="82" rx="5" fill="#FFFFFF" stroke="#B4A2D2" stroke-width="1.6"/><text x="1768" y="157" font-size="12.5" font-weight="700" fill="#4B357A">TurtleBot4 · OAK-D Pro 드라이버</text><text x="1768" y="176" font-size="11" fill="#3A3E46">oakd/rgb · stereo/depth · camera_info   704×704 crop · BEST_EFFORT</text><text x="1768" y="191" font-size="11" fill="#3A3E46">scan 10 Hz · odom · tf · battery_state · dock_status</text><text x="1768" y="206" font-size="11" fill="#3A3E46">cmd_vel (geometry_msgs/TwistStamped) 로 구동한다</text>
+<rect x="1756" y="264" width="262.667" height="82" rx="5" fill="#FFFFFF" stroke="#B4A2D2" stroke-width="1.6"/><text x="1768" y="285" font-size="12.5" font-weight="700" fill="#4B357A">aruco_detector</text><text x="1768" y="304" font-size="11" fill="#3A3E46">camera_fx_scale 1.7778 보정 (I-031)</text><text x="1768" y="319" font-size="11" fill="#3A3E46">solvePnP IPPE_SQUARE · 1.5 m 게이트</text><text x="1768" y="334" font-size="11" fill="#3A3E46">aruco/id · aruco/distance</text>
+<rect x="2038.67" y="264" width="262.667" height="82" rx="5" fill="#FFFFFF" stroke="#B4A2D2" stroke-width="1.6"/><text x="2050.67" y="285" font-size="12.5" font-weight="700" fill="#4B357A">amr_detection</text><text x="2050.67" y="304" font-size="11" fill="#3A3E46">RGB+Depth 동기 slop 0.1 s</text><text x="2050.67" y="319" font-size="11" fill="#3A3E46">worker.pt · 재식별 임계 0.6</text><text x="2050.67" y="334" font-size="11" fill="#3A3E46">target/paired · map_point</text>
+<rect x="2321.33" y="264" width="262.667" height="82" rx="5" fill="#FDF0EF" stroke="#D98A80" stroke-width="1.6"/><text x="2333.33" y="285" font-size="12.5" font-weight="700" fill="#8E2A1F">safety_watchdog  (온보드)</text><text x="2333.33" y="304" font-size="11" fill="#3A3E46">scan 만 구독 · 전방 ±35°</text><text x="2333.33" y="319" font-size="11" fill="#3A3E46">0.30 m 2프레임 → estop</text><text x="2333.33" y="334" font-size="11" fill="#3A3E46">cmd_vel 0 을 20 Hz 로 덮어씀</text>
+<rect x="1756" y="400" width="339" height="97" rx="5" fill="#FFFFFF" stroke="#B4A2D2" stroke-width="1.6"/><text x="1768" y="421" font-size="12.5" font-weight="700" fill="#4B357A">shuttle_mission    S4 셔틀</text><text x="1768" y="440" font-size="11" fill="#3A3E46">READY → SHUTTLE → AT_BAY → WAITING</text><text x="1768" y="455" font-size="11" fill="#3A3E46">ArUco 확인 → 적재 5 s → P1 토큰 → 대기공간</text><text x="1768" y="470" font-size="11" fill="#3A3E46">T_lim 120 s 초과 → 미션 폐기 (계약 7절)</text><text x="1768" y="485" font-size="11" fill="#3A3E46">WAITING 은 도착 확정 시 1회 — AC-08 기준점</text>
+<rect x="2245" y="400" width="339" height="97" rx="5" fill="#FFFFFF" stroke="#B4A2D2" stroke-width="1.6"/><text x="2257" y="421" font-size="12.5" font-weight="700" fill="#4B357A">Nav2 / AMCL   turtlebot4_navigation</text><text x="2257" y="440" font-size="11" fill="#3A3E46">map_server · amcl · bt_navigator</text><text x="2257" y="455" font-size="11" fill="#3A3E46">planner_server · controller_server</text><text x="2257" y="470" font-size="11" fill="#3A3E46">velocity_smoother → cmd_vel</text><text x="2257" y="485" font-size="11" fill="#3A3E46">xy_goal_tolerance 0.25 (I-029)</text>
+<rect x="1756" y="543" width="339" height="82" rx="5" fill="#FFFFFF" stroke="#B4A2D2" stroke-width="1.6"/><text x="1768" y="564" font-size="12.5" font-weight="700" fill="#4B357A">follow_target      S5~S8 추종</text><text x="1768" y="583" font-size="11" fill="#3A3E46">APPROACH_1 / 2 → ARRIVED → FOLLOWING</text><text x="1768" y="598" font-size="11" fill="#3A3E46">standoff 0.5 m · 놓치면 힌트 방향 탐색</text><text x="1768" y="613" font-size="11" fill="#3A3E46">T_lim 초과 → STANDBY (운영자 대기)</text>
+<rect x="2245" y="543" width="339" height="67" rx="5" fill="#FFFFFF" stroke="#B4A2D2" stroke-width="1.6"/><text x="2257" y="564" font-size="12.5" font-weight="700" fill="#4B357A">opennav_docking</text><text x="2257" y="583" font-size="11" fill="#3A3E46">action  undock  — S2 기동</text><text x="2257" y="598" font-size="11" fill="#3A3E46">action  dock     — S10 복귀</text>
+<rect x="1756" y="671" width="339" height="82" rx="5" fill="#FFFFFF" stroke="#B4A2D2" stroke-width="1.6"/><text x="1768" y="692" font-size="12.5" font-weight="700" fill="#4B357A">return_dock       S10 복귀</text><text x="1768" y="711" font-size="11" fill="#3A3E46">P1 → DOCK 토큰 (한 번에 한 대, E-7)</text><text x="1768" y="726" font-size="11" fill="#3A3E46">도크 정면 접근 지점 경유 → dock</text><text x="1768" y="741" font-size="11" fill="#3A3E46">T_ret 180 s · 재시도 2회 · 실패해도 반납</text>
+<rect x="2245" y="671" width="339" height="52" rx="5" fill="#FFFFFF" stroke="#AAB0B8" stroke-width="1.6"/><text x="2257" y="692" font-size="12.5" font-weight="700" fill="#333840">Create3 구동부</text><text x="2257" y="711" font-size="11" fill="#3A3E46">v ≤ 0.3 m/s · 범퍼 · 클리프 · 도크 IR</text>
+<rect x="916" y="158" width="329" height="82" rx="5" fill="#FFFFFF" stroke="#D6B685" stroke-width="1.6"/><text x="928" y="179" font-size="12.5" font-weight="700" fill="#8A4F0B">control_ui     Flask :5000</text><text x="928" y="198" font-size="11" fill="#3A3E46">운영자 화면 — 2대 상태 표시 (뷰어)</text><text x="928" y="213" font-size="11" fill="#3A3E46">자재 요청 → RequestMission (서비스)</text><text x="928" y="228" font-size="11" fill="#3A3E46">종료 → OperatorCommand RETURN / RETURN_ALL</text>
+<rect x="1375" y="158" width="329" height="97" rx="5" fill="#FFFFFF" stroke="#D6B685" stroke-width="1.6"/><text x="1387" y="179" font-size="12.5" font-weight="700" fill="#8A4F0B">fleet_manager</text><text x="1387" y="198" font-size="11" fill="#3A3E46">서술자 수신 → 로봇 배정 (트랙 ID 작은 쪽)</text><text x="1387" y="213" font-size="11" fill="#3A3E46">배터리 25 % 미만이면 미션 거부</text><text x="1387" y="228" font-size="11" fill="#3A3E46">mission/assigned · mission/finish 발행</text><text x="1387" y="243" font-size="11" fill="#3A3E46">FleetStatus 1 Hz · SQLite events 기록</text>
+<rect x="916" y="277" width="329" height="82" rx="5" fill="#FFFFFF" stroke="#D6B685" stroke-width="1.6"/><text x="928" y="298" font-size="12.5" font-weight="700" fill="#8A4F0B">zone_semaphore   (소유: 주행)</text><text x="928" y="317" font-size="11" fill="#3A3E46">구역은 P1 · DOCK 둘뿐 · FIFO 대기열</text><text x="928" y="332" font-size="11" fill="#3A3E46">REJECT 는 대기 시작 1건 · GRANT 는 새 획득만</text><text x="928" y="347" font-size="11" fill="#3A3E46">보유 60 s 초과 → RECLAIM (보유자 ns)</text>
+<rect x="1375" y="277" width="329" height="82" rx="5" fill="#FFFFFF" stroke="#D6B685" stroke-width="1.6"/><text x="1387" y="298" font-size="12.5" font-weight="700" fill="#8A4F0B">kpi_logger</text><text x="1387" y="317" font-size="11" fill="#3A3E46">상태 · 미션 · 개입 · 구역 이벤트 구독</text><text x="1387" y="332" font-size="11" fill="#3A3E46">거르지 않고 받아적는다 — 판정은 리포트에서</text><text x="1387" y="347" font-size="11" fill="#3A3E46">전부 ROS 시각 기준</text>
+<path d="M 1415 468 L 1415 518 A 124.5 13 0 0 0 1664 518 L 1664 468 A 124.5 13 0 0 0 1415 468 Z" fill="#FFFFFF" stroke="#8A8F98" stroke-width="1.6"/><path d="M 1415 468 A 124.5 13 0 0 0 1664 468 A 124.5 13 0 0 0 1415 468" fill="none" stroke="#8A8F98" stroke-width="1.6"/><text x="1539.5" y="481" font-size="12.5" font-weight="700" fill="#333840" text-anchor="middle">SQLite   ~/mro_fleet.db</text><text x="1539.5" y="500" font-size="11" fill="#3A3E46" text-anchor="middle">workers · missions · events</text><text x="1539.5" y="515" font-size="11" fill="#3A3E46" text-anchor="middle">kind = STATE / INTERVENTION / ZONE</text>
+<rect x="916" y="455" width="329" height="67" rx="5" fill="#FFFFFF" stroke="#D6B685" stroke-width="1.6"/><text x="928" y="476" font-size="12.5" font-weight="700" fill="#8A4F0B">kpi_report.py</text><text x="928" y="495" font-size="11" fill="#3A3E46">AC-05 · AC-08 · AC-13 · K-04 · K-05 · K-06</text><text x="928" y="510" font-size="11" fill="#3A3E46">K-06: REJECT → GRANT 60 s · RECLAIM 있으면 미해결</text>
+<rect x="58" y="1155" width="146" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="131" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">shuttle/status</text><text x="131" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">String</text>
+<rect x="214" y="1155" width="146" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="287" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">approach/status</text><text x="287" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">String</text>
+<rect x="370" y="1155" width="146" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="443" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">target/pair_state</text><text x="443" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">String</text>
+<rect x="526" y="1155" width="146" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="599" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">aruco/distance</text><text x="599" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">Float32</text>
+<rect x="682" y="1155" width="146" height="54" rx="5" fill="#FCECEC" stroke="#C0392B" stroke-width="1.6"/><text x="755" y="1177.5" font-size="12.5" font-weight="700" fill="#8E2A1F" text-anchor="middle">safety/estop</text><text x="755" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">Bool</text>
+<rect x="1792" y="1155" width="146" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="1865" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">shuttle/status</text><text x="1865" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">String</text>
+<rect x="1948" y="1155" width="146" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="2021" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">approach/status</text><text x="2021" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">String</text>
+<rect x="2104" y="1155" width="146" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="2177" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">target/pair_state</text><text x="2177" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">String</text>
+<rect x="2260" y="1155" width="146" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="2333" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">aruco/distance</text><text x="2333" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">Float32</text>
+<rect x="2416" y="1155" width="146" height="54" rx="5" fill="#FCECEC" stroke="#C0392B" stroke-width="1.6"/><text x="2489" y="1177.5" font-size="12.5" font-weight="700" fill="#8E2A1F" text-anchor="middle">safety/estop</text><text x="2489" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">Bool</text>
+<rect x="825" y="1155" width="186" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="918" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">mission/assigned</text><text x="918" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">Mission</text>
+<rect x="1021" y="1155" width="186" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="1114" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">mission/finish</text><text x="1114" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">Bool</text>
+<rect x="1217" y="1155" width="186" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="1310" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">webcam1/worker_desc.</text><text x="1310" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">WorkerDescriptor</text>
+<rect x="1413" y="1155" width="186" height="54" rx="5" fill="#EEF4FD" stroke="#3576C8" stroke-width="1.6"/><text x="1506" y="1177.5" font-size="12.5" font-weight="700" fill="#1B4F91" text-anchor="middle">webcam2/target_hint</text><text x="1506" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">TargetHint</text>
+<polygon points="1635,1155 1769,1155 1795,1182 1769,1209 1635,1209 1609,1182" fill="#FDF3E3" stroke="#B06810" stroke-width="1.8"/><text x="1702" y="1177.5" font-size="12.5" font-weight="700" fill="#8A4F0B" text-anchor="middle">/fleet/zone_token</text><text x="1702" y="1196.5" font-size="11" fill="#3A3E46" text-anchor="middle">srv/ZoneToken</text>
+<rect x="916" y="1497" width="386" height="97" rx="5" fill="#FFFFFF" stroke="#93C4A8" stroke-width="1.6"/><text x="928" y="1518" font-size="12.5" font-weight="700" fill="#1E6B40">webcam_register     PC-W1</text><text x="928" y="1537" font-size="11" fill="#3A3E46">출입구 시야 · 캡처 25 fps (Jieli 장치 상한) → 추론 10 Hz</text><text x="928" y="1552" font-size="11" fill="#3A3E46">ByteTrack ID · 0.3 s 연속이어야 등록</text><text x="928" y="1567" font-size="11" fill="#3A3E46">HSV H16×S8 = 128 · 10프레임 평균 · 재등록 0.45</text><text x="928" y="1582" font-size="11" fill="#3A3E46">/webcam1/worker_descriptor 발행</text>
+<rect x="1318" y="1497" width="386" height="97" rx="5" fill="#FFFFFF" stroke="#93C4A8" stroke-width="1.6"/><text x="1330" y="1518" font-size="12.5" font-weight="700" fill="#1E6B40">webcam_hint          PC-W2</text><text x="1330" y="1537" font-size="11" fill="#3A3E46">작업공간 + P3 입구 · 캡처 30 fps → 추론 10 Hz</text><text x="1330" y="1552" font-size="11" fill="#3A3E46">호모그래피로 바닥 좌표 환산 (I-002 재검증 중)</text><text x="1330" y="1567" font-size="11" fill="#3A3E46">/webcam2/target_hint  10 Hz · 유효 2 s</text><text x="1330" y="1582" font-size="11" fill="#3A3E46">BEST_EFFORT — 안전 판단에는 쓰지 않는다 (NF-07)</text>
+<rect x="86.5233" y="230.5" width="161.62" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="93.5233" y="245.5" font-size="10.5" fill="#3576C8" font-weight="600">oakd/rgb · camera_info</text>
+<rect x="365.835" y="230.5" width="168.33" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="372.835" y="245.5" font-size="10.5" fill="#3576C8" font-weight="600">oakd/rgb · stereo/depth</text>
+<rect x="671.987" y="230.5" width="121.36" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#C0392B" stroke-width="0.8"/><text x="678.987" y="245.5" font-size="10.5" fill="#C0392B" font-weight="600">scan   LaserScan</text>
+<rect x="76.4583" y="362.5" width="181.75" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="83.4583" y="377.5" font-size="10.5" fill="#3576C8" font-weight="600">aruco/id · aruco/distance</text>
+<rect x="359.125" y="362.5" width="181.75" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="366.125" y="377.5" font-size="10.5" fill="#3576C8" font-weight="600">target/paired · map_point</text>
+<rect x="638.437" y="362.5" width="188.46" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#C0392B" stroke-width="0.8"/><text x="645.437" y="377.5" font-size="10.5" fill="#C0392B" font-weight="600">safety/estop → Goal Cancel</text>
+<rect x="39.695" y="509.5" width="114.65" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="46.695" y="524.5" font-size="10.5" fill="#3576C8" font-weight="600">shuttle/arrived</text>
+<rect x="600.88" y="631" width="200.8" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="607.88" y="646" font-size="10.5" fill="#3576C8" font-weight="600">cmd_vel  TwistStamped</text><text x="607.88" y="659" font-size="10.5" fill="#3A3E46">estop 중엔 safety 의 0 이 이긴다</text>
+<rect x="380.7" y="390.1" width="138.6" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#6B4FA8" stroke-width="0.8"/><text x="387.7" y="405.1" font-size="10.5" fill="#6B4FA8" font-weight="600">navigate_to_pose</text><text x="387.7" y="418.1" font-size="10.5" fill="#3A3E46">(액션) 베이 · 대기공간</text>
+<rect x="389.32" y="488.075" width="121.36" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#6B4FA8" stroke-width="0.8"/><text x="396.32" y="503.075" font-size="10.5" fill="#6B4FA8" font-weight="600">navigate_to_pose</text><text x="396.32" y="516.075" font-size="10.5" fill="#3A3E46">(액션) 작업자 추종</text>
+<rect x="399.385" y="620.1" width="101.23" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#6B4FA8" stroke-width="0.8"/><text x="406.385" y="635.1" font-size="10.5" fill="#6B4FA8" font-weight="600">dock / undock</text>
+<rect x="1806.52" y="230.5" width="161.62" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="1813.52" y="245.5" font-size="10.5" fill="#3576C8" font-weight="600">oakd/rgb · camera_info</text>
+<rect x="2085.84" y="230.5" width="168.33" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="2092.84" y="245.5" font-size="10.5" fill="#3576C8" font-weight="600">oakd/rgb · stereo/depth</text>
+<rect x="2391.99" y="230.5" width="121.36" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#C0392B" stroke-width="0.8"/><text x="2398.99" y="245.5" font-size="10.5" fill="#C0392B" font-weight="600">scan   LaserScan</text>
+<rect x="1796.46" y="362.5" width="181.75" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="1803.46" y="377.5" font-size="10.5" fill="#3576C8" font-weight="600">aruco/id · aruco/distance</text>
+<rect x="2079.12" y="362.5" width="181.75" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="2086.12" y="377.5" font-size="10.5" fill="#3576C8" font-weight="600">target/paired · map_point</text>
+<rect x="2358.44" y="362.5" width="188.46" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#C0392B" stroke-width="0.8"/><text x="2365.44" y="377.5" font-size="10.5" fill="#C0392B" font-weight="600">safety/estop → Goal Cancel</text>
+<rect x="1759.69" y="509.5" width="114.65" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="1766.69" y="524.5" font-size="10.5" fill="#3576C8" font-weight="600">shuttle/arrived</text>
+<rect x="2320.88" y="631" width="200.8" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#3576C8" stroke-width="0.8"/><text x="2327.88" y="646" font-size="10.5" fill="#3576C8" font-weight="600">cmd_vel  TwistStamped</text><text x="2327.88" y="659" font-size="10.5" fill="#3A3E46">estop 중엔 safety 의 0 이 이긴다</text>
+<rect x="2100.7" y="390.1" width="138.6" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#6B4FA8" stroke-width="0.8"/><text x="2107.7" y="405.1" font-size="10.5" fill="#6B4FA8" font-weight="600">navigate_to_pose</text><text x="2107.7" y="418.1" font-size="10.5" fill="#3A3E46">(액션) 베이 · 대기공간</text>
+<rect x="2109.32" y="488.075" width="121.36" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#6B4FA8" stroke-width="0.8"/><text x="2116.32" y="503.075" font-size="10.5" fill="#6B4FA8" font-weight="600">navigate_to_pose</text><text x="2116.32" y="516.075" font-size="10.5" fill="#3A3E46">(액션) 작업자 추종</text>
+<rect x="2119.39" y="620.1" width="101.23" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#6B4FA8" stroke-width="0.8"/><text x="2126.39" y="635.1" font-size="10.5" fill="#6B4FA8" font-weight="600">dock / undock</text>
+<rect x="1476.79" y="385" width="125.43" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#5A5F6A" stroke-width="0.8"/><text x="1483.79" y="400" font-size="10.5" fill="#5A5F6A" font-weight="600">CSV + SQLite 기록</text>
+<rect x="1250.51" y="464.75" width="158.98" height="21" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#5A5F6A" stroke-width="0.8"/><text x="1257.51" y="479.75" font-size="10.5" fill="#5A5F6A" font-weight="600">events · missions 조회</text>
+<rect x="1256.03" y="150.325" width="107.94" height="34" rx="3" fill="#FFFFFF" fill-opacity="0.97" stroke="#B06810" stroke-width="0.8"/><text x="1263.03" y="165.325" font-size="10.5" fill="#B06810" font-weight="600">RequestMission</text><text x="1263.03" y="178.325" font-size="10.5" fill="#3A3E46">(서비스)</text>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<text x="38" y="1095" font-size="12.5" fill="#333840" font-weight="700">ROS 2 / DDS  —  토픽 · 서비스</text>
+<text x="38" y="1113" font-size="10" fill="#5A5F6A">Discovery Server 192.168.108.41 · 중앙 브로커 없음 (NR-06)</text>
+<text x="2582" y="1095" font-size="12.5" fill="#333840" font-weight="700" text-anchor="end">명령 · 상태 = RELIABLE</text>
+<text x="2582" y="1113" font-size="10" fill="#8E2A1F" text-anchor="end">카메라 · 힌트 = BEST_EFFORT (구독자도 sensor_data QoS)</text>
+<text x="58" y="1146" font-size="11.5" fill="#4B357A" font-weight="700">/robot3  — 로봇마다 따로 뜬다</text>
+<text x="1792" y="1146" font-size="11.5" fill="#4B357A" font-weight="700">/robot4  — 같은 이름, 다른 토픽</text>
+<text x="825" y="1146" font-size="11.5" fill="#4B357A" font-weight="700">전역 이름  (관제 · 웹캠 — 네임스페이스 없음)</text>
+<text x="38" y="1253" font-size="11" fill="#3A3E46">네모 = 토픽 · 육각 = 서비스.  노드에서 나온 화살표는 발행, 토픽에서 나온 화살표는 구독이다 — 한 토픽에서 화살표가 여럿 나가면 구독자가 여럿이라는 뜻이다 (rqt_graph 규약, 강사 자료 Day5 p.72).</text>
+<text x="1310" y="1323" font-size="10.5" fill="#3576C8" font-weight="700" text-anchor="middle">webcam_register 발행</text>
+<text x="1310" y="1395" font-size="10.5" fill="#3576C8" font-weight="700" text-anchor="middle">webcam_hint 발행 · BEST_EFFORT</text>
+<text x="38" y="1483" font-size="13" fill="#333840" font-weight="700">주행 게이트</text>
+<text x="38" y="1507" font-size="11" fill="#3A3E46">· P1 토큰 — 베이 출발 전 획득, 대기공간 도착 후 반납 (방법 B, 순서 기반)</text>
+<text x="38" y="1527" font-size="11" fill="#3A3E46">· 거절되면 2 s 후 재요청 · 60 s 초과 보유는 세마포어가 강제 회수 (RECLAIM)</text>
+<text x="38" y="1547" font-size="11" fill="#3A3E46">· 받았든 못 받았든 반드시 반납한다 — 안 하면 대기열에 남아 P1 이 잠긴다 (I-033)</text>
+<text x="38" y="1567" font-size="11" fill="#3A3E46">· estop true 동안 주행 명령 금지 · cmd_vel 0 이 Nav2 출력을 덮어쓴다</text>
+<text x="38" y="1587" font-size="11" fill="#3A3E46">· T_lim 120 s 초과 → 미션 폐기 · 늦은 도착은 arrived_late 로 따로 기록</text>
+<text x="38" y="1607" font-size="11" fill="#3A3E46">· 도크 간격 0.84 m — DOCK 토큰으로 한 대씩 (E-7 순차 도킹)</text>
+<text x="1758" y="1483" font-size="13" fill="#333840" font-weight="700">판정 게이트  (KPI 기준점)</text>
+<text x="1758" y="1507" font-size="11" fill="#3A3E46">· AC-08 배송 성공 — shuttle/status = WAITING 이 도착 확정 시각. 미션당 1회</text>
+<text x="1758" y="1527" font-size="11" fill="#3A3E46">· K-05 리드타임 — 요청 created_at → WAITING. DONE(도킹 완료)과 다르다</text>
+<text x="1758" y="1547" font-size="11" fill="#3A3E46">· AC-05 추종거리 — FOLLOWING 구간만. Nav2 도착 오차 0.25 는 판정에서 뺀다 (I-029)</text>
+<text x="1758" y="1567" font-size="11" fill="#3A3E46">· K-04 재획득 — target/visible 1→0 이 1.0 s 이상. STANDBY 면 포기로 센다</text>
+<text x="1758" y="1587" font-size="11" fill="#3A3E46">· K-06 교착 — REJECT → GRANT 60 s. 그 사이 그 구역에 RECLAIM 이 있으면 미해결</text>
+<text x="1758" y="1607" font-size="11" fill="#3A3E46">· AC-13 IPH — 개입 ÷ (undock ~ DOCKED). 안전 정지 뒤 자동 재개는 개입이 아니다</text>
+<text x="26" y="1679" font-size="13" fill="#333840" font-weight="700">읽는 법</text>
+<text x="88" y="1705" font-size="11" fill="#3A3E46">토픽  Topic</text>
+<text x="248.7" y="1705" font-size="11" fill="#3A3E46">서비스  Service</text>
+<text x="432.6" y="1705" font-size="11" fill="#3A3E46">액션  Action</text>
+<text x="599.4" y="1705" font-size="11" fill="#3A3E46">안전 경로  (토픽이지만 따로 표시)</text>
+<text x="26" y="1733" font-size="11" fill="#3A3E46">PC 는 상자 채움색으로 나눈다 — 파랑 로봇3 · 보라 로봇4 · 주황 관제 · 초록 웹캠 · 회색 온보드. 테두리는 전부 회색이라 화살표 색과 섞이지 않는다.</text>
+<text x="26" y="1753" font-size="11" fill="#3A3E46">화살표 위 상자 — 첫 줄이 토픽 · 서비스 · 액션 이름, 둘째 줄이 메시지 타입과 방향이다. PC 를 넘는 것은 전부 가운데 DDS 버스를 지난다 — 직접 호출도 소켓도 없다 (NR-06).</text>
+<text x="26" y="1773" font-size="11" fill="#8A8F98">robot4 는 robot3 과 구성이 같다. 두 대가 만나는 곳은 zone_semaphore 의 P1 · DOCK 토큰뿐이고, 그 경합이 E-3 교착과 E-7 순차 도킹이다.</text>
+<text x="26" y="1795" font-size="10" fill="#8A8F98">생성: tools/build_diagrams.py   ·   근거: docs/architecture.md, docs/interfaces.md, SDD 2.4 FR 표</text>
 </svg>
