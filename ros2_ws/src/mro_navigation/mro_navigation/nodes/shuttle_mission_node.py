@@ -888,6 +888,12 @@ class ShuttleMission(Node):
                 distance = float(value)
         if distance is None:
             self.get_logger().warn('aruco/distance 가 신선하지 않다 — pose 크기를 그대로 쓴다')
+        else:
+            # 9/8 미해결: 검출기가 0.899 m 를 찍은 순간 우리 계산이 1.104 m 였다. 어느 쪽이
+            #   어긋났는지 로그로 바로 가리려고 쓴 값을 남긴다 (내일 첫 항목)
+            self.get_logger().info(
+                f'마커 표본 {len(frames)}개 · 자로 쓴 aruco/distance {distance:.3f} m '
+                f'(수신 {self.now() - self.aruco_dist[1]:.2f} s 전)')
         rows, last = [], None
         for msg, recv in frames:
             row = self.marker_in_base(msg, tf, distance)
