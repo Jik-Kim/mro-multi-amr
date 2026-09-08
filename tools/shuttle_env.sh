@@ -47,12 +47,19 @@ else
   return 1
 fi
 
-# T3(Nav2) 터미널만 슈퍼클라이언트를 끈다. 나머지 터미널은 True 여야 ros2 CLI 가 전체 노드를 본다
+# T3(Nav2) 터미널만 슈퍼클라이언트를 끈다. 나머지 터미널은 True 여야 ros2 CLI 가 전체 노드를 본다.
+#
+# **여기서 True 를 명시적으로 넣는다 (9/8).** /etc/turtlebot4_discovery/setup.bash 는
+#   `[ -t 0 ] && export ROS_SUPER_CLIENT=True || export ROS_SUPER_CLIENT=False`
+# 로 **stdin 이 TTY 일 때만** True 를 준다. 사람이 치는 터미널은 True 지만 스크립트·SSH 비대화
+# 실행·CI 에서는 조용히 False 가 되고, 그러면 디스커버리 서버가 전체 토픽·노드를 안 넘겨줘서
+# `ros2 topic list` 가 거의 비어 나온다 — '노드가 안 보인다' 로 오진하기 딱 좋다 (가이드 D-5).
 if [ "$_SE_MODE" = "nav2" ]; then
   export ROS_SUPER_CLIENT=False
   echo "환경 준비됨 (Nav2 터미널) — ROS_DOMAIN_ID=$ROS_DOMAIN_ID · ROS_SUPER_CLIENT=False"
 else
-  echo "환경 준비됨 — ROS_DOMAIN_ID=$ROS_DOMAIN_ID · ROS_SUPER_CLIENT=${ROS_SUPER_CLIENT:-미설정} · 디스커버리 $ROS_DISCOVERY_SERVER"
+  export ROS_SUPER_CLIENT=True
+  echo "환경 준비됨 — ROS_DOMAIN_ID=$ROS_DOMAIN_ID · ROS_SUPER_CLIENT=True · 디스커버리 $ROS_DISCOVERY_SERVER"
 fi
 
 unset _SE_DIR _SE_WS _SE_MODE
