@@ -49,6 +49,54 @@ CAM1_FPS = from_yaml(WEBCAM_YAML, 'webcam_register', 'ros__parameters', 'capture
 CAM2_FPS = from_yaml(WEBCAM_YAML, 'webcam_hint', 'ros__parameters', 'fps', default=30.0)
 PROC_HZ = from_yaml(WEBCAM_YAML, 'webcam_register', 'ros__parameters', 'process_hz', default=10.0)
 
+
+CONTRACT_MD = 'docs/interfaces.md'
+
+
+def contract_topics(relpath=CONTRACT_MD):
+    """계약 4절 「토픽 계약」 표를 읽어 {토픽: (송신, 수신, 타입)} 로 돌려준다.
+
+    그림에 토픽 이름·타입·구독자를 손으로 적지 않기 위해서다. 9/7 에 웹캠 fps 를 손으로
+    적었다가 실제 값과 어긋난 적이 있고(그래서 from_yaml 을 넣었다), 토픽 표는 그보다
+    훨씬 자주 바뀐다. **계약이 원본이고 그림은 그 사본이다** — 어긋나면 그림이 틀린 것이다.
+
+    읽지 못하면 빈 dict 를 주고 경고한다. 부르는 쪽이 필요한 토픽을 못 찾으면 거기서 죽는다
+    (조용히 옛 값을 그리는 것보다 낫다).
+    """
+    try:
+        with open(os.path.join(ROOT, relpath), encoding='utf-8') as f:
+            lines = f.read().splitlines()
+    except OSError as e:
+        print('  [경고] %s 를 읽지 못했다 (%s) — 토픽 표 없이 그린다' % (relpath, e))
+        return {}
+    out, inside = {}, False
+    for ln in lines:
+        if ln.startswith('## 4. 토픽 계약'):
+            inside = True
+            continue
+        if inside and ln.startswith('## '):
+            break
+        if not inside or not ln.startswith('|'):
+            continue
+        c = [x.strip() for x in ln.strip('|').split('|')]
+        if len(c) < 4 or c[0] in ('토픽', '') or set(c[0]) <= set('-: '):
+            continue
+        names = [t.strip(' `*') for t in c[0].split('`,')]
+        names = [t.strip(' `*') for t in names if t.strip(' `*')]
+        types = [t.strip() for t in c[3].split(',')]
+        for i, nm in enumerate(names):
+            out[nm] = (c[1], c[2], types[i] if i < len(types) else types[-1])
+    print('  계약 4절에서 토픽 %d 개를 읽었다' % len(out))
+    return out
+
+
+def tp(topics, name, *, short=None):
+    """토픽 상자에 넣을 두 줄 — 이름과 타입. 계약에 없는 이름이면 바로 죽는다."""
+    if name not in topics:
+        raise KeyError('계약 4절에 없는 토픽: %r — 이름이 바뀌었거나 오타다' % name)
+    return [short or name, topics[name][2]]
+
+
 STYLES = {
     'pc':     ('#EEF4FD', '#3576C8', '#1B4F91'),
     'pcf':    ('#FDF3E3', '#B06810', '#8A4F0B'),
@@ -86,6 +134,14 @@ STYLES = {
     'bus':    ('#F7F8FA', '#5A5F6A', '#333840'),
     'bushex': ('#EFF2F6', '#5A5F6A', '#333840'),
     'db':     ('#FFFFFF', '#8A8F98', '#333840'),
+    # STEP 3-3 ROS 그래프 (rqt_graph 규약) — 노드는 타원, 토픽은 네모, 서비스는 육각, 액션은 묶음
+    'tp_t':   ('#EEF4FD', '#3576C8', '#1B4F91'),   # 토픽
+    'tp_hw':  ('#F4F5F7', '#8A8F98', '#333840'),   # TB4 기본 토픽 (계약 표 밖)
+    'tp_saf': ('#FCECEC', '#C0392B', '#8E2A1F'),   # 안전에 걸린 토픽
+    'srv':    ('#FDF3E3', '#B06810', '#8A4F0B'),   # 서비스
+    'act':    ('#F6F2FC', '#6B4FA8', '#4B357A'),   # 액션 묶음
+    'act_srv':('#FDF3E3', '#C99A5B', '#8A4F0B'),   # 액션 속 서비스
+    'act_tp': ('#EEF4FD', '#7FA6D6', '#1B4F91'),   # 액션 속 토픽
     # 시나리오 단계 — 그 단계를 수행하는 PC 를 채움색으로 나타낸다
     'st_cam': ('#EDF7F1', '#93C4A8', '#1E6B40'),
     'st_ctl': ('#FFF6E8', '#D6B685', '#8A4F0B'),
@@ -386,6 +442,10 @@ class Diagram:
                 x + w - k, y + h, x + k, y + h, x, y + h / 2)
             out.append('<polygon points="%s" fill="%s" stroke="%s" stroke-width="1.8"/>'
                        % (pts, fill, stroke))
+        elif n['shape'] == 'ellipse':
+            out.append('<ellipse cx="%g" cy="%g" rx="%g" ry="%g" fill="%s" '
+                       'stroke="%s" stroke-width="1.8"/>'
+                       % (x + w / 2, y + h / 2, w / 2, h / 2, fill, stroke))
         elif n['shape'] == 'cyl':
             r = min(13, h / 5)
             out.append('<path d="M %g %g L %g %g A %g %g 0 0 0 %g %g L %g %g '
@@ -398,7 +458,7 @@ class Diagram:
         else:
             out.append('<rect x="%g" y="%g" width="%g" height="%g" rx="5" fill="%s" '
                        'stroke="%s" stroke-width="1.6"/>' % (x, y, w, h, fill, stroke))
-        centered = n['align'] == 'center' or n['shape'] in ('diamond', 'stadium', 'hex', 'cyl')
+        centered = n['align'] == 'center' or n['shape'] in ('diamond', 'stadium', 'hex', 'cyl', 'ellipse')
         tx = x + w / 2 if centered else x + 12
         anc = ' text-anchor="middle"' if centered else ''
         lines = n['lines']
@@ -476,6 +536,8 @@ class Diagram:
                 shape = 'rounded=1;arcSize=50;'
             elif n['shape'] == 'hex':
                 shape = 'shape=hexagon;'
+            elif n['shape'] == 'ellipse':
+                shape = 'ellipse;'
             elif n['shape'] == 'cyl':
                 shape = 'shape=cylinder3;boundedLbl=1;'
             else:
@@ -483,7 +545,7 @@ class Diagram:
             dashed = ('dashed=1;dashPattern=5 4;'
                       if kind == 'band' and n.get('dash', True) else 'dashed=0;')
             align = ('align=center;' if (n['align'] == 'center' or
-                                         n['shape'] in ('diamond', 'stadium', 'hex', 'cyl'))
+                                         n['shape'] in ('diamond', 'stadium', 'hex', 'cyl', 'ellipse'))
                      else 'align=left;spacingLeft=10;')
             # draw.io 의 value 는 XML 속성이다. HTML 태그째로 넣되
             # 문자열 전체를 마지막에 한 번만 이스케이프한다 (아래 esc()).
@@ -1467,11 +1529,301 @@ def step3b():
 
 
 # =====================================================================
+# STEP 3-3 — ROS 계산 그래프 (노드 · 토픽 · 서비스 · 액션)
+# =====================================================================
+def step3c():
+    """STEP 3-3 ROS 계산 그래프 — rqt_graph 규약 (강사 자료 Day5 p.72 와 같은 표기).
+
+      타원 = 노드 · 네모 = 토픽 · 육각 = 서비스 · 점선묶음 = 액션(속은 서비스 3 + 토픽 2)
+
+    step3b 는 '무엇을 하는가'(기능 흐름)를, 이 장은 '어떻게 연결됐는가'(배선)를 보여준다.
+    토픽이 화살표 라벨이 아니라 **그림의 요소**라서 구독자가 여럿인 것이 드러난다 —
+    mission/finish 는 받는 노드가 셋이고, step3b 에서는 그게 안 보였다.
+
+    토픽 이름과 타입은 **계약 4절에서 읽는다**(contract_topics). 손으로 적지 않는다.
+    계약에 없는 이름을 쓰면 그리다 죽는다 — 조용히 틀린 그림이 나가는 것보다 낫다.
+    """
+    T = contract_topics()
+    NW, NH = 268, 54          # 노드 타원
+    TW, TH = 306, 48          # 토픽 네모
+    TOP, VG = 126, 20         # 첫 줄 y · 토픽 세로 간격
+    NVG = 36                  # 노드 세로 간격 — 타원은 좌우가 좁아져 20 px 면 붙어 보인다
+    N1, T1, N2, T2, N3, T3, N4, T4 = 32, 376, 758, 1102, 1484, 1828, 2210, 2554
+    W = T4 + TW + 32
+
+    d = Diagram('STEP3-3 ROS 그래프', W, 100,
+                'STEP 3-3 — ROS 계산 그래프 (노드 · 토픽 · 서비스 · 액션)',
+                '타원 = 노드 · 네모 = 토픽 · 육각 = 서비스 · 점선묶음 = 액션  |  '
+                '화살표 색 = 통신 종류 (파랑 토픽 · 주황 서비스 · 보라 액션 · 빨강 안전)  |  '
+                '토픽 이름·타입은 계약 4절에서 읽어 그린다  |  로봇 열은 /robot3 · /robot4 둘 다 같다')
+
+    TOPIC, SRV, ACT, SAFE, PLAIN = '#3576C8', '#B06810', '#6B4FA8', '#C0392B', '#5A5F6A'
+
+    def head(x, w, y, s, col):
+        d.text(x + w / 2, y, s, 13, col, True, 'middle')
+
+    def node(nid, x, y, name, role, sty):
+        d.box(nid, x, y, NW, [name, role], sty, h=NH, shape='ellipse', align='center')
+
+    def topic(nid, x, y, name, sty='tp_t', short=None):
+        d.box(nid, x, y, TW, tp(T, name, short=short), sty, h=TH, align='center')
+
+    def raw_topic(nid, x, y, name, typ, sty='tp_hw'):
+        """계약 4절 표 밖(표 아래 「TB4 기본 토픽」 문단)의 것들."""
+        d.box(nid, x, y, TW, [name, typ], sty, h=TH, align='center')
+
+    def link(a, b, color=TOPIC, mid=None, width=1.7, dashed=False, anchors='right-left'):
+        d.edge(a, b, '', anchors, color=color, width=width, dashed=dashed, mid=mid)
+
+    # ══════════════════ 1열 — 센서 원천 ══════════════════
+    head(N1, NW, TOP - 16, '웹캠 PC', '#1E6B40')
+    d.band('b_cam', N1 - 14, TOP - 4, NW + 28, 2 * NH + NVG + 16, '', 'pc_cam')
+    node('n_reg', N1, TOP + 4, 'webcam_register', '작업자 등록 (S1) ≤ 10 s', 'in_cam')
+    node('n_hint', N1, TOP + 4 + NH + NVG, 'webcam_hint', '작업자 힌트 %g Hz' % PROC_HZ, 'in_cam')
+
+    HY = TOP + 2 * NH + NVG + 62
+    head(N1, NW, HY - 16, '로봇 온보드 (TurtleBot4 ×2)', '#333840')
+    d.band('b_hw', N1 - 14, HY - 4, NW + 28, 3 * NH + 2 * NVG + 16, '', 'pc_hw')
+    for i, (nid, nm, role) in enumerate([
+            ('n_oak', 'OAK-D Pro', '704×704 crop · 렌즈 23.5 cm'),
+            ('n_lidar', 'RPLIDAR A1', 'scan 10 Hz · 높이 18.5 cm'),
+            ('n_c3', 'Create3', '구동 · 범퍼·클리프는 전방만')]):
+        node(nid, N1, HY + 4 + i * (NH + NVG), nm, role, 'in_hw')
+
+    # ══════════════════ 2열 — 원천 토픽 ══════════════════
+    head(T1, TW, TOP - 16, '토픽 — 센서 원천', '#1B4F91')
+    y = TOP + 4
+    topic('tp_wd', T1, y, '/webcam1/worker_descriptor'); y += TH + VG
+    topic('tp_th', T1, y, '/webcam2/target_hint'); y += TH + VG
+    d.text(T1 + TW / 2, y + 2, 'BEST_EFFORT — 구독자도 sensor_data QoS 로 잡아야 받는다',
+           10.5, '#8E2A1F', True, 'middle'); y += 26
+    for nid, nm, ty in [('tp_rgb', 'oakd/rgb/image_raw/compressed', 'CompressedImage'),
+                        ('tp_dep', 'oakd/stereo/image_raw/compressedDepth', 'CompressedImage'),
+                        ('tp_ci', 'oakd/rgb/camera_info', 'CameraInfo'),
+                        ('tp_scan', 'scan', 'LaserScan')]:
+        raw_topic(nid, T1, y, nm, ty); y += TH + VG
+    d.text(T1 + TW / 2, y + 2, 'TB4 기본 토픽 (계약 4절 표 아래)', 10.5, '#5A5F6A', False, 'middle')
+
+    link('n_reg', 'tp_wd', TOPIC, mid=T1 - 20)
+    link('n_hint', 'tp_th', TOPIC, mid=T1 - 34)
+    for i, (a, b) in enumerate([('n_oak', 'tp_rgb'), ('n_oak', 'tp_dep'), ('n_oak', 'tp_ci')]):
+        link(a, b, PLAIN, mid=T1 - 20 - i * 15, width=1.5)
+    link('n_lidar', 'tp_scan', SAFE, mid=T1 - 62, width=2.1)
+
+    # ══════════════════ 3열 — 로봇 PC (인지·안전) ══════════════════
+    head(N2, NW, TOP - 16, '로봇 제어 PC — 인지 · 안전', '#1B4F91')
+    d.band('b_per', N2 - 14, TOP - 4, NW + 28, 3 * NH + 2 * NVG + 16, '', 'pc_r3')
+    node('n_aru', N2, TOP + 4, 'aruco_detector', 'depth 보정 k · IPPE_SQUARE', 'in_r3')
+    node('n_det', N2, TOP + 4 + NH + NVG, 'amr_detection', 'RGB+Depth slop 0.1 s · 재식별', 'in_r3')
+    node('n_saf', N2, TOP + 4 + 2 * (NH + NVG), 'safety_watchdog', 'STOP 0.30 / CLEAR 0.38 · ±35°', 'in_saf')
+
+    link('tp_rgb', 'n_aru', PLAIN, mid=N2 - 22, width=1.5)
+    link('tp_ci', 'n_aru', PLAIN, mid=N2 - 38, width=1.5)
+    link('tp_rgb', 'n_det', PLAIN, mid=N2 - 54, width=1.5)
+    link('tp_dep', 'n_det', PLAIN, mid=N2 - 70, width=1.5)
+    link('tp_wd', 'n_det', TOPIC, mid=N2 - 86)
+    link('tp_scan', 'n_saf', SAFE, mid=N2 - 22, width=2.1)
+
+    # ══════════════════ 4열 — 인지 토픽 ══════════════════
+    head(T2, TW, TOP - 16, '토픽 — 인지 · 안전', '#1B4F91')
+    y = TOP + 4
+    per = ['aruco/id', 'aruco/distance', 'aruco/pose', 'target/map_point', 'target/visible',
+           'target/paired', 'target/pair_state', 'target/distance']
+    tid = {}
+    for nm in per:
+        k = 'tp_' + nm.replace('/', '_')
+        tid[nm] = k
+        topic(k, T2, y, nm)
+        y += TH + VG
+    topic('tp_estop', T2, y, 'safety/estop', 'tp_saf')
+    ESTOP_Y = y
+    y += TH + VG
+    d.text(T2 + TW / 2, y + 2, 'safety/estop 은 로봇 안 모든 노드와 관제가 받는다 (계약 4절)',
+           10.5, '#8E2A1F', True, 'middle')
+
+    for i, nm in enumerate(['aruco/id', 'aruco/distance', 'aruco/pose']):
+        link('n_aru', tid[nm], TOPIC, mid=T2 - 20 - i * 16)
+    for i, nm in enumerate(['target/map_point', 'target/visible', 'target/paired',
+                            'target/pair_state', 'target/distance']):
+        link('n_det', tid[nm], TOPIC, mid=T2 - 20 - i * 16)
+    link('n_saf', 'tp_estop', SAFE, mid=T2 - 20, width=2.1)
+
+    # ══════════════════ 5열 — 로봇 PC (임무) ══════════════════
+    head(N3, NW, TOP - 16, '로봇 제어 PC — 임무 · 주행', '#1B4F91')
+    d.band('b_mis', N3 - 14, TOP - 4, NW + 28, 3 * NH + 2 * NVG + 16, '', 'pc_r3')
+    node('n_shu', N3, TOP + 4, 'shuttle_mission', '베이 왕복 (S4~S8)', 'in_r3')
+    node('n_fol', N3, TOP + 4 + NH + NVG, 'follow_target', '추종 standoff 0.5 m', 'in_r3')
+    node('n_ret', N3, TOP + 4 + 2 * (NH + NVG), 'return_dock', '복귀 · 도킹 (S10)', 'in_r3')
+
+    for i, nm in enumerate(['aruco/id', 'aruco/distance', 'aruco/pose']):
+        link(tid[nm], 'n_shu', TOPIC, mid=N3 - 20 - i * 16)
+    for i, nm in enumerate(['target/map_point', 'target/visible', 'target/paired']):
+        link(tid[nm], 'n_fol', TOPIC, mid=N3 - 68 - i * 16)
+    link('tp_th', 'n_fol', TOPIC, mid=N3 - 120, dashed=True)
+
+    # ══════════════════ 6열 — 임무 토픽 · 액션 ══════════════════
+    head(T3, TW, TOP - 16, '토픽 — 임무 · 구동', '#1B4F91')
+    y = TOP + 4
+    for nm in ['shuttle/status', 'shuttle/arrived', 'approach/status']:
+        k = 'tp_' + nm.replace('/', '_')
+        tid[nm] = k
+        topic(k, T3, y, nm)
+        y += TH + VG
+    topic('tp_cmd', T3, y, 'cmd_vel', 'tp_saf')
+    CMD_Y = y
+    y += TH + 10
+    d.text(T3 + TW / 2, y + 4, 'estop 중 워치독이 20 Hz 로 덮어쓴다 · 병진 0 · 각속도 0.4 rad/s',
+           10.5, '#8E2A1F', True, 'middle')
+    d.text(T3 + TW / 2, y + 22, '후진 금지 (계약 2절 확정) — 범퍼·클리프가 전방에만 있다',
+           10.5, '#8E2A1F', True, 'middle')
+    y += 44
+
+    # 액션 — 속은 서비스 3 + 토픽 2 다. 강사 그림에 _action/status·feedback 이 보이는 이유
+    AH = 30
+    for gnm, gtyp, gid in [('navigate_to_pose', 'nav2_msgs/action/NavigateToPose', 'a1'),
+                           ('dock · undock', 'irobot_create_msgs/action/Dock', 'a2')]:
+        gh = 46 + 5 * AH + 5 * 6 + 10
+        d.band('bd_' + gid, T3, y, TW, gh, '', 'act')
+        d.text(T3 + TW / 2, y + 20, gnm, 12.5, '#4B357A', True, 'middle')
+        d.text(T3 + TW / 2, y + 37, gtyp, 10, '#5A5F6A', False, 'middle')
+        for i, (sub, kind) in enumerate([('_action/send_goal', '서비스'),
+                                         ('_action/cancel_goal', '서비스'),
+                                         ('_action/get_result', '서비스'),
+                                         ('_action/feedback', '토픽'),
+                                         ('_action/status', '토픽')]):
+            d.box('%s_%d' % (gid, i), T3 + 16, y + 46 + i * (AH + 6), TW - 32,
+                  ['%s   (%s)' % (sub, kind)],
+                  'act_srv' if kind == '서비스' else 'act_tp', h=AH, align='center')
+        if gid == 'a1':
+            NAV_MID = y + gh / 2
+        y += gh + VG
+    d.text(T3 + TW / 2, y + 4, '액션 하나가 속으로는 서비스 3 + 토픽 2 다 — 강사 자료 p.72 가',
+           10.5, '#4B357A', True, 'middle')
+    d.text(T3 + TW / 2, y + 22, '빽빽한 이유. Nav2 만 붙여도 상자가 40 개 는다', 10.5,
+           '#4B357A', True, 'middle')
+
+    link('n_shu', tid['shuttle/status'], TOPIC, mid=T3 - 20)
+    link('n_shu', tid['shuttle/arrived'], TOPIC, mid=T3 - 36)
+    link('n_ret', tid['shuttle/status'], TOPIC, mid=T3 - 52)
+    link('n_fol', tid['approach/status'], TOPIC, mid=T3 - 68)
+    link('n_fol', 'tp_cmd', TOPIC, mid=T3 - 84)
+    link('n_saf', 'tp_cmd', SAFE, mid=T3 - 100, width=2.1)
+    link('n_shu', 'bd_a1', ACT, mid=T3 - 116, width=2.0)
+    link('n_ret', 'bd_a2', ACT, mid=T3 - 132, width=2.0)
+    link(tid['shuttle/arrived'], 'n_fol', TOPIC, mid=T3 + TW + 22, anchors='right-right')
+    link('tp_estop', 'n_shu', SAFE, mid=N3 - 132, width=2.0, dashed=True)
+
+    # ══════════════════ 7열 — 관제 PC ══════════════════
+    head(N4, NW, TOP - 16, '관제 PC', '#8A4F0B')
+    d.band('b_ctl', N4 - 14, TOP - 4, NW + 28, 4 * NH + 3 * NVG + 16, '', 'pc_ctl')
+    for i, (nid, nm, role) in enumerate([
+            ('n_fm', 'fleet_manager', '미션 배정 · 상태 집계'),
+            ('n_zs', 'zone_semaphore', 'P1·DOCK 토큰 · 60 s 회수'),
+            ('n_ui', 'control_ui', '운영자 개입 · FR-13 UI'),
+            ('n_kpi', 'kpi_logger', 'CSV 기록 (거르지 않는다)')]):
+        node(nid, N4, TOP + 4 + i * (NH + NVG), nm, role, 'in_ctl')
+
+    for i, nm in enumerate(['shuttle/status', 'approach/status']):
+        link(tid[nm], 'n_fm', TOPIC, mid=N4 - 20 - i * 16)
+    for i, nm in enumerate(['target/paired', 'target/pair_state', 'aruco/id', 'aruco/distance']):
+        link(tid[nm], 'n_kpi', TOPIC, mid=N4 - 52 - i * 16, width=1.4)
+
+    # ══════════════════ 8열 — 관제 토픽 · 서비스 ══════════════════
+    head(T4, TW, TOP - 16, '토픽 · 서비스 — 관제', '#8A4F0B')
+    y = TOP + 4
+    for nm in ['mission/assigned', 'mission/finish', '/fleet/mission', '/fleet/status',
+               '/fleet/zone_event', '/fleet/intervention']:
+        k = 'tp_' + nm.strip('/').replace('/', '_')
+        tid[nm] = k
+        topic(k, T4, y, nm)
+        y += TH + VG
+    d.box('srv_zt', T4, y, TW, ['/fleet/zone_token', 'mro_interfaces/srv/ZoneToken'],
+          'srv', h=56, shape='hex', align='center')
+    y += 56 + 8
+    d.text(T4 + TW / 2, y + 6, '서비스는 요청·응답이라 양방향이다', 10.5, '#8A4F0B', True, 'middle')
+    d.text(T4 + TW / 2, y + 24, '거절되면 2 초 뒤 재요청 (계약 3절)', 10.5, '#5A5F6A', False, 'middle')
+
+    for i, nm in enumerate(['mission/assigned', 'mission/finish', '/fleet/mission', '/fleet/status']):
+        link('n_fm', tid[nm], TOPIC, mid=T4 - 20 - i * 16)
+    link('n_zs', tid['/fleet/zone_event'], TOPIC, mid=T4 - 84)
+    link('n_ui', tid['/fleet/intervention'], TOPIC, mid=T4 - 100)
+    link('n_zs', 'srv_zt', SRV, mid=T4 - 116, width=2.0)
+    for nm in ['/fleet/zone_event', '/fleet/intervention']:
+        link(tid[nm], 'n_kpi', TOPIC, mid=T4 + TW + 22, anchors='right-right', width=1.4)
+
+    # ══════════════════ 범례 — 왼쪽 아래 빈 자리 ══════════════════
+    LX, LY, LW = N1 + 44, HY + 3 * NH + 2 * NVG + 74, T1 + TW - N1 - 44
+    d.band('lg', LX, LY, LW, 300, '', 'note', dash=False)
+    d.text(LX + 18, LY + 28, '범례 — rqt_graph 규약 (강사 자료 Day5 p.72 와 같은 표기)', 14, '#1B2430', True)
+    d.box('lg_n', LX + 22, LY + 46, 180, ['노드 (실행 단위)'], 'in_r3', h=44,
+          shape='ellipse', align='center')
+    d.box('lg_t', LX + 218, LY + 46, 180, ['토픽 (단방향)'], 'tp_t', h=44, align='center')
+    d.box('lg_s', LX + 414, LY + 46, 180, ['서비스 (요청·응답)'], 'srv', h=44,
+          shape='hex', align='center')
+    d.band('lg_a', LX + 22, LY + 106, 180, 56, '', 'act')
+    d.text(LX + 112, LY + 128, '액션 묶음', 12.5, '#4B357A', True, 'middle')
+    d.text(LX + 112, LY + 146, '속은 서비스 3 + 토픽 2', 10.5, '#5A5F6A', False, 'middle')
+    # 색 견본은 글자 색으로 낸다 — raw 경로는 draw.io 로 안 넘어가서 범례가 반쪽이 된다
+    for k, (c, nm) in enumerate([(TOPIC, '━━  토픽'), (SRV, '━━  서비스'), (ACT, '━━  액션'),
+                                 (SAFE, '━━  안전 · 구동'), (PLAIN, '━━  센서 원본')]):
+        d.text(LX + 238, LY + 122 + k * 22, nm, 11.5, c, True, 'start')
+    d.text(LX + 380, LY + 122, '화살표 색 = 통신 종류', 11.5, '#1B2430', True, 'start')
+    d.text(LX + 380, LY + 142, '점선 = BEST_EFFORT 또는 조건부', 11, '#5A5F6A', False, 'start')
+    d.text(LX + 380, LY + 160, '굵은 빨강 = 안전에 걸린 경로', 11, '#8E2A1F', False, 'start')
+    d.text(LX + 18, LY + 196, '읽는 법 — 노드에서 나온 화살표는 그 토픽을 **발행**, 토픽에서 나온 화살표는', 11.5, '#3A3E46', False, 'start')
+    d.text(LX + 18, LY + 214, '그것을 **구독**한다는 뜻이다. 한 토픽에서 화살표가 여럿 나가면 구독자가 여럿이다.', 11.5, '#3A3E46', False, 'start')
+    d.text(LX + 18, LY + 240, '로봇 열(인지·임무)은 /robot3 과 /robot4 에 똑같이 하나씩 뜬다. 이름은 상대 이름이라', 11.5, '#3A3E46', False, 'start')
+    d.text(LX + 18, LY + 258, 'launch 가 namespace:=/robotN 을 붙인다 (계약 4절). 전역 이름은 앞에 / 가 있는 것들이다.', 11.5, '#3A3E46', False, 'start')
+    d.text(LX + 18, LY + 284, '이 그림에 없는 것 — Nav2 내부 노드 20여 개와 tf. 강사 자료 p.72 가 그것까지 담아 그만큼 빽빽하다.', 11, '#8A8F98', False, 'start')
+
+    # ══════════════════ 아래 되돌이 차선 — 관제 → 로봇 ══════════════════
+    BOT = max(n['y'] + n['h'] for n in d.nodes.values()) + 96
+    lanes = [('mission/assigned', 'n_shu', TOPIC, 0, 'S4 트리거'),
+             ('mission/finish', 'n_fol', TOPIC, 1, 'S9 — 즉시 페어링 해제 (≤ 1 s)'),
+             ('mission/finish', 'n_ret', TOPIC, 2, 'S9 — 복귀 시작'),
+             ('mission/finish', 'n_det', TOPIC, 3, 'S9 — 명시 페어링 해제 (10절)')]
+    LBX = N1 + 60                      # 차선 라벨은 한 줄로 맞춘다 — 제각각이면 읽는 순서가 안 잡힌다
+    for nm, dst, col, i, why in lanes:
+        ly = BOT + i * 34
+        d.edge(tid[nm], dst, '', 'bottom@0.5-bottom@%.2f' % (0.30 + 0.14 * i),
+               color=col, width=1.7, via=[(d.anchor(tid[nm], 'bottom@0.5')[0], ly),
+                                          (d.anchor(dst, 'bottom@%.2f' % (0.30 + 0.14 * i))[0], ly)])
+        d.text(LBX, ly - 6, '%s  →  %s      %s' % (nm, dst[2:], why), 11, col, True, 'start')
+    ly = BOT + 4 * 34
+    d.edge('n_shu', 'srv_zt', '', 'bottom@0.76-bottom@0.5', color=SRV, width=2.0,
+           via=[(d.anchor('n_shu', 'bottom@0.76')[0], ly),
+                (d.anchor('srv_zt', 'bottom@0.5')[0], ly)])
+    d.text(LBX, ly - 6, '/fleet/zone_token  ⇄  shuttle_mission      P1·DOCK 획득·반납 (서비스라 양방향)',
+           11, SRV, True, 'start')
+    ly = BOT + 5 * 34
+    # Create3 로는 오른쪽에서 들어간다 — 아래로 올리면 범례 상자를 관통한다
+    LEFT_LANE = N1 - 12                # 범례 왼쪽 바깥. 안으로 넣으면 범례를 관통한다
+    d.edge('tp_cmd', 'n_c3', '', 'bottom@0.5-left', color=SAFE, width=2.1,
+           via=[(d.anchor('tp_cmd', 'bottom@0.5')[0], ly), (LEFT_LANE, ly),
+                (LEFT_LANE, d.anchor('n_c3', 'left')[1])])
+    d.text(LBX, ly - 6, 'cmd_vel  →  Create3      워치독·Nav2·follow_target 셋이 같은 토픽에 쓴다',
+           11, SAFE, True, 'start')
+
+    d.text(N1, BOT + 6 * 34 + 26,
+           '이 장이 step3b 와 다른 점 — 토픽이 화살표의 라벨이 아니라 상자다. '
+           'mission/finish 를 받는 노드가 셋이라는 것이 step3b 에서는 안 보였다.',
+           12.5, '#1B4F91', True, 'start')
+    d.text(N1, BOT + 6 * 34 + 48,
+           '토픽 이름과 타입은 계약(docs/interfaces.md 4절)에서 읽어 그린다. '
+           '계약이 바뀌면 이 그림도 같이 바뀐다 — 손으로 적지 않는다.',
+           11.5, '#5A5F6A', False, 'start')
+
+    d.autosize()
+    return d
+
+
+# =====================================================================
 def main():
     diagrams = [('step1_deployment', step1()),
                 ('step2_nav2', step2()),
                 ('step3_scenario', step3()),
-                ('step3b_system_flow', step3b())]
+                ('step3b_system_flow', step3b()),
+                ('step3c_ros_graph', step3c())]
     pages = []
     for name, d in diagrams:
         p = os.path.join(OUT, name + '.svg')
