@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 95/156 완료** (████████████░░░░░░░░)  ·  기준 09/08
+**전체 95/159 완료** (████████████░░░░░░░░)  ·  기준 09/08
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 6/6 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 15/26 | `██████░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/31 | `███████░░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 34/64 | `█████░░░░░` | **1** |
+| mro_navigation [주행 — 박병후, 이시율] | 34/67 | `█████░░░░░` | **1** |
 | mro_fleet [관제 — 김민준] | 12/18 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 7/11 | `██████░░░░` | — |
 
@@ -133,6 +133,9 @@
 - [ ] `kpi_report.py` K-06 마무리 셋 (PR #34 후속, 막지 않음) — ① `zone_resolution` docstring 의 `[REJECT, GRANT)` 를 양끝 포함으로 정정(안쪽 주석과 어긋남) ② `reclaimed_between(...): pass` 죽은 코드 삭제 ③ **`강제 회수` 라벨을 `강제 회수(구역)` 로** — 이제 구역 전체 RECLAIM 수라 대기자 없이 보유만 초과해도 세어져 `대기 1 · 자동 해결 1 · 강제 회수 1 → 100.0%` 로 읽힌다 (I-032) · 마감 9/9 TS-08 전
 
 ## mro_navigation [주행 — 박병후, 이시율]
+- [ ] **베이 접근 잔차 규명 (I-044, 상)** — 여유 0.095 m 가 관측 잔차 0.275 m 보다 작다. `d3e0568` 로그로 다음 회차에 가리거나, 못 가리면 `bay_marker_range_m` 을 1.1 m 이상으로. **둘 중 하나를 하고 TS-07 에 들어간다** · 마감 9/9
+- [ ] **`bay_align_min_range_m` 을 0.80 으로 (PR #52 후속)** — 지금 0.45(노드 기본값 0.35)라 자기가 잰 하드 바닥보다 낮다. 잘못된 목표를 거르는 유일한 방어인데 8회차로 배운 것을 못 막는다 · 마감 9/9
+- [ ] **접근·재탐지 파라미터의 단일 출처는 `common.yaml`** (PR #52) — `bay_marker_range_m`·`bay_align_*`·`bay_exit_*`. 노드 기본값은 단독 실행용 대체값 · 마감 —
 - [ ] **토큰 서비스 미기동 시 진행하는 것 (I-041, 상)** — `shuttle_mission`·`return_dock` 둘 다 `wait_for_service` 실패 시 `True` 를 돌려 **획득한 것으로 치고 간다.** 2대 운용에서 관제가 잠깐 죽으면 두 로봇이 동시에 P1(0.79 m)에 들어간다. `require_token` 파라미터로 갈라 fleet 운용은 포기하도록. **두 노드 같이** · 마감 9/9
 - [ ] **I-033 나머지 절반 — `zone_semaphore_node` 가 반납 요청으로 대기열에서 빼는가** — 클라이언트는 PR #46 으로 끝났다. 세마포어가 안 빼주면 그대로 잠긴다(60 s 회수는 보유자만 대상). **이게 닫히기 전까지 S10 복귀를 2대로 돌리지 않는다** · 마감 9/9
 - [ ] **접근 수렴 실주행 확인 (PR #49)** — 3 m 넘는 거리에서 시작해 회차마다 gap 이 실제로 반씩 주는지. 멀리서 잰 좌표가 0.5~0.7 m 틀린다는 것이 이 설계의 전제인데, 그 오차가 회차마다 줄어드는지가 전제의 확인이다 · 마감 9/9
@@ -220,7 +223,7 @@
 
 ## mro_bringup [PM 김병직]
 - [ ] `v_max` 0.3 m/s 와 Nav2 `max_vel_x` 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘다 (PR #39 TODO ②) · 마감 9/8
-- [x] **셔틀 파라미터 7개를 `robotN.yaml` 로, `arena_yaml` 경로를 `robot.launch.py` 로** (PR #36 주행 요청, 계약 5절 단일 출처) — `bay_advance_m`·`aruco_max_dist_m`·`aruco_valid_s`·`aruco_confirm_s`·`aruco_retry`·`token_retry_s`·`nav2_poll_s`. `arena.yaml` 은 데이터 yaml 이라 파라미터 파일로 못 넘겨 경로만 준다. 노드의 런타임 조회 대체값은 단독 실행용으로 그대로 둔다 · 마감 9/8
+- [x] **셔틀 파라미터 7개를 `robotN.yaml` 로, `arena_yaml` 경로를 `robot.launch.py` 로** (PR #36 주행 요청, 계약 5절 단일 출처) — ~~`bay_advance_m`~~(PR #52 로 삭제 — 마커 기준 접근이 대신한다)·`aruco_max_dist_m`·`aruco_valid_s`·`aruco_confirm_s`·`aruco_retry`·`token_retry_s`·`nav2_poll_s`. `arena.yaml` 은 데이터 yaml 이라 파라미터 파일로 못 넘겨 경로만 준다. 노드의 런타임 조회 대체값은 단독 실행용으로 그대로 둔다 · 마감 9/8
 - [x] robot / webcam_pc / fleet_pc launch, params 골격 · 마감 9/7
 - [x] 설계도 4장 — `docs/diagrams/` (STEP 1·2·3-1·3-2) · 마감 9/8
 - [x] launch 가 `webcam.yaml` 을 넘기도록 연결 — webcam1/webcam2 launch (9/7) · 마감 9/7
