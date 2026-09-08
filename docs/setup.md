@@ -117,6 +117,13 @@ ros2 launch mro_bringup webcam2_pc.launch.py
 
 웹캠 PC 는 주로 **발행만** 하므로 `ROS_SUPER_CLIENT=False` 로 띄워 디스커버리 부하를 줄인다. 띄운 뒤 `/webcam1/worker_descriptor`, `/webcam2/target_hint` 가 로봇·관제에서 보이는지 확인할 것.
 
+웹캠2 압축 영상의 수신률·대역폭·발행→구독 지연을 확인할 때는 PC-W2와 같은 ROS 환경에서 아래 측정 노드를 실행한다. 출력에는 FPS, Mbps, 지연 평균·p95·최대와 2초 이상 수신 중단 경고가 포함된다. 동일한 `webcam_hint`를 둘 이상 띄우면 각 노드가 같은 토픽에 10 Hz씩 발행해 측정값이 합산되므로 먼저 중복 노드가 없는지 확인한다.
+
+```bash
+ros2 run mro_webcam test_subscription \
+  --ros-args -p show_window:=false -p log_interval_s:=5.0
+```
+
 ## 관제 PC
 
 ```bash
