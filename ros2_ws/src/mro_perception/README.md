@@ -59,6 +59,7 @@ ros2 run rqt_image_view rqt_image_view /robot3/target/image/compressed   # 오�
 | `max_core_gap_mm` | 150 | 거리 품질 게이트 | 거리가 자꾸 `rejected` 면 200 |
 | `bbox_inner` | 0.5 | 거리 측정 bbox 중심부 비율 | — |
 | `sync_slop_s` | 0.1 | RGB·depth 시각 차 허용 | 동기화 쌍이 안 나오면 0.2 |
+| `camera_fx_scale` | 1.7778 | `camera_info` 초점거리 보정 (I-031). `map_point` 좌우에 영향 | 로봇이 맞는 `camera_info` 를 내면 1.0 |
 | `show_window` | true | 미리보기 창 | SSH 면 false |
 | `jpeg_quality` | 80 | `target/image/compressed` 품질 | 웹캠 노드와 같은 값 유지 |
 | `diag_log_s` | 1.0 | `[diag]` 계측 로그 주기 | 0 이면 끔. 렉 의심될 때 1 |

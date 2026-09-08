@@ -54,7 +54,7 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
 
 파라미터 (robotN.yaml / config/perception.yaml 이 덮어쓴다. 아래 모듈 상수는 기본값):
   detect_conf · reid_threshold · descriptor_frames · pair_on_s · pair_off_s · publish_hz
-  · max_core_gap_mm · bbox_inner · sync_slop_s · show_window
+  · max_core_gap_mm · bbox_inner · sync_slop_s · show_window · camera_fx_scale(I-031, aruco 와 공용)
 """
 import math
 import os
@@ -77,8 +77,9 @@ from ament_index_python.packages import get_package_share_directory
 from mro_interfaces.msg import Mission, WorkerDescriptor
 
 # core/ 는 ROS 에 의존하지 않는 순수 계산 함수 모음 (단위 테스트 대상). 이 노드는 메시지 변환과 호출 순서만 맡는다
+from mro_perception.core.camera import corrected_K, read_fx_scale
 from mro_perception.core.depth_distance import (DEPTH_TRANSPORT, colorize_depth, decode_compressed_depth,
-                            distance_from_bbox, format_result)
+                                                distance_from_bbox, format_result)
 from mro_perception.core.reid import PairingGate, hsv_hist
 from mro_perception.core.target_utils import back_project, to_map
 
@@ -187,6 +188,9 @@ class AmrDetection(Node):
         self.diag_log_s = float(p('diag_log_s'))
         self.jpeg_quality = int(p('jpeg_quality'))
         self.tf_wait = Duration(seconds=float(p('tf_wait_s')))   # 0 이 아니면 실행기가 그만큼 멈춘다 (재현용)
+        # camera_info 의 초점거리가 704×704 crop 영상에 안 맞아(I-031) fx·fy 에 곱하는 배율. 기본 16/9.
+        # 선언·범위 검증은 core/camera.read_fx_scale 이 한다 — aruco_detector 와 같은 이름·같은 기본값을 쓰기 위해
+        self.fx_scale = read_fx_scale(self)
         self.diag = dict(t0=time.monotonic(), loops=0, rgb_cb=0, depth_cb=0, synced=0, processed=0,
                          age_sum=0.0, age_max=0.0, proc_ms_sum=0.0, proc_ms_max=0.0, tf_cb=0)
 
@@ -261,7 +265,9 @@ class AmrDetection(Node):
     def info_cb(self, msg):
         """camera_info → K. 카메라 파라미터는 바뀌지 않으니 첫 메시지만 저장한다."""
         if self.K is None:
-            self.K = np.array(msg.k).reshape(3, 3)           # msg.k 는 9개짜리 1차원 → 3×3
+            # 보정 없이 쓰면 back_project 의 좌우(x) 성분이 1.76 배 크게 나와 추종 목표가 옆으로 밀린다 (I-031)
+            self.K = corrected_K(msg, self.fx_scale)
+            self.get_logger().info(f'camera_info 수신 — fx {msg.k[0]:.1f} × {self.fx_scale:.4f} 보정 (I-031)')
 
     def synced_cb(self, rgb_msg, depth_msg):
         """시각이 맞는 (RGB, depth) 한 쌍 → 디코드해서 self.pair 에 보관만 한다. 계산은 process() 가."""

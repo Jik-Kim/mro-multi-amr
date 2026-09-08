@@ -10,7 +10,7 @@
                                # 것으로 보고 이론값을 쓴다. TS-U05 줄자 대조로 확정. 근본 해결(로봇이
                                # 맞는 camera_info 를 내보냄)이 되면 1.0 으로 되돌린다
 
-    # --- amr_detection_node (14개 전부 declare_parameter 로 읽는다 9/7 · 이름·기본값은 README §3 과 1:1) ---
+    # --- amr_detection_node (15개 전부 declare_parameter 로 읽는다 · camera_fx_scale 은 위 공용 · README §3 과 1:1) ---
     detect_conf: 0.5           # 학습 conf 스윕의 F1 최적은 0.4 지만 올려 쓴다.
                                # 미탐은 Lost 후 재탐지 절차가 있고 K-04 로 측정되지만, 오탐은 오추종이고
                                # AC-04 는 0건이 절대 기준이다. 0.4→0.6 에서 오탐 6→2, 재현율은 1 %p 만 하락
