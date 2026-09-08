@@ -8,7 +8,7 @@
 **정상 운용** — 로봇 제어 PC 에서 `docs/setup.md` 의 T1~T4 순서대로. T4 가 이 패키지 노드를 띄운다.
 
 ```bash
-ros2 launch mro_bringup robot.launch.py namespace:=/robot3      # robot4 는 /robot4
+ros2 launch mro_bringup robot.launch.py namespace:=/robot3      # 두 번째 로봇은 /robot8 (9/8 robot4 → robot8 교체)
 ```
 
 launch 가 붙여주는 것: `namespace`, `/tf → tf` 리맵, `params/robot3.yaml`. **`config/perception.yaml` 은 아직 안 넘긴다**

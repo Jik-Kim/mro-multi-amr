@@ -208,7 +208,7 @@ class AmrDetection(Node):
         self.last_reason = ''
 
         # 카메라 입력. 토픽은 상대 이름 — launch 의 namespace 가 앞에 붙는다.
-        # ('/robot3' 폴백을 두면 robot4 가 네임스페이스 없이 떴을 때 robot3 카메라에 몰래 붙는다 → 두지 않는다)
+        # ('/robot3' 폴백을 두면 다른 로봇(robot8)이 네임스페이스 없이 떴을 때 robot3 카메라에 몰래 붙는다 → 두지 않는다)
         if DEPTH_TRANSPORT == 'compressedDepth':             # Wi-Fi 대역폭 때문에 depth 는 압축본을 받는다 (기본)
             depth_sub = Subscriber(self, CompressedImage, 'oakd/stereo/image_raw/compressedDepth',
                                    qos_profile=CAMERA_QOS)

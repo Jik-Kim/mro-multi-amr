@@ -2,7 +2,7 @@
 """amr_detection 렉 진단 — 노드가 도는 PC 에서 실행. 추측 대신 숫자로 원인 자리를 가른다 (README 7절).
 
   python3 tools/diag_lag.py                # /robot3, 10 초  (docs/setup.md '터미널마다 맨 처음' 을 한 터미널에서)
-  python3 tools/diag_lag.py --ns /robot4 --seconds 15
+  python3 tools/diag_lag.py --ns /robot8 --seconds 15
 
 재는 것 (노드는 그대로 두고 옆에서 듣기만 한다)
   입력  oakd/rgb·depth        Hz · 대역폭 · 지연(카메라 stamp → 지금)     ← RPi·Wi-Fi 쪽
