@@ -65,6 +65,7 @@ import numpy as np
 import rclpy
 from rclpy.duration import Duration
 from rclpy.node import Node
+from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 from std_msgs.msg import Bool, Float32, String
 from geometry_msgs.msg import PointStamped
@@ -119,6 +120,10 @@ MAX_CORE_GAP_MM = 150
 
 # ── 입력·표시 (파라미터 기본값) ──────────────────────────────────────────────────────────────────────
 SYNC_SLOP_S = 0.1            # RGB 와 depth 의 타임스탬프 차이가 이 안(초)이면 "같은 순간" 으로 묶는다
+SYNC_QUEUE = 3               # 동기화기가 짝을 기다리며 들고 있는 프레임 수. 크면 묵은 프레임을 재생한다
+# 카메라 구독 QoS — "최신 한 장만". 처리가 잠깐 밀려도 전송 계층이 묵은 프레임을 버려 화면이 '몇 초 전' 이 되지 않는다.
+# RELIABLE·큐 10 이던 이관 설정은 밀린 10장을 순서대로 재생했다 (9/8 렉 분석). BEST_EFFORT 구독은 RELIABLE 발행자도 받는다
+CAMERA_QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST, depth=1)
 SHOW_WINDOW = True           # 로컬 미리보기 창. 모니터 없는 로봇 PC 에서는 yaml 로 false — 창을 못 만들면 노드가 죽는다
 
 
@@ -199,15 +204,17 @@ class AmrDetection(Node):
         # 카메라 입력. 토픽은 상대 이름 — launch 의 namespace 가 앞에 붙는다.
         # ('/robot3' 폴백을 두면 robot4 가 네임스페이스 없이 떴을 때 robot3 카메라에 몰래 붙는다 → 두지 않는다)
         if DEPTH_TRANSPORT == 'compressedDepth':             # Wi-Fi 대역폭 때문에 depth 는 압축본을 받는다 (기본)
-            depth_sub = Subscriber(self, CompressedImage, 'oakd/stereo/image_raw/compressedDepth')
+            depth_sub = Subscriber(self, CompressedImage, 'oakd/stereo/image_raw/compressedDepth',
+                                   qos_profile=CAMERA_QOS)
         else:
-            depth_sub = Subscriber(self, Image, 'oakd/stereo/image_raw')
-        rgb_sub = Subscriber(self, CompressedImage, 'oakd/rgb/image_raw/compressed')
+            depth_sub = Subscriber(self, Image, 'oakd/stereo/image_raw', qos_profile=CAMERA_QOS)
+        rgb_sub = Subscriber(self, CompressedImage, 'oakd/rgb/image_raw/compressed', qos_profile=CAMERA_QOS)
         rgb_sub.registerCallback(lambda m: self.diag.__setitem__('rgb_cb', self.diag['rgb_cb'] + 1))
         depth_sub.registerCallback(lambda m: self.diag.__setitem__('depth_cb', self.diag['depth_cb'] + 1))
         # RGB 와 depth 는 별도 토픽으로 따로 도착한다. 타임스탬프가 SYNC_SLOP_S 안으로 맞는 쌍만 synced_cb 로 넘겨,
         # "이 컬러 프레임의 이 픽셀이 저 depth 프레임의 이 거리" 라고 말할 수 있게 한다
-        self.sync = ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size=10, slop=float(p('sync_slop_s')))
+        self.sync = ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size=SYNC_QUEUE,
+                                                slop=float(p('sync_slop_s')))
         self.sync.registerCallback(self.synced_cb)
         self.create_subscription(CameraInfo, 'oakd/stereo/camera_info', self.info_cb, 1)
 

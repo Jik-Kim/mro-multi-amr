@@ -100,6 +100,8 @@ python3 tools/reid_threshold.py --dataset <그 폴더> --splits train --current 
 
 ## 6. 알아둘 것
 
+- 카메라 구독은 **최신 한 장만**(BEST_EFFORT·depth 1, 동기화 큐 3). 처리가 밀려도 묵은 프레임을 재생하지 않고 건너뛴다 —
+  `[diag]` 의 `age` 가 항상 한 프레임 간격 근처여야 정상. 커지면 입력 쪽(RPi·Wi-Fi·시계) 문제다 (9/8 A-1)
 - 검출은 시작 신호 없이 항상 켜진다 (계약 v1.10). 셔틀 중 작업자를 스치면 `visible` 이 토글되고, `kpi_report.py` 의 K-04 가
   FOLLOWING 구간으로 안 걸러 Lost 로 셀 수 있다 — 웹캠팀 이슈
 - `follow_target` 이 `target/paired` 를 보고 추종을 시작하는 연동은 주행 TODO ④. 그 전까지 `paired` 는 발행만 된다
