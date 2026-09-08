@@ -186,7 +186,7 @@ def zone_resolution(rows, t_end):
 
       해결   같은 로봇·구역의 GRANT 가 ZONE_RESOLVE_S 안에 왔고,
              그 사이 그 구역에 RECLAIM 이 없었다
-      미해결 [REJECT, GRANT) 구간에 그 구역의 RECLAIM 이 있었다 · 시간 초과 ·
+      미해결 [REJECT, GRANT] 구간에 그 구역의 RECLAIM 이 있었다 · 시간 초과 ·
              로그 끝까지 GRANT 가 안 옴
 
     RECLAIM 은 구역 단위로 본다 (I-032). 세마포어가 RECLAIM 을 **보유자** ns 로 내기
@@ -235,9 +235,10 @@ def zone_resolution(rows, t_end):
                     resolved += 1
                     spans.append(dur)
                 rejected_at = None            # 시간 초과·강제 회수면 미해결로 두고 대기를 닫는다
-        if rejected_at is not None and reclaimed_between(zone, rejected_at, t_end):
-            pass                              # 끝까지 GRANT 가 안 온 대기 — 이미 미해결이다
+        # 끝까지 GRANT 가 안 온 대기는 resolved 에 들어가지 않으므로 이미 미해결이다
 
+    # 구역 전체의 RECLAIM 수다 — 대기자가 없는데 보유만 60 s 를 넘겨도 세어지므로
+    # 대기 건수와 짝이 맞지 않을 수 있다. 출력에 '(구역)' 을 붙여 그 뜻을 밝힌다
     reclaimed = sum(len(ts) for ts in reclaims.values())
     return waits, resolved, reclaimed, spans
 
@@ -362,7 +363,7 @@ def main():
         print('  대기 기록 없음 — zone_semaphore 가 /fleet/zone_event 를 발행하는지 확인 (I-030)')
     else:
         rate = resolved / waits * 100
-        print(f'  대기(REJECT) {waits} 회 · 자동 해결 {resolved} · 강제 회수 {reclaimed}'
+        print(f'  대기(REJECT) {waits} 회 · 자동 해결 {resolved} · 강제 회수(구역) {reclaimed}'
               f' → {rate:.1f}%')
         if spans:
             print(f'  해결까지(s)  평균 {sum(spans)/len(spans):.1f}  p50 {percentile(spans, 50):.1f}  '
