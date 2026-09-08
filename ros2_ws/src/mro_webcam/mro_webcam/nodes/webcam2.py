@@ -38,7 +38,9 @@ class Webcam2Node(Node):
         self.declare_parameter('click_coordinate_enabled', True)
         self.declare_parameter('click_navigation_enabled', False)
         self.declare_parameter('manual_pixel_input_enabled', False)
-        self.declare_parameter('navigation_action', '/robot4/navigate_to_pose')
+        # 클릭 주행(수동 시험)에 쓸 액션. 특정 로봇을 기본값으로 박아 두면 그 로봇이 빠졌을 때
+        #   조용히 죽은 액션으로 목표를 보낸다 — 켜는 쪽이 명시하게 한다 (9/8, robot4 이탈로 드러남)
+        self.declare_parameter('navigation_action', '')
         self.declare_parameter('goal_yaw', 0.0)
         default_homography = os.path.join(get_package_share_directory('mro_webcam'), 'config', 'WebCam2', 'homography_cam2.json')
         self.declare_parameter('homography_json', default_homography)
@@ -72,6 +74,10 @@ class Webcam2Node(Node):
             or self.manual_pixel_input_enabled
         )
         self.homography = load_homography(homography_json) if coordinate_input_enabled else None
+        if self.click_navigation_enabled and not navigation_action:
+            raise RuntimeError(
+                'click_navigation_enabled=true 이면 navigation_action 을 줘야 한다 — '
+                '예: -p navigation_action:=/robot8/navigate_to_pose')
         self.navigate_client = ActionClient(self, NavigateToPose, navigation_action) if self.click_navigation_enabled else None
         self.last_click = None
         self.window_closed = False

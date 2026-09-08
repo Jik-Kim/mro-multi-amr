@@ -110,7 +110,7 @@ class FakeLogger:
 
 def make_worker_manager(assigned=None, batteries=None):
     """작업자 배정 콜백 검증에 필요한 최소 관제 객체를 만든다."""
-    robots = ['/robot3', '/robot4']
+    robots = ['/robot3', '/robot8']
     database = FakeDatabase()
     logger = FakeLogger()
     fake = SimpleNamespace(
@@ -173,14 +173,14 @@ def test_workers_are_assigned_by_id_for_w1_then_w2():
     """W1, W2 입력이 worker_id 순서대로 배정되는지 확인한다."""
     assignments, _database = register_workers(['W1', 'W2'])
 
-    assert assignments == {'W1': '/robot3', 'W2': '/robot4'}
+    assert assignments == {'W1': '/robot3', 'W2': '/robot8'}
 
 
 def test_workers_are_assigned_by_id_for_w2_then_w1():
     """W2가 먼저 와도 W1이 robot3에 배정되는지 확인한다."""
     assignments, _database = register_workers(['W2', 'W1'])
 
-    assert assignments == {'W1': '/robot3', 'W2': '/robot4'}
+    assert assignments == {'W1': '/robot3', 'W2': '/robot8'}
 
 
 def test_worker_assignment_is_independent_of_callback_order():
@@ -212,10 +212,10 @@ def test_existing_worker_is_not_reassigned_by_new_registration():
 
     assert fake.worker_robot == {
         'W2': '/robot3',
-        'W1': '/robot4',
+        'W1': '/robot8',
     }
     assert database.workers == [
-        ('W1', 'worker_a', 15.0, '/robot4')
+        ('W1', 'worker_a', 15.0, '/robot8')
     ]
 
 
@@ -242,12 +242,12 @@ def test_pending_worker_request_keeps_low_battery_rejection():
 def test_return_all_accepts_empty_robot_namespace():
     """RETURN_ALL이 빈 robot_ns여도 두 로봇에 발행되는지 확인한다."""
     fake = SimpleNamespace(
-        robots=['/robot3', '/robot4'],
-        robot={'/robot3': {}, '/robot4': {}},
+        robots=['/robot3', '/robot8'],
+        robot={'/robot3': {}, '/robot8': {}},
         db=FakeDatabase(),
         pub_finish={
             '/robot3': FakePublisher(),
-            '/robot4': FakePublisher(),
+            '/robot8': FakePublisher(),
         },
         _now_s=lambda: 10.0,
     )
@@ -258,7 +258,7 @@ def test_return_all_accepts_empty_robot_namespace():
 
     assert result.ok is True
     assert len(fake.pub_finish['/robot3'].messages) == 1
-    assert len(fake.pub_finish['/robot4'].messages) == 1
+    assert len(fake.pub_finish['/robot8'].messages) == 1
     assert all(event[2] == 'OPERATOR' for event in fake.db.events)
 
 
@@ -348,14 +348,14 @@ def test_intervention_uses_receive_time_for_invalid_stamp():
     for stamp in invalid_stamps:
         message = SimpleNamespace(
             header=SimpleNamespace(stamp=stamp),
-            robot_ns='/robot4',
+            robot_ns='/robot8',
             kind='RESTART',
             note='노드 재시작',
         )
         FleetManager._intervention_cb(fake, message)
 
     assert fake.db.events == 3 * [
-        (99.0, '/robot4', 'INTERVENTION', 'RESTART', '노드 재시작')
+        (99.0, '/robot8', 'INTERVENTION', 'RESTART', '노드 재시작')
     ]
 
 
@@ -386,7 +386,7 @@ def test_zone_events_are_recorded_with_contract_fields():
     """구역 이벤트 4종이 계약의 DB 필드로 기록되는지 확인한다."""
     database = FakeDatabase()
     fake = SimpleNamespace(
-        robot={'/robot3': {}, '/robot4': {}},
+        robot={'/robot3': {}, '/robot8': {}},
         db=database,
         _now_s=lambda: 42.5,
         get_logger=lambda: FakeLogger(),
@@ -394,8 +394,8 @@ def test_zone_events_are_recorded_with_contract_fields():
     messages = (
         'P1 /robot3 REJECT',
         'P1 /robot3 GRANT',
-        'DOCK /robot4 RELEASE',
-        'DOCK /robot4 RECLAIM',
+        'DOCK /robot8 RELEASE',
+        'DOCK /robot8 RECLAIM',
     )
 
     for data in messages:
@@ -404,8 +404,8 @@ def test_zone_events_are_recorded_with_contract_fields():
     assert database.events == [
         (42.5, '/robot3', 'ZONE', 'REJECT', 'P1'),
         (42.5, '/robot3', 'ZONE', 'GRANT', 'P1'),
-        (42.5, '/robot4', 'ZONE', 'RELEASE', 'DOCK'),
-        (42.5, '/robot4', 'ZONE', 'RECLAIM', 'DOCK'),
+        (42.5, '/robot8', 'ZONE', 'RELEASE', 'DOCK'),
+        (42.5, '/robot8', 'ZONE', 'RECLAIM', 'DOCK'),
     ]
 
 
@@ -414,7 +414,7 @@ def test_invalid_zone_events_are_not_recorded():
     database = FakeDatabase()
     logger = FakeLogger()
     fake = SimpleNamespace(
-        robot={'/robot3': {}, '/robot4': {}},
+        robot={'/robot3': {}, '/robot8': {}},
         db=database,
         _now_s=lambda: 42.5,
         get_logger=lambda: logger,

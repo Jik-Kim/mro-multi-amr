@@ -32,7 +32,10 @@ from sensor_msgs.msg import BatteryState
 from std_msgs.msg import Bool, String
 
 
-DEFAULT_ROBOTS = ['/robot3', '/robot4']
+# 명단의 단일 출처는 mro_bringup/params/fleet.yaml 의 robot_namespaces 다 (fleet_pc.launch.py 가 넘긴다).
+#   여기 값은 런치 없이 노드만 띄웠을 때의 대체값일 뿐이다 — 로봇을 추가·교체할 때 고칠 곳이 아니다.
+#   아래 로직은 전부 이 목록을 순회하므로 대수를 가정하지 않는다.
+DEFAULT_ROBOTS = ['/robot3', '/robot8']
 
 SHUTTLE_MISSION_STATES = {
     'SHUTTLE': Mission.SHUTTLE,

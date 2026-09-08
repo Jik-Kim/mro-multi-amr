@@ -1,0 +1,21 @@
+# 관제 PC(PC-F) 노드 파라미터 — fleet_pc.launch.py 가 fleet_manager · kpi_logger 에 넘긴다.
+#
+# ★ robot_namespaces 가 **로봇 명단의 단일 출처**다. 관제 코드는 이 목록을 순회할 뿐 대수를
+#   가정하지 않으므로(배정·RETURN_ALL·상태 집계 전부), 여기만 고치면 로봇을 늘리거나 바꿀 수 있다.
+#   목록에 없는 로봇은 관제가 구독도 배정도 하지 않는다.
+#
+#   로봇을 추가할 때 함께 해야 할 것:
+#     ① params/robotN.yaml 생성 (robot3.yaml 복사 → dock_pose·depth_k 실측)
+#     ② params/arena.yaml 의 waiting_zone · dock_zone.pose · dock_zone.approach 에 robotN 항목 추가
+#     ③ 여기 robot_namespaces 에 /robotN 추가
+#   한 번만 다르게 띄우고 싶으면 파일을 고치지 말고 launch 인자로:
+#     ros2 launch mro_bringup fleet_pc.launch.py robots:="[/robot3,/robot8,/robot9]"
+/**:
+  ros__parameters:
+    robot_namespaces: [/robot3, /robot8]   # robot4 → robot8 교체 (하드웨어 이슈, 9/8)
+
+/fleet_manager:
+  ros__parameters:
+    battery_min: 0.25              # 이보다 낮으면 배정 거부 (ASSIGN_REFUSED_BATTERY)
+    t_lim_s: 120.0                 # 미션 제한시간. 넘기면 TLIM_EXCEEDED
+    worker_assignment_window_s: 1.0  # 동시 등록으로 볼 시간창 — 이 안에 온 작업자를 worker_id 순으로 한꺼번에 배정

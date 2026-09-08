@@ -8,7 +8,7 @@
 ## 기술 방향
 
 - Ubuntu 24.04, ROS 2 Jazzy, Python 3.12, `rclpy`, `rosidl`
-- TurtleBot4 Standard ×2 (RPLIDAR, OAK-D Pro, Create3 도킹) — 네임스페이스 `/robot3`, `/robot4`, `ROS_DOMAIN_ID=3` 통일
+- TurtleBot4 Standard ×2 (RPLIDAR, OAK-D Pro, Create3 도킹) — 네임스페이스 `/robot3`, `/robot8`, `ROS_DOMAIN_ID=3` 통일
 - Nav2 + AMCL (turtlebot4_navigation), YOLO11n (ultralytics), OpenCV ArUco, SQLite + Flask
 - 고정 웹캠 ×2 (PoC 계측·보조 인프라 — 로봇 안전 동작은 웹캠 없이 성립)
 

@@ -1,0 +1,27 @@
+# 로봇 공통 파라미터 — **모든 로봇이 같은 값을 쓰는 것만** 둔다. 값의 단일 출처는 여기다 (계약 5절).
+#
+# robot.launch.py 가 [common.yaml, perception.yaml, robotN.yaml] 순으로 넘긴다 → 뒤에 오는 파일이 이긴다.
+#   로봇마다 달라야 하는 값(dock_pose·depth_k)은 robotN.yaml 에만 적는다.
+#   로봇을 추가·교체할 때 이 파일은 건드리지 않는다 — robotN.yaml 하나만 만들면 된다.
+#
+# reid_threshold 는 여기에 없다. 계약 5절대로 mro_perception/config/perception.yaml 이 단일 출처다
+#   (종전에는 robotN.yaml 과 perception.yaml 양쪽에 있었다 — 9/8 정리).
+/**:
+  ros__parameters:
+    follow_standoff_m: 0.5
+    min_separation_m: 0.3
+    v_max: 0.3
+    bay_dwell_s: 5.0
+    t_lim_s: 120.0
+    t_ret_s: 180.0
+    dock_retry: 2
+    # ── shuttle_mission (PR #36, 주행 요청으로 PM 이관 9/7)
+    bay_advance_m: 0.3        # 베이 도착 후 창고 안쪽 전진. xy_goal_tolerance 0.25 고정이라 실이동은 0.05~0.3 로 흔들린다 (I-029). 선반 설치 후 재검토
+    aruco_max_dist_m: 1.5     # 계약 6절 검출 조건. 인지도 max_distance_m 로 이미 자른다 (PR #30) — 이중 방어
+    aruco_valid_s: 1.0        # aruco/id 와 aruco/distance 는 헤더가 없어 각자 수신 시각으로 신선도를 본다
+    aruco_confirm_s: 3.0      # 베이 도착 확정까지 마커를 기다리는 시간
+    aruco_retry: 1            # 미확인 시 정차 자세 재정렬 횟수. 넘으면 오도착으로 포기 (FR-08)
+    token_retry_s: 2.0        # 계약 3절 '거절되면 2초 후 재요청'
+    nav2_poll_s: 5.0          # bt_navigator 가 active 가 될 때까지 폴링 간격
+    nav2_poll_max: 3          # 이 횟수 안에 active 가 아니면 T_lim 을 태우지 않고 곧장 포기 (I-035, PR #44). 기본값에서 약 10 s
+    dock_status_wait_s: 5.0   # dock_status 를 기다리는 상한. 예전에는 무한 대기라 T_lim 조차 안 돌아 FAILED 도 안 나왔다 (가이드 D-2)

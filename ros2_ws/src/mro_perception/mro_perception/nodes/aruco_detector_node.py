@@ -26,9 +26,9 @@
 의 Kn1_mini 보정식(correct_depth, A=1.023·B=0.024)은 같은 꼴이지만 A 가 이 로봇들에 안 맞아
 1 m 이상을 4~7 cm 짧게 만들었다(9/7 줄자 5점).
 
-depth_min_m(0.8) 아래는 depth 를 버리고 solvePnP 로 낸다 — robot4 0.57 m 에서 depth 원값이
+depth_min_m(0.8) 아래는 depth 를 버리고 solvePnP 로 낸다 — 9/7 실측(당시 2호기 robot4) 0.57 m 에서 depth 원값이
 +6.6 cm(11 %) 였고 474 프레임이 같은 비율이었다(카메라 근거리 한계, CALIB_RANGE_M 하한과 같다).
-robot4 는 ID 4 앞 정차가 0.58 m 라(계약 6절) 이 구간이 관제 FR-35 에 그대로 걸린다. 같은
+robot8 은 ID 4 앞 정차가 0.58 m 라(계약 6절) 이 구간이 관제 FR-35 에 그대로 걸린다. 같은
 자리에서 pnp 는 +0.2 cm 였다.
 
 같은 프레임에서 두 거리가 다 나오면 그 비(depth / pnp)를 최근 20 프레임(약 2 초) 중앙값으로

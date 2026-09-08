@@ -506,7 +506,7 @@ done
 |---|---|---|
 | **1** | **아무것도 바꾸지 않고 줄자 실측** | `적재 체류 5.0 s` 5 초 동안 베이에서 로봇 실제 위치를 잰다. **I-037 을 가르는 유일한 방법** — 다른 것을 바꾸기 전에 해야 기준선이 생긴다 |
 | 2 | `inflation_radius` 0.25 → **0.15** | P1 자유폭이 0.29 → 0.49 m 로 넓어져 통과가 쉬워지는지. **주의 아래** |
-| 3 | **robot4 로 같은 시험** | 개체차·도크 차이·측위 차이를 가른다. `bay:=A`, `-r __ns:=/robot4`, `robot4.yaml` |
+| 3 | **robot8 로 같은 시험** | 개체차·도크 차이·측위 차이를 가른다. `bay:=A`, `-r __ns:=/robot8`, `robot8.yaml` |
 | 4 | `localization.yaml` 튜닝 | `update_min_a`(0.2) · `resample_interval`(1) · `recovery_alpha_slow/fast`(0.0). `update_min_d` 는 9/7 에 0.25→0.05 로 이미 바꿨다 (I-029) |
 | 5 | Nav2 플러그인 튜닝 | `controller_server`(DWB/MPPI 파라미터) · `progress_checker` · `general_goal_checker` |
 

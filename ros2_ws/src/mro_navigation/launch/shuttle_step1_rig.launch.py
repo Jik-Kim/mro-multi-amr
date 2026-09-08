@@ -9,7 +9,7 @@ costmap 경고에 판정 로그가 묻혀 시험 자체가 성립하지 않는�
 
 쓰는 법
   ros2 launch mro_navigation shuttle_step1_rig.launch.py
-  ros2 launch mro_navigation shuttle_step1_rig.launch.py namespace:=/robot4 bay:=B
+  ros2 launch mro_navigation shuttle_step1_rig.launch.py namespace:=/robot8 bay:=B
   ros2 launch mro_navigation shuttle_step1_rig.launch.py inject_aruco:=false   # 3단계(실물 마커)
 
 인자

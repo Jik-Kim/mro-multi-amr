@@ -1,10 +1,12 @@
-# Interfaces — 계약 v1.13 (2026-09-08)
+# Interfaces — 계약 v1.14 (2026-09-08)
 
 > v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
 > **v1.11 (9/7 저녁): 세마포어 이벤트 토픽 `/fleet/zone_event` 신설** — 대기·획득·반납·강제 회수를 기록해 K-06(교착 자동 해결률)을 센다 (I-030). `mro_interfaces` 는 바꾸지 않고 `std_msgs/String` 을 쓴다.
 > **v1.12 (9/7 저녁): 명시 페어링 폴백(FR-13) 확정** — 재식별 게이트 미달이 30 s 지속될 때 운영자가 로봇과 작업자를 직접 짝지어 주는 경로다. 상태 토픽 `target/pair_state`, 서비스 `srv/ManualPair`, 개입 종류 `MANUAL_PAIR` 셋이 새로 생겼다. 규칙은 아래 **10절**. 관제가 올린 8개 질문(9/7)에 대한 답을 그대로 계약으로 굳힌 것이다.
 > **v1.13 (9/8 새벽): 실주행이 드러낸 것 셋을 계약에 반영.** ① `aruco/pose` 비준 (PR #40) — 선택 발행, **회전(yaw)은 정렬에 쓰지 않는다.** ② ArUco 는 **발행 한계(2.0 m)와 수용 조건(1.5 m)을 나눈다** — 경계값 마커가 조용히 사라지지 않게 하되 판정은 소비자가 건다. ③ `cmd_vel` 발행자에 `follow_target`(제자리 회전) 추가, **estop 중 병진은 전부 막고 저속 제자리 회전만 통과** (I-036). **후진은 쓰지 않는다** — 2절 확정. 해제 거리 `CLEAR_DIST` 0.45 → **0.38 m** 로 낮춘다(P1 반폭 0.395 m 보다 작아야 통로 안에서 회전으로 풀린다). estop 이 복구까지 막아 로봇이 벽 앞에서 95 초를 쓴 실주행 기록이 근거다.
-> 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더한 것이 전부다.
+> **v1.14 (9/8 오후, PR #45): `amr_detection` 이 실제 노드가 되면서 드러난 셋.** ① `target/image`(raw `Image`) → **`target/image/compressed`**(CompressedImage) — raw 는 **구독자가 없는데** 대역폭만 먹었다. 계약이 `follow_target` 을 수신자로 적어둔 것이 틀렸다. 사람이 보는 용도이고 안전 판단·KPI 에 쓰지 않는다. ② **`target/visible` 의 의미를 바꾼다** — 「작업자가 보이나」에서 **「내 담당이 보이나」** 로. K-04 Lost 의 원천이라 그냥 둘 수 없다: 재획득은 *대상* 재획득이지 아무나 재획득이 아니다. ③ `mission/assigned` 수신자에 `amr_detection` 추가 — 이 로봇이 누구를 맡았는지는 여기서만 안다 (`WorkerDescriptor.robot_ns` 는 채워지지 않는다).
+>
+> 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더했고, v1.14 는 **더한 것 없이 하나를 갈고 하나의 뜻을 바꿨다.**
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
 
@@ -85,11 +87,13 @@
 | `/fleet/status` | fleet_manager | control_ui, kpi_logger | FleetStatus | 1 Hz |
 | `/fleet/intervention` | control_ui | kpi_logger, fleet_manager | Intervention | 운영자 버튼 |
 | `/fleet/zone_event` | zone_semaphore | kpi_logger, fleet_manager | String | **v1.11 (I-030).** `"<zone_id> <robot_ns> <REJECT\|GRANT\|RELEASE\|RECLAIM>"`. K-06 원천 — 3절 이벤트 규칙 |
-| `mission/assigned` | fleet_manager | shuttle_mission | Mission | **S4 트리거.** 옛 `webcam/detected` 는 쓰지 않는다 |
+| `mission/assigned` | fleet_manager | shuttle_mission, **amr_detection** | Mission | **S4 트리거.** 옛 `webcam/detected` 는 쓰지 않는다. **v1.14 — `amr_detection` 도 받는다** (PR #45): 이 로봇이 누구를 맡았는지는 여기서만 안다. `WorkerDescriptor.robot_ns` 로는 알 수 없다 — `fleet_manager` 가 그 칸을 채우지 않는다 |
 | `mission/finish` | fleet_manager | return_dock, **follow_target**, amr_detection | Bool | S9. follow_target 은 **즉시 페어링 해제·추종 중단**(≤ 1 s), return_dock 은 복귀 시작. **amr_detection 은 명시 페어링을 해제한다** (v1.12, 10절) |
 | `shuttle/status` | shuttle_mission, return_dock | fleet_manager, kpi_logger | String | READY / SHUTTLE / AT_BAY / WAITING / RETURNING / DOCK_WAIT / DOCKING / DOCKED / FAILED |
 | `shuttle/arrived` | shuttle_mission | follow_target | Bool | 대기공간 도착 (구 `goto_goal/arrived`) |
-| `target/map_point`, `target/visible`, `target/image` | amr_detection | follow_target | PointStamped, Bool, Image | Kn1_mini 계약 유지 |
+| `target/map_point` | amr_detection | follow_target | PointStamped | 거리 품질 게이트를 통과한 검출만. **`paired` 가 아닐 때도 발행된다** — 쓸지 말지는 `target/paired` 로 소비자가 정한다 |
+| `target/visible` | amr_detection | kpi_logger, follow_target | Bool | **v1.14 (PR #45) — 의미가 바뀌었다.** 예전 「작업자 bbox 가 보이나」에서 **「재식별 게이트가 고른 *내 담당* 이 보이나」** 로. K-04 Lost 의 원천이므로 중요하다 — 재획득은 *대상* 재획득이지 아무나 재획득이 아니다. 남의 옷만 보이면 `False` 다. **단, 서술자·미션이 아직 없으면**(S1~S3 전·단독 시험) 확신도 1등을 대상으로 삼으므로 그때는 옛 의미다 |
+| `target/image/compressed` | amr_detection | **없음 (사람이 보는 용도)** | CompressedImage | **v1.14 (PR #45).** 옛 `target/image`(raw `Image`)를 대체한다 — raw 는 구독자가 없는데 대역폭만 먹었다. `jpeg_quality` 80. 오버레이(bbox·거리·sim·paired)가 그려진 모니터링 영상이다. **안전 판단·KPI 에 쓰지 않는다** |
 | `target/distance` | amr_detection | kpi_logger | Float32 | **추종거리 판정의 기준값**(FR-29). 검출 노드가 산출한 대상 거리, m |
 | `target/paired`, `target/worker_id` | amr_detection | follow_target, fleet_manager | Bool, String | 재식별 게이트 통과 여부. **발행자는 amr_detection 하나뿐이다** — 자동이든 명시 페어링이든 (10절) |
 | `target/pair_state` | amr_detection | control_ui, fleet_manager, kpi_logger | String | **v1.12 (FR-13).** `PAIRED` / `GATE_FAIL` / `NO_TARGET`. `GATE_FAIL` 은 **대상은 보이는데 게이트를 못 넘는 상태가 30 s 지속됐을 때만** 낸다 — 10절 |
@@ -112,7 +116,9 @@
 | 파일 | 담는 것 | 담당 |
 |---|---|---|
 | `arena.yaml` | 베이 waypoint·ArUco ID, 대기공간, `dock_zone`(pose·approach·holding), `passages`, `semaphore_zones` 폴리곤, `homography_marks`, `t_lim_s`·`t_ret_s`·`dock_retry` | 박병후·이시율 |
-| `robot3.yaml` / `robot4.yaml` | `dock_pose`, `follow_standoff_m` 0.5, `min_separation_m` 0.3, `v_max` 0.3, `reid_threshold`, `bay_dwell_s` 5, `t_lim_s` 120, `t_ret_s` 180, `dock_retry` 2 | 박병후·이시율 |
+| `common.yaml` `9/8 신설` | 전 로봇 공통값 — `follow_standoff_m` 0.5, `min_separation_m` 0.3, `v_max` 0.3, `bay_dwell_s` 5, `t_lim_s` 120, `t_ret_s` 180, `dock_retry` 2, 셔틀 상수 | 박병후·이시율 |
+| `robot3.yaml` / `robot8.yaml` | **로봇마다 다른 값만** — `robot_ns`, `dock_pose`, `depth_k`. 로봇 추가 = 이 파일 하나 복사 | 박병후·이시율 |
+| `fleet.yaml` `9/8 신설` | 관제 — `robot_namespaces`(로봇 명단의 단일 출처), `battery_min`, `t_lim_s`, `worker_assignment_window_s` | 김민준 |
 | `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m` | 정정인·민범진 |
 | `mro_webcam/config/WebCam1/homography_cam1.json` | **쓰지 않는다 (9/6 결정)** — 웹캠1 은 작업자 출발(등록)만 인식하고 map 좌표를 내지 않는다. 파일은 Kn1_mini 잔재이며 `webcam_register` 가 좌표를 쓰면 안 된다 | 한세교·김학민 |
 | `mro_webcam/config/WebCam2/homography_cam2.json` | 웹캠2 호모그래피 행렬·대응점·재투영 오차. 기준점 원본은 같은 폴더 `marker_coordinates.json` (로봇 AMCL 로 실측, PR #9 — RMSE 2.8 cm) | 한세교·김학민 |
@@ -128,7 +134,7 @@
 |---|---|
 | 1 / 2 / 3 | 베이 A / B / C. 10 cm, **선반 뒤 벽면 높이 20 cm.** 실측 광축은 23.5 cm 라 마커는 그보다 3.5 cm 아래에 오지만 화각 안이다. 올리면 선반(25 cm)에 가린다. 바닥 부착 금지 — 가까워지면 시야 아래로 사라진다. 무광 인쇄, 검은 테두리 바깥에 흰 여백 한 칸 이상 |
 | 10~19 | *(예약)* KOZ 바닥 마커 — Phase 2. Phase 1 에서는 쓰지 않는다 |
-| **4** | **측위 검증 마커** (9/6 신설) — 웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 23.5 cm. 베이 마커와 달리 **AMCL 이 맞는지 확인하는 용도**다. 로봇이 P1 을 나와 남쪽으로 대기공간에 접근하는 구간에서 정면에 들어온다 (턴 시점 ≈ 1.36 m · robot3 정차 1.08 m · robot4 정차 0.58 m, 9/6 실측). map 좌표는 `arena.yaml` `loc_check_marker` (주행 실측 9/7). 규칙은 9.2 |
+| **4** | **측위 검증 마커** (9/6 신설) — 웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 23.5 cm. 베이 마커와 달리 **AMCL 이 맞는지 확인하는 용도**다. 로봇이 P1 을 나와 남쪽으로 대기공간에 접근하는 구간에서 정면에 들어온다 (턴 시점 ≈ 1.36 m · robot3 정차 1.08 m · robot8 정차 0.58 m, 9/6 실측). map 좌표는 `arena.yaml` `loc_check_marker` (주행 실측 9/7). 규칙은 9.2 |
 
 **검출 조건 — 발행과 수용을 나눈다 (v1.13).**
 

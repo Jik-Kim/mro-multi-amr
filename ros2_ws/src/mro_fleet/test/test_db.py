@@ -81,7 +81,7 @@ def test_done_keeps_delivery_result(tmp_path):
     """도킹 완료 뒤에도 앞서 확정한 배송 결과가 유지되는지 확인한다."""
     db = make_db(tmp_path)
     try:
-        mission_id = db.create_mission('W2', 'B', 100.0, '/robot4')
+        mission_id = db.create_mission('W2', 'B', 100.0, '/robot8')
         db.mark_waiting(mission_id, 225.0, 120.0)
         db.set_state(mission_id, 8, 300.0)
         mission = db.mission(mission_id)

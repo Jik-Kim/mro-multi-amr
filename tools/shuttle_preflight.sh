@@ -13,7 +13,7 @@
 # 이 스크립트는 환경을 검사만 하고 바꾸지 않는다. 자식 프로세스라 여기서 source 해도 부모
 #   터미널에 반영되지 않기 때문이다. 환경을 만드는 것은 `source tools/shuttle_env.sh` 쪽이다.
 #
-#   두 번째 인자로 네임스페이스를 바꾼다: tools/shuttle_preflight.sh mission /robot4
+#   두 번째 인자로 네임스페이스를 바꾼다: tools/shuttle_preflight.sh mission /robot8
 #
 # 종료 코드 0 = 전부 통과. 1 = FAIL 있음. FAIL 이면 가이드의 어느 절을 볼지 같이 찍는다.
 

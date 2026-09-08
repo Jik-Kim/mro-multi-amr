@@ -38,7 +38,7 @@
 - mro_navigation — safety_watchdog_node.py: estop 중 병진 전부 차단 · 저속 회전만 통과 · CLEAR_DIST 0.45…
 - mro_navigation — test_follow_target_fsm.py 신규 (PR #39 후속) — 상태기계 검사 18개가 저장소에 없어 재현·회귀 검…
 - mro_navigation — arena.yaml loc_check_marker.xy 실측 — 지금 [0.0, 0.0] 은 맵 원점이라 관제가 그대로 읽으면 …
-- mro_navigation — inflation_radius 0.05 → 0.25 적용 (I-009) — 주행 합의값. 승인 후 PC-R3·PC-R4 의 na…
+- mro_navigation — inflation_radius 0.05 → 0.25 적용 (I-009) — 주행 합의값. 승인 후 PC-R3·PC-R8 의 na…
 - mro_navigation — 베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025) — 접근 지점과 0.31/0.38 m…
 - mro_navigation — estop 중 Nav2 복구 행동이 막히는 문제 (I-036) — 벽 앞에서 후진·회전까지 0 으로 덮여 95 초를 못 빠져나왔…
 - mro_navigation — 도착 오차 수치 신뢰성 확인 (I-037) — 노드 TF 0.84 m vs 같은 순간 amcl_pose 0.18 m. 3회차에 …
@@ -46,7 +46,7 @@
 - mro_navigation — return_dock_node.py: 복귀 시 P1 토큰 획득·반납 — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P…
 - mro_navigation — follow_target_node.py: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, est…
 - mro_navigation — AMCL update_min_d 0.05 실주행 확인 (I-029) — 9/7 저녁 적용(0.25→0.05). 도착 판정이 안정…
-- mro_navigation — PC-R4 에 localization.yaml update_min_d: 0.05 복제 (I-029) — turtlebot4_ws…
+- mro_navigation — PC-R8 에 localization.yaml update_min_d: 0.05 복제 (I-029) — turtlebot4_ws…
 - mro_navigation — 추종거리 분포 실측 (I-029) — xy_goal_tolerance 0.25 고정이라 정지 시 오차 25 cm. TS-U07 …
 - mro_navigation — follow_target_node.py: 힌트 구독을 /webcam2/target_hint(TargetHint, sensor_d…
 - mro_navigation — shuttle_mission_node.py: P1 대기 중 포기해도 반납을 부를 것 (I-033) — 거절당하면 세마포어 대기열…
@@ -79,12 +79,12 @@
 - [x] `WorkerDescriptor.color_hist` — H16×S8=128, `reid.hsv_hist()` 공유 호출로 확정 · 마감 9/6
 
 ## mro_perception [인지 — 정정인, 민범진]
-- [x] **TS-U05 독립 점 1개 (I-031 마무리)** — 완료 9/8 (PR #43). 배율 모델이 1.55 m 에서 3.0 cm 틀려 **역깊이(시차 편향) 보정**으로 교체. 독립점 1.19 m 에서 −0.5 cm. PM 재적합 확인 — 배율은 어떻게 펴도 최선이 1.9~2.1 cm 라 모델 꼴 문제였다. **robot4 독립점은 카메라 올라온 뒤**
+- [x] **TS-U05 독립 점 1개 (I-031 마무리)** — 완료 9/8 (PR #43). 배율 모델이 1.55 m 에서 3.0 cm 틀려 **역깊이(시차 편향) 보정**으로 교체. 독립점 1.19 m 에서 −0.5 cm. PM 재적합 확인 — 배율은 어떻게 펴도 최선이 1.9~2.1 cm 라 모델 꼴 문제였다. **robot8 독립점은 카메라 올라온 뒤** (9/8 기체 교체로 2호기 보정은 원점)
 - [x] `core/aruco.py` ROS 비의존 — 완료 9/8 (PR #43). `depth_distance` 의 ROS import 를 뷰어 노드 전용 try/except 로. PM 확인: `AMENT_PREFIX_PATH` 빈 셸에서 `rclpy` 미적재 · 단위 시험 18/18
 - [ ] **robot3 depth 가 RGB 보다 +83 ms 늦다 (I-038)** — ArUco 프레임 73 % 가 depth 대신 pnp 대체로 떨어진다. 값은 같은 자라 지금 오차는 없지만, 기동 직후 '못 봤다' 구간과 오래된 depth/pnp 비가 남는다. 큐 방식 짝짓기 · 마감 9/9
 - [ ] **`perception.yaml` 에 k 검증 범위를 적는다 (PR #43 후속)** — k 를 편 범위는 보정값 0.843~1.565 m 인데 발행 한계는 2.0 m 다 (보정량 −9.2 cm, 미검증). 계약 6절 수용 1.5 m 는 검증 범위 안이라는 것까지 한 줄 · 마감 9/9
 - [ ] **`calibrated_depth` 가 `depth_min` 게이트에 의존한다 (PR #43 후속)** — `z_raw` 로 나누므로 게이트가 없으면 0 원값에서 죽는다. docstring 에 명시 · 마감 9/9
-- [ ] **robot4 TS-U05 독립 점 1개 (I-031)** — k 0.0076 은 2점 적합이라 자기 검증이다. 카메라 올라오면 한 점. 급하지 않다 (0.58 m 정차는 pnp 경로, k 영향 0.4 cm) · 마감 9/10
+- [ ] **robot8 `depth_k` 실측 (I-031·I-040)** — 9/8 기체 교체로 **보정값이 없다**(`robot8.yaml` `depth_k: 0.0`). 구 robot4 의 0.0076 은 그 카메라 값이라 승계 불가 (robot3 은 0.024 — 3 배 차). 0.8 m 이상 줄자 2점 이상으로 `k = 평균(1/줄자 − 1/원값)`. **I-040 으로 robot3 보정도 그동안 안 먹고 있었으므로 TS-U05 재측정과 함께** · 마감 9/10
 - [ ] `mro_perception` flake8 정리 — main 55건에서 PR #40 으로 80건. 대부분 D400·D403 docstring 형식과 99자 초과라 한 번에 정리된다. **아무도 이 시험을 안 돌리고 있다는 뜻** · 마감 9/9
 - [ ] **`amr_detection_node.py`: 명시 페어링 폴백 서버 (FR-13, 계약 10절)** — ① `target/pair_state` 발행 (`PAIRED`/`GATE_FAIL`/`NO_TARGET`) ② 게이트 미달 30 s 계측 — **대상이 보이는데 못 넘는 경우만 센다**(`NO_TARGET` 은 세지 않음) ③ `/robotN/manual_pair` 서비스 서버 — 거부 사유 6종(10.5 표) ④ `mission/finish` 구독해 명시 페어링 해제 ⑤ 확정 시 `target/paired`·`target/worker_id` 발행은 **여기서만** · 마감 9/9
 - [x] 인형 2종 제작 (상하의 전체, 9/6 결정) · 마감 9/6
@@ -153,7 +153,7 @@
 - [x] **`params/arena.yaml` 좌표 입력 (I-001)** — bays A/B/C, waiting_zone, dock_zone, `semaphore_zones` 폴리곤 실측 기입 (9/6) · 마감 9/6
 - [x] **`dock_zone.pose` · `robotN.yaml` `dock_pose` 실측 기입 (I-013)** — 두 파일 값 일치 확인 (9/6) · 마감 9/6
 - [x] I-004 받침대 돌출폭 실측 (9/6) — P1 없음 · P2 양쪽 3 cm(폭 0.86 정정) · P3 입구 5 cm·안쪽 6.5 cm · 마감 9/7
-- [ ] **`inflation_radius` 0.05 → 0.25 적용 (I-009)** — 주행 합의값. 승인 후 PC-R3·PC-R4 의 `nav2.yaml` 양쪽에 같은 값으로 · 마감 9/8
+- [ ] **`inflation_radius` 0.05 → 0.25 적용 (I-009)** — 주행 합의값. 승인 후 PC-R3·PC-R8 의 `nav2.yaml` 양쪽에 같은 값으로 · 마감 9/8
 - [ ] **측위 검증 마커 설치·실측** — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 23.5 cm), map 좌표를 `arena.yaml` `loc_check_marker.xy` 에 (계약 6절·9.2 ①) · 마감 9/7
 - [x] **I-013 검증 (9/7)** — ArUco 미설치라 도킹 상태 `amcl_pose` 비교로 대체. 밀림 방향이 둘 다 −x 로 같고 차이 5.1 cm, 도크 간격 측정 0.803 대 줄자 0.840 m → **map 프레임 상호 일치 확인**. 개별 20 cm 치우침은 `xy_goal_tolerance` 0.25 에서 오는 것 · 마감 9/7
 - [x] TB4 2대 동시 운용 검증 (9/6) — 네임스페이스 격리 · `odom` 20 Hz · OAK-D 동시 스트리밍 · RPi CPU 21~31 % · **Nav2 2벌 동시 `active`** 확인 (I-011) · 마감 9/6
@@ -164,13 +164,13 @@
 - [ ] **베이 A·B 정차점 서쪽으로 ≥ 0.15 m 이동 또는 DOCK 폴리곤 확장 (I-025)** — 접근 지점과 0.31/0.38 m 라 몸통이 겹친다. TS-07 전 · 마감 9/8
 - [ ] **estop 중 Nav2 복구 행동이 막히는 문제 (I-036)** — 벽 앞에서 후진·회전까지 0 으로 덮여 95 초를 못 빠져나왔다. 후보 ①전진 성분만 차단 ②N초 후 워치독이 후진 ③goal cancel — **PM·안전 검토 필요** · 마감 9/8
 - [ ] **도착 오차 수치 신뢰성 확인 (I-037)** — 노드 TF 0.84 m vs 같은 순간 `amcl_pose` 0.18 m. 3회차에 `tf2_echo` 기록 + **베이에서 줄자 실측**으로 가른다 · 마감 9/8
-- [ ] **P1 통과 실주행 확인 (I-009)** — 여유 0.175 m < 실측 측위 오차 0.32 m 라 통과가 운에 좌우된다. `inflation_radius` 0.15 실험 후 결정. **PC-R3 는 0.25 적용 확인됨, PC-R4 미확인** · 마감 9/8
+- [ ] **P1 통과 실주행 확인 (I-009)** — 여유 0.175 m < 실측 측위 오차 0.32 m 라 통과가 운에 좌우된다. `inflation_radius` 0.15 실험 후 결정. **PC-R3 는 0.25 적용 확인됨, PC-R8 미확인** · 마감 9/8
 - [x] **I-035 조치 결정** — PM 이 ①(절차+코드)로 확정하고 ②(노드가 RESUME)·③(`t0` 이동)은 반려했다 (9/8). ③은 T_lim 기준점이 요청 접수 시각이라(계약 9절·FR-09) 옮기면 AC-08 이 실제보다 좋게 나온다. 구현은 위 줄 · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
 - [x] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8
 - [ ] **AMCL `update_min_d` 0.05 실주행 확인 (I-029)** — 9/7 저녁 적용(0.25→0.05). 도착 판정이 안정되는지, 리샘플링이 잦아져 pose 가 더 떨리지는 않는지. 떨리면 `resample_interval` 2로 · 마감 9/8
-- [ ] **PC-R4 에 `localization.yaml` `update_min_d: 0.05` 복제 (I-029)** — `turtlebot4_ws` 는 git 밖이라 PC 마다 손으로. I-009 의 `nav2.yaml` 과 같이 확인 · 마감 9/8
+- [ ] **PC-R8 에 `localization.yaml` `update_min_d: 0.05` 복제 (I-029)** — `turtlebot4_ws` 는 git 밖이라 PC 마다 손으로. I-009 의 `nav2.yaml` 과 같이 확인 · 마감 9/8
 - [ ] **추종거리 분포 실측 (I-029)** — `xy_goal_tolerance` 0.25 고정이라 정지 시 오차 25 cm. TS-U07 로 `target/distance` p95·min 을 재고 미달이면 `cmd_vel` 미세 보정 구현 (PM: ③→② 순서, 기준 완화는 마지막) · 마감 9/8
 - [ ] `follow_target_node.py`: 힌트 구독을 `/webcam2/target_hint`(**TargetHint, sensor_data QoS**) 로 — 지금은 옛 `webcam/car_map_point` PointStamped RELIABLE 이라 BEST_EFFORT 발행자(PR #14)의 힌트를 못 받는다 · 마감 9/8
 - [ ] **`shuttle_mission_node.py`: P1 대기 중 포기해도 반납을 부를 것 (I-033)** — 거절당하면 세마포어 대기열에 들어가는데 `token_held` 가 False 라 `release_token` 이 그냥 돌아온다. T_lim 으로 끊기면 유령 대기열이 남아 **P1 이 영구히 잠기고 watchdog 도 못 푼다**. `token_requested` 플래그 추가. 거절만 반복하다 T_lim 으로 끝나는 단위 시험도 함께 · 마감 9/8
@@ -210,7 +210,7 @@
 - [ ] `fleet_manager_node.py`: `/fleet/zone_event` 구독 → DB `events` kind `ZONE` 기록 (I-030, 계약 v1.11 §7) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
 - [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①). **기준점 주의:** `aruco/distance` 는 카메라→마커, `\|amcl_pose − xy\|` 는 base_link→마커 — `tf2_echo base_link oakd_rgb_camera_optical_frame` 으로 오프셋을 재서 뺀다 (I-031) · 마감 9/8
-- [x] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') — 1 s 배치 창 + `worker_id` 정렬, W1→robot3·W2→robot4 로 순서 무관 재현 (PR #28, PM 스텁 24/24) · 마감 9/8
+- [x] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') — 1 s 배치 창 + `worker_id` 정렬, W1→robot3·W2→robot8 로 순서 무관 재현 (PR #28, PM 스텁 24/24) · 마감 9/8
 - [ ] `control_ui`: 페어링 폴백(명시 페어링) 버튼 (FR-13) · 마감 9/8
 - [x] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) (PR #7) · 마감 9/9
 

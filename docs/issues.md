@@ -28,6 +28,7 @@
 | [I-027](#i-027) | 중 | **진행중** | 웹캠 한세교·김학민 | webcam_hint 의 YOLO 타이머가 겹쳐 돌 수 있다 (Reentrant 그룹) |
 | [I-038](#i-038) | 중 | **열림** | 인지 정정인·민범진 | robot3 의 depth 가 RGB 보다 +83 ms 늦어 ArUco 프레임 73 % 가 depth 대신 pnp 대체로 떨어진다 |
 | [I-039](#i-039) | 하 | **열림** | 인지 정정인·민범진 | robot3 pnp 실효 계수가 자리마다 1.61~1.87 로 흔들린다 — `aruco/pose` 좌우 성분에만 남는다 |
+| [I-040](#i-040) | **상** | **고침 (9/8)** | PM · 인지 정정인·민범진 | `perception.yaml` 의 `/robotN/**` `depth_k` 가 노드에 **안 들어가고 있었다** — I-031 보정이 무효였다 |
 
 ## 해결된 이슈
 
@@ -77,7 +78,7 @@
   - **P1 폴리곤이 0.70 × 0.48 m** 인데 병목 실측은 0.79 m 다. 폴리곤이 통로를 완전히 가로지르는지 확인이 필요하다 — 통로보다 좁으면 로봇이 토큰 없이 옆으로 빠져나간다.
   - 접근 지점 → 도크 0.462 / 0.459 m, `robotN.yaml` ↔ `arena.yaml` 값 일치는 확인됐다.
 - **PM 검증 3건 재실측 완료 (9/6, 박병후)**
-  - holding `[-0.422, 1.501, -1.689]` — 최근접 도크(robot4)까지 **1.52 m** 로 FR-31(≥1.5 m) 충족.
+  - holding `[-0.422, 1.501, -1.689]` — 최근접 도크(robot8)까지 **1.52 m** 로 FR-31(≥1.5 m) 충족.
   - bays A/B/C waypoint 를 `x=-0.78` 로 통일(정밀 실측) — 계산 확인 결과 셋 다 새 DOCK 폴리곤(`x∈[-0.675,0.2]`) 밖으로 나왔다.
   - DOCK 폴리곤을 도크·접근지점만 감싸는 사각형(`x∈[-0.675,0.2], y∈[-1.45,0.4]`)으로 좁혔다. dock_zone.pose/approach 4점 전부 포함, bays A/B/C 전부 제외 확인.
   - P1 폴리곤을 `0.8×0.45 m`(x∈[-0.8,0], y∈[0.45,0.9]) 사각형으로 재실측 — 병목 실측 0.79 m 를 여유 있게 가로지른다.
@@ -132,7 +133,7 @@
 `mro_navigation` · 심각도 중 · 담당 주행 박병후·이시율 · 등록 2026-09-05 (PM)
 
 - **내용·재현** — 사진에는 로봇만 있고 도크가 안 보였다. 0.9 m 가 도크 중심 간인지 확인이 필요하고, 도크 설치 후 접근 지점 좌표를 재야 한다. 체크리스트는 `docs/measurement_guide.md` §4.
-- **조치·남은 것** — **접근 지점 좌표 실측 완료 (9/6)** — `dock_zone.approach` robot3·robot4. 도크 앞 0.46 m.
+- **조치·남은 것** — **접근 지점 좌표 실측 완료 (9/6)** — `dock_zone.approach` robot3·robot8. 도크 앞 0.46 m.
   **도크 간격 확정 (9/6):** AMR 담당 줄자 실측 **도킹점 기준 0.84 m** (도킹 스테이션 끝-끝 0.74 · 터틀봇 끝-끝 0.52). 초기 0.9 m 는 어림값이었다. AMCL `dock_pose` 간 0.830 m 와 1 cm 차이로 일치 → `spacing_m` 0.84 로 갱신하고 BRD·SDD·SOT 를 통일했다.
   **MDF 차폐판은 두지 않기로 합의 (9/6, 주행)** — 차폐 없이도 두 대가 각자 자기 도크에 정상 도킹하고 한 대씩 순차로 들어가는 것을 확인했다. IR 간섭이 관찰되지 않아 불필요하다고 판단. `arena.yaml` 의 `divider` 를 `false` 로 갱신할 것(PR #11 머지 후).
   **TS-U12 도킹 반복 완료 (9/6, 주행)** — 차폐판 없는 조건에서 로봇별 10회, 각자 자기 도크에 정상 도킹하고 오도킹 없음. 차폐판 불필요 판단이 시험으로 확인됐다. 4개 확인 항목(도크 실물·간격·접근 지점·도킹 반복) 모두 완료로 종결.
@@ -167,12 +168,12 @@
 - **조치·남은 것** — **실제 설정값 확인 (9/6, 주행): `inflation_radius` 는 0.05** 다 (`turtlebot4_navigation/config/nav2.yaml` 의 local·global costmap 양쪽). 로봇 footprint 내접 반지름 0.175 m 보다 작아 **완충 구간이 없다** — 계획 경로가 벽면에 닿는 것을 막지 않는다.
   `arena.yaml` 의 `nav2_inflation_radius: 0.22 [팀 확정]` 은 PM 문서 커밋(`2c1184b`)에 들어온 계산값으로 **주행이 확정한 값이 아니고, Nav2 로 전달되는 경로도 없다**. 표기를 정리할 것.
   **필요값 산출 (9/6):** 로봇 표면과 벽면 사이 여유 = `r − 0.175`. 받침대 실측 최대 6.5 cm(P3 안쪽, I-004)를 덮으려면 **r ≥ 0.24**, 여유를 두면 **0.25**. r=0.25 에서도 P1 하드 자유폭은 0.44 m 로 병목 통과에 무리가 없다(P1 에 받침대 없음).
-  **적용 방식 합의 (9/6):** `nav2.yaml` 은 각 제어 PC 의 `turtlebot4_navigation` 패키지에 있으므로 저장소로 옮기지 않고 **PC-R3·PC-R4 에서 각자 같은 값으로 수정**한다. 통합 전에 두 PC 값이 같은지 확인한다.
+  **적용 방식 합의 (9/6):** `nav2.yaml` 은 각 제어 PC 의 `turtlebot4_navigation` 패키지에 있으므로 저장소로 옮기지 않고 **PC-R3·PC-R8 에서 각자 같은 값으로 수정**한다. 통합 전에 두 PC 값이 같은지 확인한다.
   `xy_goal_tolerance` 는 **0.25 로 고정** — 낮추면 도착을 못 한다(9/7 실측). 별개 원인이라 **I-029** 로 분리했다. inflation 과 무관하다.
-  **값 0.25 로 주행 합의 (9/6)** — 6.5 cm 를 덮는 하한이 0.24 라 AMCL 오차를 감안해 0.25 로 둔다. **PM 승인 (9/6).** `arena.yaml` 의 `nav2_inflation_radius` 는 0.25 참고값으로 고치고 '전달 경로 없음' 을 명시했다. 남은 것 — PC-R3·PC-R4 `nav2.yaml` 에 적용하고 두 PC 값 일치 확인, P1 실주행 확인.
+  **값 0.25 로 주행 합의 (9/6)** — 6.5 cm 를 덮는 하한이 0.24 라 AMCL 오차를 감안해 0.25 로 둔다. **PM 승인 (9/6).** `arena.yaml` 의 `nav2_inflation_radius` 는 0.25 참고값으로 고치고 '전달 경로 없음' 을 명시했다. 남은 것 — PC-R3·PC-R8 `nav2.yaml` 에 적용하고 두 PC 값 일치 확인, P1 실주행 확인.
 
   **실주행 결과 (9/7 저녁, robot3 2회차) — 계산은 맞았지만 통과는 측위 정확도에 막힌다.**
-  `inflation_radius` 는 PC-R3 의 `turtlebot4_navigation/config/nav2.yaml` 에 **이미 0.25 로 적용돼 있다**(런타임 `ros2 param get` 으로 local·global 양쪽 확인). 위 '남은 것' 의 PC-R3 적용은 끝났고 **PC-R4 확인만 남았다.**
+  `inflation_radius` 는 PC-R3 의 `turtlebot4_navigation/config/nav2.yaml` 에 **이미 0.25 로 적용돼 있다**(런타임 `ros2 param get` 으로 local·global 양쪽 확인). 위 '남은 것' 의 PC-R3 적용은 끝났고 **PC-R8 확인만 남았다.**
   같이 확인한 것 — `robot_radius: 0.1` 이 보이지만 `footprint` 팔각형(외접 0.189 · 내접 0.175)이 설정돼 있어 **무시된다.** footprint 는 실측과 맞다.
   **그런데 2회차에서 P1 을 통과하지 못했다.** 로봇이 `(-0.92, 0.27)` 에서 벽을 만나 95 초를 쓰고 T_lim 으로 끝났다 (교착 자체는 I-036).
   **기하 확인:** P1 개구부는 x −0.8~0 인데 **대기공간 robot3 `(-0.998, 0.937)` 은 개구부 서쪽 '바깥'** 이다. 베이 A `(-0.78, 0.138)` 에서 대기공간까지 직선을 그으면 y=0.45/0.70/0.90 에서 x = −0.865/−0.933/−0.988 로 **전 구간이 개구부 밖(벽)** 이다. 정상 경로는 개구부로 북진해 빠져나온 뒤 서쪽으로 꺾는 ㄱ자여야 한다.
@@ -215,7 +216,7 @@
 `mro_bringup` · 심각도 중 · 담당 주행 박병후·이시율 · 등록 2026-09-05 (PM)
 
 - **내용·재현** — 웹캠 PC 분리(9/5)로 PC 5대 + 로봇 2대. Kn1_mini 에서 PC 2대·로봇 1대로도 lifecycle 멈춤이 있었음
-- **조치·남은 것** — 서버를 PC-F 로 옮겨 RPi 부하가 구조적으로 사라짐(I-014). 웹캠 PC 는 `ROS_SUPER_CLIENT=False` 유지. **2대 동시 부하 실측 확인 (9/6, 주행):** 네임스페이스 격리 정상(`/robot3/*`·`/robot4/*` 누락 없이 동시 수신) · `odom` 20.08 / 20.01 Hz(std dev 0.023 / 0.028 s, Create3 권장 20 Hz 유지) · OAK-D preview 6.0 / 5.1 Hz 동시 스트리밍 · 2대 PC 에서 각각 `cmd_vel` 조종 시 지연 없음 · RPi CPU 4코어 21~31 %(Kn1_mini 의 100 % 폭주 재현 없음) · **Nav2 2벌 동시 구동 확인 — lifecycle 노드 14종(amcl·map_server·bt_navigator·controller_server·planner_server·behavior_server·smoother_server·velocity_smoother·waypoint_follower·collision_monitor·docking_server·route_server·global_costmap·local_costmap)이 양쪽에 모두 존재하고 `/robot4/bt_navigator/get_state` 가 `active` 응답.** Kn1_mini 의 lifecycle 멈춤은 재현되지 않았다
+- **조치·남은 것** — 서버를 PC-F 로 옮겨 RPi 부하가 구조적으로 사라짐(I-014). 웹캠 PC 는 `ROS_SUPER_CLIENT=False` 유지. **2대 동시 부하 실측 확인 (9/6, 주행):** 네임스페이스 격리 정상(`/robot3/*`·`/robot8/*` 누락 없이 동시 수신) · `odom` 20.08 / 20.01 Hz(std dev 0.023 / 0.028 s, Create3 권장 20 Hz 유지) · OAK-D preview 6.0 / 5.1 Hz 동시 스트리밍 · 2대 PC 에서 각각 `cmd_vel` 조종 시 지연 없음 · RPi CPU 4코어 21~31 %(Kn1_mini 의 100 % 폭주 재현 없음) · **Nav2 2벌 동시 구동 확인 — lifecycle 노드 14종(amcl·map_server·bt_navigator·controller_server·planner_server·behavior_server·smoother_server·velocity_smoother·waypoint_follower·collision_monitor·docking_server·route_server·global_costmap·local_costmap)이 양쪽에 모두 존재하고 `/robot8/bt_navigator/get_state` 가 `active` 응답.** Kn1_mini 의 lifecycle 멈춤은 재현되지 않았다
 
 ### I-012
 
@@ -234,9 +235,9 @@
 
 - **내용·재현** — 각 로봇이 도크에서 (0,0) 으로 초기화하면 두 map 프레임의 원점이 달라진다. 같은 좌표가 서로 다른 장소를 가리키게 되어 세마포어도 waypoint 도 전부 무의미해진다.
 - **조치·남은 것** — 맵 원점을 SLAM 작성 시점 하나로 고정하고, 각 로봇은 자기 `dock_pose` 로 초기화하도록 코드·문서를 고쳤다 (9/5).
-  **실측·기입 완료 (9/6)** — robot3 `[0.019, -0.795, 0.133]`, robot4 `[-0.023, 0.034, -0.052]`. 각각 amcl_pose 수렴을 확인한 뒤 채택했고, `arena.yaml` 의 `dock_zone.pose` 와 `robotN.yaml` 의 `dock_pose` 두 값이 일치하는 것을 PM 이 확인했다.
+  **실측·기입 완료 (9/6)** — robot3 `[0.019, -0.795, 0.133]`, robot8 도크 `[-0.023, 0.034, -0.052]` (9/6 실측 당시 기체는 robot4. 도크의 map 좌표라 9/8 교체 후에도 승계 — robot8 첫 도킹 후 재확인 필요). 각각 amcl_pose 수렴을 확인한 뒤 채택했고, `arena.yaml` 의 `dock_zone.pose` 와 `robotN.yaml` 의 `dock_pose` 두 값이 일치하는 것을 PM 이 확인했다.
   **2대 동시 연결 검증 완료 (9/7, 주행) — 두 map 프레임은 서로 일치한다.**
-  각자 자기 도크에 도킹시킨 뒤 `amcl_pose` 를 기록값과 비교했다. 개별 차이는 robot3 19.9 cm · robot4 24.4 cm 지만,
+  각자 자기 도크에 도킹시킨 뒤 `amcl_pose` 를 기록값과 비교했다. 개별 차이는 robot3 19.9 cm · robot8 도크 24.4 cm(당시 기체 robot4) 지만,
   **밀림 방향이 둘 다 −x 로 같고 그 차이가 5.1 cm** 이며 **두 도크 간격도 측정 0.803 m 대 줄자 0.840 m 로 3.7 cm 차이**다.
   프레임이 어긋났다면 상대 거리가 크게 틀어져야 하는데 그렇지 않으므로, 원점 불일치는 아니다.
   개별 20 cm 치우침의 출처는 `xy_goal_tolerance` 0.25 다 — RViz 가 `Distance remaining 0.20 m` 에서 `reached` 를 띄우는 것으로 확인했다.
@@ -251,7 +252,7 @@
 `mro_bringup` · 심각도 **상** · 담당 주행 박병후·이시율 · 등록 2026-09-05 (팀 리뷰)
 
 - **내용·재현** — 실패하면 웹캠·관제가 로봇과 통신 못 해 S1·S3·힌트·FleetStatus 가 전부 죽는다. 단일 실패 지점
-- **조치·남은 것** — **offboard 단일 서버 채택 (9/5).** PC-F `192.168.108.41` ID 1. robot3·robot4 토픽 PC-F 에서 확인 완료. PC 4대 접속 완료(9/5). 남은 것: 공유기 `.41` 예약 요청
+- **조치·남은 것** — **offboard 단일 서버 채택 (9/5).** PC-F `192.168.108.41` ID 1. robot3·robot8 토픽 PC-F 에서 확인 완료. PC 4대 접속 완료(9/5). 남은 것: 공유기 `.41` 예약 요청
 
 ### I-015
 
@@ -364,10 +365,10 @@
 `mro_bringup` · 심각도 상 · 담당 주행 박병후·이시율 · 등록 2026-09-06 (PR #11 PM 검증)
 
 - **내용·재현** — PR #11 은 "베이 A 가 DOCK 폴리곤 안" 이라는 PM 지적을 **폴리곤을 좁혀서**(왼쪽 변 x=−0.675) 풀었다. 토큰 판정(로봇 중심 기준)으로는 맞지만, **물리적으로는 창고 열(x=−0.78)과 도크 접근 지점(x≈−0.45)이 0.3 m 밖에 안 떨어져 있다.** TB4 반경 0.22 m 라 두 로봇 중심이 0.44 m 이상 떨어져야 하는데:
-  - bay A `(−0.78, 0.138)` ↔ approach robot4 `(−0.479, 0.082)` = **0.306 m → 몸통 겹침**
+  - bay A `(−0.78, 0.138)` ↔ approach robot8 `(−0.479, 0.082)` = **0.306 m → 몸통 겹침**
   - bay B `(−0.78, −0.554)` ↔ approach robot3 `(−0.435, −0.710)` = **0.379 m → 몸통 겹침**
   - bay C ↔ approach robot3 = 0.647 m (여유 0.2 m, 아슬아슬)
-  즉 **한 대가 베이 A 에 정차(ArUco 확인·5 초 체류)해 있을 때 다른 대가 robot4 도크로 접근하거나 undock 하면 부딪힌다.** 시나리오상 S4 는 두 대가 같이 베이에 있으므로(A↔B 0.69 m, 괜찮다) 문제없고, **위험한 것은 TS-07 배송 20회처럼 미션이 엇갈릴 때** — 한 대는 셔틀 중, 다른 대는 복귀·undock 중인 순간이다. DOCK 폴리곤이 베이를 제외하도록 좁혀졌으므로 세마포어가 이 경우를 막지 못한다.
+  즉 **한 대가 베이 A 에 정차(ArUco 확인·5 초 체류)해 있을 때 다른 대가 robot8 도크로 접근하거나 undock 하면 부딪힌다.** 시나리오상 S4 는 두 대가 같이 베이에 있으므로(A↔B 0.69 m, 괜찮다) 문제없고, **위험한 것은 TS-07 배송 20회처럼 미션이 엇갈릴 때** — 한 대는 셔틀 중, 다른 대는 복귀·undock 중인 순간이다. DOCK 폴리곤이 베이를 제외하도록 좁혀졌으므로 세마포어가 이 경우를 막지 못한다.
 - **조치·남은 것** — 둘 중 하나. ① **베이 정차점을 서쪽으로 ≥ 0.15 m** (x=−0.78 → ≤ −0.95) 옮긴다. ArUco 거리가 그만큼 늘지만 검출 조건 1.5 m 안이면 된다 — 선반 마커까지의 실거리를 확인할 것. ② 좌표를 못 옮기면 **DOCK 폴리곤을 다시 베이 A·B 까지 넓히고** 셔틀이 베이 A·B 에 정차하는 동안 DOCK 토큰을 쥔다 (두 대 동시 셔틀은 A↔B 가 0.69 m 라 토큰을 나눠 쥐면 된다 — 단 이러면 셔틀과 도킹이 직렬화된다). PM 은 ①을 권한다. **어느 쪽이든 9/9 TS-07 전에 결정한다.**
 
 ### I-026
@@ -422,7 +423,7 @@
   **기준선 주의**: 9/7 낮에 잰 tolerance 진동 데이터는 `update_min_d 0.25` 기준이다. 이 변경 이후 수치와
   섞어 비교하지 않는다.
   **저장소 밖 설정**: `localization.yaml` 은 `turtlebot4_ws`(git 아님)에 있어 **PC 마다 손으로 맞춰야 한다.**
-  I-009 의 `nav2.yaml` 과 같은 종류의 문제다. PC-R4 복제는 `docs/todo.md` 에 두었다.
+  I-009 의 `nav2.yaml` 과 같은 종류의 문제다. PC-R8 복제는 `docs/todo.md` 에 두었다.
 
 ### I-030
 
@@ -448,7 +449,7 @@
 
 `mro_perception` (aruco_detector, amr_detection) · 심각도 중 · 담당 인지 정정인·민범진 · 등록 2026-09-07 (PR #30, 인지 정정인)
 
-- **증상** — 줄자 1.35 m 를 `aruco/distance` 가 0.76 m 로 냈다 (9/7 robot4 실측). robot3 도 `camera_info` 구조가 같다 (fx 566.65 / 569.95, 0.58 % 는 개체 차).
+- **증상** — 줄자 1.35 m 를 `aruco/distance` 가 0.76 m 로 냈다 (9/7 실측, 당시 2호기 robot4). robot3 도 `camera_info` 구조가 같다 (fx 566.65 / 569.95, 0.58 % 는 개체 차).
 - **원인** — 발행 영상은 704×704 정사각 crop 인데 `camera_info` 의 `fx`·`fy` 가 자르기 전 16:9 **전체 폭** 기준으로 줄어 실려 온다 (`cx`·`cy` ≈ 353 은 정상 — 가운데를 잘랐다는 뜻). crop 은 화각만 좁히고 초점거리는 안 바꾸므로 실제 fx 는 16/9 = 1.778 배다. 현장 비 1.35 / 0.76 = 1.776 과 일치. depthai / turtlebot4 설정이라 **저장소 밖** (I-009 와 같은 부류).
 - **영향** — `aruco/distance` 1.74 배 작게 (FR-08 베이 도착 확정 · FR-35 측위 검증) · `target/map_point` 좌우 1.76 배 크게 (1.13 m 지점에서 11.7 cm — 추종 목표가 옆으로 밀린다) · `target/distance` 는 depth 라 영향 없음.
 - **조치 (PR #30, 9/7)** — `core/camera.py` 의 `corrected_K` 가 `fx`·`fy` 에 `camera_fx_scale`(기본 16/9 = 1.7778, `perception.yaml`) 을 곱한다. `aruco_detector` 적용 완료. 합성 검증 두 벌 — 인지 `tools/aruco_offline_check.py`(왜곡 포함) 보정 후 최대 2.4 cm, PM 핀홀 재현(노드 코드 그대로) 0.5~1.45 m 오차 0.3~1.9 cm · 보정 없이 1.35 → 0.770 m 로 현장 0.76 재현. 함께 들어간 것: solvePnP(IPPE_SQUARE) · 자세 실패 시 NaN 대신 `id = -1` · 거리 게이트 `max_distance_m` 1.5 (계약 6절) · `marker_ids` 허용 목록 · 카메라 구독 `sensor_data` QoS.
@@ -459,9 +460,9 @@
   **PM (9/8, PR #40 후속) — 거리 부분은 닫는다.** `aruco/distance` 가 depth 기반으로 바뀌어 초점거리와 무관해졌다. PM 독립 재현(합성 RGB + 정합 depth, 0.5~2.0 m × yaw 0/20/−30° 18조합): **depth 최대 오차 0.79 cm · pnp 3.81 cm.** `radial_from_depth` 의 광축→직선거리 환산이 기울기 30° 에서도 1 cm 안이다.
   **`camera_fx_scale` 은 이제 `target/map_point` 의 좌우 성분과 `aruco/pose` 위치에만 남는다** — 거기서는 여전히 유효하므로 이슈는 그 범위로 좁혀 연다. 남은 것: ① `amr_detection` 에 `corrected_K` + sensor_data QoS.
 
-  **PM (9/8, PR #43) — TS-U05 독립 점 충족. 거리 부분 종결.** 배율 모델이 1.55 m 에서 3.0 cm 틀리는 것을 인지가 실기로 잡았고, 원인이 값이 아니라 **모델 꼴**이었다. 스테레오 오차는 시차에 상수로 붙어 거리 오차가 z² 로 자라므로 배율 하나로는 근·원거리를 동시에 못 맞춘다. 역깊이 보정 `z = scale / (1/z_raw + k)` 로 바꾸고 `k` 는 로봇별(robot3 0.024, robot4 0.0076, `perception.yaml`).
+  **PM (9/8, PR #43) — TS-U05 독립 점 충족. 거리 부분 종결.** 배율 모델이 1.55 m 에서 3.0 cm 틀리는 것을 인지가 실기로 잡았고, 원인이 값이 아니라 **모델 꼴**이었다. 스테레오 오차는 시차에 상수로 붙어 거리 오차가 z² 로 자라므로 배율 하나로는 근·원거리를 동시에 못 맞춘다. 역깊이 보정 `z = scale / (1/z_raw + k)` 로 바꾸고 `k` 는 로봇별이다 — robot3 0.024. **값의 위치가 바뀌었다 (9/8, I-040): `perception.yaml` 이 아니라 `mro_bringup/params/robotN.yaml`.**
   PM 재적합 대조 — **배율을 어떻게 다시 펴도 최선이 1.93~2.07 cm 로 2 cm 문턱에 걸친다**(minimax 0.9653 / 최소제곱 0.9662). k=0.024 는 4점 최대 1.47 cm, **적합에 안 쓴 독립점 1.19 m 에서 −0.47 cm**. 조건(≤ 2 cm) 충족.
-  **robot4 는 독립점이 아직 없다** (2점 적합, 카메라 미장착). 급하지 않다 — robot4 의 ID 4 정차 0.58 m 는 `depth_min` 0.8 아래라 pnp 경로이고, k 가 depth/pnp 비를 통해 미치는 영향은 0.4 cm 수준이다. 카메라가 올라오면 한 점만 잰다.
+  **robot8 은 `k` 가 아예 없다 (9/8).** 종전 2호기 robot4 의 2점 적합값 0.0076 은 그 카메라 개체값이라 robot8 에 쓸 수 없어 `robot8.yaml` 은 `depth_k: 0.0`(보정 없음) 으로 두었다. robot3 0.024 와 robot4 0.0076 이 3 배 차이였던 만큼 옮겨 쓰면 안 된다. **0.8 m 이상 줄자 2점 이상으로 재실측이 필요하다** — robot8 의 ID 4 정차 0.58 m 자체는 `depth_min` 0.8 아래라 pnp 경로지만, 그 pnp 대체값에 곱하는 depth/pnp 비가 `k` 에 걸리므로 FR-35 측위 검증이 여기에 묶인다.
   **미검증 외삽 구간** — k 를 편 범위는 보정값 0.843~1.565 m 인데 발행 한계는 2.0 m 다. 보정량이 1.5 m 에서 −5.2 cm, 2.0 m 에서 −9.2 cm 로 커진다. **계약 6절 수용 조건 1.5 m 가 검증 범위 안**이라 판정에 쓰이는 값은 전부 검증됐고, 1.5~2.0 m 는 '봤다' 기록용이다.
 
 ### I-032
@@ -470,7 +471,7 @@
 
 `mro_webcam` (`tools/kpi_report.py`) · 심각도 중 · 담당 웹캠 한세교·김학민 · 등록 2026-09-07 (PR #33 PM 검증)
 
-- **내용·재현** — `zone_resolution()` 이 `(robot, zone)` 별로 이벤트를 모아 REJECT → GRANT 를 짝짓고, **같은 열에서** RECLAIM 을 찾는다. 그런데 세마포어는 RECLAIM 을 **보유자** ns 로 낸다 (`zone_semaphore_node.py` `self.event(z, h, 'RECLAIM')`, h = holder). 대기자 열에는 RECLAIM 이 절대 오지 않는다. PM 재현 (PR #31 세마포어 코드로 이벤트 생성 → PR #33 `zone_resolution` 에 입력): robot3 GRANT t=0 → robot4 REJECT t=55 → **RECLAIM(robot3)** t=61 → robot4 GRANT t=61. 계약 9절은 "그 사이 같은 구역에 RECLAIM 이 있으면 미해결" 인데 리포트는 6 s 만에 **해결**로 센다. `강제 회수` 카운트도 실로그에서는 항상 0 이 된다. 다른 네 시나리오(정상 3.5 s 해결 · 60 s 초과 · 대기 없는 GRANT · 포기)는 통과.
+- **내용·재현** — `zone_resolution()` 이 `(robot, zone)` 별로 이벤트를 모아 REJECT → GRANT 를 짝짓고, **같은 열에서** RECLAIM 을 찾는다. 그런데 세마포어는 RECLAIM 을 **보유자** ns 로 낸다 (`zone_semaphore_node.py` `self.event(z, h, 'RECLAIM')`, h = holder). 대기자 열에는 RECLAIM 이 절대 오지 않는다. PM 재현 (PR #31 세마포어 코드로 이벤트 생성 → PR #33 `zone_resolution` 에 입력): robot3 GRANT t=0 → robot8 REJECT t=55 → **RECLAIM(robot3)** t=61 → robot8 GRANT t=61. 계약 9절은 "그 사이 같은 구역에 RECLAIM 이 있으면 미해결" 인데 리포트는 6 s 만에 **해결**로 센다. `강제 회수` 카운트도 실로그에서는 항상 0 이 된다. 다른 네 시나리오(정상 3.5 s 해결 · 60 s 초과 · 대기 없는 GRANT · 포기)는 통과.
 - **조치** — RECLAIM 을 **구역 단위** 목록으로 따로 모으고, 각 대기의 `[REJECT, GRANT]` 구간에 그 구역의 RECLAIM 이 하나라도 있으면 미해결로 센다. **구간은 양 끝을 포함한다** — 세마포어가 보유자에게서 뺏은 직후 대기자에게 넘겨 RECLAIM 과 GRANT 의 시각이 같게 찍히므로(재현에서 둘 다 t=61), 반열린 구간으로 두면 같은 결함이 그대로 남는다. `reclaimed` 는 구역 RECLAIM 수. `kpi_logger` 쪽은 바꿀 것 없다 (원문 그대로 적는다). 마감 9/9 — TS-08 교착 20회(9/10) 전.
   **해결 (9/7 저녁, PR #34 한세교).** PM 재대조 — 세마포어(main) 를 실제로 돌려 만든 이벤트열을 수정 전·후에 넣어 8개 시나리오 전부 기대값과 일치. ① 재현(RECLAIM·GRANT 동시) 100.0 % → **0.0 %** ② 정상 해결 ③ 60 s 초과 ④ 미복귀 ⑤ 대기 없는 GRANT ⑥ 포기 ⑦ 두 구역 동시(P1 강제회수·DOCK 정상) ⑧ 대기자 없이 보유만 초과. RECLAIM 이 없는 로그 400건 차등 퍼즈에서 기존 판정과 불일치 0건. 리포트 전 구간 실행도 확인(같은 CSV 에서 100.0 % → 50.0 %).
   **남은 것 (막지 않음, 9/9 TS-08 전)** — ① 함수 docstring 이 아직 `[REJECT, GRANT)` 로 적혀 안쪽 주석과 어긋난다 ② `if rejected_at is not None and reclaimed_between(...): pass` 죽은 코드 ③ **`강제 회수` 가 이제 구역 전체 RECLAIM 수라 대기 건수와 짝이 안 맞는다** — 대기자 없이 보유만 초과해도 세어져 `대기 1 · 자동 해결 1 · 강제 회수 1 → 100.0%` 같은 줄이 나온다(값은 정확하다). TS-08 판독 때 오독하기 쉬우니 라벨을 `강제 회수(구역)` 로 바꾼다.
@@ -483,9 +484,9 @@
 `mro_navigation` (`shuttle_mission_node.py`) · 심각도 상 · 담당 주행 박병후·이시율 · 등록 2026-09-07 (PR #36 PM 검증)
 
 - **내용** — `release_token()` 이 `token_held` 가 False 면 즉시 돌아온다. 그런데 `acquire_p1()` 에서 거절당한 로봇은 **세마포어 대기열에는 이미 들어가 있고** `token_held` 는 False 다. 이 상태에서 T_lim 이 끊으면 `MissionAbort` → `finally` → `release_token` 이 아무것도 하지 않는다. 계약 3절 "토큰을 받았든 못 받았든 반드시 반납을 부른다" 를 이 경로만 어긴다.
-- **재현 (PM, 현재 main 세마포어로)** — robot4 가 P1 보유 → robot3 대기 시작(대기열 `['/robot3']`) → robot3 이 T_lim 으로 포기(반납 없음, 대기열 그대로) → robot4 정상 반납(holder=None, 대기열 `['/robot3']`) → **robot4 재요청 거절**. `cb` 2단계 (a) 가 FIFO 선두(`/robot3`)와 다르면 거절하기 때문이다. `watchdog` 은 `holder` 만 비우므로 60 s 뒤에도 못 푼다. `zone_semaphore_node.cb` 반납 분기의 주석이 정확히 이 상황을 경고하고 있다.
-- **파급** — ① P1 이 남은 운용 내내 잠긴다 (S4·S10 이 둘 다 P1 을 지난다) ② **K-06 도 틀어진다** — 유령 대기열이 만드는 거절이 매번 새 `REJECT` 로 발행돼 짝 없는 대기가 계속 쌓인다. 재현에서 robot4 의 정상 요청이 `REJECT` 로 찍혔다.
-- **조치** — 요청한 적이 있으면 반납한다. `__init__`·`run_mission` 시작에 `self.token_requested = False`, `acquire_p1()` 진입 시 `True`, `release_token` 조건을 `if not (self.token_held or self.token_requested): return` 으로. 반납 후 둘 다 False. 세마포어는 보유한 적 없는 로봇의 반납에 `RELEASE` 를 내지 않으므로 K-06 에 가짜 해결이 생기지 않는다 — 같은 재현에서 대기열이 비고 robot4 가 바로 받는 것을 확인했다.
+- **재현 (PM, 현재 main 세마포어로)** — robot8 가 P1 보유 → robot3 대기 시작(대기열 `['/robot3']`) → robot3 이 T_lim 으로 포기(반납 없음, 대기열 그대로) → robot8 정상 반납(holder=None, 대기열 `['/robot3']`) → **robot8 재요청 거절**. `cb` 2단계 (a) 가 FIFO 선두(`/robot3`)와 다르면 거절하기 때문이다. `watchdog` 은 `holder` 만 비우므로 60 s 뒤에도 못 푼다. `zone_semaphore_node.cb` 반납 분기의 주석이 정확히 이 상황을 경고하고 있다.
+- **파급** — ① P1 이 남은 운용 내내 잠긴다 (S4·S10 이 둘 다 P1 을 지난다) ② **K-06 도 틀어진다** — 유령 대기열이 만드는 거절이 매번 새 `REJECT` 로 발행돼 짝 없는 대기가 계속 쌓인다. 재현에서 robot8 의 정상 요청이 `REJECT` 로 찍혔다.
+- **조치** — 요청한 적이 있으면 반납한다. `__init__`·`run_mission` 시작에 `self.token_requested = False`, `acquire_p1()` 진입 시 `True`, `release_token` 조건을 `if not (self.token_held or self.token_requested): return` 으로. 반납 후 둘 다 False. 세마포어는 보유한 적 없는 로봇의 반납에 `RELEASE` 를 내지 않으므로 K-06 에 가짜 해결이 생기지 않는다 — 같은 재현에서 대기열이 비고 robot8 가 바로 받는 것을 확인했다.
 - **시험** — `test_shuttle_mission_fsm.py` 에 **거절만 반복하다 T_lim 으로 끝나는 시나리오**를 넣는다. 지금 8건 중 이 경로가 없다: `test_token_retry_keeps_at_bay` 는 `[False, False, True]` 라 결국 획득하고, ArUco 불일치 시험은 `token_log == []` 로 애초에 요청하지 않는다.
 - **마감 9/8** — TS-07(9/9)·TS-08(9/10) 전.
 
@@ -540,7 +541,26 @@
 - **지금 당장의 영향은 작다** — 대체 경로가 쓰는 depth/pnp 비 자체가 depth 로 맞춘 자라서 값은 사실상 같다. 9/8 실기 오차도 depth 경로와 구분되지 않았다.
 - **왜 그래도 고쳐야 하나** — ① 비가 쌓이기 전(기동 직후 5 프레임)에는 '못 봤다'로 나가므로 베이 도착 확정이 늦어질 수 있다 ② 비는 `angle_deg ≤ 30` 인 프레임에서만 쌓는데, 대체 비율이 높으면 비를 갱신할 기회가 줄어 오래된 비를 계속 쓴다 ③ **거리의 근거가 실제로는 pnp 라면 I-031 초점거리 결함과 다시 엮인다** — depth 기반이라 무관하다는 PR #40·#43 의 논거가 73 % 의 프레임에서는 간접적으로만 성립한다.
 - **방향** — 인지가 큐 방식 짝짓기(양쪽을 짧은 버퍼에 담고 가장 가까운 stamp 끼리 맞춤)를 제안했다. `depth_wait_s` 를 0.1 로 올리는 것은 임시방편이고 지연이 그대로 발행 지연이 된다.
-- **먼저 확인할 것** — +83 ms 가 robot3 만의 것인지, 카메라가 올라온 뒤 robot4 에서도 같은지.
+- **먼저 확인할 것** — +83 ms 가 robot3 만의 것인지, 카메라가 올라온 뒤 robot8 에서도 같은지.
+
+### I-040
+
+**로봇별 `depth_k` 가 노드에 안 들어가고 있었다 — I-031 보정이 무효**
+
+`mro_perception` · `mro_bringup` · 심각도 상 · 담당 PM · 등록 2026-09-08 (로봇 하드코딩 일반화 작업 중 발견) · **고침**
+
+- **내용** — `perception.yaml` 은 `/**` 에 `depth_k: 0.0` 을 두고 아래에 `/robot3/**: depth_k: 0.024` 를 두었다. 그런데 `robot.launch.py` 가 `parameters=[robotN.yaml, perception.yaml]` 순으로 넘겨서, 실제로 노드에 들어간 값은 **0.024 가 아니라 0.0** 이었다. **PR #43 의 시차 편향 보정이 한 번도 적용된 적이 없다.**
+- **왜 이렇게 되나** — `rcl_yaml_param_parser` 는 와일드카드 패턴마다 묶음을 만들고, **패턴이 처음 나온 순서**대로 묶음을 적용한다. 같은 패턴이 뒤 파일에 또 나오면 먼저 만든 묶음에 합쳐진다. 구체적인 패턴이 광역 패턴을 이기는 규칙은 **없다.**
+
+  | `--params-file` 순서 | robot3 의 `depth_k` |
+  |---|---|
+  | `robot3.yaml`(`/robot3/**`) → `perception.yaml`(`/**`, `/robot3/**`) ← **변경 전** | **0.0** ✗ |
+  | `common.yaml`(`/**`) → `perception.yaml`(`/**`) → `robot3.yaml`(`/robot3/**`) ← 변경 후 | **0.024** ✓ |
+
+  변경 전 순서에서는 `/robot3/**` 묶음이 먼저 생기고 `perception.yaml` 의 `/**` 묶음이 나중에 적용되어 덮었다.
+- **고친 방법** — 로봇별 값(`depth_k`·`dock_pose`)을 `mro_bringup/params/robotN.yaml` 한 곳에 모으고, 런치가 **광역 파일을 먼저, 로봇별 파일을 마지막에** 넘기도록 순서를 바꿨다 (`robot.launch.py`). `perception.yaml` 에서 `/robotN/**` 블록은 삭제했다 — 이 파일이 `robotN.yaml` 보다 먼저 오므로 여기에 다시 넣으면 같은 함정에 다시 빠진다.
+- **확인** — `--params-file` 을 런치와 같은 순서로 준 노드에서 `robot3 → 0.024`, `robot8 → 0.0`(미실측) 을 확인했다.
+- **남은 것** — **거리 관련 실측치를 다시 봐야 한다.** 9/7~9/8 의 `aruco/distance` 로그는 전부 `depth_k = 0` 상태에서 나온 값이다. I-031 의 잔차 표(−0.8~+1.5 cm)는 보정식을 **오프라인으로** 적용해 낸 것이라 유효하지만, **노드가 실제로 낸 거리로 판정한 시험(TS-U05, FR-35 측위 검증)은 다시 돌려야 한다.**
 
 ### I-039
 

@@ -33,7 +33,7 @@ cd ros2_ws && colcon build --symlink-install && source install/setup.bash
 
 | PC | 실행 |
 |---|---|
-| 로봇 제어 PC (로봇당 1대) | `localization` → `nav2`(`ROS_SUPER_CLIENT=False`) 별도 터미널 → `ros2 launch mro_bringup robot.launch.py namespace:=/robot3` (두 번째 로봇은 `/robot4`) |
+| 로봇 제어 PC (로봇당 1대) | `localization` → `nav2`(`ROS_SUPER_CLIENT=False`) 별도 터미널 → `ros2 launch mro_bringup robot.launch.py namespace:=/robot3` (두 번째 로봇은 `/robot8`) |
 | 웹캠1 PC | `ros2 launch mro_bringup webcam1_pc.launch.py` |
 | 웹캠2 PC | `ros2 launch mro_bringup webcam2_pc.launch.py` |
 | 관제 PC | `ros2 launch mro_bringup fleet_pc.launch.py` → http://localhost:5000 (kpi_logger 포함) |

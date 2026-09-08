@@ -24,7 +24,9 @@ from rclpy.qos import qos_profile_sensor_data
 from std_msgs.msg import String, Bool, Float32
 from mro_interfaces.msg import TargetHint, Mission, Intervention, FleetStatus
 
-ROBOT_NAMESPACES = ['/robot3', '/robot4']   # 기본값. bringup params 로 덮어쓸 수 있다
+# 명단의 단일 출처는 mro_bringup/params/fleet.yaml 의 robot_namespaces 다 (fleet_pc.launch.py 가 넘긴다).
+#   여기 값은 런치 없이 노드만 띄웠을 때의 대체값이다. 목록에 없는 로봇은 KPI 에 한 줄도 안 남는다
+ROBOT_NAMESPACES = ['/robot3', '/robot8']
 
 
 class KpiLogger(Node):

@@ -52,7 +52,7 @@ BRD v3.2 1장 요약. 정비사(스케일 인형+RC카)가 관제센터에서 �
 
 ### 1.3 용어
 
-BRD v3.2 부록 B 참조. 본 문서 추가: **PC-R3/PC-R4**(로봇 제어 PC), **PC-W**(웹캠 PC), **PC-F**(관제 PC), **Z-01~Z-09**(아레나 구역, BRD 3.1).
+BRD v3.2 부록 B 참조. 본 문서 추가: **PC-R3/PC-R8**(로봇 제어 PC), **PC-W**(웹캠 PC), **PC-F**(관제 PC), **Z-01~Z-09**(아레나 구역, BRD 3.1).
 
 ---
 
@@ -64,11 +64,11 @@ BRD v3.2 부록 B 참조. 본 문서 추가: **PC-R3/PC-R4**(로봇 제어 PC), 
 
 | ID | 대상 | 요구사항 | 근거 | 상태 |
 |---|---|---|---|---|
-| HW-01 | AMR ×2 | TurtleBot4 Standard (Create3 + RPi4, RPLIDAR A1, OAK-D Pro, 범퍼·클리프, 충전 도크). 네임스페이스 `/robot3`, `/robot4` | BRD 3.1 | [검증됨] 1대 / [미검증] 2대 동시 |
+| HW-01 | AMR ×2 | TurtleBot4 Standard (Create3 + RPi4, RPLIDAR A1, OAK-D Pro, 범퍼·클리프, 충전 도크). 네임스페이스 `/robot3`, `/robot8` | BRD 3.1 | [검증됨] 1대 / [미검증] 2대 동시 |
 | HW-02 | AMR 카메라 | OAK-D RGB 704×704 @10 Hz, aligned depth, subpixel, compressed 전송 (Kn1_mini 프로파일 유지). **설치 높이는 RPLIDAR 보다 위** (9/5 실측 사진 확인) — 렌즈 높이 **23.5 cm**, LiDAR 스캔 높이 **18.5 cm** (9/6 실측, I-005). **`camera_info` 의 fx·fy 가 704×704 crop 영상에 안 맞는다 (I-031, 9/7 실측)** — 자르기 전 16:9 전체 폭 기준으로 줄어 실려 와 실제의 1/1.778. 줄자 1.35 m 가 `aruco/distance` 0.76 m. 로봇 설정(depthai)이라 저장소 밖 — 인지 노드가 `core/camera.corrected_K` 로 보정(`camera_fx_scale` 16/9, 두 노드 공용), TS-U05 줄자로 계수 확정 | 거리 보정식 유효 조건, 가림 판정 기준, **ArUco 거리·`map_point` 의 초점거리 원천** | [검증됨] 프로파일 / [실측 완료] 높이 / **[보정 중] camera_info** |
 | HW-03 | AMR 적재부 | 시험용 고정 적재물 상시 탑재, 급정지·회전 시 이탈 없는 고정 구조 | BR-T21 | [팀 목표] |
 | HW-04 | 도크 | Create3 도크 ×2, Z-03, **도킹점 기준 0.84 m** (AMR 담당 줄자 실측 2026-09-06; 초기 0.9 m 는 어림값. AMCL `dock_pose` 간 0.83 m 와 일치). 좌우 여유 각 0.42 m 로 여유가 없어 로봇별 도크 정면 접근 지점 경유를 조건으로 한다. **IR 차폐판은 두지 않는다** (9/6 TS-U12 로봇별 10회, 차폐 없이 오도킹 0 — I-006 종결). **맵 원점은 SLAM 작성 시점의 단일 기준점으로 고정한다.** 각 도크의 map 좌표(x, y, yaw)는 `arena.yaml` 의 `dock_zone.pose` 에 상수로 기록하고, 로봇은 기동 시 **자신의 도크 좌표값**으로 초기 pose 를 설정한다. 도크가 맵의 기준이 되는 것이 아니라, 도크의 위치가 맵 안의 좌표값이다 | S2/S10 | [실측] 간격 / [미검증] 도킹 성공률·2대 좌표계 일치 |
-| HW-05 | PC-R3, PC-R4 | Ubuntu 24.04, ROS 2 Jazzy, NVIDIA GPU(OAK-D 영상 YOLO 추론), 로봇 Wi-Fi ping ≤ 10 ms | 온보드 인지는 로봇 제어 PC 에서 수행 | [검증됨] 1대 |
+| HW-05 | PC-R3, PC-R8 | Ubuntu 24.04, ROS 2 Jazzy, NVIDIA GPU(OAK-D 영상 YOLO 추론), 로봇 Wi-Fi ping ≤ 10 ms | 온보드 인지는 로봇 제어 PC 에서 수행 | [검증됨] 1대 |
 | HW-06 | PC-W1 / PC-W2 | Ubuntu 24.04, ROS 2 Jazzy, USB 웹캠 1대씩 (640×480, 삼각대). **캡처는 장치 상한 그대로(웹캠1 Jieli 25 fps · 웹캠2 30 fps), YOLO 추론·발행만 10 Hz 로 내린다** (계약 v1.2). 캡처와 처리 속도가 다르므로 **버퍼를 1프레임으로 제한**(`CAP_PROP_BUFFERSIZE=1`)하거나 별도 스레드에서 `grab()` 을 계속 돌리고 처리 시점에 `retrieve()` 한다 — 그러지 않으면 읽지 않은 프레임이 초당 20장씩 쌓여 **몇 초 전 장면을 보게 된다**. 웹캠2 힌트는 유효기간이 2 s 라 버퍼 지연이 그것을 넘으면 로봇이 이미 지나간 위치로 회전한다 | 웹캠1·2 | [팀 목표] 버퍼 처리 / [미검증] 2캠 |
 | HW-07 | PC-F | Ubuntu 24.04, ROS 2 Jazzy, SQLite, Flask. GPU 불필요 | 관제 | [팀 목표] |
 | HW-08 | 웹캠 배치 | **웹캠1: 남쪽 외벽, 출입구 바로 옆 — 출입구만 본다 (9/7, 관제탑 구역 전경 아님 · Q-26 · BRD v3.5) / 웹캠2: 남쪽 외벽, P3 개구부 정면 — 삼각대 최대 높이 (9/5 확정, 9/6 배치도).** 작업공간 바닥과 P3 입구가 프레임에 들어오고 중앙 복도는 시야 밖 — E-1 가림 시험은 작업공간 안에서 수행한다. 호모그래피 기준점은 **프레임 가장자리를 피해 작업공간 안쪽에 6~8점** | S1, E-1 | [확정] 위치 / [팀 목표] 캘리브레이션 |
@@ -91,14 +91,14 @@ BRD v3.2 부록 B 참조. 본 문서 추가: **PC-R3/PC-R4**(로봇 제어 PC), 
 | SW-05 | 웹캠 | YOLO + ByteTrack, 바닥 호모그래피(json), 재탐지 힌트 발행, KPI CSV 로거. **추론·발행 주기는 파라미터 `process_hz`(기본 10)로 노출하고 코드에 박지 않는다.** 시간 기반 상수(히스테리시스, 힌트 유효기간)는 주기가 아니라 초로 계산한다 | [검증됨] 검출·호모그래피 / [미검증] 트래킹·힌트 |
 | SW-06 | 관제 | `fleet_manager`(미션·상태·배터리·종료 시퀀스), `zone_semaphore`(구역 토큰 **`P1`·`DOCK`** — 주행 소관), Flask `control_ui`(요청·뷰어·작업자별/전체 종료·개입 버튼), SQLite 스키마(workers/missions/events) | [검증됨] 세마포어 / [팀 목표] 나머지 |
 | SW-07 | 안전 | `safety_watchdog`: `/scan` 만 구독, 전방 ±35° 0.3 m 이내 → `safety/estop` + `cmd_vel` 0 (20 Hz). YOLO·웹캠·Wi-Fi 비의존 | [검증됨] 코드 / [미검증] 실물 |
-| SW-08 | 파라미터 | 변경 가능한 값은 `mro_bringup/params/{robot3,robot4,arena}.yaml` 로 관리, 코드 하드코딩 금지 | [팀 목표] |
+| SW-08 | 파라미터 | 변경 가능한 값은 `mro_bringup/params/` 로 관리, 코드 하드코딩 금지. `9/8` 공통값 `common.yaml` · 로봇별 `robotN.yaml`(`dock_pose`·`depth_k` 만) · 아레나 `arena.yaml` · 관제 명단 `fleet.yaml` 로 분리 — 로봇 추가는 `robotN.yaml` 1개 + `arena.yaml`·`fleet.yaml` 항목 추가 | [팀 목표] |
 | SW-09 | 저장소 | 담당 단위 패키지, PR 리뷰, `docs/SOT.md`·`interfaces.md` 동기화 | [검증됨] |
 
 ### 2.3 네트워크 요구사항
 
 | ID | 요구사항 | 상태·근거 |
 |---|---|---|
-| NR-01 `9/5 확정` | `ROS_DOMAIN_ID=3` 통일. **Discovery Server 는 PC-F `192.168.108.41` 한 대 (offboard, ID 1).** 로봇 2대는 `turtlebot4-setup` 에서 Offboard IP 를 PC-F 로 설정(onboard 서버 3/4 는 유지하되 PC 는 보지 않음). 모든 PC 는 `ROS_DISCOVERY_SERVER=";192.168.108.41:11811"`. 웹캠 PC 는 `ROS_SUPER_CLIENT=False` | **[검증됨] 9/5 — robot3·robot4 토픽을 PC-F 와 PC 4대 전부에서 확인. 통신 구성 완료** |
+| NR-01 `9/5 확정` | `ROS_DOMAIN_ID=3` 통일. **Discovery Server 는 PC-F `192.168.108.41` 한 대 (offboard, ID 1).** 로봇 2대는 `turtlebot4-setup` 에서 Offboard IP 를 PC-F 로 설정(onboard 서버 3/4 는 유지하되 PC 는 보지 않음). 모든 PC 는 `ROS_DISCOVERY_SERVER=";192.168.108.41:11811"`. 웹캠 PC 는 `ROS_SUPER_CLIENT=False` | **[검증됨] 9/5 — robot3·robot8 토픽을 PC-F 와 PC 4대 전부에서 확인. 통신 구성 완료** |
 | **NR-07** `9/5 종결` | **통신 구성은 프로젝트의 단일 실패 지점이다** — 실패하면 웹캠도 관제도 로봇과 통신하지 못해 S1 등록·S3 요청·힌트·FleetStatus 가 모두 죽는다. 검토한 네 안 중 **① offboard 단일 Discovery Server(PC-F, ID 1)** 로 9/5 에 확정·검증했다(NR-01). ② 2서버 동시 접속 · ③ 멀티캐스트 · ④ 로봇 1대 축소는 폐기. 되돌리는 절차는 `docs/setup.md` | **[검증됨] 9/5** |
 | **NR-08** `신규` | **offboard 구성 시 지켜야 할 것.** ① **PC-F 의 IP 를 고정한다** — DHCP 로 바뀌면 전부 한 번에 끊긴다. 9/7 확인: PC-F 는 학원 지원 노트북이라 재부팅해도 `.41` 유지(학원 확답), 공유기 예약 불필요. ② **PC-F 의 서버를 먼저 띄우고 로봇을 켠다** — 부팅 순서가 중요하다. ③ PC-F 가 **단일 실패 지점**이 되므로 시연 중 그 PC 에서 다른 작업을 하지 않는다. ④ **변경 전 원래 설정을 기록**하고, 로봇이 다른 조와 공용이면 **되돌리는 절차까지** 준비한다 | [팀 목표] |
 | NR-02 | nav2 launch 터미널은 `ROS_SUPER_CLIENT=False`, 그 외 노드·CLI 는 `True` | [검증됨] lifecycle 멈춤 해소 |
@@ -143,7 +143,7 @@ BRD v3.2 부록 B 참조. 본 문서 추가: **PC-R3/PC-R4**(로봇 제어 PC), 
 | ID | 기능 요구사항 | 입력·조건 | 수락 기준 | BRD | TS |
 |---|---|---|---|---|---|
 | FR-07 | 로봇은 `mission/assigned` 를 받으면 베이 waypoint(arena.yaml) 로 이동한다 — 도크와 창고는 벽 없이 이어져 토큰이 필요 없다. **베이를 떠나 대기공간으로 나올 때 P1 토큰을 획득**하고 완전히 빠져나온 뒤 반납한다 | zone_token 서비스 | 토큰 없이 P1 진입 0건 | BR-T09 | TS-U06, TS-08 |
-| FR-08 | 베이 도착은 `aruco/id == 요청 베이 ID` 로 확정하고 N=5 s 체류 후 Z-05 로 이동한다 | **v0.14 (PR #40): 거리는 depth 기반이다** — 0.8 m 이상은 depth 원값 × 로봇별 배율(robot3 0.972 · robot4 0.990), 그 아래는 solvePnP × 최근 depth/pnp 비. **초점거리를 쓰지 않아 I-031 과 무관하다.** PM 독립 재현(합성 RGB + 정합 depth, 0.5~2.0 m × yaw 0/20/−30°): depth 최대 오차 **0.79 cm** · pnp 3.81 cm. **발행 한계 2.0 m 와 수용 조건 1.5 m 를 나눈다**(계약 6절) — 1.5 로 발행을 자르면 정확히 1.5 m 마커가 1.52 로 걸러진다. 주행이 `aruco_max_dist_m` 1.5 로 판정한다 | 오도착 0건 | BR-T06 | TS-U05, TS-U06 |
+| FR-08 | 베이 도착은 `aruco/id == 요청 베이 ID` 로 확정하고 N=5 s 체류 후 Z-05 로 이동한다 | **v0.14 (PR #40): 거리는 depth 기반이다** — 0.8 m 이상은 depth 원값 × 로봇별 배율(robot3 0.972 · 2호기 0.990 — 당시 기체 robot4. **이 배율 모델은 PR #43 에서 역깊이 보정 `depth_k` 로 대체됐다**), 그 아래는 solvePnP × 최근 depth/pnp 비. **초점거리를 쓰지 않아 I-031 과 무관하다.** PM 독립 재현(합성 RGB + 정합 depth, 0.5~2.0 m × yaw 0/20/−30°): depth 최대 오차 **0.79 cm** · pnp 3.81 cm. **발행 한계 2.0 m 와 수용 조건 1.5 m 를 나눈다**(계약 6절) — 1.5 로 발행을 자르면 정확히 1.5 m 마커가 1.52 로 걸러진다. 주행이 `aruco_max_dist_m` 1.5 로 판정한다 | 오도착 0건 | BR-T06 | TS-U05, TS-U06 |
 | FR-09 | 요청 접수 → Z-05 도착 리드타임을 기록하고 T_lim(120 s `[팀 확정]`) 초과 시 미션을 실패로 기록하되 이동은 계속한다. **판정은 T_lim 기준 실패로 확정하고, 나중에 도착한 사실은 `arrived_late` 로 별도 기록한다** — 이중 계상하지 않는다 | DB missions.waiting_at | 성공률 ≥ 95 % | K-05, AC-08 | TS-07 |
 | **FR-35** `신규 9/6` | **대기공간 도착의 측위 검증.** 웹캠1·2 모두 대기공간이 시야 밖이라(I-010) 도착은 로봇의 자기 보고다. 로봇이 P1 을 나와 남향 접근하는 동안 **ArUco ID 4** 가 정면에 들어오면 `fleet_manager` 가 `aruco/distance` 와 `\|amcl_pose − 마커 좌표\|` 를 비교해 **측위**를 검증하고, `WAITING` 시 `amcl_pose` 를 `waiting_zone` 과 대조해 **목표 좌표 도달**을 확인한다. 둘 다 **기록용** — 미션을 막지 않는다. **기준점 주의 (PR #30):** `aruco/distance` 는 카메라→마커, AMCL 차이는 base_link→마커라 상수 오프셋이 있다 — `tf2_echo base_link oakd_rgb_camera_optical_frame` 으로 재서 뺀다 | `aruco/id`·`aruco/distance`·`amcl_pose`, `arena.yaml` `loc_check_marker` | 차 ≤ 10 cm → `localization_verified`. AC-08 보고 시 "성공 n, 그중 측위 확인 m" | AC-08, FR-34 | TS-07 |
 | FR-10 | 두 로봇이 같은 구역 토큰을 요청하면 먼저 요청한 로봇이 통과하고 후행은 대기한다. 보유 60 s 초과 시 강제 회수·기록 | zone_semaphore FIFO | 교착 자동 해결 ≥ 95 %, AMR 간 접촉 0 | BR-T09, AC-09 | TS-08 |
@@ -260,19 +260,19 @@ BRD v3.2 부록 B 참조. 본 문서 추가: **PC-R3/PC-R4**(로봇 제어 PC), 
 ```
                       Wi-Fi  SSID turtle08  /  ROS_DOMAIN_ID = 3
  ┌──────────────┬──────────────┬────────────────────────┬───────────────┬───────────────┐
- │ [PC-W1]      │ [PC-W2]      │ [PC-F]  192.168.108.41 │ [PC-R3]       │ [PC-R4]       │
+ │ [PC-W1]      │ [PC-W2]      │ [PC-F]  192.168.108.41 │ [PC-R3]       │ [PC-R8]       │
  │ Ubuntu 24.04 │ Ubuntu 24.04 │ Ubuntu 24.04 / Jazzy   │ Jazzy + GPU   │ Jazzy + GPU   │
  │ Jazzy        │ Jazzy        │ ★ Discovery Server     │ localization  │ localization  │
  │ mro_webcam   │ mro_webcam   │   ID 1  :11811         │ nav2 · RViz   │ nav2 · RViz   │
  │ webcam_      │ webcam_hint  │ mro_fleet + SQLite     │ mro_perception│ mro_perception│
  │  register    │ (재탐지 힌트)│ Flask control_ui       │ mro_navigation│ mro_navigation│
- │ SUPER_CLIENT │ SUPER_CLIENT │ kpi_logger             │ ns=/robot3    │ ns=/robot4    │
+ │ SUPER_CLIENT │ SUPER_CLIENT │ kpi_logger             │ ns=/robot3    │ ns=/robot8    │
  │  = False     │  = False     │                        │               │               │
  └──────┬───────┴──────┬───────┴───────────┬────────────┴───────┬───────┴───────┬───────┘
         └──────────────┴──── ROS_DISCOVERY_SERVER=";192.168.108.41:11811" ──────┘
                                            │
                         ┌──────────────────┴──────────────────┐
-                   [robot3 TurtleBot4]                  [robot4 TurtleBot4]
+                   [robot3 TurtleBot4]                  [robot8 TurtleBot4]
                     RPi4 / Jazzy                         RPi4 / Jazzy
                     create3 · depthai(OAK-D) · rplidar    (동일)
                     onboard Discovery ID 3 (유지, 미사용)  onboard ID 4 (유지, 미사용)

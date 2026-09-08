@@ -53,7 +53,7 @@ from turtlebot4_navigation.turtlebot4_navigator import TurtleBot4Navigator
 
 from mro_perception.core.target_utils import robot_xy, standoff_goal
 
-DEFAULT_NS = '/robot3'            # 네임스페이스 없이 단독 실행할 때만 쓰는 대체값
+# 네임스페이스 대체값은 두지 않는다 (9/8) — 대체값으로 뜨면 남의 로봇에 goToPose 를 건다
 
 # 계약 4절 토픽 이름. 로봇 노드는 상대 이름을 쓰고 launch 가 namespace 를 붙인다.
 ARRIVED_TOPIC = 'shuttle/arrived'     # 셔틀이 대기공간에 세워놓고 내는 시작 신호
@@ -96,8 +96,13 @@ TICK_S = 0.05                # 메인 루프 주기
 class FollowTarget(Node):
     def __init__(self):
         super().__init__('follow_target')
-        ns = self.get_namespace()
-        self.ns = DEFAULT_NS if ns == '/' else ns
+        self.ns = self.get_namespace().rstrip('/')
+        if not self.ns:
+            raise RuntimeError(
+                'follow_target: 네임스페이스 없이는 뜰 수 없다 — 로봇 노드는 ns 로 자기 로봇을 정한다.\n'
+                '  ros2 launch mro_bringup robot.launch.py namespace:=/robotN\n'
+                '  (단독 실행이면 --ros-args -r __ns:=/robotN)\n'
+                'ns 로 Nav2 액션 서버를 잡는다 — 틀리면 남의 로봇을 움직인다.')
         self.navigator = TurtleBot4Navigator(namespace=self.ns)
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)

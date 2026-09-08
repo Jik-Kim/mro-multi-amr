@@ -31,7 +31,15 @@ class ReturnDock(Node):
         #   ① 토큰 대기 중에는 holding 으로, ② 토큰 획득 후 자기 도크 정면 approach 로 goToPose 한 뒤 dock() 을 부른다.
         #   도크 간격이 0.84 m(실측) 뿐이라 멀리서 dock() 을 부르면 옆 도크로 향할 수 있다 — approach 경유는 선택이 아니라 필수.
         self.flag = False
-        self.ns = self.get_namespace().rstrip('/') or '/robot3'
+        self.ns = self.get_namespace().rstrip('/')
+        if not self.ns:
+            # 대체값을 쓰면 이 노드가 남의 이름으로 DOCK 토큰을 요청·반납해
+            #   **다른 로봇의 도크 점유를 풀어 버린다.** 조용히 틀리느니 여기서 죽는다 (9/8)
+            raise RuntimeError(
+                'return_dock: 네임스페이스 없이는 뜰 수 없다 — 로봇 노드는 ns 로 자기 로봇을 정한다.\n'
+                '  ros2 launch mro_bringup robot.launch.py namespace:=/robotN\n'
+                '  (단독 실행이면 --ros-args -r __ns:=/robotN)\n'
+                '이 노드는 자기 이름으로 DOCK 토큰을 요청하므로 대체값을 쓸 수 없다.')
         self.create_subscription(Bool, 'mission/finish', self.cb, 10)
         self.pub = self.create_publisher(String, 'shuttle/status', 10)
         self.cli = self.create_client(ZoneToken, '/fleet/zone_token')

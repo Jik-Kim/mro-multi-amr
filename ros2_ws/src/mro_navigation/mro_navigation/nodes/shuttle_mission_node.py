@@ -65,7 +65,8 @@ from tf2_ros import Buffer, TransformListener
 from turtlebot4_navigation.turtlebot4_navigator import TurtleBot4Navigator
 import yaml
 
-DEFAULT_NS = '/robot3'          # 네임스페이스 없이 단독 실행할 때만 쓰는 대체값
+# 네임스페이스 대체값은 두지 않는다 (9/8) — ns 가 arena.yaml 의 로봇별 좌표 조회 키라
+#   틀리면 남의 대기공간·도크로 간다. 아래에서 없으면 죽인다
 MISSION_TOPIC = 'mission/assigned'
 STATUS_TOPIC = 'shuttle/status'
 ARRIVED_TOPIC = 'shuttle/arrived'
@@ -86,8 +87,13 @@ class MissionAbort(Exception):
 class ShuttleMission(Node):
     def __init__(self):
         super().__init__('shuttle_mission')
-        ns = self.get_namespace()
-        self.ns = DEFAULT_NS if ns == '/' else ns.rstrip('/')
+        self.ns = self.get_namespace().rstrip('/')
+        if not self.ns:
+            raise RuntimeError(
+                'shuttle_mission: 네임스페이스 없이는 뜰 수 없다 — 로봇 노드는 ns 로 자기 로봇을 정한다.\n'
+                '  ros2 launch mro_bringup robot.launch.py namespace:=/robotN\n'
+                '  (단독 실행이면 --ros-args -r __ns:=/robotN)\n'
+                'ns 가 arena.yaml 의 waiting_zone·dock_zone 조회 키다 — 틀리면 남의 자리로 간다.')
         self.robot = self.ns.strip('/')          # arena.yaml 의 키는 'robot3' (슬래시 없음)
         self.navigator = TurtleBot4Navigator(namespace=self.ns)
 
@@ -405,7 +411,7 @@ class ShuttleMission(Node):
         v = [float(a) for a in (self.p('dock_pose') or [])]
         if len(v) != 3 or all(a == 0.0 for a in v):
             # (0,0,0) 은 파라미터가 안 들어왔다는 뜻으로 본다. 실제 도크는 robot3 [0.019,-0.795,0.133],
-            #   robot4 [-0.023,0.034,-0.052] 라 원점과 겹치지 않는다. 원점으로 초기화하는 것이
+            #   robot8 [-0.023,0.034,-0.052] 라 원점과 겹치지 않는다. 원점으로 초기화하는 것이
             #   바로 두 map 프레임을 어긋나게 하는 실수다 (I-013) — 조용히 진행하지 않고 포기한다.
             raise MissionAbort(
                 f'dock_pose 가 유효하지 않다 ({v}) — robotN.yaml 의 dock_pose 를 확인할 것. '

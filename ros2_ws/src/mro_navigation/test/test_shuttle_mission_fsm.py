@@ -41,6 +41,8 @@ from rclpy.node import Node
 from rclpy.parameter import Parameter
 
 ARENA = Path(__file__).resolve().parents[2] / 'mro_bringup' / 'params' / 'arena.yaml'
+# 테스트용 네임스페이스. arena.yaml 의 waiting_zone·dock_zone 에 키가 있는 로봇이어야 한다
+TEST_NS = '/robot3'
 BASE = {
     'dock_pose': [0.019, -0.795, 0.133],
     'bay_dwell_s': 0.2,
@@ -145,8 +147,12 @@ def _shuttle_mission_class():
 
 @pytest.fixture(scope='module')
 def ros():
-    """arena.yaml 경로를 전역 파라미터로 넘긴 채 rclpy 를 띄운다 (install 공간에 의존하지 않게)."""
-    rclpy.init(args=['--ros-args', '-p', f'arena_yaml:={ARENA}'])
+    """arena.yaml 경로를 전역 파라미터로 넘긴 채 rclpy 를 띄운다 (install 공간에 의존하지 않게).
+
+    네임스페이스도 함께 준다 — 노드가 ns 없이는 뜨지 않는다 (9/8). ns 는 arena.yaml 의
+    waiting_zone·dock_zone 조회 키라 대체값을 쓰면 남의 자리로 가므로, 대체값 대신 죽게 했다.
+    """
+    rclpy.init(args=['--ros-args', '-r', f'__ns:={TEST_NS}', '-p', f'arena_yaml:={ARENA}'])
     yield
     rclpy.shutdown()
 

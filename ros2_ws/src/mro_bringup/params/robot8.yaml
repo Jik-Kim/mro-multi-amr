@@ -1,23 +1,17 @@
-# 로봇별 파라미터. launch 가 namespace:=robot4 와 함께 로드한다.
-/robot4/**:
+# robot8 전용 값 — **로봇마다 달라야 하는 것만** 둔다. 공통값은 common.yaml 이 단일 출처다.
+# robot.launch.py 가 namespace:=/robot8 일 때 이 파일을 마지막으로 넘긴다 (common·perception 을 이긴다).
+#
+# robot4 하드웨어 이슈로 9/8 교체 투입. 도크 슬롯은 robot4 자리를 그대로 쓴다.
+/robot8/**:
   ros__parameters:
-    robot_ns: /robot4
-    follow_standoff_m: 0.5
-    min_separation_m: 0.3
-    v_max: 0.3
-    reid_threshold: 0.6
-    bay_dwell_s: 5.0
-    t_lim_s: 120.0
-    t_ret_s: 180.0
-    dock_retry: 2
-    # ── shuttle_mission (PR #36, 주행 요청으로 PM 이관 9/7). 값의 단일 출처는 여기다 (계약 5절)
-    bay_advance_m: 0.3        # 베이 도착 후 창고 안쪽 전진. xy_goal_tolerance 0.25 고정이라 실이동은 0.05~0.3 로 흔들린다 (I-029). 선반 설치 후 재검토
-    aruco_max_dist_m: 1.5     # 계약 6절 검출 조건. 인지도 max_distance_m 로 이미 자른다 (PR #30) — 이중 방어
-    aruco_valid_s: 1.0        # aruco/id 와 aruco/distance 는 헤더가 없어 각자 수신 시각으로 신선도를 본다
-    aruco_confirm_s: 3.0      # 베이 도착 확정까지 마커를 기다리는 시간
-    aruco_retry: 1            # 미확인 시 정차 자세 재정렬 횟수. 넘으면 오도착으로 포기 (FR-08)
-    token_retry_s: 2.0        # 계약 3절 '거절되면 2초 후 재요청'
-    nav2_poll_s: 5.0          # bt_navigator 가 active 가 될 때까지 폴링 간격
-    # ★ 자신의 도크의 map 좌표 [x, y, yaw_rad]. arena.yaml 의 dock_zone.pose.robot4 와 같은 값.
-    #   각 로봇이 (0,0) 으로 초기화하면 두 map 프레임이 어긋난다 (9/5). 9/6 실측
+    robot_ns: /robot8
+    # ★ 자신의 도크의 map 좌표 [x, y, yaw_rad]. arena.yaml 의 dock_zone.pose.robot8 과 같은 값.
+    #   각 로봇이 (0,0) 으로 초기화하면 두 map 프레임이 어긋난다 (9/5).
+    #   값은 robot4 가 쓰던 도크의 9/6 실측이다 — 도크의 좌표라 로봇이 바뀌어도 유효하지만,
+    #   robot8 첫 도킹 후 amcl_pose 로 한 번 재확인할 것 (기체 개체차 · 도킹 자세 차이).
     dock_pose: [-0.023, 0.034, -0.052]
+    # ⚠ [인지 재실측 필요 — robot8 투입 9/8] ArUco 역깊이 편향, 1/m. **카메라 개체값이다.**
+    #   robot4 의 0.0076 은 robot4 카메라의 값이라 여기 쓸 수 없다. 0.0 = 보정 없음(원값 그대로).
+    #   재실측: 0.8 m 이상 줄자 2점 이상에서 k = 평균(1/줄자 − 1/원값). 참고로 robot3 은 0.024, robot4 는 0.0076
+    #   이었다 — 3 배 차이가 나므로 대충 옮겨 쓰면 안 된다. FR-35 측위 검증(ID 4, 0.58 m 정차)이 여기에 걸린다.
+    depth_k: 0.0

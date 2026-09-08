@@ -110,7 +110,9 @@ median 이 28 % 느리고, 그 여유를 캡처·ROS·Nav2 에 남겨두는 편�
 추론(7.3 ms)보다 **프레임이 오는 주기(100 ms)** 가 훨씬 크다. 추론을 0 으로 만들어도 그것은 안 없어지므로,
 더 작은 모델로 내려도 전체 지연은 거의 줄지 않는다.
 
-| 항목 | robot3 | robot4 |
+아래 2호기 수치는 **교체 전 기체 robot4 에서 잰 값**이다 (9/8 robot8 로 교체). 카메라가 다르므로 참고값으로만 본다.
+
+| 항목 | robot3 | 2호기(구 robot4) |
 |---|---|---|
 | `oakd/rgb/image_raw/compressed` | 9.30 Hz | 9.45 Hz |
 | `oakd/stereo/image_raw/compressedDepth` | 9.15 Hz | 9.45 Hz |

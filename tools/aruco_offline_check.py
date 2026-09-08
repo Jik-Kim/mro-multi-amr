@@ -25,7 +25,8 @@ Z 가 곧 그 화소의 depth 라, depth 영상도 같은 렌더에서 나온다
 **영상은 언제나 실제 카메라(fx = camera_info × --true-scale)로 렌더하고, 푸는 쪽만 --scale 을 바꾼다.**
 둘 다 바꾸면 계수가 뭐든 자기일관이라 아무것도 검증하지 못한다 — --scale 1.0 이 합격으로 나온다.
 
-카메라 값은 robot4 실측이다 (9/7, `ros2 topic echo /robot4/oakd/rgb/camera_info`).
+카메라 값은 9/7 실측이다 (당시 2호기 robot4, `ros2 topic echo /robot4/oakd/rgb/camera_info`).
+9/8 로 robot8 교체 — 카메라가 다르므로 robot8 로 다시 받아야 한다.
 robot3 은 fx 566.654 로 0.58 % 다를 뿐 구조는 같다.
 """
 import argparse
