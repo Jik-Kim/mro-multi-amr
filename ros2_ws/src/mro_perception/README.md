@@ -60,6 +60,9 @@ ros2 run rqt_image_view rqt_image_view /robot3/target/image/compressed   # 오�
 | `bbox_inner` | 0.5 | 거리 측정 bbox 중심부 비율 | — |
 | `sync_slop_s` | 0.1 | RGB·depth 시각 차 허용 | 동기화 쌍이 안 나오면 0.2 |
 | `show_window` | true | 미리보기 창 | SSH 면 false |
+| `jpeg_quality` | 80 | `target/image/compressed` 품질 | 웹캠 노드와 같은 값 유지 |
+| `diag_log_s` | 1.0 | `[diag]` 계측 로그 주기 | 0 이면 끔. 렉 의심될 때 1 |
+| `tf_wait_s` | 0.0 | `to_map` 이 TF 를 기다리는 시간 | **항상 0.** 1.0 은 9/8 렉 재현용 (7절) |
 
 실행 중 바꾸기: `ros2 param set /robot3/amr_detection detect_conf 0.6` (다음 프레임부터는 안 먹는 값도 있다 — `sync_slop_s`·`show_window` 는 재시작).
 
@@ -100,8 +103,9 @@ python3 tools/reid_threshold.py --dataset <그 폴더> --splits train --current 
 
 ## 6. 알아둘 것
 
-- 카메라 구독은 **최신 한 장만**(BEST_EFFORT·depth 1, 동기화 큐 3). 처리가 밀려도 묵은 프레임을 재생하지 않고 건너뛴다 —
-  `[diag]` 의 `age` 가 항상 한 프레임 간격 근처여야 정상. 커지면 입력 쪽(RPi·Wi-Fi·시계) 문제다 (9/8 A-1)
+- 카메라 구독은 **최신 한 장만**(BEST_EFFORT·depth 1). 처리가 밀려도 묵은 프레임을 재생하지 않고 건너뛴다 —
+  `[diag]` 의 `age` 가 항상 한 프레임 간격 근처여야 정상. 커지면 입력 쪽(RPi·Wi-Fi) 문제다 (9/8 A-1).
+  동기화 큐(`SYNC_QUEUE` 20)는 rgb·depth **도착 시차** 허용치라 줄이면 안 된다 — 3 으로 뒀다가 짝이 안 맞아 처리 0 이 났다
 - 검출은 시작 신호 없이 항상 켜진다 (계약 v1.10). 셔틀 중 작업자를 스치면 `visible` 이 토글되고, `kpi_report.py` 의 K-04 가
   FOLLOWING 구간으로 안 걸러 Lost 로 셀 수 있다 — 웹캠팀 이슈
 - `follow_target` 이 `target/paired` 를 보고 추종을 시작하는 연동은 주행 TODO ④. 그 전까지 `paired` 는 발행만 된다
