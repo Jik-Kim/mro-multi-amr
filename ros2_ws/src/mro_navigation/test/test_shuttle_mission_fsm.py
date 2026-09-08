@@ -371,19 +371,20 @@ def test_bay_approach_without_marker_pose_aborts(ros):
 
 
 def test_bay_approach_drives_to_target_range(ros):
-    """마커가 1.0 m 앞이면 기본 목표 0.7 m 까지 0.3 m 접근한다 — 옛 0.3 m 전진을 대신한다.
+    """마커가 1.0 m 앞이면 기본 목표 0.9 m 까지 0.1 m 접근한다 — 옛 0.3 m 전진을 대신한다.
 
-    **기본값 0.7 을 여기서 못 박는다** (9/8 주행 결정). 0.6 은 실주행에서 옆벽에 붙어 서고
-    거기서 나오지도 못했다. 값이 바뀌면 이 시험이 먼저 알려준다.
+    **기본값 0.9 를 여기서 못 박는다.** 9/8 실측에서 선반 앞면이 마커 벽에서 0.425 m 앞이라
+    (마커까지 0.715 m 일 때 워치독이 전방 0.29 m 를 봤다) 워치독·Nav2 충돌 예측 양쪽의
+    하드 바닥이 0.80 m 다. 0.5·0.6·0.7 은 전부 그 아래여서 실패했다. 값이 바뀌면 여기서 먼저 드러난다.
     """
     node = make_node(bay_align_enable=True, bay_align_max_iter=1)
     stub_token(node, [True])
     fresh_marker(node)
     marker_frames(node, fwd=1.0, lat=0.0)
-    assert node.p('bay_marker_range_m') == 0.7
+    assert node.p('bay_marker_range_m') == 0.9
     node.run_mission(assigned('A'))
     # 정면이라 첫 회전·마지막 회전이 0 이고 직진만 남는다
-    assert approach_moves(node) == [('drive', 0.3)]
+    assert approach_moves(node) == [('drive', 0.1)]
     assert node.status_log[-2:] == ['WAITING', 'READY']
     node.destroy_node()
 
@@ -495,6 +496,20 @@ def test_turns_below_spin_resolution_are_not_commanded(ros):
     node.run_mission(assigned('A'))
     moves = approach_moves(node)
     assert [m[0] for m in moves] == ['drive']    # 회전 없이 직진만
+    node.destroy_node()
+
+
+def test_pose_without_matching_marker_id_is_not_used(ros):
+    """`aruco/pose` 에는 ID 가 없다 — 기대한 마커가 지금 안 보이면 자세를 쓰지 않는다.
+
+    검출기는 여럿 보이면 **가장 가까운 하나**만 낸다. 옆 베이 마커로 바뀌는 순간의 자세를
+    그대로 믿으면 엉뚱한 곳으로 접근한다. 같은 프레임에서 함께 나오는 aruco/id·distance 로 건다.
+    """
+    node = make_node(bay_align_enable=True)
+    marker_frames(node, fwd=1.0, lat=0.0)        # 자세 표본은 있지만
+    fresh_marker(node, marker_id=2)              # 지금 보이는 것은 베이 B 의 마커다
+    assert node.marker_sample(expect_id=1) is None
+    assert node.marker_sample(expect_id=2) is not None   # 기대가 맞으면 쓴다
     node.destroy_node()
 
 

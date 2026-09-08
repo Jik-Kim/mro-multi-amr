@@ -106,6 +106,7 @@ def test_camera_tf_arriving_late_does_not_lose_the_run():
 
     node.tf_buffer.lookup_transform = lookup
     node.create_timer(0.3, lambda: late.__setitem__('ready', True))
+    fresh_marker(node)                # aruco/pose 는 ID 가 없다 — id·거리로 걸러진다
     marker_frames(node, fwd=1.0, lat=0.0)
     try:
         node.approach_and_align(node.arena['bays']['A'])
@@ -123,6 +124,7 @@ def test_missing_pose_cannot_start_approach():
     """
     node = make_node(bay_align_enable=True, tf_pose_timeout_s=0.1)
     camera_tf_only(node)
+    fresh_marker(node)                # aruco/pose 는 ID 가 없다 — id·거리로 걸러진다
     marker_frames(node, fwd=1.0, lat=0.0)
     try:
         from mro_navigation.nodes.shuttle_mission_node import MissionAbort
@@ -168,6 +170,7 @@ def test_approach_waits_for_updated_pose():
     node = make_node(bay_align_enable=True, bay_align_max_iter=1, tf_pose_timeout_s=1.0)
     feed_pose(node, -0.65, -0.02, yaw=yaw_ref, age=2.0)          # 처음엔 2 초 지연된 좌표뿐
     node.create_timer(0.05, lambda: feed_pose(node, -0.65, -0.02, yaw=yaw_ref))
+    fresh_marker(node)                # aruco/pose 는 ID 가 없다 — id·거리로 걸러진다
     marker_frames(node, fwd=1.0, lat=0.0)
     try:
         node.approach_and_align(node.arena['bays']['A'])

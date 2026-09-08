@@ -212,11 +212,16 @@ class ShuttleMission(Node):
         # 베이 정렬 보정 (9/8 추가) — 값의 단일 출처는 common.yaml. 여기 기본값은 대체값이다.
         self.declare_parameter('bay_align_enable', True)
         # 접근이 끝났을 때 마커가 base_link 에서 있어야 할 자리 = 이 미션의 최종 정차 위치다.
-        #   0.7 m 는 옛 '창고 안쪽 0.3 m 전진' 을 대신한다 (9/8 주행 결정). 0.6 은 실주행에서
-        #   옆벽에 붙어 섰고 **거기서 나오지도 못했다** — 후진 금지라 좁은 칸에서 제자리 회전으로
-        #   방향을 바꿔야 하는데 92 초 동안 안 풀렸다. 들어가는 것보다 나오는 것이 어렵다.
+        #   **0.9 m 는 추정이 아니라 실측에서 나온 값이다 (9/8).** 접근 2회차에 마커까지
+        #   0.715 m 였을 때 워치독이 `ESTOP: 전방 0.29 m` 를 냈다 — 빼면 **선반 앞면이 마커
+        #   벽에서 0.425 m 앞**이다. 여기서 바닥이 계산된다:
+        #     워치독이 안 울리려면   0.425 + clear_dist 0.38  = 0.805 m
+        #     Nav2 충돌 예측을 피하려면 0.425 + 0.379          = 0.804 m
+        #   즉 **0.80 m 가 하드 바닥**이고 0.6·0.7 은 그 아래라 실패한 것이 당연했다. 0.9 는
+        #   양쪽에 10 cm 씩 여유를 둔 값이다. 옛 '0.3 m 전진' 이 세우던 자리가 0.87 m 였는데,
+        #   우연히 이 바닥 바로 위여서 지금까지 이 문제가 안 드러났다.
         #   좌우 치우침 목표는 두지 않는다 — approach_translation 의 설명 참조 (9/8 실주행).
-        self.declare_parameter('bay_marker_range_m', 0.7)
+        self.declare_parameter('bay_marker_range_m', 0.9)
         # 목표 거리 자체의 하한. footprint 외접 0.189 라 0.35 면 벽까지 여유 0.16 m 다.
         #   이보다 가까운 목표는 설정 오류로 보고 포기한다 — 선반에 밀어 넣는 것을 막는다
         self.declare_parameter('bay_align_min_range_m', 0.35)
@@ -826,14 +831,24 @@ class ShuttleMission(Node):
             return None                       # 수평 성분이 없다 — 방위를 낼 수 없다
         return p.position.x, p.position.y, math.atan2(ny, nx)
 
-    def marker_sample(self):
+    def marker_sample(self, expect_id=None):
         """여러 프레임의 중앙값으로 한 점을 만든다. 표본을 못 모으면 None.
+
+        **expect_id 를 주면 그 마커가 지금 보일 때만 쓴다.** `aruco/pose` 에는 ID 가 없어서
+        (계약 4절) 이 토픽만 보면 어느 마커의 자세인지 알 수 없다. 검출기는 여럿 보이면 가장
+        가까운 하나만 내므로, 옆 베이 마커로 바뀌는 순간의 자세를 그대로 쓰면 엉뚱한 곳으로
+        간다. 같은 프레임에서 함께 나오는 `aruco/id`·`aruco/distance` 로 걸러 준다.
 
         중앙값을 쓰는 이유 — 한 프레임이 튀어도(두 해 뒤집힘·ROI 오염) 보정량이 끌려가지 않는다.
         법선 방위는 π 근처라 그대로 중앙값을 내면 π 와 −π 가 섞이므로 첫 표본 기준으로 접어서 낸다.
         """
         want = max(1, int(self.p('bay_align_samples')))
         window = self.positive_parameter('bay_align_sample_s')
+        if expect_id is not None and not self.aruco_ok(expect_id):
+            self.get_logger().warn(
+                f'마커 {expect_id} 가 지금 보이지 않는다 — 자세 표본을 쓰지 않는다 '
+                '(aruco/pose 에는 ID 가 없어 옆 베이 마커일 수 있다)')
+            return None
         self.aruco_poses.clear()
         self.wait(lambda: len(self.aruco_poses) >= want, timeout=window)
         frames = list(self.aruco_poses)
@@ -1035,7 +1050,7 @@ class ShuttleMission(Node):
             f'베이 접근 — 마커를 향해 곧장 {r_target:.2f} m 까지 들어간다 '
             '(좌우 치우침은 보정하지 않는다 — 좁은 칸에서 옆걸음은 옆벽으로 민다)')
         for i in range(1, iters + 1):
-            sample = self.marker_sample()
+            sample = self.marker_sample(bay['aruco_id'])
             if sample is None:
                 raise MissionAbort(
                     f'{ARUCO_POSE_TOPIC} 표본 없음 — 접근할 기준이 없다. aruco_detector 가 떠 '
@@ -1062,7 +1077,7 @@ class ShuttleMission(Node):
                     f'접근 이동량 {step:.3f} m 가 상한 {max_step:.3f} m 를 넘는다 — 마커 측정이나 '
                     'bay_marker_range_m 를 의심할 것 (이대로 움직이면 선반에 부딪힐 수 있다)')
             self.relative_move(tx, ty, phi, f'접근 {i}')
-        final = self.marker_sample()
+        final = self.marker_sample(bay['aruco_id'])
         if final is None:
             self.get_logger().warn('접근 후 마커를 다시 못 봤다 — 잔차를 남기지 못한다')
         else:
