@@ -67,7 +67,7 @@ def marker_texture(mid, px=400):
 
 
 def sensor_depth_mm(z_true_m):
-    """참 거리 → 센서 원값(mm). 노드는 원값 × depth_scale 을 쓰므로(배율 1.0 가정) 원값 = 참값으로 둔다."""
+    """참 거리 → 센서 원값(mm). 노드는 원값에 calibrated_depth(k, scale) 를 걸므로(k=0·배율 1.0 가정) 원값 = 참값으로 둔다."""
     return (z_true_m * 1000.0).astype(np.uint16)
 
 

@@ -24,10 +24,15 @@ import os
 
 import cv2
 import numpy as np
-import rclpy
-from cv_bridge import CvBridge
-from rclpy.node import Node
-from sensor_msgs.msg import CompressedImage, Image
+
+try:                                   # ROS 는 아래 뷰어 노드(DepthViewer)만 쓴다
+    import rclpy
+    from cv_bridge import CvBridge
+    from rclpy.node import Node
+    from sensor_msgs.msg import CompressedImage, Image
+except ImportError:                    # ROS 없이 roi_distance·decode_compressed_depth 만 쓰는 경우
+    rclpy = CvBridge = CompressedImage = Image = None   # (core/aruco 단위 테스트, tools/aruco_offline_check)
+    Node = object
 
 # =====================================================================
 # 설정
