@@ -32,6 +32,7 @@ setup(
         'console_scripts': [
             'webcam_register_node = mro_webcam.nodes.webcam_register_node:main',
             'webcam_hint_node = mro_webcam.nodes.webcam_hint_node:main',
+            'test_subscription = mro_webcam.nodes.test_subscription:main',
             'webcam2 = mro_webcam.nodes.webcam2:main',
             'kpi_logger_node = mro_webcam.nodes.kpi_logger_node:main',
             'calibrate_homography = mro_webcam.core.homography:main',
