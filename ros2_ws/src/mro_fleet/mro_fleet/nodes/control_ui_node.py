@@ -4,10 +4,11 @@ rclpy executor는 별도 스레드에서 돌고 Flask는 메인 스레드에서 
 """
 import os
 import threading
+import time
 
 from ament_index_python.packages import get_package_share_directory
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_file
 
 from mro_interfaces.msg import FleetStatus, Intervention
 from mro_interfaces.srv import ManualPair, OperatorCommand, RequestMission
@@ -18,9 +19,97 @@ from rclpy.node import Node
 
 from std_msgs.msg import String
 
+import yaml
+
 
 DEFAULT_ROBOTS = ['/robot3', '/robot8']
 PAIR_STATES = {'PAIRED', 'GATE_FAIL', 'NO_TARGET'}
+
+
+def _default_map_yaml_path():
+    """통합 워크스페이스에 설치된 기본 아레나 맵을 찾는다."""
+    try:
+        share = get_package_share_directory('mro_bringup')
+    except Exception:  # 설치 전에는 빈 값으로 UI를 계속 실행한다.
+        return ''
+    return os.path.join(share, 'maps', 'auto_map.yaml')
+
+
+def _default_arena_yaml_path():
+    """통합 워크스페이스에 설치된 기본 아레나 설정을 찾는다."""
+    try:
+        share = get_package_share_directory('mro_bringup')
+    except Exception:  # 설치 전에는 빈 값으로 UI를 계속 실행한다.
+        return ''
+    return os.path.join(share, 'params', 'arena.yaml')
+
+
+def _pgm_size(path):
+    """P2/P5 PGM 헤더에서 이미지 크기만 읽는다."""
+    with open(path, 'rb') as stream:
+        tokens = []
+        while len(tokens) < 4:
+            line = stream.readline()
+            if not line:
+                break
+            line = line.split(b'#', 1)[0]
+            tokens.extend(line.split())
+    if len(tokens) < 4 or tokens[0] not in {b'P2', b'P5'}:
+        raise ValueError('지원하지 않는 PGM 형식')
+    width, height = int(tokens[1]), int(tokens[2])
+    if width <= 0 or height <= 0:
+        raise ValueError('PGM 크기는 양수여야 함')
+    return width, height
+
+
+def load_map_config(yaml_path):
+    """Nav2 맵 YAML과 PGM을 검증해 웹용 메타데이터로 바꾼다."""
+    if not yaml_path:
+        raise ValueError('map_yaml_path가 비어 있음')
+    yaml_path = os.path.realpath(os.path.expanduser(yaml_path))
+    with open(yaml_path, encoding='utf-8') as stream:
+        source = yaml.safe_load(stream) or {}
+    image = source.get('image', '')
+    image_path = os.path.realpath(
+        image if os.path.isabs(image)
+        else os.path.join(os.path.dirname(yaml_path), image)
+    )
+    resolution = float(source['resolution'])
+    origin = [float(value) for value in source['origin']]
+    if resolution <= 0.0 or len(origin) != 3:
+        raise ValueError('맵 resolution 또는 origin 형식 오류')
+    width, height = _pgm_size(image_path)
+    return {
+        'yaml_path': yaml_path,
+        'image_path': image_path,
+        'width': width,
+        'height': height,
+        'resolution': resolution,
+        'origin': origin,
+        'negate': int(source.get('negate', 0)),
+        'occupied_thresh': float(source.get('occupied_thresh', 0.65)),
+        'free_thresh': float(source.get('free_thresh', 0.196)),
+    }
+
+
+def load_dock_landmarks(yaml_path):
+    """arena.yaml에서 로봇별 도킹 기준 자세를 읽는다."""
+    if not yaml_path:
+        raise ValueError('arena_yaml_path가 비어 있음')
+    with open(
+        os.path.realpath(os.path.expanduser(yaml_path)), encoding='utf-8'
+    ) as stream:
+        source = yaml.safe_load(stream) or {}
+    poses = source['arena']['dock_zone']['pose']
+    landmarks = []
+    for robot, values in poses.items():
+        pose = [float(value) for value in values]
+        if len(pose) != 3:
+            raise ValueError(f'{robot} dock pose 형식 오류')
+        landmarks.append({
+            'robot': str(robot), 'x': pose[0], 'y': pose[1], 'yaw': pose[2]
+        })
+    return landmarks
 
 
 class ControlUI(Node):
@@ -31,10 +120,38 @@ class ControlUI(Node):
         super().__init__('control_ui')
         self.declare_parameter('robot_namespaces', DEFAULT_ROBOTS)
         self.declare_parameter('manual_pair_timeout_s', 3.0)
+        self.declare_parameter('status_stale_s', 2.5)
+        self.declare_parameter('map_yaml_path', _default_map_yaml_path())
+        self.declare_parameter('arena_yaml_path', _default_arena_yaml_path())
         self.robots = list(self.get_parameter('robot_namespaces').value)
         self.manual_pair_timeout_s = float(
             self.get_parameter('manual_pair_timeout_s').value
         )
+        self.status_stale_s = float(
+            self.get_parameter('status_stale_s').value
+        )
+        if self.status_stale_s <= 0.0:
+            raise ValueError('status_stale_s must be positive')
+        self.map_config = None
+        self.map_error = ''
+        try:
+            self.map_config = load_map_config(
+                str(self.get_parameter('map_yaml_path').value)
+            )
+        except (
+            KeyError, OSError, TypeError, ValueError, yaml.YAMLError
+        ) as error:
+            self.map_error = str(error)
+            self.get_logger().warn(f'웹 맵을 불러오지 못함: {error}')
+        self.dock_landmarks = []
+        try:
+            self.dock_landmarks = load_dock_landmarks(
+                str(self.get_parameter('arena_yaml_path').value)
+            )
+        except (
+            KeyError, OSError, TypeError, ValueError, yaml.YAMLError
+        ) as error:
+            self.get_logger().warn(f'도크 기준 좌표를 불러오지 못함: {error}')
         self.status = {}
         self.status_lock = threading.Lock()
         self.create_subscription(
@@ -72,6 +189,7 @@ class ControlUI(Node):
             'mission': message.mission_id,
             'worker': message.paired_worker,
             'estop': message.estop,
+            '_received_monotonic': time.monotonic(),
         }
         with self.status_lock:
             status['pair_state'] = self.status.get(
@@ -90,11 +208,22 @@ class ControlUI(Node):
             self.status.setdefault(namespace, {})['pair_state'] = message.data
 
     def _status_snapshot(self):
+        """웹 UI에 로봇별 최신 상태와 수신 경과 시간을 반환한다."""
+        now = time.monotonic()
         with self.status_lock:
-            return {
-                namespace: values.copy()
-                for namespace, values in self.status.items()
-            }
+            snapshot = {}
+            for namespace, values in self.status.items():
+                copied = values.copy()
+                received = copied.pop('_received_monotonic', None)
+                if received is None:
+                    copied['age_s'] = None
+                    copied['stale'] = True
+                else:
+                    age_s = max(0.0, now - received)
+                    copied['age_s'] = round(age_s, 3)
+                    copied['stale'] = age_s > self.status_stale_s
+                snapshot[namespace] = copied
+            return snapshot
 
     def _call(self, client, service_request, timeout_sec=2.0):
         if not client.wait_for_service(timeout_sec=1.0):
@@ -202,6 +331,35 @@ def main():
     def status():
         """가장 최근 로봇 상태의 복사본을 반환한다."""
         return jsonify(node._status_snapshot())
+
+    @app.route('/map/metadata')
+    def map_metadata():
+        """웹 좌표 변환에 필요한 실제 맵 메타데이터를 반환한다."""
+        if node.map_config is None:
+            return jsonify(ok=False, message=node.map_error), 503
+        return jsonify(
+            ok=True,
+            width=node.map_config['width'],
+            height=node.map_config['height'],
+            resolution=node.map_config['resolution'],
+            origin=node.map_config['origin'],
+            negate=node.map_config['negate'],
+            occupied_thresh=node.map_config['occupied_thresh'],
+            free_thresh=node.map_config['free_thresh'],
+            image_url='/map/image',
+            docks=node.dock_landmarks,
+        )
+
+    @app.route('/map/image')
+    def map_image():
+        """브라우저 canvas가 읽을 실제 PGM 파일을 반환한다."""
+        if node.map_config is None:
+            return jsonify(ok=False, message=node.map_error), 503
+        return send_file(
+            node.map_config['image_path'],
+            mimetype='image/x-portable-graymap',
+            conditional=True,
+        )
 
     def spin_node():
         """종료 신호로 ROS 컨텍스트가 닫히면 executor를 정상 종료한다."""
