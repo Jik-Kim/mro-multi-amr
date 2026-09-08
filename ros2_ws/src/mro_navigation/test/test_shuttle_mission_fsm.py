@@ -353,18 +353,19 @@ def test_bay_approach_without_marker_pose_aborts(ros):
 
 
 def test_bay_approach_drives_to_target_range(ros):
-    """마커가 1.0 m 앞이면 기본 목표 0.6 m 까지 0.4 m 접근한다 — 옛 0.3 m 전진을 대신한다.
+    """마커가 1.0 m 앞이면 기본 목표 0.7 m 까지 0.3 m 접근한다 — 옛 0.3 m 전진을 대신한다.
 
-    0.6 m 는 코드 기본값을 그대로 쓴다 (9/8 주행 결정). 선반 최근접점 0.32 m 에 여유를 둔 값이라
-    바뀌면 여기서 먼저 드러나야 한다.
+    **기본값 0.7 을 여기서 못 박는다** (9/8 주행 결정). 0.6 은 실주행에서 옆벽에 붙어 서고
+    거기서 나오지도 못했다. 값이 바뀌면 이 시험이 먼저 알려준다.
     """
     node = make_node(bay_align_enable=True, bay_align_max_iter=1)
     stub_token(node, [True])
     fresh_marker(node)
     marker_frames(node, fwd=1.0, lat=0.0)
+    assert node.p('bay_marker_range_m') == 0.7
     node.run_mission(assigned('A'))
     # 정면이라 첫 회전·마지막 회전이 0 이고 직진만 남는다
-    assert node.navigator.moves() == [('drive', 0.4)]
+    assert node.navigator.moves() == [('drive', 0.3)]
     assert node.status_log[-2:] == ['WAITING', 'READY']
     node.destroy_node()
 
@@ -376,7 +377,7 @@ def test_bay_approach_heads_straight_at_the_marker(ros):
     r·sin(φ) 만큼 옆으로 파고들었고, 좁은 베이 칸에서 마커가 없는 옆벽을 만나 Nav2 가
     `Collision Ahead` 로 중단했다. 이제 진행 방위는 **마커 방위와 같아야 한다.**
 
-    마커가 base_link (1.0, +0.12) 이면 거리는 1.0072 이고 목표 0.6 까지 0.4072 m 를
+    마커가 base_link (1.0, +0.12) 이면 거리는 1.0072 이고, 목표 거리까지 남는 만큼을
     마커 방위(+6.84°)로 들어간다.
     """
     node = make_node(bay_align_enable=True, bay_align_max_iter=1)   # 대역은 마커가 안 따라온다
@@ -390,7 +391,8 @@ def test_bay_approach_heads_straight_at_the_marker(ros):
     bearing = math.atan2(0.12, 1.0)
     # 대역이 호출값을 소수 3자리로 반올림해 기록하므로 그만큼만 느슨하게 본다
     assert turn1 == pytest.approx(bearing, abs=1e-3)      # 진행 방위 = 마커 방위
-    assert step == pytest.approx(math.hypot(1.0, 0.12) - 0.6, abs=0.002)
+    assert step == pytest.approx(
+        math.hypot(1.0, 0.12) - node.p('bay_marker_range_m'), abs=0.002)
     assert turn2 == pytest.approx(-turn1, abs=1e-6)       # 베이 방위로 되돌린다
     assert node.status_log[-2:] == ['WAITING', 'READY']
     node.destroy_node()
@@ -413,7 +415,8 @@ def test_bay_approach_does_not_sidestep_when_heading_is_off(ros):
     assert moves[0][1] == pytest.approx(bearing, abs=1e-3)
     # 실주행에서 실제로 돈 값은 -19.06° 였다. 마커 방위에서 14° 벗어난 그 각이 옆벽을 불렀다
     assert abs(moves[0][1] - math.radians(-19.06)) > math.radians(10)
-    assert moves[1] == ('drive', round(math.hypot(1.170, 0.098) - 0.6, 3))
+    assert moves[1] == (
+        'drive', round(math.hypot(1.170, 0.098) - node.p('bay_marker_range_m'), 3))
     node.destroy_node()
 
 

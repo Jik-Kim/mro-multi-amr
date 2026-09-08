@@ -212,10 +212,11 @@ class ShuttleMission(Node):
         # 베이 정렬 보정 (9/8 추가) — 값의 단일 출처는 common.yaml. 여기 기본값은 대체값이다.
         self.declare_parameter('bay_align_enable', True)
         # 접근이 끝났을 때 마커가 base_link 에서 있어야 할 자리 = 이 미션의 최종 정차 위치다.
-        #   0.6 m 는 옛 '창고 안쪽 0.3 m 전진' 을 대신한다 (9/8 주행 결정). 선반 최근접점이
-        #   0.32 m 라 워치독 0.30 m 에 걸리지는 않지만 여유가 적어 0.5 에서 올렸다.
+        #   0.7 m 는 옛 '창고 안쪽 0.3 m 전진' 을 대신한다 (9/8 주행 결정). 0.6 은 실주행에서
+        #   옆벽에 붙어 섰고 **거기서 나오지도 못했다** — 후진 금지라 좁은 칸에서 제자리 회전으로
+        #   방향을 바꿔야 하는데 92 초 동안 안 풀렸다. 들어가는 것보다 나오는 것이 어렵다.
         #   좌우 치우침 목표는 두지 않는다 — approach_translation 의 설명 참조 (9/8 실주행).
-        self.declare_parameter('bay_marker_range_m', 0.6)
+        self.declare_parameter('bay_marker_range_m', 0.7)
         # 목표 거리 자체의 하한. footprint 외접 0.189 라 0.35 면 벽까지 여유 0.16 m 다.
         #   이보다 가까운 목표는 설정 오류로 보고 포기한다 — 선반에 밀어 넣는 것을 막는다
         self.declare_parameter('bay_align_min_range_m', 0.35)
@@ -229,9 +230,10 @@ class ShuttleMission(Node):
         self.declare_parameter('bay_align_max_step_m', 1.0)
         self.declare_parameter('bay_align_speed_mps', 0.10)   # DriveOnHeading 속도
         self.declare_parameter('bay_align_timeout_s', 20)     # Spin·DriveOnHeading time_allowance
-        # 마커 자세(yaw)로 각도를 잡을지. 기본 꺼짐 — 두 해 문제로 흔들린다는 인지 경고 때문이다.
-        #   꺼져 있어도 마커 법선으로 본 방위 오차는 매 회차 로그로 남는다 (켤 근거를 모으려고).
-        self.declare_parameter('bay_align_use_marker_yaw', False)
+        # 마커 자세(yaw)로 각도를 잡을지. **9/8 실주행에서 켜기로 결정 (실험값, 표본 1회)** —
+        #   마커 법선이 회전량 +10.44° 를 0.3° 오차로 따라왔고, 반대로 [측량] 기준은 이미 거의
+        #   정면이던 로봇을 8.3° 틀어지게 만들었다. 두 해 뒤집힘은 아래 게이트가 막는다.
+        self.declare_parameter('bay_align_use_marker_yaw', True)
         self.declare_parameter('bay_align_yaw_gate_deg', 25.0)  # 측량값과 이보다 어긋나면 두 해 뒤집힘
 
         self.arena = self._load_arena(self.p('arena_yaml'))
