@@ -162,7 +162,7 @@ ros2 topic pub -r 5 /robot3/aruco/id std_msgs/msg/Int32 "{data: 1}" & ros2 topic
 **T7 · 셔틀 미션** — **T3 보다 먼저.** `robot.launch.py` 대신 단독 실행(그쪽은 아직 준비 안 된
 인지 노드까지 띄운다)
 ```bash
-ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/robot3.yaml 2>&1 | tee ~/shuttle_step1_$(date +%m%d_%H%M).log
+ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/common.yaml --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/robot3.yaml 2>&1 | tee ~/shuttle_step1_$(date +%m%d_%H%M).log
 ```
 
 **T8 · 상태 관찰**
@@ -296,17 +296,18 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 
 ```
 [INFO] [robot3.shuttle_mission]: 베이 A → (-0.78, 0.14) 이동 시작
-[INFO] [robot3.shuttle_mission]: 베이 A 도착 — 목표 (-0.78, 0.14) / 실제 (-0.71, 0.19), 오차 0.09 m
+[INFO] [robot3.shuttle_mission]: 베이 A 도착 검증 통과 — 목표 (-0.78, 0.14) / TF 추정 (-0.71, 0.19), 오차 0.090 m, TF 시각 ..., 지연 0.020 s
 [INFO] [robot3.shuttle_mission]: [AT_BAY]
 [INFO] [robot3.shuttle_mission]: 마커 1 확인 (거리 0.90 m)
 ```
-**판정 3.** `베이 A 도착` 의 **실제 좌표를 적어둔다** — 판정 4 에 쓴다.
+**판정 3.** `베이 A 도착 검증 통과`의 **TF 추정 좌표·시각·지연을 적어둔다** — 판정 4에 쓴다. 물리적 실제 좌표는 줄자로 별도 확인한다.
 
 ```
 [INFO] [robot3.shuttle_mission]: 창고 안쪽 0.3 m 전진 → (-1.01, 0.18) 이동 시작
-[INFO] [robot3.shuttle_mission]: 창고 안쪽 0.3 m 전진 도착 — 목표 (-1.01, 0.18) / 실제 (-0.95, 0.19), 오차 0.06 m
+[INFO] [robot3.shuttle_mission]: 창고 안쪽 0.3 m 전진 도착 검증 통과 — 목표 (-1.01, 0.18) / TF 추정 (-0.95, 0.19), 오차 0.061 m, TF 시각 ..., 지연 0.020 s
+[INFO] [robot3.shuttle_mission]: 베이 전진량 — 목표 오프셋 0.300 m / TF 전방 변위 0.240 m
 ```
-**판정 4.** 전진 목표는 **베이 도착 실제 좌표**에서 계산되므로 매번 다르다. 위 예시의 실제
+**판정 4.** 전진 목표는 **전진 직전 새 TF 좌표·방향**에서 계산되므로 매번 다르다. 위 예시의 TF상
 이동량은 `(-0.71,0.19) → (-0.95,0.19)` = **0.24 m** 로 0.3 에 못 미친다 (D-3 참조).
 
 ```
@@ -319,7 +320,7 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 
 ```
 [INFO] [robot3.shuttle_mission]: 대기공간 → (-1.00, 0.94) 이동 시작
-[INFO] [robot3.shuttle_mission]: 대기공간 도착 — 목표 (-1.00, 0.94) / 실제 (-1.02, 0.91), 오차 0.04 m
+[INFO] [robot3.shuttle_mission]: 대기공간 도착 검증 통과 — 목표 (-1.00, 0.94) / TF 추정 (-1.02, 0.91), 오차 0.036 m, TF 시각 ..., 지연 0.020 s
 [INFO] [robot3.shuttle_mission]: P1 반납 (대기공간 도착 — P1 통과 완료)
 [INFO] [robot3.shuttle_mission]: [WAITING]
 [INFO] [robot3.shuttle_mission]: 대기공간 도착 — 소요 62.4 s
@@ -406,18 +407,25 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 그래도 로그가 멎는다면 그 구간은 `undock()`·`dock()` 블로킹이다 (수 초). 그보다 오래 멎으면
 로봇 전원·네임스페이스·디스커버리를 확인한다.
 
-### D-3. 전진이 0.3 m 에 한참 못 미친다
+### D-3. 전진 부족·도착 검증 실패 (I-037)
 
-Nav2 의 `xy_goal_tolerance` 가 **0.25 m 로 고정**이라(I-029 — 낮추면 목표 근처에서 진동해
-도착 판정을 못 한다) 0.3 m 목표를 줘도 실제 이동은 **0.05~0.3 m** 사이다. 더 확실히 전진시켜야
-하면 파라미터를 올린다 (재빌드 불필요).
+먼저 TF 지연을 확인한다. 과거 코드는 오래된 좌표·방향으로 전진 목표를 만들어,
+‘0.3 m 전진’ 목표가 Nav2 기준으로는 이미 허용범위 안에 놓일 수 있었다.
+9/8 수정은 TF 수신을 전용 실행기로 분리하고 **완료 이후의 신선한 TF**를 검사한다.
+조건·재현·결과는 [셔틀 TF 실험](shuttle_tf_experiment.md).
 
-```bash
-ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -p bay_advance_m:=0.55 --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/robot3.yaml
-```
+- `신선한 TF를 … 안에 받지 못함`: TF 발행·시각·로봇 네임스페이스를 점검한다. waypoint를 대신 써서 진행하지 않는다.
+- `도착 검증 실패 — Nav2 SUCCEEDED`: 새 TF의 오차가 `arrival_xy_tolerance_m`를 넘었다. Nav2 feedback·AMCL·물리 위치를 대조한다.
+- `베이 전진량`: 목표 오프셋과 TF 전방 변위를 구분한다. 물리적 실측은 별도로 기록한다.
 
-전진 목표에서만 `이동 실패: FAILED` 가 나면 `progress_checker` 를 의심한다 — 10 초 안에
-0.5 m 이동을 요구하는데 목표가 0.3 m 뿐이다.
+`common.yaml`의 `tf_pose_timeout_s=3.0`, `tf_max_age_s=0.3`,
+`arrival_xy_tolerance_m=0.25`는 실험 초깃값이다. 단독 실행에도 common과 robot3 YAML을 둘 다 전달한다.
+Nav2 허용오차는 그대로 0.25 m이므로 **정확히 0.3 m 이동을 보장하지 않는다.**
+TF·실측을 확인하기 전에 `bay_advance_m`를 키워 부족분을 덮지 않는다.
+허용오차를 낮추는 실험은 기존 I-029 진동과 함께 별도로 검증한다.
+
+전진 목표에서만 `이동 실패: FAILED`가 나면 progress_checker 로그도 본다.
+현재 설정은 10초 안에 0.5 m 이동을 요구하지만 목표 오프셋은 0.3 m이다.
 
 ### D-5. 노드 이름은 보이는데 서비스가 응답하지 않는다 (유령 노드)
 
