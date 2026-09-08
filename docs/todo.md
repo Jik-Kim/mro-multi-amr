@@ -5,7 +5,7 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 95/154 완료** (████████████░░░░░░░░)  ·  기준 09/08
+**전체 95/156 완료** (████████████░░░░░░░░)  ·  기준 09/08
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | mro_perception [인지 — 정정인, 민범진] | 15/26 | `██████░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/31 | `███████░░░` | — |
 | mro_navigation [주행 — 박병후, 이시율] | 34/64 | `█████░░░░░` | **1** |
-| mro_fleet [관제 — 김민준] | 12/16 | `████████░░` | — |
+| mro_fleet [관제 — 김민준] | 12/18 | `███████░░░` | — |
 | mro_bringup [PM 김병직] | 7/11 | `██████░░░░` | — |
 
 **마감이 지난 항목 1건**
@@ -199,6 +199,8 @@
 - [x] 도킹 반복 시험 TS-U12 (9/6) — 로봇별 10회, 차폐판 없이 오도킹 0 확인 (I-006 종결) · 마감 9/8
 
 ## mro_fleet [관제 — 김민준]
+- [ ] **대시보드 JS 의 로봇 이름 하드코딩 (PR #51 후속)** — `uiState.robots` 가 `{robot3, robot8}` 고정 사전이라 `robot_namespaces` 를 바꾸면 화면만 조용히 어긋난다 (빠진 로봇은 「수신 대기」로 남고 새 로봇은 안 보인다). `/status` 응답의 키로 카드를 만들면 된다 — 백엔드는 이미 `fleet.yaml` 명단을 쓴다. 오늘 robot4 → robot8 을 한 번 겪었다 · 마감 9/10
+- [ ] **FR-13 대시보드 실제 조작 확인 (PR #47·#51)** — 브라우저에서 ① `GATE_FAIL` 발행 시 버튼이 뜨는가 ② 누르면 `인지 서비스 응답 없음` 이 뜨는가(인지 서버 미구현이라 이게 정답) ③ **그때 `MANUAL_PAIR` 개입 이벤트가 발행되지 않는가** — 실패한 시도를 개입으로 세면 AC-13 IPH 가 부풀어 실제보다 나빠 보인다 · 마감 9/9
 - [ ] **FR-35 는 `loc_check_marker.xy` 실측 뒤에 켠다** — `[0.0, 0.0]` 인 채로 읽으면 측위가 정상인데도 `localization_suspect` 로 기록된다. 그리고 **`aruco/distance`(카메라 기준)와 `|amcl_pose − xy|`(base_link 기준)의 6 cm 오프셋을 빼고 비교**한다 (TF 실측, `tolerance_m` 0.10 의 60 %) · 마감 9/9
 - [x] **`control_ui`: 명시 페어링 폴백 버튼 (FR-13, 계약 10절)** — `target/pair_state = GATE_FAIL` 이면 버튼 표시, 운영자가 로봇·작업자 선택 → `fleet_manager` 가 `/robotN/manual_pair` 호출, 응답의 `reason` 을 화면에 그대로 보여준다. 성공 시 `/fleet/intervention` 에 **`kind = MANUAL_PAIR`** 발행 — IPH 에 들어간다(10.7) · 마감 9/9  **→ 완료 9/8 (PR #47) — `/fleet/manual_pair` 중계까지**
 - [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8
