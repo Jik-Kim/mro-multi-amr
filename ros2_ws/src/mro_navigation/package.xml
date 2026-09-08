@@ -13,6 +13,7 @@
   <exec_depend>nav2_msgs</exec_depend>
   <exec_depend>lifecycle_msgs</exec_depend>
   <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>tf2_geometry_msgs</exec_depend>
   <exec_depend>turtlebot4_navigation</exec_depend>
   <exec_depend>mro_interfaces</exec_depend>
   <exec_depend>mro_perception</exec_depend>

@@ -3,7 +3,8 @@
 
 역할 변경: '웹캠 차 좌표 앞 1.5 m 로 이동' → 'S4 셔틀 미션'.
   **기동 시** 도크 초기자세 → (미션 대기) → mission/assigned 수신 → Nav2 준비 → undock
-  → 베이 waypoint → ArUco 로 도착 확정 → 창고 안쪽 전진 → 적재 체류 → P1 토큰 → 대기공간 → WAITING
+  → 베이 waypoint → ArUco 로 도착 확정(못 보면 제자리 회전 재탐지) → **마커까지 접근·정렬**
+  → 적재 체류 → P1 토큰 → 대기공간 → WAITING
 
 기동 순서가 중요하다 (I-035) — **이 노드를 Nav2(T3) 보다 먼저 띄운다.** Nav2 의 global_costmap 은
   기동할 때 map→base_link TF 를 요구하고, AMCL 은 초기자세를 받아야 map→odom 을 낸다. 초기자세가
@@ -15,8 +16,34 @@
 폐기한 것: webcam/detected 트리거, webcam/car_map_point 목표, goto_goal/arrived
   (계약 4절 '쓰지 않는 옛 토픽'), standoff_goal 기반 목표 선택.
 
-입력  mission/assigned(Mission) · aruco/id(Int32) · aruco/distance(Float32) · safety/estop(Bool)
-      TF map→base_link · arena.yaml(베이 waypoint·aruco_id, 대기공간) · robotN.yaml(dock_pose 등)
+**베이 접근·정렬 (9/8 추가) — '창고 안쪽 0.3 m 전진' 을 대체한다.**
+  옛 절차는 두 단계였다: waypoint 에 도착한 뒤 그 자리에서 앞으로 0.3 m. 앞의 0.3 m 는 **출발점을
+  모르는 상대량**이라 AMCL 이 0.4 m 틀리면 최종 정차 위치도 그대로 0.4 m 틀렸다 (실측 0.38~0.53 m).
+  지금은 한 단계다: **마커에서 bay_marker_range_m(0.5 m) 인 자리로 간다.** 목적지가 마커 기준
+  절대 위치라 출발점이 어디든 도착점이 같다 — `aruco/pose` 는 카메라→마커의 상대 측정이라
+  AMCL 오차와 무관하기 때문이다. 그래서 별도의 전진 단계가 필요 없다.
+
+**마커 재탐지 (9/8 추가)** — 베이에서 마커를 못 보면 **제자리 회전만으로** 좌우를 훑는다.
+  기준 방위에서 가까운 쪽부터 좌우 교대로(−Δ, +Δ, −2Δ, +2Δ …) 돌며 정지점마다 확인한다.
+  · **병진하지 않는다.** 마커를 못 본다는 것은 자기 위치를 못 믿는다는 뜻이라 어디로 갈지
+    모른다. 제자리 회전이 footprint 밖으로 쓸고 가는 폭은 내접 0.175 / 외접 0.189 라 1.4 cm
+    뿐이다 (safety_watchdog 과 같은 근거).
+  · 스텝은 카메라 수평 FOV 보다 확실히 작아야 정지점 **사이로 마커가 빠지지 않는다.**
+  · 옛 '정차 자세 재정렬'(같은 waypoint 로 goToPose 재전송)을 대체한다 — Nav2 허용오차
+    0.25 m 안이면 로봇이 아예 안 움직여 사실상 무동작이었다.
+  · 찾으면 **원래 방위로 되돌리지 않는다.** 접근 단계가 어차피 측량 베이 방위로 돌려세운다.
+  · **Nav2 목표로는 못 한다.** SimpleGoalChecker 가 xy 0.25 m · yaw 0.25 rad 라 12 cm 보정 목표를
+    보내면 로봇이 움직이지 않고 곧장 SUCCEEDED 가 난다 (nav2.yaml 9/8 확인). 그래서 보정과 전진은
+    behavior_server 의 Spin·DriveOnHeading(상대 이동, 허용오차 없음) 으로 실행한다.
+  · 차동구동이라 옆으로 못 간다 → **회전–직진–회전**. 직진은 항상 전진이다 (후진 금지, 계약 2절).
+  · **각도 기준은 arena.yaml 의 측량된 베이 방위**다. 마커 자세(yaw)는 정사각 마커의 두 해 문제로
+    흔들려 인지가 '보조로만 쓰라' 고 명시했다 — 계산해서 로그로만 남기고, 쓰려면
+    bay_align_use_marker_yaw 를 켠다(측량값과 크게 어긋나면 두 해 뒤집힘으로 보고 측량값으로 되돌린다).
+  · 그래서 **AMCL 의 방위 오차는 이 보정으로 지워지지 않는다.** 위치는 상대라 지워진다.
+
+입력  mission/assigned(Mission) · aruco/id(Int32) · aruco/distance(Float32) · aruco/pose(PoseStamped)
+      safety/estop(Bool) · TF map→base_link · TF base_link→카메라 광학 프레임
+      arena.yaml(베이 waypoint·aruco_id, 대기공간) · robotN.yaml(dock_pose 등)
 출력  shuttle/status(String: READY/SHUTTLE/AT_BAY/WAITING/FAILED) · shuttle/arrived(Bool)
 협조  /fleet/zone_token 의 P1 토큰 — 베이를 떠나기 전 획득, 대기공간 도착 후 반납 (계약 3절)
       **순서 기반 판정 (방법 B, 9/7 팀 회의).** 경로가 베이 → P1 → 대기공간으로 고정돼 있으므로
@@ -39,28 +66,36 @@ TODO([주행]): ① 파라미터 7개와 arena_yaml 경로는 PM 이 robotN.yaml
   런치가 안 넘겨줄 때의 대체값으로만 남아 있다 (의존을 선언하면 순환이라 막을 수 없다)
 ② follow_target_node.py 가 아직 옛 goto_goal/arrived 를 구독한다. shuttle/arrived 로 바꾸지 않으면
   S5 합류가 시작되지 않는다 (docs/todo.md 에 등록)
-③ ArUco '정면 ±30°'(계약 6절)는 여전히 아무도 검사하지 않는다. aruco_detector 가 PR #30 으로
-  solvePnP 를 넣어 기운각을 **계산은 하지만 로그로만 남기고 발행하지 않는다** — 게이팅이 필요하면
-  인지에 각도 발행을 요청할 것. 거리는 그쪽이 이미 1.5 m 에서 자른다(`max_distance_m`, 넘으면 id=-1)
-  므로 아래 aruco_max_dist_m 는 이중 방어다
+③ ArUco '정면 ±30°'(계약 6절)는 **기계로 검사하지 않기로 확정됐다** — 기운각이 두 해 문제로
+  흔들려(1.0 m 에서 −30° 가 33° 로) 게이트로 쓸 수 없다. 시험 절차에서 사람이 지킨다.
+  거리는 다르다: aruco_detector 의 `max_distance_m` 은 **2.0 m** 이고(1.5 로 두면 정확히 1.5 m 에
+  둔 마커가 1.52 로 걸러진다, I-031), 계약 6절의 검출 조건 1.5 m 는 **소비자인 우리가** 자른다 —
+  아래 aruco_max_dist_m 는 이중 방어가 아니라 **주 게이트**다
 ④ 대기공간 정차 중에도 로봇 몸통이 P1 폴리곤에 살짝 걸친다 — robot3 정차점이 폴리곤에서
   0.20 m 인데 반지름은 0.22 m 다. 반납 시점이 계약상 '완전 이탈' 인지 실주행에서 확인할 것
   (2대 시험 때 다른 로봇이 P1 을 지날 수 있는지가 실제 판단 기준)
 ⑤ navigator.undock()/dock() 은 블로킹이라 그 동안 이 노드의 콜백·T_lim 검사가 멈춘다
   (수 초 규모라 그대로 둔다)
 """
+from collections import deque
+from dataclasses import dataclass
 import math
 import os
+from statistics import median
+from threading import Thread
 
 from ament_index_python.packages import get_package_share_directory
+from geometry_msgs.msg import Pose, PoseStamped
 from lifecycle_msgs.srv import GetState
 from mro_interfaces.msg import Mission
 from mro_interfaces.srv import ZoneToken
 import rclpy
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.time import Time
 from std_msgs.msg import Bool, Float32, Int32, String
+from tf2_geometry_msgs import do_transform_pose
 from tf2_ros import Buffer, TransformListener
 from turtlebot4_navigation.turtlebot4_navigator import TurtleBot4Navigator
 import yaml
@@ -72,16 +107,59 @@ STATUS_TOPIC = 'shuttle/status'
 ARRIVED_TOPIC = 'shuttle/arrived'
 ARUCO_ID_TOPIC = 'aruco/id'
 ARUCO_DIST_TOPIC = 'aruco/distance'
+ARUCO_POSE_TOPIC = 'aruco/pose'
 ESTOP_TOPIC = 'safety/estop'
 TOKEN_SRV = '/fleet/zone_token'   # 관제 PC 의 zone_semaphore. 전역 이름
 ZONE_P1 = 'P1'                    # arena.yaml semaphore_zones · ZoneToken.srv 와 ID 일치
 MAP_FRAME = 'map'
 BASE_FRAME = 'base_link'
+# aruco/pose 의 header.frame_id 가 비어 올 때만 쓰는 대체값 (aruco_detector 와 같은 이름)
+CAMERA_FRAME_FALLBACK = 'oakd_rgb_camera_optical_frame'
 TICK_S = 0.1                      # spin_once 주기
 
 
 class MissionAbort(Exception):
     """미션을 포기하는 유일한 경로. 사유를 담아 FAILED 로 빠진다."""
+
+
+@dataclass(frozen=True)
+class PoseSample:
+    """한 번의 TF 조회에서 얻은 좌표와 시각. 실측 위치가 아닌 map 추정값이다."""
+
+    x: float
+    y: float
+    yaw: float
+    stamp_s: float
+
+    @property
+    def pose(self):
+        """목표 계산에 쓰는 좌표와 방향."""
+        return self.x, self.y, self.yaw
+
+
+@dataclass(frozen=True)
+class MarkerSample:
+    """마커를 base_link 로 옮긴 값. AMCL 과 무관한 **상대** 측정이다."""
+
+    fwd: float          # base_link x [m] — 앞이 +
+    lat: float          # base_link y [m] — 왼쪽이 +
+    normal_yaw: float   # 마커 법선의 base_link 방위 [rad]. 정면이면 π (뒤에서 로봇을 본다)
+    stamp_s: float
+
+    @property
+    def bearing(self):
+        """로봇 정면에서 마커까지의 방위각 [rad]."""
+        return math.atan2(self.lat, self.fwd)
+
+    @property
+    def yaw_error(self):
+        """벽 법선 기준 로봇 방위 오차 [rad]. 이만큼 돌면 벽을 정면으로 본다."""
+        return wrap_pi(self.normal_yaw - math.pi)
+
+
+def wrap_pi(a):
+    """각을 (−π, π] 로 접는다. 보정량을 항상 짧은 쪽으로 돌리기 위한 것이다."""
+    return math.atan2(math.sin(a), math.cos(a))
 
 
 class ShuttleMission(Node):
@@ -114,21 +192,81 @@ class ShuttleMission(Node):
         self.declare_parameter('bay_dwell_s', 5.0)             # robotN.yaml
         self.declare_parameter('t_lim_s', 120.0)               # robotN.yaml
         self.declare_parameter('arena_yaml', default_arena)
-        self.declare_parameter('bay_advance_m', 0.3)
         self.declare_parameter('aruco_max_dist_m', 1.5)        # 계약 6절 검출 조건
         self.declare_parameter('aruco_valid_s', 1.0)
         self.declare_parameter('aruco_confirm_s', 3.0)
-        self.declare_parameter('aruco_retry', 1)
+        self.declare_parameter('aruco_retry', 1)          # 재탐지 스윕 횟수 (9/8 의미 변경)
+        self.declare_parameter('aruco_search_enable', True)
+        self.declare_parameter('aruco_search_step_deg', 15.0)   # 카메라 수평 FOV 보다 작게
+        self.declare_parameter('aruco_search_max_deg', 60.0)    # 이보다 틀렸으면 측위가 깨진 것
+        self.declare_parameter('aruco_search_dwell_s', 0.8)     # 정지점마다 확인하는 시간
         self.declare_parameter('token_retry_s', 2.0)           # 계약 3절 '거절되면 2초 후 재요청'
         self.declare_parameter('nav2_poll_s', 5.0)
         # I-035 로 추가 (9/8) — robotN.yaml 이관은 PM 요청 필요 (위 TODO ①)
         self.declare_parameter('nav2_poll_max', 3)          # 이 횟수 안에 active 가 아니면 포기
-        self.declare_parameter('dock_status_wait_s', 5.0)   # dock_status 를 기다리는 상한
+        self.declare_parameter('dock_status_wait_s', 15.0)   # dock_status 를 기다리는 상한
+        # I-037 실험값 — common.yaml 이 단일 출처. 실물 검증 전 팀 확정값이 아니다.
+        self.declare_parameter('tf_pose_timeout_s', 3.0)
+        self.declare_parameter('tf_max_age_s', 0.3)
+        self.declare_parameter('arrival_xy_tolerance_m', 0.25)
+        # 베이 정렬 보정 (9/8 추가) — 값의 단일 출처는 common.yaml. 여기 기본값은 대체값이다.
+        self.declare_parameter('bay_align_enable', True)
+        # 접근이 끝났을 때 마커가 base_link 에서 있어야 할 자리 = 이 미션의 최종 정차 위치다.
+        #   **0.9 m 는 추정이 아니라 실측에서 나온 값이다 (9/8).** 접근 2회차에 마커까지
+        #   0.715 m 였을 때 워치독이 `ESTOP: 전방 0.29 m` 를 냈다 — 빼면 **선반 앞면이 마커
+        #   벽에서 0.425 m 앞**이다. 여기서 바닥이 계산된다:
+        #     워치독이 안 울리려면   0.425 + clear_dist 0.38  = 0.805 m
+        #     Nav2 충돌 예측을 피하려면 0.425 + 0.379          = 0.804 m
+        #   즉 **0.80 m 가 하드 바닥**이고 0.6·0.7 은 그 아래라 실패한 것이 당연했다. 0.9 는
+        #   양쪽에 10 cm 씩 여유를 둔 값이다. 옛 '0.3 m 전진' 이 세우던 자리가 0.87 m 였는데,
+        #   우연히 이 바닥 바로 위여서 지금까지 이 문제가 안 드러났다.
+        #   좌우 치우침 목표는 두지 않는다 — approach_translation 의 설명 참조 (9/8 실주행).
+        self.declare_parameter('bay_marker_range_m', 0.9)
+        # 목표 거리 자체의 하한. footprint 외접 0.189 라 0.35 면 벽까지 여유 0.16 m 다.
+        #   이보다 가까운 목표는 설정 오류로 보고 포기한다 — 선반에 밀어 넣는 것을 막는다
+        self.declare_parameter('bay_align_min_range_m', 0.35)
+        self.declare_parameter('bay_align_max_iter', 2)
+        self.declare_parameter('bay_align_tol_xy_m', 0.05)
+        self.declare_parameter('bay_align_tol_yaw_deg', 5.0)
+        # 이보다 작은 회전은 **명령하지 않는다.** Nav2 의 Spin 은 min_rotational_vel 0.4 rad/s ·
+        #   10 Hz 라 한 사이클에 최소 2.3° 를 돌고 그만큼 지나친다 — 0.4° 를 시키면 6배가
+        #   실행된다 (9/8 실측). 수렴 판정(tol_yaw)과 같은 값으로 두어야 앞뒤가 맞는다
+        self.declare_parameter('bay_align_min_turn_deg', 5.0)
+        self.declare_parameter('bay_align_samples', 5)        # 중앙값을 낼 표본 수
+        self.declare_parameter('bay_align_sample_s', 2.0)     # 표본을 모으는 상한
+        # 한 번에 움직일 상한. **접근 거리 전체가 여기 들어온다** — 잔차 보정만 하던 때보다 커야
+        #   한다 (waypoint 가 마커에서 1.2 m 면 보정이 0.7 m 다). 넘으면 측정을 의심하고 포기한다
+        self.declare_parameter('bay_align_max_step_m', 1.0)
+        # 체류 뒤 칸 밖을 향해 제자리에서 도는 각. 0 이면 끈다 (turn_out_of_bay 설명 참조)
+        self.declare_parameter('bay_exit_turn_deg', 180.0)
+        # 돌고 나서 칸 밖으로 스스로 빠져나올 거리 [m]. 0 이면 바로 Nav2 에 넘긴다
+        self.declare_parameter('bay_exit_drive_m', 0.5)
+        self.declare_parameter('bay_align_speed_mps', 0.10)   # DriveOnHeading 속도
+        self.declare_parameter('bay_align_timeout_s', 20)     # Spin·DriveOnHeading time_allowance
+        # 마커 자세(yaw)로 각도를 잡을지. **9/8 저녁에 켜 봤다가 되돌렸다.**
+        #   T11 [측량] +1.8° → −8.3° · T12 [마커] +8.3° → +16.4° → −14.1°. **둘 다 나빠졌다** —
+        #   기준의 문제가 아니라 회전 분해능과 루프의 문제였다(아래 bay_align_min_turn_deg).
+        #   T12 에서는 검출기 기운각도 9→17→22° 로 튀어 인지가 경고한 두 해 문제가 실제로
+        #   관측됐다. 루프를 고친 뒤에 다시 시험할 것.
+        self.declare_parameter('bay_align_use_marker_yaw', False)
+        self.declare_parameter('bay_align_yaw_gate_deg', 25.0)  # 측량값과 이보다 어긋나면 두 해 뒤집힘
 
         self.arena = self._load_arena(self.p('arena_yaml'))
 
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
+        # navigator의 블로킹 호출 동안에도 TF 수신은 계속한다 (I-037).
+        # 셔틀 자신을 다른 executor에 넣으면 기존 spin_once와 충돌하므로 TF 전용 Node를 쓴다.
+        # 전역 __node 리맵은 상속하지 않고, 로봇별 TF 토픽과 시계만 명시적으로 맞춘다.
+        self.tf_node = Node(
+            'shuttle_tf', namespace=self.ns, context=self.context, use_global_arguments=False,
+            cli_args=['--ros-args', '-r', '/tf:=tf', '-r', '/tf_static:=tf_static'],
+            parameter_overrides=[Parameter(
+                'use_sim_time', value=self.get_parameter('use_sim_time').value)])
+        self.tf_buffer = Buffer(node=self.tf_node)
+        self.tf_listener = TransformListener(self.tf_buffer, self.tf_node)
+        self.tf_executor = SingleThreadedExecutor(context=self.context)
+        self.tf_executor.add_node(self.tf_node)
+        self.tf_thread = Thread(target=self._spin_tf, name='shuttle_tf', daemon=True)
+        self.tf_thread.start()
 
         # 콜백이 채우는 값들 — 실행은 전부 메인 루프에서 한다
         self.pending = None      # 채택 대기 중인 Mission
@@ -136,6 +274,9 @@ class ShuttleMission(Node):
         self.t0 = None           # T_lim 기준 ROS 시각
         self.aruco_id = None     # (id, 수신 시각)
         self.aruco_dist = None   # (m, 수신 시각)
+        # aruco/pose 원본을 그대로 쌓는다 — TF 변환은 메인 루프에서 한다 (콜백은 값만 저장)
+        self.aruco_poses = deque(maxlen=30)
+        self.cam_tf = None       # (프레임 이름, base_link←카메라 변환) — 고정이라 한 번만 찾는다
         self.estop = False
         self.last_status = None
         self.token_held = False
@@ -143,6 +284,7 @@ class ShuttleMission(Node):
         self.create_subscription(Mission, MISSION_TOPIC, self.mission_cb, 10)
         self.create_subscription(Int32, ARUCO_ID_TOPIC, self.aruco_id_cb, 1)
         self.create_subscription(Float32, ARUCO_DIST_TOPIC, self.aruco_dist_cb, 1)
+        self.create_subscription(PoseStamped, ARUCO_POSE_TOPIC, self.aruco_pose_cb, 10)
         self.create_subscription(Bool, ESTOP_TOPIC, self.estop_cb, 1)
         self.pub_status = self.create_publisher(String, STATUS_TOPIC, 10)
         self.pub_arrived = self.create_publisher(Bool, ARRIVED_TOPIC, 1)
@@ -154,8 +296,31 @@ class ShuttleMission(Node):
         self.get_logger().info(f'대기: {self.ns}/{MISSION_TOPIC} 에 Mission(ASSIGNED) 오면 출발')
 
     # ── 파라미터·설정 ────────────────────────────────────────────────
+    def _spin_tf(self):
+        """TF 전용 실행기는 navigator나 미션 상태를 건드리지 않는다."""
+        try:
+            self.tf_executor.spin()
+        except ExternalShutdownException:
+            pass
+
+    def destroy_node(self):
+        """콜백 종료를 기다린 뒤 TF·navigator 자원을 회수한다."""
+        self.tf_executor.shutdown()
+        self.tf_thread.join()
+        self.tf_listener.unregister()
+        self.tf_node.destroy_node()
+        self.navigator.destroy_node()
+        return super().destroy_node()
+
     def p(self, name):
         return self.get_parameter(name).value
+
+    def positive_parameter(self, name):
+        """도착 검증을 우회하는 0·음수·NaN 설정은 미션 실패로 처리한다."""
+        value = float(self.p(name))
+        if not math.isfinite(value) or value <= 0.0:
+            raise MissionAbort(f'{name} 은 유한한 양수여야 한다: {value}')
+        return value
 
     def _load_arena(self, path):
         """arena.yaml 은 ROS 파라미터 형식이 아닌 데이터 yaml 이라 파일로 직접 읽는다."""
@@ -189,6 +354,10 @@ class ShuttleMission(Node):
 
     def aruco_dist_cb(self, msg):
         self.aruco_dist = (float(msg.data), self.now())
+
+    def aruco_pose_cb(self, msg):
+        """마커 자세. 여기서는 TF 를 만지지 않는다 — 변환은 메인 루프의 marker_sample() 이 한다."""
+        self.aruco_poses.append((msg, self.now()))
 
     def estop_cb(self, msg):
         self.estop = bool(msg.data)
@@ -236,7 +405,14 @@ class ShuttleMission(Node):
         """유일한 대기 수단. 모든 대기가 여기를 지나므로 T_lim 검사가 한 곳에 모인다."""
         t_start = self.now()
         while rclpy.ok():
-            if cond():
+            # 완료와 제한시간 초과가 같은 tick에 와도 늦은 성공을 내지 않는다.
+            if self.over_tlim():
+                raise MissionAbort(f"T_lim {self.p('t_lim_s')} s 초과")
+            done = cond()
+            # navigator 완료 폴링 자체가 블로킹이므로 그 사이 지난 제한시간도 확인한다.
+            if self.over_tlim():
+                raise MissionAbort(f"T_lim {self.p('t_lim_s')} s 초과")
+            if done:
                 return True
             rclpy.spin_once(self, timeout_sec=TICK_S)   # 콜백은 대기 중에도 살아 있다
             if on_tick:
@@ -247,11 +423,8 @@ class ShuttleMission(Node):
                 return False
         raise MissionAbort('노드 종료')
 
-    def tf_pose(self, warn=True):
-        """(x, y, yaw) 또는 None. yaw 식은 계약 2절 FleetStatus.yaw 와 같다.
-
-        warn=False 는 도착 로그용 — 좌표를 못 얻어도 미션에 지장이 없으니 경고를 남기지 않는다.
-        """
+    def tf_sample(self, warn=True):
+        """최신 공통 시각의 map→base_link 좌표와 stamp를 함께 읽는다."""
         try:
             t = self.tf_buffer.lookup_transform(MAP_FRAME, BASE_FRAME, Time())
         except Exception as e:
@@ -261,7 +434,33 @@ class ShuttleMission(Node):
         q = t.transform.rotation
         yaw = math.atan2(2.0 * (q.w * q.z + q.x * q.y),
                          1.0 - 2.0 * (q.y * q.y + q.z * q.z))
-        return t.transform.translation.x, t.transform.translation.y, yaw
+        return PoseSample(t.transform.translation.x, t.transform.translation.y, yaw,
+                          Time.from_msg(t.header.stamp).nanoseconds * 1e-9)
+
+    def tf_pose(self, warn=True):
+        """관측용 좌표. 도착 판정과 목표 계산은 신선도를 검사하는 fresh_pose를 쓴다."""
+        sample = self.tf_sample(warn=warn)
+        return None if sample is None else sample.pose
+
+    def fresh_pose(self, label, not_before=None):
+        """새 TF를 제한시간 안에 얻지 못하면 좌표를 추측하지 않고 포기한다."""
+        timeout = self.positive_parameter('tf_pose_timeout_s')
+        max_age = self.positive_parameter('tf_max_age_s')
+        sample = None
+
+        def ready():
+            nonlocal sample
+            sample = self.tf_sample(warn=False)
+            return (sample is not None
+                    and all(math.isfinite(v) for v in (*sample.pose, sample.stamp_s))
+                    and 0.0 <= self.now() - sample.stamp_s <= max_age
+                    and (not_before is None or sample.stamp_s >= not_before))
+
+        if not self.wait(ready, timeout=timeout):
+            detail = ('TF 없음' if sample is None else
+                      f'TF 시각 {sample.stamp_s:.3f}, 지연 {self.now() - sample.stamp_s:.3f} s')
+            raise MissionAbort(f'{label}: 신선한 TF를 {timeout:.1f} s 안에 받지 못함 ({detail})')
+        return sample
 
     def pose_of(self, x, y, yaw):
         """회전 인자는 도 단위다 — getPoseStamped 규약이라 라디안을 넘기면 조용히 틀어진다."""
@@ -269,6 +468,9 @@ class ShuttleMission(Node):
 
     def goto(self, pose, label):
         """목표 1건. 콜백 밖에서만 불린다."""
+        tolerance = self.positive_parameter('arrival_xy_tolerance_m')
+        self.positive_parameter('tf_pose_timeout_s')
+        self.positive_parameter('tf_max_age_s')
         if self.estop:
             self.get_logger().warn(f'estop 중 — 해제까지 {label} 보류')
             self.wait(lambda: not self.estop)        # 계약 4절: estop 동안 주행 명령 금지
@@ -280,15 +482,19 @@ class ShuttleMission(Node):
         result = self.navigator.getResult().name
         if result != 'SUCCEEDED':
             raise MissionAbort(f'{label} 이동 실패: {result}')
-        # 실제 정차 위치를 같이 남긴다 — Nav2 의 xy_goal_tolerance(0.25 m) 때문에
-        #   목표와 실제가 그만큼 벌어질 수 있어서, 전진 거리를 로그로 확인해야 한다
-        at = self.tf_pose(warn=False)
-        if at is None:
-            self.get_logger().info(f'{label} 도착')
-        else:
-            self.get_logger().info(
-                f'{label} 도착 — 목표 ({gx:.2f}, {gy:.2f}) / 실제 ({at[0]:.2f}, {at[1]:.2f}), '
-                f'오차 {math.hypot(at[0] - gx, at[1] - gy):.2f} m')
+        completed = self.now()
+        # SUCCEEDED 직전 캐시가 아닌 완료 이후 관측으로 검증한다. 목표 전송 시각으로
+        # 조회하면 출발 위치를 읽게 되므로 쓰지 않는다. TF는 물리적 실측과 구분해 표시한다.
+        at = self.fresh_pose(label, not_before=completed)
+        error = math.hypot(at.x - gx, at.y - gy)
+        measurement = (f'목표 ({gx:.2f}, {gy:.2f}) / TF 추정 ({at.x:.2f}, {at.y:.2f}), '
+                       f'오차 {error:.3f} m, TF 시각 {at.stamp_s:.3f}, '
+                       f'지연 {self.now() - at.stamp_s:.3f} s')
+        if error > tolerance:
+            raise MissionAbort(
+                f'{label} 도착 검증 실패 — Nav2 SUCCEEDED, {measurement}, 허용 {tolerance:.3f} m')
+        self.get_logger().info(f'{label} 도착 검증 통과 — {measurement}')
+        return at
 
     def token(self, acquire):
         """P1 토큰 획득/반납. 서비스가 없으면 (관제 미기동) 통과시켜 단독 시험을 막지 않는다."""
@@ -365,8 +571,9 @@ class ShuttleMission(Node):
             self.goto(self.pose_of(*bay['waypoint']), f'베이 {m.bay}')
             self.set_status('AT_BAY')                # Mission.msg: 'ArUco 확인, 체류 중'
             self.confirm_aruco(bay)
-            self.advance_into_bay(bay)
+            self.approach_and_align(bay)
             self.dwell()
+            self.turn_out_of_bay()   # 토큰보다 먼저 — 회전에 쓰는 몇 초가 60 s 강제 회수를 깎지 않게
             self.acquire_p1()
 
             self.set_status('SHUTTLE')
@@ -386,6 +593,7 @@ class ShuttleMission(Node):
             self.mission = None
             self.t0 = None                           # 폐기 — 늦은 도착을 계상하지 않는다 (계약 7절)
             self.aruco_id = self.aruco_dist = None
+            self.aruco_poses.clear()
             self.set_status('READY')
 
     def mission_targets(self, m):
@@ -498,33 +706,438 @@ class ShuttleMission(Node):
         raise MissionAbort(f'Nav2 미준비 — {tries}회 확인 동안 active 가 아니다: {reason}')
 
     def confirm_aruco(self, bay):
-        """베이 도착 확정. 마커를 확인하지 못하면 전진·체류하지 않고 포기한다 (FR-08 오도착 0건)."""
-        retry = int(self.p('aruco_retry'))
-        for attempt in range(retry + 1):
+        """베이 도착 확정. 못 보면 제자리 회전으로 재탐지하고, 그래도 없으면 포기한다 (FR-08).
+
+        포기하면 접근·체류를 하지 않는다 — 오도착 0건이 절대 기준이다.
+        """
+        sweeps = max(0, int(self.p('aruco_retry')))
+        seen = None
+        for attempt in range(sweeps + 1):
             if self.wait(lambda: self.aruco_ok(bay['aruco_id']),
                          timeout=self.p('aruco_confirm_s')):
                 self.get_logger().info(
                     f"마커 {bay['aruco_id']} 확인 (거리 {self.aruco_dist[0]:.2f} m)")
                 return
             seen = self.aruco_id[0] if self.aruco_id else None
-            if attempt == retry:
-                raise MissionAbort(f"ArUco 불일치 — 오도착 (기대 {bay['aruco_id']}, 관측 {seen})")
+            if attempt == sweeps:
+                break
             self.get_logger().warn(
-                f'마커 미확인 {attempt + 1}/{retry + 1} (관측 {seen}) — 정차 자세 재정렬')
-            self.goto(self.pose_of(*bay['waypoint']), '베이 재정렬')  # 아직 포기 아님 → AT_BAY 유지
+                f'마커 미확인 {attempt + 1}/{sweeps + 1} (관측 {seen}) — 제자리 회전으로 재탐지')
+            if self.search_marker(bay):     # 아직 포기 아님 → AT_BAY 를 유지한다 (I-026)
+                return
+        raise MissionAbort(f"ArUco 불일치 — 오도착 (기대 {bay['aruco_id']}, 관측 {seen})")
 
-    def advance_into_bay(self, bay):
-        """확인된 자리에서 창고 안쪽(로봇 전방)으로 bay_advance_m 전진."""
-        # 주의 — Nav2 xy_goal_tolerance 가 0.25 m 로 고정이라(I-029, 낮추면 목표 근처에서 진동한다)
-        #   0.3 m 목표를 줘도 실제 이동은 0.05~0.3 m 사이다. 도착 로그의 실제 좌표로 확인할 것
-        d = self.p('bay_advance_m')
-        pose = self.tf_pose()
-        if pose is None:
-            self.get_logger().warn('TF 없음 — 베이 waypoint 기준으로 전진 목표를 계산한다')
-            pose = tuple(bay['waypoint'])
-        x, y, yaw = pose
-        self.goto(self.pose_of(x + d * math.cos(yaw), y + d * math.sin(yaw), yaw),
-                  f'창고 안쪽 {d} m 전진')
+    def search_offsets(self):
+        """훑을 상대 각도들 — 가까운 쪽부터 좌우 교대 [−Δ, +Δ, −2Δ, +2Δ …].
+
+        AMCL 방위 오차는 대개 작아 가까운 쪽이 먼저 맞을 확률이 높다. 좌우를 교대하면 한쪽으로
+        편향되지 않고, 못 찾고 끝나도 총 회전량이 최소다.
+        """
+        step = math.radians(self.positive_parameter('aruco_search_step_deg'))
+        limit = math.radians(self.positive_parameter('aruco_search_max_deg'))
+        offsets, k = [], 1
+        while k * step <= limit + 1e-9:
+            offsets.extend((-k * step, k * step))
+            k += 1
+        return offsets
+
+    def search_marker(self, bay):
+        """제자리 회전만으로 마커를 다시 찾는다. 찾으면 True.
+
+        **병진하지 않는다.** 마커를 못 본다는 것은 자기 위치를 못 믿는다는 뜻이라 어디로 갈지
+        모른다. 제자리 회전이 footprint 밖으로 쓸고 가는 폭은 1.4 cm 뿐이다.
+
+        찾은 뒤 원래 방위로 되돌리지 않는다 — 접근 단계가 측량 베이 방위로 돌려세우므로
+        되돌리면 같은 회전을 두 번 한다.
+        """
+        if not self.p('aruco_search_enable'):
+            return False
+        if not self.behavior_server_ready():
+            raise MissionAbort('behavior_server 의 spin 이 없다 — Nav2(T3) 를 확인할 것')
+        dwell = self.positive_parameter('aruco_search_dwell_s')
+        allow = max(1, int(self.p('bay_align_timeout_s')))
+        offsets = self.search_offsets()
+        self.get_logger().info(
+            f'마커 재탐지 — 제자리 회전 {len(offsets)}회, '
+            f"±{self.p('aruco_search_max_deg'):.0f}° 를 "
+            f"{self.p('aruco_search_step_deg'):.0f}° 간격으로")
+        at = 0.0
+        for i, target in enumerate(offsets, start=1):
+            delta = wrap_pi(target - at)
+            self.run_behavior(lambda d=delta: self.navigator.spin(d, allow),
+                              f'마커 재탐지 회전 {math.degrees(target):+.0f}°')
+            at = target
+            if self.wait(lambda: self.aruco_ok(bay['aruco_id']), timeout=dwell):
+                self.get_logger().info(
+                    f"마커 {bay['aruco_id']} 재탐지 성공 — 기준 방위에서 "
+                    f'{math.degrees(at):+.0f}° ({i}/{len(offsets)}), '
+                    f'거리 {self.aruco_dist[0]:.2f} m')
+                return True
+        self.get_logger().warn(
+            f"마커 재탐지 실패 — ±{self.p('aruco_search_max_deg'):.0f}° 안에 없다 "
+            f'(지금 방위는 기준에서 {math.degrees(at):+.0f}°)')
+        return False
+
+    # ── 베이 접근·정렬 (마커 기준 상대 이동) ─────────────────────────
+    def camera_transform(self, frame):
+        """base_link ← 카메라 광학 프레임. 고정 변환이라 **한 번만 찾아 들고 있는다**.
+
+        기다리는 이유 — `tf_static` 은 늦게 도착한다. 9/8 실측에서 `tf2_echo` 도 처음 몇 초는
+        `Invalid frame ID "base_link" ... frame does not exist` 를 내다가 그 뒤에 값을 냈다.
+        기다리지 않으면 그 창에 걸린 회차가 '마커 표본 없음' 으로 미션을 포기한다.
+        robot3 실측값: 병진 [-0.060, 0, 0.244] · 회전 (xyzw) [-0.5, 0.5, -0.5, 0.5].
+        """
+        if self.cam_tf is not None and self.cam_tf[0] == frame:
+            return self.cam_tf[1]
+        found = None
+
+        def ready():
+            nonlocal found
+            try:
+                found = self.tf_buffer.lookup_transform(BASE_FRAME, frame, Time())
+            except Exception:
+                return False
+            return True
+
+        if not self.wait(ready, timeout=self.positive_parameter('tf_pose_timeout_s')):
+            self.get_logger().warn(
+                f'카메라 TF({BASE_FRAME}←{frame}) 를 못 찾았다 — 프레임 이름과 '
+                'tf_static 발행을 확인할 것 (ros2 run tf2_ros tf2_echo)')
+            return None
+        t = found.transform.translation
+        self.get_logger().info(
+            f'카메라 TF 확보 ({BASE_FRAME}←{frame}) — '
+            f'병진 [{t.x:.3f}, {t.y:.3f}, {t.z:.3f}]')
+        self.cam_tf = (frame, found)
+        return found
+
+    def marker_in_base(self, msg, tf, distance=None):
+        """aruco/pose 한 장을 base_link 로 옮겨 (앞, 왼쪽, 법선 방위) 로 돌려준다.
+
+        **거리를 주면 그 값으로 다시 재서 쓴다 — 방향만 pose 에서 가져온다 (9/8).**
+        두 값은 계산 방법이 다르다: `aruco/distance` 는 depth 에 로봇별 보정(k)을 건 값이라
+        줄자 대조 ±1.5 cm 인 반면, `aruco/pose` 의 위치는 solvePnP 의 tvec 에 depth/pnp 비
+        **중앙값**을 곱한 것이라 프레임별 오차가 그대로 남는다. 실측에서 같은 순간에
+        1.188 m 대 0.943 m 로 26 % 어긋났고, 그 때문에 목표 0.9 m 인데 0.66 m 까지 들어가
+        하드 바닥(0.80 m) 아래로 내려갔다. 크기는 정확한 쪽을, 방향은 pose 를 쓴다.
+
+        마커 법선은 마커 좌표계의 +z 를 base_link 로 옮긴 것이다(회전행렬 3열). 로봇이 벽을
+        정면으로 보면 법선은 로봇 쪽 = base_link −x 를 향하므로 방위가 π 가 된다.
+        solvePnP 의 두 해 중 법선이 반대로 나온 해는 부호를 되돌려 흡수한다 — 이건 뒤집힘이
+        분명해 안전하지만, 남는 기울기 모호성까지 지우지는 못한다 (그래서 기본은 안 쓴다).
+        """
+        pose = msg.pose
+        if distance is not None:
+            pos = pose.position
+            reach = math.sqrt(pos.x ** 2 + pos.y ** 2 + pos.z ** 2)
+            if reach < 1e-6:
+                return None
+            k = distance / reach          # 카메라 프레임에서 크기만 갈아끼운다 (방향 보존)
+            pose = Pose()
+            pose.position.x, pose.position.y, pose.position.z = pos.x * k, pos.y * k, pos.z * k
+            pose.orientation = msg.pose.orientation
+        p = do_transform_pose(pose, tf)
+        q = p.orientation
+        nx = 2.0 * (q.x * q.z + q.w * q.y)
+        ny = 2.0 * (q.y * q.z - q.w * q.x)
+        if not all(math.isfinite(v) for v in (p.position.x, p.position.y, nx, ny)):
+            return None
+        if p.position.x <= 0.0:
+            return None                       # 마커가 로봇 뒤에 있다 — 변환이나 검출이 틀렸다
+        if nx > 0.0:
+            nx, ny = -nx, -ny                 # 법선은 로봇 쪽을 향한다 (두 해 중 뒤집힌 것 복원)
+        if math.hypot(nx, ny) < 1e-3:
+            return None                       # 수평 성분이 없다 — 방위를 낼 수 없다
+        return p.position.x, p.position.y, math.atan2(ny, nx)
+
+    def marker_sample(self, expect_id=None):
+        """여러 프레임의 중앙값으로 한 점을 만든다. 표본을 못 모으면 None.
+
+        **expect_id 를 주면 그 마커가 지금 보일 때만 쓴다.** `aruco/pose` 에는 ID 가 없어서
+        (계약 4절) 이 토픽만 보면 어느 마커의 자세인지 알 수 없다. 검출기는 여럿 보이면 가장
+        가까운 하나만 내므로, 옆 베이 마커로 바뀌는 순간의 자세를 그대로 쓰면 엉뚱한 곳으로
+        간다. 같은 프레임에서 함께 나오는 `aruco/id`·`aruco/distance` 로 걸러 준다.
+
+        중앙값을 쓰는 이유 — 한 프레임이 튀어도(두 해 뒤집힘·ROI 오염) 보정량이 끌려가지 않는다.
+        법선 방위는 π 근처라 그대로 중앙값을 내면 π 와 −π 가 섞이므로 첫 표본 기준으로 접어서 낸다.
+        """
+        want = max(1, int(self.p('bay_align_samples')))
+        window = self.positive_parameter('bay_align_sample_s')
+        self.aruco_poses.clear()
+        # ID 일치를 **기다리는 조건에 넣는다.** 미리 한 번 보고 없다고 곧장 포기하면, 회전 직후
+        #   한두 프레임 놓친 것만으로 미션이 죽는다 (9/8 T15·T16 이 그랬다)
+        self.wait(lambda: (len(self.aruco_poses) >= want
+                           and (expect_id is None or self.aruco_ok(expect_id))),
+                  timeout=window)
+        if expect_id is not None and not self.aruco_ok(expect_id):
+            self.get_logger().warn(
+                f'마커 {expect_id} 를 {window:.1f} s 안에 못 봤다 — 자세 표본을 쓰지 않는다 '
+                '(aruco/pose 에는 ID 가 없어 옆 베이 마커일 수 있다)')
+            return None
+        frames = list(self.aruco_poses)
+        if not frames:
+            return None
+        tf = self.camera_transform(frames[0][0].header.frame_id or CAMERA_FRAME_FALLBACK)
+        if tf is None:
+            return None
+        # 거리는 검출기가 vetting 한 aruco/distance 를 쓴다 (위 marker_in_base 설명)
+        distance = None
+        if self.aruco_dist is not None:
+            value, stamp = self.aruco_dist
+            if self.now() - stamp <= self.p('aruco_valid_s') and math.isfinite(value):
+                distance = float(value)
+        if distance is None:
+            self.get_logger().warn('aruco/distance 가 신선하지 않다 — pose 크기를 그대로 쓴다')
+        else:
+            # 9/8 미해결: 검출기가 0.899 m 를 찍은 순간 우리 계산이 1.104 m 였다. 어느 쪽이
+            #   어긋났는지 로그로 바로 가리려고 쓴 값을 남긴다 (내일 첫 항목)
+            self.get_logger().info(
+                f'마커 표본 {len(frames)}개 · 자로 쓴 aruco/distance {distance:.3f} m '
+                f'(수신 {self.now() - self.aruco_dist[1]:.2f} s 전)')
+        rows, last = [], None
+        for msg, recv in frames:
+            row = self.marker_in_base(msg, tf, distance)
+            if row is not None:
+                rows.append(row)
+                last = recv
+        if not rows:
+            return None
+        ref = rows[0][2]
+        return MarkerSample(
+            median([r[0] for r in rows]), median([r[1] for r in rows]),
+            ref + median([wrap_pi(r[2] - ref) for r in rows]), last)
+
+    def align_yaw(self, sample, yaw_ref, yaw_now):
+        """돌려야 할 각 φ 와 그 근거를 돌려준다.
+
+        기본은 arena.yaml 의 측량된 베이 방위다 — 이 경로는 AMCL 의 방위 오차를 그대로 물려받는다
+        (위치와 달리 상쇄되지 않는다). 마커 자세를 켜면 그 오차까지 지워지지만 두 해 문제가 있어,
+        측량값과 게이트 이상 어긋나면 뒤집힌 해로 보고 측량값으로 되돌아간다.
+        """
+        surveyed = wrap_pi(yaw_ref - yaw_now)
+        if not self.p('bay_align_use_marker_yaw'):
+            return surveyed, '측량'
+        gate = math.radians(self.positive_parameter('bay_align_yaw_gate_deg'))
+        if abs(wrap_pi(sample.yaw_error - surveyed)) > gate:
+            self.get_logger().warn(
+                f'마커 자세 기각 — 측량 {math.degrees(surveyed):+.1f}° 와 '
+                f'{math.degrees(sample.yaw_error):+.1f}° 가 게이트 {math.degrees(gate):.0f}° 를 '
+                '넘게 어긋난다 (두 해 뒤집힘으로 본다)')
+            return surveyed, '측량(마커 자세 기각)'
+        return sample.yaw_error, '마커'
+
+    def approach_translation(self, sample, r_target):
+        """**마커를 향해 곧장** 들어가는 base_link 이동량 (앞, 왼쪽).
+
+        마커 방향 단위벡터에 (지금 거리 − 목표 거리) 를 곱한 것이다. 그래서 이동 방향이 곧
+        마커 방위이고, 로봇은 벽에 거의 수직으로 들어간다.
+
+        **왜 좌우 치우침을 맞추지 않나 (9/8 실주행에서 배웠다).** 예전에는 '마커가 정면
+        정중앙에 오도록' 을 목표로 삼아 t = p − R(φ)·p* 를 썼다. 그러면 회전 φ 가 거리 r 과
+        묶여 **r·sin(φ) 만큼의 옆걸음**이 따라 나온다. 실측: 마커가 9.8 cm 오른쪽 · φ=9.8° ·
+        r=0.6 이었는데 이동 요구가 앞 0.58 · **좌 −0.20** 이 되어, 로봇이 마커를 14° 비껴간
+        방향으로 파고들다 **마커가 없는 옆벽**을 만나 `Collision Ahead` 로 중단됐다.
+        좁은 베이 칸에서 옆걸음은 옆벽으로 밀어 넣는다.
+
+        그래서 좌우는 **보정하지 않는다.** 로봇이 마커에서 좌우로 조금 어긋난 채 서게 되지만,
+        옆벽에 파고드는 것보다 낫고 그 잔차는 로그로 남는다. 정중앙 정렬이 정말 필요해지면
+        '멀리서 옆으로 정렬 → 직진 접근' 2단계로 따로 설계해야 한다 — 지금 방식으로는 안 된다.
+        """
+        reach = math.hypot(sample.fwd, sample.lat)
+        if reach <= r_target:
+            return 0.0, 0.0                    # 이미 목표보다 가깝다 — 후진 금지라 물러나지 않는다
+        scale = 1.0 - r_target / reach
+        return sample.fwd * scale, sample.lat * scale
+
+    def behavior_server_ready(self, timeout_s=2.0):
+        """Spin·DriveOnHeading 액션 서버가 떠 있는지.
+
+        BasicNavigator 의 spin()·driveOnHeading() 은 서버가 없으면 **무한히** 기다린다
+        (`while not wait_for_server(...)`). getDockedStatus 와 같은 함정이라 먼저 확인한다.
+        대역(시험)에는 액션 클라이언트가 없으므로 준비된 것으로 본다.
+        """
+        for attr in ('spin_client', 'drive_on_heading_client'):
+            client = getattr(self.navigator, attr, None)
+            if client is not None and not client.wait_for_server(timeout_sec=timeout_s):
+                return False
+        return True
+
+    def run_behavior(self, start, label):
+        """상대 이동 1건. goto() 와 같은 폴링 규약을 쓰되 좌표 검증은 마커가 대신한다."""
+        if self.estop:
+            self.get_logger().warn(f'estop 중 — 해제까지 {label} 보류')
+            self.wait(lambda: not self.estop)      # 계약 4절: estop 동안 주행 명령 금지
+        if not start():
+            raise MissionAbort(f'{label} 거부됨')
+        self.wait(self.navigator.isTaskComplete)
+        result = self.navigator.getResult().name
+        if result != 'SUCCEEDED':
+            raise MissionAbort(f'{label} 실패: {result}')
+
+    def turn_worth_doing(self, angle):
+        """분해능보다 작은 회전은 명령하지 않는다 — 명령하면 되레 나빠진다.
+
+        Nav2 의 Spin 은 `min_rotational_vel` 0.4 rad/s 를 밑돌지 않고 제어 주기가 10 Hz 라
+        **한 사이클에 최소 0.04 rad = 2.3° 를 돌고, 정지 판정도 사이클 단위라 그만큼 지나친다.**
+        9/8 실주행에서 0.37° 를 명령했는데 실제로는 그 몇 배가 실행됐고, 그 오차가 매 회전마다
+        쌓여 법선 오차가 8.3° → 16.4° → −14.1° 로 **발산**했다. 작은 각은 그냥 두는 편이 낫다.
+        """
+        return abs(angle) >= math.radians(self.positive_parameter('bay_align_min_turn_deg'))
+
+    def relative_move(self, tx, ty, phi, label):
+        """회전–직진–회전. 차동구동이라 옆으로 못 가고, 직진은 항상 전진이다 (후진 금지)."""
+        speed = self.positive_parameter('bay_align_speed_mps')
+        allow = max(1, int(self.p('bay_align_timeout_s')))
+        step = math.hypot(tx, ty)
+        turn1 = 0.0
+        if step >= 1e-3:
+            heading = math.atan2(ty, tx)           # 이동 방향을 정면으로 — 그래야 전진만으로 간다
+            if self.turn_worth_doing(heading):
+                turn1 = heading
+                self.run_behavior(lambda: self.navigator.spin(turn1, allow), f'{label} 회전①')
+            else:
+                # 안 돌았다. 지금 방위 그대로 가면 옆으로 step·sin(heading) 만큼 어긋나는데,
+                #   불감대(5°)에서 그 값은 수렴 허용치와 같은 자리수다. 회전 오차보다 낫다
+                self.get_logger().info(
+                    f'{label} 회전① 생략 — {math.degrees(heading):+.1f}° 는 Spin 분해능 미만')
+            self.run_behavior(
+                lambda: self.navigator.driveOnHeading(step, speed, allow), f'{label} 전진')
+        turn2 = wrap_pi(phi - turn1)
+        if self.turn_worth_doing(turn2):
+            self.run_behavior(lambda: self.navigator.spin(turn2, allow), f'{label} 회전②')
+        elif abs(turn2) > 1e-6:
+            self.get_logger().info(
+                f'{label} 회전② 생략 — {math.degrees(turn2):+.1f}° 는 Spin 분해능 미만')
+
+    def turn_out_of_bay(self):
+        """체류 뒤 제자리에서 돌아 칸 밖을 향한다 — Nav2 가 좁은 칸에서 방향을 못 바꾼다.
+
+        **실주행 2회 연속으로 여기서 죽었다** (마커까지 0.6 m·0.7 m 둘 다). 체류를 마치고
+        대기공간 목표를 받은 Nav2 가 90 초 넘게 진전을 못 내고 T_lim 을 넘겼다. 두 번째
+        회차에는 워치독 estop 조차 없었다 — 장애물이 가까워서가 아니라 **경로를 못 푼 것**이다.
+
+        로봇이 **벽을 마주 본 채** 출발 명령을 받기 때문이다. 후진이 금지돼 있어(계약 2절)
+        좁은 칸 안에서 스스로 180° 를 돌아야 하는데 DWB 가 그걸 풀지 못한다.
+
+        그래서 우리가 대신 돌려 준다. 돌고 나면 Nav2 는 앞으로 나오기만 하면 된다.
+          · 제자리 회전이 footprint 밖으로 쓸고 가는 폭은 1.4 cm 다 (safety_watchdog 과 같은
+            근거) — 칸 안에서도 안전하고, '제자리 회전 뒤 전진' 은 계약이 정한 탈출 방식이다.
+          · **AMCL 을 쓰지 않는다.** 목표 방위를 계산하지 않고 그냥 뒤로 돈다 — 칸 밖은 무조건
+            로봇 뒤쪽이고, 그 판단에 측위는 필요 없다.
+          · 제자리 회전이라 위치가 바뀌지 않으므로 방법 B 의 전제(획득 시점이 P1 폴리곤 밖)를
+            건드리지 않는다.
+        """
+        turn = math.radians(float(self.p('bay_exit_turn_deg')))
+        if abs(turn) < 1e-6:
+            self.get_logger().info('탈출 회전 꺼짐 (bay_exit_turn_deg=0)')
+            return
+        if not self.behavior_server_ready():
+            raise MissionAbort('behavior_server 의 spin 이 없다 — Nav2(T3) 를 확인할 것')
+        allow = max(1, int(self.p('bay_align_timeout_s')))
+        self.get_logger().info(
+            f'칸 밖을 향해 제자리 {math.degrees(turn):.0f}° 회전')
+        self.run_behavior(lambda: self.navigator.spin(wrap_pi(turn), allow), '탈출 회전')
+        # 돌기만 하고 Nav2 에 넘겼더니 좁은 칸 안에서 DWB 가 앞뒤로 헤매다 진행하지 못했다
+        #   (9/8 T17: 35 초 넘게 제자리에서 흔들리고 P1 이 강제 회수됐다). 칸을 벗어나는
+        #   구간까지 우리가 곧게 빼 준 뒤 넘긴다 — 열린 곳에서는 Nav2 가 잘 한다
+        out = float(self.p('bay_exit_drive_m'))
+        if out <= 0.0:
+            return
+        speed = self.positive_parameter('bay_align_speed_mps')
+        self.get_logger().info(f'칸 밖으로 {out:.2f} m 전진 — 여기까지만 우리가 뺀다')
+        self.run_behavior(lambda: self.navigator.driveOnHeading(out, speed, allow), '탈출 전진')
+
+    def approach_target(self):
+        """접근을 끝낼 마커까지의 거리를 검증해 돌려준다.
+
+        이것이 **미션의 최종 정차 위치**다 (옛 '0.3 m 전진' 을 대신한다). 그래서 0 이나 음수를
+        '거리 보정 안 함' 으로 조용히 넘기지 않는다 — 설정 누락으로 보고 포기한다.
+        하한(bay_align_min_range_m)은 선반·벽에 밀어 넣는 설정을 막는 유일한 방어다.
+
+        하한을 정할 때 Nav2 쪽 바닥도 같이 봐야 한다: DriveOnHeading 은 앞을
+        `속도 × simulate_ahead_time`(0.1 × 1.9 = 0.19 m) 내다보고 footprint 정면 0.189 m 를
+        더해, **중심에서 약 0.38 m 안에 벽이 들어오면 스스로 중단한다.** 목표 거리가 0.45 m
+        밑이면 정상 접근이 매번 `Collision Ahead` 로 끝난다 (9/8 실측).
+        """
+        r_target = self.positive_parameter('bay_marker_range_m')
+        floor = self.positive_parameter('bay_align_min_range_m')
+        if r_target < floor:
+            raise MissionAbort(
+                f'bay_marker_range_m {r_target:.3f} m 가 하한 {floor:.3f} m 보다 가깝다 — '
+                'footprint 외접 0.189 m 를 빼면 벽까지 여유가 없다')
+        return r_target
+
+    def approach_and_align(self, bay):
+        """마커에서 bay_marker_range_m 인 자리로 가서 베이 방위로 선다.
+
+        **이 단계가 옛 '창고 안쪽 0.3 m 전진' 을 대신한다.** 전진은 출발점을 모르는 상대량이라
+        AMCL 오차가 그대로 남았지만, 여기는 목적지가 마커 기준 절대 위치라 출발점이 어디든
+        도착점이 같다.
+
+        Nav2 목표로는 못 한다: SimpleGoalChecker 가 xy 0.25 m · yaw 0.25 rad 라 이 크기의 이동을
+        '이미 도착' 으로 처리해 로봇이 안 움직인다. 그래서 behavior_server 의 상대 이동을 쓴다.
+
+        **aruco/pose 가 없으면 포기한다.** 정렬만 하던 때는 건너뛰어도 미션이 성립했지만
+        (베이가 맞다는 것은 confirm_aruco 가 확인한다), 지금은 그 pose 가 **유일한 목적지 정보**라
+        없으면 갈 곳이 없다. 주입 리그로 시험할 때는 bay_align_enable:=false 로 끈다.
+        """
+        if not self.p('bay_align_enable'):
+            self.get_logger().warn(
+                '베이 접근·정렬 꺼짐 (bay_align_enable=false) — 베이 waypoint 에 선 채로 둔다. '
+                '적재 위치까지 가지 않으므로 판정 3(도달 오차)은 이 회차에 매기지 않는다')
+            return
+        r_target = self.approach_target()
+        yaw_ref = float(bay['waypoint'][2])
+        tol_xy = self.positive_parameter('bay_align_tol_xy_m')
+        tol_yaw = math.radians(self.positive_parameter('bay_align_tol_yaw_deg'))
+        max_step = self.positive_parameter('bay_align_max_step_m')
+        iters = max(1, int(self.p('bay_align_max_iter')))
+        self.get_logger().info(
+            f'베이 접근 — 마커를 향해 곧장 {r_target:.2f} m 까지 들어간다 '
+            '(좌우 치우침은 보정하지 않는다 — 좁은 칸에서 옆걸음은 옆벽으로 민다)')
+        for i in range(1, iters + 1):
+            sample = self.marker_sample(bay['aruco_id'])
+            if sample is None:
+                if i > 1:
+                    # 이미 접근은 했다. 다듬지 못할 뿐이라 미션을 죽일 이유가 없다 (I-026)
+                    self.get_logger().warn(
+                        f'접근 {i}/{iters} 에서 마커를 못 봤다 — {i - 1}회 접근한 자리에서 멈춘다')
+                    return
+                raise MissionAbort(
+                    f'{ARUCO_POSE_TOPIC} 표본 없음 — 접근할 기준이 없다. aruco_detector 가 떠 '
+                    '있는지, publish_pose 가 true 인지, 카메라 TF 가 있는지 확인할 것')
+            if i == 1 and not self.behavior_server_ready():
+                raise MissionAbort(
+                    'behavior_server 의 spin·drive_on_heading 이 없다 — Nav2(T3) 를 확인할 것')
+            here = self.fresh_pose('접근 기준 자세', not_before=self.now())
+            phi, source = self.align_yaw(sample, yaw_ref, here.yaw)
+            tx, ty = self.approach_translation(sample, r_target)
+            step = math.hypot(tx, ty)
+            self.get_logger().info(
+                f'접근 {i}/{iters} — 마커 base_link ({sample.fwd:.3f}, {sample.lat:.3f}) m, '
+                f'방위 {math.degrees(sample.bearing):+.1f}°, '
+                f'마커 법선 오차 {math.degrees(sample.yaw_error):+.1f}° / '
+                f'이동 앞 {tx:+.3f} · 좌 {ty:+.3f} m (합 {step:.3f}, '
+                f'진행 방위 {math.degrees(sample.bearing):+.1f}°), '
+                f'끝나고 회전 {math.degrees(phi):+.1f}° [{source}]')
+            if step <= tol_xy and abs(phi) <= tol_yaw:
+                self.get_logger().info(f'접근 완료 ({i}회) — 더 움직이지 않는다')
+                return
+            if step > max_step:
+                raise MissionAbort(
+                    f'접근 이동량 {step:.3f} m 가 상한 {max_step:.3f} m 를 넘는다 — 마커 측정이나 '
+                    'bay_marker_range_m 를 의심할 것 (이대로 움직이면 선반에 부딪힐 수 있다)')
+            self.relative_move(tx, ty, phi, f'접근 {i}')
+        final = self.marker_sample(bay['aruco_id'])
+        if final is None:
+            self.get_logger().warn('접근 후 마커를 다시 못 봤다 — 잔차를 남기지 못한다')
+        else:
+            self.get_logger().info(
+                f'접근 종료 — 마커까지 {math.hypot(final.fwd, final.lat):.3f} m '
+                f'(목표 {r_target:.3f}, 잔차 {math.hypot(final.fwd, final.lat) - r_target:+.3f} m), '
+                f'base_link ({final.fwd:.3f}, {final.lat:.3f}), '
+                f'좌우 치우침 {final.lat:+.3f} m (보정하지 않은 값), '
+                f'법선 오차 {math.degrees(final.yaw_error):+.1f}°')
 
     def dwell(self):
         dwell_s = self.p('bay_dwell_s')

@@ -14,6 +14,16 @@
   · dock_pose 가 (0,0,0) 이면 거부한다 (I-013 — 두 로봇의 맵 좌표계가 어긋난다)
   · 초기자세를 **미션이 아니라 기동 시** 보낸다 (I-035). 도크 밖이면 보내지 않고, 기동 경로는
     미션이 없으므로 FAILED 를 내지 않는다. Nav2 가 active 가 아니면 T_lim 을 태우지 않고 곧장 포기
+  · 마커 재탐지 (9/8): 베이에서 못 보면 **제자리 회전만으로** 좌우 교대로 훑는다. 병진하지
+    않는다 — 위치를 못 믿는 상태라 어디로 갈지 모른다. 다 훑고도 없으면 오도착으로 포기한다
+  · 탈출 회전 (9/8): 체류 뒤 **제자리에서 돌아 칸 밖을 향한 다음** 대기공간 목표를 준다.
+    벽을 마주 본 채 출발시키면 Nav2 가 좁은 칸에서 방향을 못 바꿔 실주행 2회 연속 T_lim 이었다
+  · 회전 불감대 (9/8): Spin 분해능(약 2.3°)보다 작은 회전은 명령하지 않는다. 명령하면 오차만
+    쌓여 정렬 루프가 발산한다 (실측 8.3° → 16.4° → −14.1°)
+  · 베이 접근·정렬 (9/8, 옛 '창고 안쪽 0.3 m 전진' 대체): 마커에서 bay_marker_range_m 인 자리로
+    회전–직진–회전으로 간다. aruco/pose 가 없으면 **목적지를 모르므로 포기**하고, 이동량이
+    상한을 넘어도 포기한다. Nav2 목표가 아니라 Spin·DriveOnHeading 이다 — SimpleGoalChecker
+    허용오차 xy 0.25 m 가 이 크기의 이동을 '이미 도착' 으로 처리하는 것을 피한다
 
 **보장하지 못하는 것 — 실주행에서만 확인된다.**
   · Nav2 가 실제로 베이 → P1 → 대기공간 순서로 지나는지. 방법 B 는 이 순서를 전제로 한다
@@ -23,13 +33,13 @@
 
 실행 (`colcon build` 로 `mro_interfaces` 가 설치돼 있어야 한다):
 
-    cd ros2_ws/src/mro_navigation
-    PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest test/test_shuttle_mission_fsm.py -v
+    bash tools/test_shuttle_offline.sh -v
 
 `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` 은 이 PC 의 `launch_testing_ros` 플러그인이 pytest 9 와
 맞지 않아 붙인 것이다 (이 저장소 문제가 아니라 환경 문제 — `test_flake8.py` 도 같은 이유로 못 돈다).
 """
 import math
+import os
 from pathlib import Path
 import sys
 import types
@@ -43,6 +53,10 @@ from rclpy.parameter import Parameter
 ARENA = Path(__file__).resolve().parents[2] / 'mro_bringup' / 'params' / 'arena.yaml'
 # 테스트용 네임스페이스. arena.yaml 의 waiting_zone·dock_zone 에 키가 있는 로봇이어야 한다
 TEST_NS = '/robot3'
+# 광학 프레임(x 우·y 하·z 앞) → base_link(x 앞·y 좌·z 상) 회전. TB4 의 카메라 TF 와 같은 꼴이다.
+#   R = [[0,0,1],[-1,0,0],[0,-1,0]] 이라 광학 (px,py,pz) 가 base 에서 (pz, −px, −py) 가 된다
+OPTICAL_TO_BASE_Q = (-0.5, 0.5, -0.5, 0.5)     # (x, y, z, w)
+CAMERA_FRAME = 'oakd_rgb_camera_optical_frame'
 BASE = {
     'dock_pose': [0.019, -0.795, 0.133],
     'bay_dwell_s': 0.2,
@@ -50,6 +64,12 @@ BASE = {
     'aruco_confirm_s': 0.5,
     'aruco_retry': 1,
     'token_retry_s': 0.1,
+    'bay_align_sample_s': 0.05,   # 마커 표본을 기다리는 시간. 시험을 빠르게 끝내려고 줄인다
+    # 접근 단계는 **기본으로 끈다.** 마커 pose 를 주지 않는 시험이 대부분이고, 마커 없이 접근하면
+    #   목적지를 모르니 포기가 정상이다 (test_bay_approach_without_marker_pose_aborts 가 그것을 본다).
+    #   접근을 보는 시험은 marker_frames() 와 함께 bay_align_enable=True 로 켠다.
+    'bay_align_enable': False,
+    'aruco_search_dwell_s': 0.05,  # 재탐지 정지점 대기. 시험을 빠르게 끝내려고 줄인다
 }
 
 
@@ -74,6 +94,10 @@ class StubNavigator(Node):
         self.result_name = 'SUCCEEDED'
         self.goal_accepted = True
         self._ticks = 0
+        self.pose = None
+        # 상대 이동(Spin·DriveOnHeading)은 목표 좌표가 없어 '어디로 갔는지' 를 대역이 직접
+        #   굴려야 검증할 수 있다. goToPose 는 목표로 순간이동시킨다 (예전과 같은 동작)
+        self.sim = (0.0, 0.0, 0.0)
 
     def deliver_dock_status(self, value):
         """실물의 _dockCallback 이 도착한 것과 같다 — is_docked 는 이 경로로만 바뀐다."""
@@ -109,8 +133,29 @@ class StubNavigator(Node):
 
     def goToPose(self, pose, behavior_tree=''):  # noqa: N802
         """목표 전송을 기록하고 nav_ticks 만큼 미완료 상태를 유지한다."""
+        self.pose = pose
+        q = pose.pose.orientation
+        self.sim = (pose.pose.position.x, pose.pose.position.y,
+                    math.atan2(2.0 * (q.w * q.z + q.x * q.y),
+                               1.0 - 2.0 * (q.y * q.y + q.z * q.z)))
         self.calls.append(
             ('goto', round(pose.pose.position.x, 3), round(pose.pose.position.y, 3)))
+        self._ticks = self.nav_ticks
+        return self.goal_accepted
+
+    def spin(self, spin_dist=1.57, time_allowance=10):
+        """제자리 회전. 실물 BasicNavigator 와 같은 서명·반환값이다."""
+        x, y, yaw = self.sim
+        self.sim = (x, y, yaw + float(spin_dist))
+        self.calls.append(('spin', round(float(spin_dist), 3)))
+        self._ticks = self.nav_ticks
+        return self.goal_accepted
+
+    def driveOnHeading(self, dist=0.15, speed=0.025, time_allowance=10):  # noqa: N802
+        """정면으로 dist 만큼 직진. 후진은 이 경로로 오지 않는다 (계약 2절)."""
+        x, y, yaw = self.sim
+        self.sim = (x + dist * math.cos(yaw), y + dist * math.sin(yaw), yaw)
+        self.calls.append(('drive', round(float(dist), 3)))
         self._ticks = self.nav_ticks
         return self.goal_accepted
 
@@ -130,6 +175,10 @@ class StubNavigator(Node):
     def goals(self):
         """전송한 goToPose 목표만 추린다."""
         return [c for c in self.calls if c[0] == 'goto']
+
+    def moves(self):
+        """상대 이동(Spin·DriveOnHeading)만 추린다."""
+        return [c for c in self.calls if c[0] in ('spin', 'drive')]
 
 
 def _shuttle_mission_class():
@@ -152,13 +201,16 @@ def ros():
     네임스페이스도 함께 준다 — 노드가 ns 없이는 뜨지 않는다 (9/8). ns 는 arena.yaml 의
     waiting_zone·dock_zone 조회 키라 대체값을 쓰면 남의 자리로 가므로, 대체값 대신 죽게 했다.
     """
-    rclpy.init(args=['--ros-args', '-r', f'__ns:={TEST_NS}', '-p', f'arena_yaml:={ARENA}'])
+    if os.environ.get('ROS_DOMAIN_ID') != '201' or os.environ.get('ROS_DISCOVERY_SERVER'):
+        pytest.fail('실물과 분리해 실행할 것: bash tools/test_shuttle_offline.sh -v')
+    rclpy.init(args=['--ros-args', '-r', f'__ns:={TEST_NS}', '-p', f'arena_yaml:={ARENA}',
+                     '-r', '/tf:=tf', '-r', '/tf_static:=tf_static'])
     yield
     rclpy.shutdown()
 
 
-def make_node(**params):
-    """발행 내용을 기록하도록 감싼 노드를 만든다. Nav2 준비 확인은 통과시킨다."""
+def make_node(simulate_pose=True, **params):
+    """FSM 시험은 목표 도달 TF를 공급한다. TF 갱신 시험은 simulate_pose=False로 분리한다."""
     node = _shuttle_mission_class()()
     node.status_log = []
     node.arrived_log = []
@@ -169,7 +221,91 @@ def make_node(**params):
     node.pub_arrived.publish = lambda m: (node.arrived_log.append(m.data), pub_arrived(m))
     node.nav2_state = lambda: (True, 'active')
     node.set_parameters([Parameter(k, value=v) for k, v in {**BASE, **params}.items()])
+    if simulate_pose:
+        from geometry_msgs.msg import TransformStamped
+
+        def lookup(target, source, *args, **kwargs):
+            """map→base_link 는 대역의 현재 자세, base_link→카메라는 고정 광학 회전."""
+            transform = TransformStamped()
+            transform.header.stamp = node.get_clock().now().to_msg()
+            transform.header.frame_id = target
+            transform.child_frame_id = source
+            if source == CAMERA_FRAME:
+                q = transform.transform.rotation
+                q.x, q.y, q.z, q.w = OPTICAL_TO_BASE_Q
+                return transform
+            x, y, yaw = node.navigator.sim
+            transform.transform.translation.x = x
+            transform.transform.translation.y = y
+            transform.transform.rotation.z = math.sin(yaw / 2)
+            transform.transform.rotation.w = math.cos(yaw / 2)
+            return transform
+
+        node.tf_buffer.lookup_transform = lookup
     return node
+
+
+class ScriptedPoses(list):
+    """aruco/pose 버퍼 대역. marker_sample() 이 clear() 한 뒤 다시 채워 넣는다.
+
+    노드는 '먼저 비우고 새 표본을 기다린다' 라 시험이 미리 넣어 둔 값이 지워진다. 토픽으로
+    실제 발행하면 spin 타이밍에 따라 시험이 흔들리므로, 비울 때 같은 대본을 되채워
+    **marker_sample() 의 진짜 코드(TF 변환·중앙값·법선 뒤집기)를 그대로 돌린다.**
+    """
+
+    def __init__(self, script):
+        """대본을 그대로 담고, 되채울 사본을 따로 든다."""
+        super().__init__(script)
+        self.script = list(script)
+
+    def clear(self):
+        """비운 뒤 대본을 되채운다 — 노드에게는 새 프레임이 방금 온 것과 같다."""
+        del self[:]
+        self.extend(self.script)
+
+
+# 체류 뒤 칸을 벗어나는 두 동작: 제자리 180° 회전 + 칸 밖으로 직진
+EXIT_MOVES = [('spin', round(math.pi, 3)), ('drive', 0.5)]
+
+
+def approach_moves(node):
+    """탈출 동작을 뺀 '접근 구간' 의 상대 이동만 추린다.
+
+    탈출 회전·전진은 체류 뒤 항상 뒤에 붙는다 — 그것까지 매 시험이 세면 접근 자체를 보는
+    검증이 흐려진다. 대신 여기서 그 존재를 한 번에 확인한다.
+    """
+    moves = node.navigator.moves()
+    assert moves[-len(EXIT_MOVES):] == EXIT_MOVES, f'탈출 동작이 뒤에 없다: {moves}'
+    return moves[:-len(EXIT_MOVES)]
+
+
+def marker_frames(node, fwd, lat, count=5, flip_normal=False, set_distance=True):
+    """마커가 base_link 에서 (fwd, lat) 에 정면으로 보이는 aruco/pose 를 대본으로 넣는다.
+
+    광학 프레임에서 (px, py, pz) 는 base 에서 (pz, −px, −py) 이므로 px = −lat, pz = fwd 다.
+    자세는 x 축 180° 회전(1,0,0,0) — 마커의 +z(법선)가 카메라 쪽 = base −x 를 향한다.
+    flip_normal 은 solvePnP 가 법선이 뒤집힌 해를 낸 경우다 (노드가 되돌려야 한다).
+    """
+    from geometry_msgs.msg import PoseStamped
+    script = []
+    for _ in range(count):
+        m = PoseStamped()
+        m.header.stamp = node.get_clock().now().to_msg()
+        m.header.frame_id = CAMERA_FRAME
+        m.pose.position.x, m.pose.position.y, m.pose.position.z = -lat, 0.0, fwd
+        # 네 성분을 다 적는다 — Quaternion 의 기본값이 w=1.0 이라 한 성분만 바꾸면 조용히
+        #   정규화되지 않은(= 다른 각도의) 회전이 된다
+        q = m.pose.orientation
+        if flip_normal:
+            q.x, q.y, q.z, q.w = 0.0, 0.0, 0.0, 1.0   # 법선이 +z (카메라 반대쪽) 를 향하는 해
+        else:
+            q.x, q.y, q.z, q.w = 1.0, 0.0, 0.0, 0.0   # x 축 180° — 법선이 카메라를 향한다
+        script.append((m, node.now()))
+    node.aruco_poses = ScriptedPoses(script)
+    if set_distance:
+        # 노드는 크기를 aruco/distance 에서 가져온다 (pose 는 방향만) — 기하와 맞춰 둔다.
+        #   fresh_marker() 뒤에 부를 것: 그쪽이 임의의 거리 0.9 를 넣어 둔다
+        node.aruco_dist = (math.hypot(fwd, lat), node.now())
 
 
 def stub_token(node, granted_sequence):
@@ -213,35 +349,342 @@ def test_normal_mission(ros):
     assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
     assert node.arrived_log == [True]
     assert node.token_log == ['acquire', 'release']
-    # 베이 → 창고 안쪽 0.3 m 전진 → 대기공간. 전진 목표는 베이 yaw(-3.05 rad) 방향이다
-    assert node.navigator.goals() == [
-        ('goto', -0.78, 0.138), ('goto', -1.079, 0.111), ('goto', -0.998, 0.937)]
+    # 베이 → 대기공간. 접근은 Nav2 목표가 아니라 상대 이동이고, 이 시험은 마커를 안 주므로
+    #   접근 단계를 끈다 (마커가 없으면 목적지를 모른다 → 포기가 정상이다)
+    assert node.navigator.goals() == [('goto', -0.78, 0.138), ('goto', -0.998, 0.937)]
+    assert approach_moves(node) == []          # 접근은 껐고, 탈출 회전만 남는다
     assert ('initpose', 0.019, -0.795) in node.navigator.calls
     assert (node.mission, node.t0) == (None, None)
     node.destroy_node()
 
 
-def test_aruco_mismatch_aborts_without_waiting(ros):
-    """다른 베이의 마커가 보이면 재정렬 후 포기한다 — 오도착 0건 (FR-08)."""
+def test_bay_approach_without_marker_pose_aborts(ros):
+    """aruco/pose 가 없으면 포기한다 — 그 pose 가 유일한 목적지 정보다.
+
+    옛 '0.3 m 전진' 은 마커 없이도 갈 수 있었지만(전방으로 고정량), 접근은 마커에서 몇 m 인
+    자리가 목적지라 마커를 못 보면 갈 곳이 없다. 조용히 건너뛰면 적재 위치에 못 간 채
+    WAITING 을 내 AC-08 이 틀어진다 (I-024).
+    """
+    node = make_node(bay_align_enable=True)
+    stub_token(node, [True])
+    fresh_marker(node)                       # id·거리는 오지만 pose 는 없다 (주입 리그와 같다)
+    node.run_mission(assigned('A'))
+    assert node.status_log[-2:] == ['FAILED', 'READY']
+    assert node.arrived_log == []
+    assert node.navigator.moves() == []
+    node.destroy_node()
+
+
+def test_bay_approach_drives_to_target_range(ros):
+    """마커가 1.0 m 앞이면 기본 목표 0.9 m 까지 0.1 m 접근한다 — 옛 0.3 m 전진을 대신한다.
+
+    **기본값 0.9 를 여기서 못 박는다.** 9/8 실측에서 선반 앞면이 마커 벽에서 0.425 m 앞이라
+    (마커까지 0.715 m 일 때 워치독이 전방 0.29 m 를 봤다) 워치독·Nav2 충돌 예측 양쪽의
+    하드 바닥이 0.80 m 다. 0.5·0.6·0.7 은 전부 그 아래여서 실패했다. 값이 바뀌면 여기서 먼저 드러난다.
+    """
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.0, lat=0.0)
+    assert node.p('bay_marker_range_m') == 0.9
+    node.run_mission(assigned('A'))
+    # 정면이라 첫 회전·마지막 회전이 0 이고 직진만 남는다
+    assert approach_moves(node) == [('drive', 0.1)]
+    assert node.status_log[-2:] == ['WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_bay_approach_heads_straight_at_the_marker(ros):
+    """좌우로 치우쳐 보여도 **마커 방향으로** 들어간다 — 옆걸음하지 않는다 (9/8 실주행).
+
+    옛 방식은 '마커가 정면 정중앙에 오도록' 을 목표로 삼아 회전 φ 가 거리와 묶이면서
+    r·sin(φ) 만큼 옆으로 파고들었고, 좁은 베이 칸에서 마커가 없는 옆벽을 만나 Nav2 가
+    `Collision Ahead` 로 중단했다. 이제 진행 방위는 **마커 방위와 같아야 한다.**
+
+    마커가 base_link (1.0, +0.12) 이면 거리는 1.0072 이고, 목표 거리까지 남는 만큼을
+    마커 방위(+6.84°)로 들어간다.
+    """
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1)   # 대역은 마커가 안 따라온다
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.0, lat=0.12)
+    node.run_mission(assigned('A'))
+    moves = approach_moves(node)
+    assert [m[0] for m in moves] == ['spin', 'drive', 'spin']
+    turn1, step, turn2 = moves[0][1], moves[1][1], moves[2][1]
+    bearing = math.atan2(0.12, 1.0)
+    # 대역이 호출값을 소수 3자리로 반올림해 기록하므로 그만큼만 느슨하게 본다
+    assert turn1 == pytest.approx(bearing, abs=1e-3)      # 진행 방위 = 마커 방위
+    assert step == pytest.approx(
+        math.hypot(1.0, 0.12) - node.p('bay_marker_range_m'), abs=0.002)
+    assert turn2 == pytest.approx(-turn1, abs=1e-6)       # 베이 방위로 되돌린다
+    assert node.status_log[-2:] == ['WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_bay_approach_does_not_sidestep_when_heading_is_off(ros):
+    """방위가 틀어져 있어도 진행 방위는 마커 방위다 — 회전이 옆걸음을 만들지 않는다.
+
+    이것이 9/8 사고의 재발 방지선이다. 옛 방식이면 이 조건에서 진행 방위가 마커 방위와
+    10° 넘게 벌어졌다.
+    """
+    # 불감대를 낮춰 **명령된 방향 자체**를 본다. 불감대 동작은 별도 시험이 맡는다
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1, bay_align_min_turn_deg=1.0)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.170, lat=-0.098)           # 9/8 실측값
+    node.run_mission(assigned('A'))
+    moves = approach_moves(node)
+    bearing = math.atan2(-0.098, 1.170)                   # -4.79°
+    assert moves[0][0] == 'spin'
+    assert moves[0][1] == pytest.approx(bearing, abs=1e-3)
+    # 실주행에서 실제로 돈 값은 -19.06° 였다. 마커 방위에서 14° 벗어난 그 각이 옆벽을 불렀다
+    assert abs(moves[0][1] - math.radians(-19.06)) > math.radians(10)
+    assert moves[1] == (
+        'drive', round(math.hypot(1.170, 0.098) - node.p('bay_marker_range_m'), 3))
+    node.destroy_node()
+
+
+def test_bay_approach_stops_when_already_at_target(ros):
+    """마커가 이미 목표 거리에 있으면 한 번도 움직이지 않는다."""
+    node = make_node(bay_align_enable=True, bay_marker_range_m=1.0)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.0, lat=0.0)
+    node.run_mission(assigned('A'))
+    assert approach_moves(node) == []
+    assert node.status_log[-2:] == ['WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_exit_turn_happens_before_leaving_the_bay(ros):
+    """체류 뒤 **제자리 180° 회전 + 칸 밖으로 직진**을 하고 나서 대기공간 목표를 준다.
+
+    벽을 마주 본 채 출발시키면 Nav2 가 좁은 칸에서 방향을 못 바꾼다 — 실주행 2회 연속으로
+    (마커까지 0.6 m·0.7 m 둘 다) 90 초 넘게 진전을 못 내고 T_lim 을 넘겼다. 돌기만 하고
+    넘겼더니 이번엔 DWB 가 칸 안에서 35 초를 헤맸다 (T17) — 칸을 벗어나는 구간까지 우리가
+    곧게 빼 준다. 둘 다 **토큰 획득보다 먼저** 해야 60 s 강제 회수 예산을 여기 쓰지 않는다.
+    """
     node = make_node()
     stub_token(node, [True])
+    fresh_marker(node)
+    node.run_mission(assigned('A', 'M9'))
+    moves = node.navigator.moves()
+    assert moves[-len(EXIT_MOVES):] == EXIT_MOVES
+    # 시점: 베이 목표는 이미 보냈고 대기공간 목표는 아직 안 보낸 사이여야 한다
+    assert node.token_marks == [('acquire', 1), ('release', 2)]
+    assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_exit_turn_can_be_disabled(ros):
+    """bay_exit_turn_deg=0 이면 돌지 않는다 — 옛 동작과 비교할 수 있게 남겨 둔다."""
+    node = make_node(bay_exit_turn_deg=0.0)
+    stub_token(node, [True])
+    fresh_marker(node)
+    node.run_mission(assigned('A'))
+    assert node.navigator.moves() == []
+    assert node.status_log[-2:] == ['WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_turns_below_spin_resolution_are_not_commanded(ros):
+    """Spin 분해능(약 2.3°)보다 작은 회전은 명령하지 않는다.
+
+    9/8 실주행에서 0.37° 를 명령했다가 실제로는 몇 배가 실행됐고, 그 오차가 매 회전마다
+    쌓여 법선 오차가 8.3° → 16.4° → −14.1° 로 발산했다. 작은 각은 그냥 두는 편이 낫다.
+    """
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1,
+                     bay_align_min_turn_deg=5.0)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.0, lat=0.02)       # 방위 +1.15° — 불감대 안이다
+    node.run_mission(assigned('A'))
+    moves = approach_moves(node)
+    assert [m[0] for m in moves] == ['drive']    # 회전 없이 직진만
+    node.destroy_node()
+
+
+def test_pose_without_matching_marker_id_is_not_used(ros):
+    """`aruco/pose` 에는 ID 가 없다 — 기대한 마커가 지금 안 보이면 자세를 쓰지 않는다.
+
+    검출기는 여럿 보이면 **가장 가까운 하나**만 낸다. 옆 베이 마커로 바뀌는 순간의 자세를
+    그대로 믿으면 엉뚱한 곳으로 접근한다. 같은 프레임에서 함께 나오는 aruco/id·distance 로 건다.
+    """
+    node = make_node(bay_align_enable=True)
+    marker_frames(node, fwd=1.0, lat=0.0)        # 자세 표본은 있지만
+    fresh_marker(node, marker_id=2)              # 지금 보이는 것은 베이 B 의 마커다
+    assert node.marker_sample(expect_id=1) is None
+    assert node.marker_sample(expect_id=2) is not None   # 기대가 맞으면 쓴다
+    node.destroy_node()
+
+
+def test_losing_the_marker_after_first_approach_does_not_kill_the_mission(ros):
+    """1회차 접근을 마친 뒤 마커를 놓치면 **거기서 멈추되 미션은 계속한다** (I-026).
+
+    회전 직후 한두 프레임을 놓치는 일이 실주행에서 반복됐다 (9/8 T15·T16). 이미 접근은
+    끝났으므로 다듬지 못할 뿐이고, 그것 때문에 미션을 죽이면 회차가 통째로 날아간다.
+    """
+    node = make_node(bay_align_enable=True)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.5, lat=0.0)        # 1회차는 크게 접근한다
+    original = node.marker_sample
+
+    def once(expect_id=None):
+        node.marker_sample = lambda expect_id=None: None   # 2회차부터는 못 본다
+        return original(expect_id)
+
+    node.marker_sample = once
+    node.run_mission(assigned('A'))
+    assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
+    assert approach_moves(node) == [('drive', 0.6)]     # 1회차 접근은 실행됐다
+    node.destroy_node()
+
+
+def test_bay_approach_refuses_oversized_move(ros):
+    """이동량이 상한을 넘으면 움직이지 않고 포기한다 — 선반 충돌을 막는 마지막 방어다.
+
+    거리를 aruco/distance 에서 가져오게 된 뒤로는 aruco_max_dist_m(1.5) 가 이미 걸러 주므로
+    정상 검출로는 상한을 넘기기 어렵다. 그래도 bay_marker_range_m 설정 오류나 튄 값이 남으니
+    상한 자체는 살려 둔다 — 여기서는 상한을 낮춰 그 경로를 확인한다.
+    """
+    node = make_node(bay_align_enable=True, bay_align_max_step_m=0.3)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.4, lat=0.0)                 # 이동 0.5 m > 상한 0.3
+    node.run_mission(assigned('A'))
+    assert node.status_log[-2:] == ['FAILED', 'READY']
+    assert node.arrived_log == []
+    assert node.navigator.moves() == []
+    node.destroy_node()
+
+
+@pytest.mark.parametrize('value', [0.0, -0.5, 0.2])
+def test_bay_approach_refuses_unsafe_target_range(ros, value):
+    """목표 거리가 없거나 하한(footprint 외접 + 여유)보다 가까우면 움직이지 않는다.
+
+    0.0 을 '거리 보정 안 함' 으로 조용히 넘기면 로봇이 적재 위치에 못 간 채 미션이 성공으로
+    끝난다. 0.2 는 footprint 외접 0.189 m 를 빼면 벽까지 1 cm 라 선반에 밀어 넣는 설정이다.
+    """
+    node = make_node(bay_align_enable=True, bay_marker_range_m=value, bay_align_min_range_m=0.35)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.0, lat=0.0)
+    node.run_mission(assigned('A'))
+    assert node.status_log[-2:] == ['FAILED', 'READY']
+    assert node.navigator.moves() == []
+    node.destroy_node()
+
+
+def test_marker_sample_restores_flipped_normal(ros):
+    """법선이 뒤집힌 solvePnP 해가 와도 방위 오차는 0 이어야 한다 (두 해 문제)."""
+    node = make_node()
+    marker_frames(node, fwd=1.0, lat=0.0, flip_normal=True)
+    sample = node.marker_sample()
+    assert sample is not None
+    assert sample.fwd == pytest.approx(1.0, abs=1e-6)
+    assert sample.lat == pytest.approx(0.0, abs=1e-6)
+    assert sample.yaw_error == pytest.approx(0.0, abs=1e-6)
+    node.destroy_node()
+
+
+def test_marker_yaw_is_rejected_when_it_disagrees_with_survey(ros):
+    """마커 자세를 켜도 측량값과 게이트 이상 어긋나면 측량값으로 되돌아간다.
+
+    인지가 '정사각 마커 두 해 문제로 흔들린다' 고 명시했다 — 뒤집힌 해를 그대로 믿고 돌면
+    선반 쪽으로 크게 틀어진다.
+    """
+    node = make_node(bay_align_use_marker_yaw=True, bay_align_yaw_gate_deg=25.0)
+    marker_frames(node, fwd=1.0, lat=0.0)
+    sample = node.marker_sample()
+    # 마커 기준 오차는 0 인데 측량 기준으로는 40° 틀어져 있다 → 게이트 밖이라 측량을 쓴다
+    phi, source = node.align_yaw(sample, yaw_ref=math.radians(40), yaw_now=0.0)
+    assert phi == pytest.approx(math.radians(40))
+    assert '기각' in source
+    # 8° 차이면 게이트 안 — 마커 값을 쓴다 (AMCL 방위 오차까지 지운다)
+    phi, source = node.align_yaw(sample, yaw_ref=math.radians(8), yaw_now=0.0)
+    assert phi == pytest.approx(0.0, abs=1e-6)
+    assert source == '마커'
+    node.destroy_node()
+
+
+def always_wrong_marker(node, marker_id=1):
+    """매 tick 마커를 갱신해 '신선하지만 ID 가 다른' 상황을 만든다 (콜백이 없으므로)."""
     original_wait = node.wait
 
     def wait(cond, timeout=None, on_tick=None):
-        # 콜백이 없으므로 매 tick 마커를 갱신해 '신선하지만 ID 가 다른' 상황을 만든다
         def tick():
-            fresh_marker(node, marker_id=1)
+            fresh_marker(node, marker_id=marker_id)
             if on_tick:
                 on_tick()
         return original_wait(cond, timeout, tick)
 
     node.wait = wait
+
+
+def test_aruco_mismatch_aborts_without_waiting(ros):
+    """다른 베이의 마커만 보이면 재탐지를 다 돌고 포기한다 — 오도착 0건 (FR-08)."""
+    node = make_node()
+    stub_token(node, [True])
+    always_wrong_marker(node, marker_id=1)
     node.run_mission(assigned('B', 'M2'))
     assert node.status_log == ['SHUTTLE', 'AT_BAY', 'FAILED', 'READY']
     assert node.arrived_log == []
-    assert len(node.navigator.goals()) == 2      # 베이 + 재정렬 1회
+    assert len(node.navigator.goals()) == 1      # 베이 목표뿐 — 재탐지는 제자리 회전이다
     assert 'cancel' in node.navigator.calls
     assert node.token_log == []                  # 토큰은 잡지도 않았다
+    node.destroy_node()
+
+
+def test_marker_search_is_rotation_only(ros):
+    """재탐지는 제자리 회전만 쓴다 — 병진하면 위치를 모르는 채 움직이는 것이다."""
+    node = make_node()
+    stub_token(node, [True])
+    always_wrong_marker(node, marker_id=1)
+    node.run_mission(assigned('B', 'M2'))
+    moves = node.navigator.moves()               # 포기한 미션이라 탈출 회전이 없다
+    assert moves, '재탐지 회전이 하나도 없다'
+    assert {m[0] for m in moves} == {'spin'}     # drive 가 섞이면 안 된다
+    assert len(moves) == len(node.search_offsets())
+    node.destroy_node()
+
+
+def test_search_offsets_alternate_from_nearest(ros):
+    """훑는 순서는 가까운 쪽부터 좌우 교대여야 한다 (−Δ, +Δ, −2Δ, +2Δ …)."""
+    node = make_node(aruco_search_step_deg=15.0, aruco_search_max_deg=45.0)
+    degrees = [round(math.degrees(a), 3) for a in node.search_offsets()]
+    assert degrees == [-15.0, 15.0, -30.0, 30.0, -45.0, 45.0]
+    node.destroy_node()
+
+
+def test_marker_search_stops_as_soon_as_it_finds(ros):
+    """세 번째 정지점에서 마커가 보이면 거기서 멈추고 미션을 계속한다."""
+    node = make_node()
+    stub_token(node, [True])
+    original_spin = node.navigator.spin
+
+    def spin(spin_dist=1.57, time_allowance=10):
+        accepted = original_spin(spin_dist, time_allowance)
+        if len(node.navigator.moves()) >= 3:     # 3번째 회전 뒤부터 마커가 보인다
+            fresh_marker(node, marker_id=1)
+        return accepted
+
+    node.navigator.spin = spin
+    node.run_mission(assigned('A', 'M7'))
+    assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
+    assert len(approach_moves(node)) == 3        # 다 안 훑고 멈춘다
+    node.destroy_node()
+
+
+def test_marker_search_can_be_disabled(ros):
+    """aruco_search_enable=false 면 회전하지 않고 곧장 포기한다."""
+    node = make_node(aruco_search_enable=False)
+    stub_token(node, [True])
+    always_wrong_marker(node, marker_id=1)
+    node.run_mission(assigned('B', 'M8'))
+    assert node.status_log[-2:] == ['FAILED', 'READY']
+    assert node.navigator.moves() == []
     node.destroy_node()
 
 
@@ -412,9 +855,9 @@ def test_p1_token_spans_bay_to_waiting(ros):
     stub_token(node, [True])
     fresh_marker(node)
     node.run_mission(assigned('A', 'M6'))
-    # 목표 3건: ① 베이 ② 창고 안쪽 전진 ③ 대기공간.
-    #   획득은 ②까지 끝난 뒤(=베이를 아직 안 떠남), 반납은 ③까지 끝난 뒤여야 한다
-    assert node.token_marks == [('acquire', 2), ('release', 3)]
+    # 목표 2건: ① 베이 ② 대기공간. 접근은 상대 이동이라 goToPose 를 안 쓴다.
+    #   획득은 ①까지 끝난 뒤(= 베이를 아직 안 떠남), 반납은 ②까지 끝난 뒤여야 한다
+    assert node.token_marks == [('acquire', 1), ('release', 2)]
     assert node.token_log.count('release') == 1     # finally 에서 두 번 풀지 않는다
     node.destroy_node()
 

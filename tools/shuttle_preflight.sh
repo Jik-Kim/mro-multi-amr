@@ -21,6 +21,13 @@ set -u
 
 STAGE="${1:-mission}"
 NS="${2:-/robot3}"
+
+# 디스커버리 서버 방식에서는 **새로 만든 참가자가 상대를 찾는 데 시간이 걸린다** (9/8 실측 3~10 s).
+#   ros2 CLI 는 호출마다 새 참가자를 만들므로 짧은 상한을 주면 '아무것도 없다' 는 거짓 결과가 나온다.
+#   9/8 에 `ros2 node list --no-daemon`(기본 spin-time 1 s)이 0 개를 돌려주는 것을 보고 디스커버리
+#   서버가 죽었다고 오진했다. `--spin-time 10` 으로 주니 34 개가 나왔다. 상한을 넉넉히 준다.
+NODE_SPIN_S=8        # node list 가 디스커버리를 기다리는 시간
+DOCK_WAIT_S=20       # dock_status 첫 수신 상한 (실측 3 s, 로봇이 막 켜졌으면 더 걸린다)
 NSB="${NS#/}"                     # 앞 슬래시 없는 형태 (robot3)
 
 case "$STAGE" in
@@ -98,14 +105,17 @@ fi
 # is_docked — 이걸 안 보고 시작하면 미션 수신 직후 getDockedStatus() 가 무한 대기에 빠지고
 #   T_lim 도 돌지 않아 FAILED 조차 안 나온다 (가이드 D-2). 시험이 통째로 멈추는 유일한 항목이다.
 if printf '%s\n' "$TOPICS" | grep -q "^$NS/dock_status$"; then
-  DS="$(timeout 15 ros2 topic echo "$NS/dock_status" --once 2>/dev/null)"
+  # dock_status 는 약 1 Hz 로 계속 온다 (9/8 실측). 이것이 안 오면 로봇에서 데이터가 흐르지 않는
+  #   것이므로 시험을 시작할 수 없다 — 노드 목록에 이름이 보이는 것과는 전혀 다른 얘기다.
+  DS="$(timeout "$DOCK_WAIT_S" ros2 topic echo "$NS/dock_status" --once 2>/dev/null)"
   if printf '%s\n' "$DS" | grep -q 'is_docked: true'; then
-    pass "도킹됨 (is_docked: true)"
+    pass "도킹됨 (is_docked: true) — 로봇 데이터가 실제로 흐른다"
   elif printf '%s\n' "$DS" | grep -q 'is_docked: false'; then
     fail "로봇이 도크에 안 물려 있다 (is_docked: false)" \
-         "이 상태로 미션을 보내면 getDockedStatus() 가 무한 대기한다 — T_lim 도 안 돈다 (가이드 D-2)"
+         "셔틀은 기동 시 도킹 상태에서만 초기자세를 보낸다 (I-035). 로봇을 도크에 올릴 것"
   else
-    warn "dock_status 를 15 초 안에 못 받았다" "로봇 전원·디스커버리 확인"
+    fail "$NS/dock_status 를 $DOCK_WAIT_S 초 안에 못 받았다 — 로봇 데이터가 흐르지 않는다" \
+         "로봇 전원·부팅 완료, PC-F 디스커버리 서버(로봇 전원보다 먼저)를 확인할 것"
   fi
 else
   fail "$NS/dock_status 토픽이 없다" "로봇이 안 떴다"
@@ -114,7 +124,9 @@ fi
 # ────────────────────────────────────────────────────────── 3. 중복·유령 노드
 sect "3. 중복·유령 노드 — 9/7 에 T_lim 120 초를 날린 원인"
 
-NODES="$(r2 25 node list | sort)"
+# 데몬(ros2 daemon)은 죽은 세션의 노드를 캐시에 오래 들고 있어 '있다' 고 거짓말한다 — 9/8 에
+#   로봇이 안 뜬 상태에서도 robot3 노드 13 개를 보여줬다. 실제 디스커버리로 받아 판단한다.
+NODES="$(timeout $((NODE_SPIN_S + 25)) ros2 node list --no-daemon --spin-time "$NODE_SPIN_S" 2>/dev/null | sort)"
 if [ -z "$NODES" ]; then
   warn "노드 목록을 못 받았다" "디스커버리 확인"
 else

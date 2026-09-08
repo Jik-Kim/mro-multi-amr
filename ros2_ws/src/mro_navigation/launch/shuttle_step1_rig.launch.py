@@ -10,7 +10,7 @@ costmap 경고에 판정 로그가 묻혀 시험 자체가 성립하지 않는�
 쓰는 법
   ros2 launch mro_navigation shuttle_step1_rig.launch.py
   ros2 launch mro_navigation shuttle_step1_rig.launch.py namespace:=/robot8 bay:=B
-  ros2 launch mro_navigation shuttle_step1_rig.launch.py inject_aruco:=false   # 3단계(실물 마커)
+  ros2 launch mro_navigation shuttle_step1_rig.launch.py real_aruco:=true     # 3단계(실물 마커)
 
 인자
   namespace      기본 /robot3
@@ -18,7 +18,11 @@ costmap 경고에 판정 로그가 묻혀 시험 자체가 성립하지 않는�
   aruco_id       0 이면 bay 로부터 자동. 직접 주고 싶을 때만 지정 (2단계 오도착 시험 등)
   aruco_distance 기본 0.9 (m). 셔틀의 aruco_max_dist_m 1.5 안쪽이어야 한다
   aruco_rate     기본 5.0 (Hz). 셔틀 신선도 판정이 1.0 s 라 2 Hz 밑으로 내리지 말 것
-  inject_aruco   기본 true. 실물 마커를 쓸 때 false
+  inject_aruco   기본 true. 실물 마커를 쓸 때 false. real_aruco:=true 면 자동으로 꺼진다
+  real_aruco     기본 false. true 면 mro_perception 의 aruco_detector_node 를 실제로 띄운다 (3단계).
+                 **베이 접근(마커까지 0.5 m)은 이것 없이는 못 한다** — 주입 리그는 id·distance 만
+                 내고 aruco/pose 는 안 내므로 셔틀이 목적지를 몰라 미션을 포기한다. 주입으로만
+                 시험하려면 셔틀에 bay_align_enable:=false 를 줄 것. 전제: 실물 마커 설치
   semaphore      기본 true. false 로 두면 셔틀이 '단독 모드' 가 되어 판정 5 를 못 한다
   watchdog       기본 true
 
@@ -40,6 +44,24 @@ import yaml
 # 마커 주입 프로세스는 발행마다 'publishing #N' 을 찍는다. 5 Hz 씩 둘이면 초당 10줄이라
 #   같은 터미널의 세마포어 토큰 2줄이 묻힌다. 화면 대신 로그 파일로 보낸다.
 ARUCO_OUTPUT = 'log'
+
+
+def _perception_params(ns):
+    """aruco_detector 에 넘길 params 파일 목록. 값의 단일 출처는 params 다 (계약 5절).
+
+    robot.launch.py 와 **같은 순서**여야 한다 — 광역(/**) 파일이 먼저, 로봇별(/robotN/**) 이
+    마지막이어야 robot3 의 depth_k 0.024 가 이긴다. 순서를 뒤집으면 조용히 0.0 으로 돈다 (I-040).
+    """
+    try:
+        bringup = os.path.join(get_package_share_directory('mro_bringup'), 'params')
+        perception = os.path.join(get_package_share_directory('mro_perception'), 'config')
+    except PackageNotFoundError as e:
+        raise RuntimeError(f'real_aruco:=true 인데 패키지를 못 찾았다 — ws source 누락: {e}')
+    files = [p for p in (os.path.join(perception, 'perception.yaml'),
+                         os.path.join(bringup, f'{ns.strip("/")}.yaml')) if os.path.exists(p)]
+    if not files:
+        raise RuntimeError('perception.yaml 도 robotN.yaml 도 없다 — colcon build 를 다시 할 것')
+    return files
 
 
 def _aruco_id_for_bay(bay):
@@ -66,6 +88,7 @@ def _setup(context, *_args, **_kwargs):
     distance = float(LaunchConfiguration('aruco_distance').perform(context))
     rate = float(LaunchConfiguration('aruco_rate').perform(context))
     inject = LaunchConfiguration('inject_aruco').perform(context).lower() in ('true', '1', 'yes')
+    real = LaunchConfiguration('real_aruco').perform(context).lower() in ('true', '1', 'yes')
     use_sem = LaunchConfiguration('semaphore').perform(context).lower() in ('true', '1', 'yes')
     use_wd = LaunchConfiguration('watchdog').perform(context).lower() in ('true', '1', 'yes')
 
@@ -91,6 +114,25 @@ def _setup(context, *_args, **_kwargs):
                             name='safety_watchdog', namespace=ns, output='screen',
                             remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')]))
 
+    # 실물 검출기와 주입은 같이 못 쓴다 — 같은 토픽에 둘이 발행하면 셔틀이 어느 값을 봤는지 모른다
+    if real and inject:
+        inject = False
+        actions.append(LogInfo(msg='[리그] real_aruco:=true 라 마커 주입을 끈다 (같은 토픽 경합 방지)'))
+
+    if real:
+        params = _perception_params(ns)
+        actions.append(LogInfo(
+            msg=f'[리그] 실물 ArUco 검출: {ns}/aruco/id · aruco/distance · aruco/pose · '
+                f'params={[os.path.basename(p) for p in params]}'))
+        actions.append(LogInfo(
+            msg='[리그] 전제 — 베이 벽면에 실물 마커가 붙어 있어야 한다. 마커가 없으면 셔틀이 '
+                'ArUco 불일치로 미션을 포기한다 (FR-08 오도착 0건)'))
+        # 카메라 구독은 로봇당 검출 노드 1개다 (AGENTS.md) — amr_detection 과 같이 띄우지 않는다
+        actions.append(Node(package='mro_perception', executable='aruco_detector_node',
+                            name='aruco_detector', namespace=ns, output='screen',
+                            parameters=params,
+                            remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')]))
+
     if inject:
         actions.append(LogInfo(msg=f'[리그] 마커 주입: {ns}/aruco/id={aruco_id} (베이 {bay}) · '
                                    f'distance={distance} m · {rate} Hz → 로그 파일로만 출력'))
@@ -102,8 +144,9 @@ def _setup(context, *_args, **_kwargs):
             cmd=['ros2', 'topic', 'pub', '-r', str(rate), f'{ns}/aruco/distance',
                  'std_msgs/msg/Float32', f'{{data: {distance}}}'],
             name='aruco_distance_pub', output=ARUCO_OUTPUT))
-    else:
-        actions.append(LogInfo(msg='[리그] 마커 주입 꺼짐 — 실물 ArUco 를 쓴다 (3단계)'))
+    elif not real:
+        actions.append(LogInfo(
+            msg='[리그] 마커 주입도 실물 검출기도 없다 — 셔틀은 ArUco 확인에서 멈춘다'))
 
     actions.append(LogInfo(msg='[리그] 준비됨. 다음: tools/shuttle_preflight.sh mission ' + ns))
     return actions
@@ -118,6 +161,8 @@ def generate_launch_description():
         DeclareLaunchArgument('aruco_distance', default_value='0.9'),
         DeclareLaunchArgument('aruco_rate', default_value='5.0', description='2 Hz 밑으로 내리지 말 것 (신선도 1.0 s)'),
         DeclareLaunchArgument('inject_aruco', default_value='true'),
+        DeclareLaunchArgument('real_aruco', default_value='false',
+                              description='true 면 aruco_detector_node 를 띄우고 주입을 끈다 (3단계)'),
         DeclareLaunchArgument('semaphore', default_value='true'),
         DeclareLaunchArgument('watchdog', default_value='true'),
         OpaqueFunction(function=_setup),

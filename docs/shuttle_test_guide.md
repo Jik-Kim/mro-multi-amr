@@ -13,9 +13,9 @@
 
 | 단계 | 목적 — 무엇이 참인지 확인하나 | 전제 | 합격 조건 |
 |---|---|---|---|
-| **1** | **정상 경로가 끝까지 돈다** — 상태열, 목표 도달, 전진 실제 이동량, 토큰 획득·반납 시점 | 마커 주입, 선반 없음, 1대 | B-5 판정 7항목 |
+| **1** | **정상 경로가 끝까지 돈다** — 상태열, 목표 도달, 토큰 획득·반납 시점 | 마커 주입, 선반 없음, 1대 | B-5 판정 7항목 |
 | **2** | **실패 경로가 옳게 실패한다** — 오도착 거부, T_lim 포기, estop 보류 | 1단계와 같은 환경 | `FAILED` 뒤 `WAITING`·`arrived` 미발행 |
-| 3 | ArUco 실물 판정, 전진 후 선반 여유 | 마커·선반 설치 | 오도착 0건 (FR-08) |
+| 3 | ArUco 실물 판정, **마커 기준 접근 잔차**, 재탐지, 선반 여유 | 마커·선반 설치 | 오도착 0건 (FR-08), 접근 잔차 ≤ 0.05 m |
 | 4 | P1 FIFO·E-3 교착, 대기공간 정차 중 타 로봇 통과 | 로봇 2대 | 교착 자동 해소, 접촉 0 |
 | 5 | AC-08 판정 사슬 (TS-07 배송 20회) | `fleet_manager` | `missions.result` 일치 |
 
@@ -28,6 +28,7 @@
 |---|---|---|
 | `fleet_manager` | `mission/assigned` 를 터미널에서 직접 발행 | DB 기록·`missions.result`·리드타임 (5단계로 미룸) |
 | ArUco 마커·`aruco_detector` | `aruco/id`·`aruco/distance` 를 터미널에서 주입 | 실제 마커 판정·거리 정확도 (3단계) |
+| `aruco/pose` (주입으로는 못 만든다) | **대체 없음.** 셔틀에 `bay_align_enable:=false` 를 주고 접근 단계를 끈다 | **베이 접근 전체** — 로봇이 waypoint 에 선 채로 끝나 판정 4 를 못 한다 |
 | `zone_semaphore` | **대체 없음.** 안 띄우면 노드가 '단독 모드'로 통과시켜 토큰 로직이 검증되지 않는다 | 판정 5 전체 |
 | 로봇 2대 | 1대로 진행 | P1 경합·교착 (4단계) |
 
@@ -37,7 +38,7 @@
 
 ### B-0. 사전 점검
 
-- [ ] **아레나 정리** — 베이 A `(-0.78, 0.14)` 주변과 **그 서쪽 0.5 m**(전진 목표), P1 통로
+- [ ] **아레나 정리** — 베이 A `(-0.78, 0.14)` 주변과 **그 서쪽 0.5 m**(마커 쪽 접근 구간), P1 통로
       (x −0.8~0 / y 0.45~0.9), 대기공간 `(-1.00, 0.94)` 경로
 - [ ] **로봇을 도크에 물려서 시작** — 초기자세 설정이 도킹 상태를 전제한다
 - [ ] E-stop 손 닿는 위치, 감시자 배치
@@ -100,20 +101,24 @@ source /etc/turtlebot4_discovery/setup.bash && source /home/hv-04/turtlebot4_ws/
 > T1 localization → T2 RViz → T4 리그 → T7 셔틀(초기자세) → T3 Nav2 → 게이트 → 미션
 > ```
 
+> **⚠ 아래 명령마다 `source` 를 앞에 붙여 놓았다. 떼지 말 것 (9/8 실주행).** B-2 를 따로 치는
+> 구조였더니 T3 에서 실제로 빠졌고, `failed to send response to …/change_state (timeout)` 로
+> 라이프사이클 기동이 중간에 멈췄다 (D-7).
+
 **T1 · localization**
 ```bash
-ros2 launch turtlebot4_navigation localization.launch.py namespace:=/robot3 map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch turtlebot4_navigation localization.launch.py namespace:=/robot3 map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
 ```
 
 **T2 · RViz** — **2D Pose Estimate 클릭 금지.** 초기자세는 셔틀 노드가 기동 시 `dock_pose` 로 잡는다
 ```bash
-ros2 launch turtlebot4_viz view_navigation.launch.py namespace:=/robot3
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch turtlebot4_viz view_navigation.launch.py namespace:=/robot3
 ```
 
-**T3 · Nav2** — **T7 을 먼저 띄운 뒤에** 온다. 이 터미널만 `ROS_SUPER_CLIENT=False`
-(`shuttle_env.sh nav2` 가 해준다)
+**T3 · Nav2** — **T7 을 먼저 띄운 뒤에** 온다. 이 터미널만 `shuttle_env.sh nav2`
+(`ROS_SUPER_CLIENT=False`). **`nav2` 를 빼거나 source 를 건너뛰면 기동이 중간에 멈춘다 (D-7).**
 ```bash
-ros2 launch turtlebot4_navigation nav2.launch.py namespace:=/robot3
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh nav2 && ros2 launch turtlebot4_navigation nav2.launch.py namespace:=/robot3
 ```
 
 T7 이 이미 초기자세를 보냈으므로 `map→odom` TF 가 있고, `global_costmap` 이 곧바로 활성화된다.
@@ -139,13 +144,20 @@ w 0.997790). **RViz 의 2D Pose Estimate 로 대신하지 않는다** — 사람
 
 **T4 · 시험 리그** — 세마포어 + 안전 감시 + 마커 주입을 한 터미널로 (옛 T4·T5·T6)
 ```bash
-ros2 launch mro_navigation shuttle_step1_rig.launch.py
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch mro_navigation shuttle_step1_rig.launch.py
 ```
 
 세 노드는 시험 중에 볼 로그가 사실상 없어서 묶었다. 화면에는 워치독 기동 한 줄과 세마포어의
 토큰 2줄만 나온다 — **마커 주입의 `publishing #N` 은 로그 파일로 보내 화면을 비웠다.**
 베이를 바꾸려면 `bay:=B` (주입 ID 는 `arena.yaml` 의 `bays.<bay>.aruco_id` 에서 읽는다).
-실물 마커를 쓰는 3단계에서는 `inject_aruco:=false`.
+
+**실물 마커를 쓰는 3단계 — 진짜 검출기를 띄운다** (주입은 자동으로 꺼진다)
+```bash
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch mro_navigation shuttle_step1_rig.launch.py real_aruco:=true
+```
+`aruco_detector_node` 가 `aruco/id`·`aruco/distance` 에 더해 **`aruco/pose`** 를 낸다.
+**베이 접근(마커까지 0.6 m)은 이것 없이는 못 한다** — 주입은 pose 를 만들 수 없어 셔틀이
+목적지를 몰라 미션을 포기한다. 주입으로만 돌리려면 셔틀에 `-p bay_align_enable:=false`.
 
 > **셔틀(T7)과 Nav2(T3)는 묶지 않았다.** 셔틀은 판정 7항목이 전부 나오는 주 관찰 대상이고,
 > Nav2 는 실패 원인이 자기 로그에 있다. 합치면 costmap 경고에 판정 로그가 묻힌다.
@@ -162,12 +174,12 @@ ros2 topic pub -r 5 /robot3/aruco/id std_msgs/msg/Int32 "{data: 1}" & ros2 topic
 **T7 · 셔틀 미션** — **T3 보다 먼저.** `robot.launch.py` 대신 단독 실행(그쪽은 아직 준비 안 된
 인지 노드까지 띄운다)
 ```bash
-ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/robot3.yaml 2>&1 | tee ~/shuttle_step1_$(date +%m%d_%H%M).log
+ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/common.yaml --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/robot3.yaml 2>&1 | tee ~/shuttle_step1_$(date +%m%d_%H%M).log
 ```
 
 **T8 · 상태 관찰**
 ```bash
-ros2 topic echo /robot3/shuttle/status
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 topic echo /robot3/shuttle/status
 ```
 
 ### B-4. 미션 발행 — 확인하고 보낼 것
@@ -243,7 +255,7 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 | 1 | 상태열 | T8 | `SHUTTLE` → `AT_BAY` → `SHUTTLE` → `WAITING` → `READY`. **`WAITING` 은 1회** |
 | 2 | 초기자세 | T7 | `초기자세 (0.02, -0.80, 8°)` — `robot3.yaml` 의 `dock_pose` 와 일치 |
 | 3 | 베이 도달 오차 | T7 | `베이 A 도착 — … 오차 N m`, N ≤ 0.25 (Nav2 허용치, I-029) |
-| 4 | **전진 실제 이동량** | T7 | 베이 도착 실제 좌표 → 전진 도착 실제 좌표 거리. **0.3 m 에 못 미쳐도 정상일 수 있다** (아래 D-3) |
+| 4 | **접근 잔차** | T7 | `접근 종료 — … 잔차 +N m`. \|N\| ≤ 0.05 (`bay_align_tol_xy_m`). **AMCL 과 무관한 마커 상대 측정이라 판정 3 보다 엄격하다** (아래 D-3) |
 | 5 | **토큰 시점** | T7 + T4 | `적재 체류` 다음 줄이 `P1 획득`, `대기공간 도착` 다음 줄이 `P1 반납 (대기공간 도착 — P1 통과 완료)`. T4 에 획득·반납 각 1줄 |
 | 6 | 소요 시간 | T7 | `대기공간 도착 — 소요 N s`, N < 120 |
 | 7 | 합류 신호 | `ros2 topic echo /robot3/shuttle/arrived` | `data: true` 1회 |
@@ -296,18 +308,40 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 
 ```
 [INFO] [robot3.shuttle_mission]: 베이 A → (-0.78, 0.14) 이동 시작
-[INFO] [robot3.shuttle_mission]: 베이 A 도착 — 목표 (-0.78, 0.14) / 실제 (-0.71, 0.19), 오차 0.09 m
+[INFO] [robot3.shuttle_mission]: 베이 A 도착 검증 통과 — 목표 (-0.78, 0.14) / TF 추정 (-0.71, 0.19), 오차 0.090 m, TF 시각 ..., 지연 0.020 s
 [INFO] [robot3.shuttle_mission]: [AT_BAY]
 [INFO] [robot3.shuttle_mission]: 마커 1 확인 (거리 0.90 m)
 ```
-**판정 3.** `베이 A 도착` 의 **실제 좌표를 적어둔다** — 판정 4 에 쓴다.
+**판정 3.** `베이 A 도착 검증 통과`의 **TF 추정 좌표·시각·지연을 적어둔다** — 판정 4에 쓴다. 물리적 실제 좌표는 줄자로 별도 확인한다.
 
 ```
-[INFO] [robot3.shuttle_mission]: 창고 안쪽 0.3 m 전진 → (-1.01, 0.18) 이동 시작
-[INFO] [robot3.shuttle_mission]: 창고 안쪽 0.3 m 전진 도착 — 목표 (-1.01, 0.18) / 실제 (-0.95, 0.19), 오차 0.06 m
+[INFO] [robot3.shuttle_mission]: 베이 접근 — 마커 정면 0.60 m · 좌우 +0.00 m 를 목표로 한다
+[INFO] [robot3.shuttle_mission]: 접근 1/2 — 마커 base_link (0.980, +0.070) m, 방위 +4.1°, 마커 법선 오차 +2.3° / 이동 앞 +0.380 · 좌 +0.070 m (합 0.386), 회전 +1.2° [측량]
+[INFO] [robot3.shuttle_mission]: 접근 2/2 — 마커 base_link (0.615, +0.012) m, … (합 0.019), 회전 +0.3° [측량]
+[INFO] [robot3.shuttle_mission]: 접근 완료 (2회) — 더 움직이지 않는다
 ```
-**판정 4.** 전진 목표는 **베이 도착 실제 좌표**에서 계산되므로 매번 다르다. 위 예시의 실제
-이동량은 `(-0.71,0.19) → (-0.95,0.19)` = **0.24 m** 로 0.3 에 못 미친다 (D-3 참조).
+**판정 4.** `이동 앞/좌` 는 **회전–직진–회전**으로 실행된다 (`Spin` → `DriveOnHeading` → `Spin`).
+차동구동이라 옆으로 못 가서다. 마지막 줄이 `접근 완료` 면 잔차가 `bay_align_tol_xy_m`(0.05 m)
+안이라는 뜻이고, 2회를 다 쓰고도 못 맞추면 `접근 종료 — … 잔차 +N m` 로 실측이 남는다.
+
+**`마커 법선 오차` 는 참고값이다** — 마커 자세로 각도를 잡는 경로(`bay_align_use_marker_yaw`)는
+기본으로 꺼져 있다. 이 값이 회차마다 안정적이면 켤 근거가 된다 (정사각 마커 두 해 문제, 계약 6절).
+
+**`[측량]` 표시**는 회전 기준이 `arena.yaml` 의 베이 방위라는 뜻이다. 그래서 **AMCL 의 방위
+오차는 이 보정으로 지워지지 않는다** — 위치만 지워진다.
+
+<details><summary>마커를 못 봐서 재탐지가 돈 경우</summary>
+
+```
+[WARN] [robot3.shuttle_mission]: 마커 미확인 1/2 (관측 None) — 제자리 회전으로 재탐지
+[INFO] [robot3.shuttle_mission]: 마커 재탐지 — 제자리 회전 8회, ±60° 를 15° 간격으로
+[INFO] [robot3.shuttle_mission]: 마커 1 재탐지 성공 — 기준 방위에서 +30° (4/8), 거리 0.98 m
+```
+가까운 쪽부터 좌우 교대(−15° → +15° → −30° → +30° …)로 훑는다. **병진하지 않는다** — 마커를
+못 본다는 것은 자기 위치를 못 믿는다는 뜻이라 어디로 갈지 모르기 때문이다.
+찾은 각도를 적어 둘 것: 매 회차 같은 쪽으로 크게 나오면 `arena.yaml` 의 베이 방위나 마커
+설치 위치를 재실측해야 한다는 신호다.
+</details>
 
 ```
 [INFO] [robot3.shuttle_mission]: 적재 체류 5.0 s
@@ -319,7 +353,7 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 
 ```
 [INFO] [robot3.shuttle_mission]: 대기공간 → (-1.00, 0.94) 이동 시작
-[INFO] [robot3.shuttle_mission]: 대기공간 도착 — 목표 (-1.00, 0.94) / 실제 (-1.02, 0.91), 오차 0.04 m
+[INFO] [robot3.shuttle_mission]: 대기공간 도착 검증 통과 — 목표 (-1.00, 0.94) / TF 추정 (-1.02, 0.91), 오차 0.036 m, TF 시각 ..., 지연 0.020 s
 [INFO] [robot3.shuttle_mission]: P1 반납 (대기공간 도착 — P1 통과 완료)
 [INFO] [robot3.shuttle_mission]: [WAITING]
 [INFO] [robot3.shuttle_mission]: 대기공간 도착 — 소요 62.4 s
@@ -343,7 +377,7 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 |---|---|---|
 | `READY` | 미션 대기 | 기동 시, 미션 종료 후 |
 | `SHUTTLE` | 셔틀 주행 중 | undock 직후 / P1 획득 직후 — **두 번이 정상** |
-| `AT_BAY` | 베이 도착. ArUco 확인·전진·체류·토큰 대기 | 베이 도착 시 |
+| `AT_BAY` | 베이 도착. ArUco 확인(필요하면 재탐지 회전)·접근·체류·토큰 대기 | 베이 도착 시 |
 | `WAITING` | **대기공간 도착 확정** | 미션당 **1회** |
 | `FAILED` | **포기** | 재시도 중에는 나오지 않는다 |
 
@@ -359,7 +393,10 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 | `mro_bringup 을 찾지 못했다 — arena_yaml 을 직접 넘길 것` | ws source 누락 | B-2 |
 | `zone_token 서비스 없음 — 단독 모드로 진행` | **T4 미기동** | **판정 5 를 못 한다.** T4 띄우고 재시험 |
 | `P1 점유 중 (holder=…)` | 다른 로봇이 보유 | 1대 시험에선 나오면 안 된다 — 이전 토큰 잔존. T4 재시작 |
-| `마커 미확인 1/2 (관측 None) — 정차 자세 재정렬` | 3 초 안에 마커 확인 실패 | T6 주입 확인. `관측 None` 은 토픽이 아예 안 온다는 뜻 |
+| `마커 미확인 1/2 (관측 None) — 제자리 회전으로 재탐지` | 3 초 안에 마커 확인 실패 | 주입/실물 검출기 확인. `관측 None` 은 토픽이 아예 안 온다는 뜻. 이어서 재탐지 회전이 돈다 |
+| `마커 1 재탐지 성공 — 기준 방위에서 +30° (4/8)` | 회전 스윕으로 찾았다 | **정상이지만 각도를 적어 둘 것.** 매 회차 같은 쪽으로 크게 나오면 베이 방위·마커 위치 재실측 신호 |
+| `마커 재탐지 실패 — ±60° 안에 없다` | 스윕을 다 돌고도 못 찾음 | 다음 줄이 `ArUco 불일치` 포기다. 마커 설치·조명·거리(≤1.5 m)를 볼 것 |
+| `aruco/pose 표본 없음` (포기 사유로도 나온다) | 검출기가 pose 를 안 낸다 | `real_aruco:=true` 로 띄웠는지, `publish_pose: true` 인지, 카메라 TF 가 있는지 |
 | `estop 중 — 해제까지 … 보류` | 워치독 정지 | 전방 0.3 m 장애물 제거 |
 | `TF: …` / `TF 없음 — 베이 waypoint 기준으로…` | `map→base_link` 조회 실패 | AMCL 수렴 확인. 판정 4 의 의미가 약해진다 |
 | `이미 미션이 있다 — 새 배정을 버린다` | 발행을 두 번 했다 | 정상 방어. 무시 |
@@ -379,7 +416,11 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 | `arena.yaml waiting_zone 에 robot3 이 없다` | 네임스페이스 불일치 | `-r __ns:=/robot3` 확인 |
 | `베이 A 목표 거부됨` | Nav2 가 goal 을 반려 | **T3 로그.** 목표가 lethal 안이거나 액션 서버 미기동 |
 | `베이 A 이동 실패: FAILED` | 경로 실패 | T3 로그. 통로 폭·inflation·장애물 |
-| `창고 안쪽 0.3 m 전진 이동 실패: FAILED` | 전진 실패 | D-3 |
+| `aruco/pose 표본 없음 — 접근할 기준이 없다` | 마커 자세 토픽이 없다 | 주입 리그만 띄웠다면 정상이다 — `real_aruco:=true` 를 쓰거나 셔틀에 `bay_align_enable:=false` |
+| `접근 이동량 N m 가 상한 1.0 m 를 넘는다` | 마커까지가 너무 멀거나 측정이 튐 | 베이 waypoint 가 마커에서 1.6 m 넘게 떨어졌는지, 거리값이 튀는지 확인 |
+| `bay_marker_range_m N m 가 하한 0.35 m 보다 가깝다` | 목표 거리 설정 오류 | `common.yaml`. 0·음수도 여기서 걸린다 |
+| `접근 1 전진 실패: FAILED` / `… 회전① 실패` | 상대 이동이 중간에 깨졌다 | **T3 behavior_server 로그.** estop 이 걸렸는지, `time_allowance`(20 s) 를 넘겼는지 |
+| `behavior_server 의 spin·drive_on_heading 이 없다` | Nav2 미기동·미활성 | T3 확인. 이 액션이 없으면 접근·재탐지가 전부 불가능하다 |
 
 **포기한 미션은 폐기된다.** 그 뒤 로봇이 늦게 도착해도 `WAITING`·`arrived` 를 내지 않는다
 (계약 7절 이중 계상 금지). 이것을 확인하는 것이 2단계다.
@@ -406,18 +447,68 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 그래도 로그가 멎는다면 그 구간은 `undock()`·`dock()` 블로킹이다 (수 초). 그보다 오래 멎으면
 로봇 전원·네임스페이스·디스커버리를 확인한다.
 
-### D-3. 전진이 0.3 m 에 한참 못 미친다
+### D-3. 접근 잔차·도착 검증 실패 (I-037)
 
-Nav2 의 `xy_goal_tolerance` 가 **0.25 m 로 고정**이라(I-029 — 낮추면 목표 근처에서 진동해
-도착 판정을 못 한다) 0.3 m 목표를 줘도 실제 이동은 **0.05~0.3 m** 사이다. 더 확실히 전진시켜야
-하면 파라미터를 올린다 (재빌드 불필요).
+**9/8 로 절차가 바뀌었다.** 옛 '창고 안쪽 0.3 m 전진' 은 없어졌다. 그것은 출발점을 모르는
+상대량이라 AMCL 오차 0.38~0.53 m 가 최종 정차 위치에 그대로 남았고, `bay_advance_m` 을 키워도
+덮이지 않는 문제였다. 지금은 **마커에서 0.6 m 인 자리로 간다** — 목적지가 마커 기준 절대
+위치라 출발점이 어디든 도착점이 같다.
 
-```bash
-ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -p bay_advance_m:=0.55 --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/robot3.yaml
+**두 오차를 섞지 말 것.**
+
+| | 판정 3 `베이 A 도착 검증` | 판정 4 `접근 종료 … 잔차` |
+|---|---|---|
+| 기준 | map 좌표 (AMCL) | 마커 (카메라 상대 측정) |
+| 허용 | 0.25 m (`arrival_xy_tolerance_m`) | 0.05 m (`bay_align_tol_xy_m`) |
+| 무엇이 틀리면 나빠지나 | AMCL 수렴, Nav2 | 마커 검출 거리, 실행 오차 |
+
+판정 3 이 나쁜데 판정 4 가 좋으면 **정상이다** — 그게 이 기능의 목적이다 (AMCL 이 틀려도
+마커 기준으로는 제자리에 선다). 반대로 판정 4 가 나쁘면 마커 쪽을 본다.
+
+- `신선한 TF를 … 안에 받지 못함`: TF 발행·시각·로봇 네임스페이스를 점검한다. 접근은 회전량을
+  '측량 베이 방위 − 지금 방위' 로 잡으므로 `map→base_link` 없이는 시작하지 않는다.
+- `도착 검증 실패 — Nav2 SUCCEEDED`: 새 TF의 오차가 `arrival_xy_tolerance_m`를 넘었다.
+  Nav2 feedback·AMCL·물리 위치를 대조한다.
+- `접근 종료 … 잔차`: 2회 반복하고도 못 맞춘 값이다. 줄자 실측과 대조해 **마커 거리 자체가
+  틀렸는지**(`depth_k`, 0.8 m 아래는 pnp 로 떨어진다) **실행이 틀렸는지**를 가른다.
+
+`common.yaml`의 `tf_pose_timeout_s=3.0`, `tf_max_age_s=0.3`,
+`arrival_xy_tolerance_m=0.25`는 실험 초깃값이다. 단독 실행에도 common과 robot3 YAML을 둘 다 전달한다.
+허용오차를 낮추는 실험은 기존 I-029 진동과 함께 별도로 검증한다.
+
+**접근 이동은 `progress_checker` 에 안 걸린다** — `Spin`·`DriveOnHeading` 은 behavior_server 의
+상대 이동이라 controller 의 `SimpleProgressChecker`(10 초 안에 0.5 m)를 지나지 않는다.
+대신 `time_allowance`(`bay_align_timeout_s`, 20 s)가 상한이다.
+
+### D-7. 라이프사이클 기동이 중간에 멈춘다 — `failed to send response to …/change_state (timeout)`
+
+**증상.** `lifecycle_manager` 가 어느 노드까지는 `Configuring …` 을 찍다가 거기서 멈춘다.
+멈춘 노드 쪽 로그에는 이렇게 남는다.
+
+```
+[smoother_server] [WARN] failed to send response to /robot3/smoother_server/change_state
+                         (timeout): client will not receive response
 ```
 
-전진 목표에서만 `이동 실패: FAILED` 가 나면 `progress_checker` 를 의심한다 — 10 초 안에
-0.5 m 이동을 요구하는데 목표가 0.3 m 뿐이다.
+**무슨 일인가.** 요청은 갔고 노드는 **실제로 수행했다**(`Created smoother …` 까지 찍힌다).
+돌아오는 **응답만** 못 왔다. `lifecycle_manager` 는 영영 안 올 응답을 기다리며 멈추고,
+그 뒤 순서(`planner_server`·`bt_navigator`·`behavior_server` …)는 configure 조차 시작되지 않는다.
+그래서 **T7 은 `Nav2 미준비` 로 미션을 포기**하게 된다.
+
+**9/8 실주행에서 확인된 원인 — `source` 누락.** T3 를 `source tools/shuttle_env.sh nav2` 없이
+띄웠을 때 났고, 붙여서 다시 띄우니 정상 기동했다. 같은 날 아침 T1(`map_server/change_state`)에서도
+같은 문장이 났고 그때는 터미널 재시작으로 풀렸다.
+
+**조치.**
+1. **멈춘 터미널만** 내렸다가 `source` 를 붙여 다시 띄운다. T1·T7 은 건드리지 않는다 —
+   초기자세는 이미 나갔고 다시 띄우면 순서(I-035)를 처음부터 다시 만들어야 한다.
+2. T3 는 반드시 `shuttle_env.sh **nav2**` 다 (`ROS_SUPER_CLIENT=False`). 나머지는 인자 없이.
+3. 다시 떠도 같은 곳에서 멈추면 디스커버리 문제다 — D-5·D-5-1 로 간다.
+
+**같이 나오지만 무관한 것.**
+`The configured inflation radius (0.100) is smaller than the computed inscribed radius (0.186)`
+는 **의도한 설정**이다 (local 0.10 / global 0.30 분리, 9/8 P1 통과 설정). ERROR 로 찍히지만
+기동 실패와 무관하니 여기서 원인을 찾지 말 것.
 
 ### D-5. 노드 이름은 보이는데 서비스가 응답하지 않는다 (유령 노드)
 
@@ -446,6 +537,30 @@ ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -p bay_
 그래서 preflight 는 이것을 **WARN 으로만** 낸다. 위험한 것은 '네임스페이스가 없는 것' 이 아니라
 **'완전한 이름이 같은 것'** 이다. 단, T1·T3 를 `namespace:=` 없이 띄우면 그때는 진짜로 충돌한다 —
 **항상 네임스페이스를 준다.**
+
+### D-5-1. 노드가 '있다/없다' 를 볼 때 — 데몬 캐시와 spin-time (9/8 실측)
+
+**둘 다 거짓말을 한다. 방향이 반대다.**
+
+| 방법 | 문제 | 9/8 에 실제로 본 것 |
+|---|---|---|
+| `ros2 node list` (데몬) | **죽은 노드를 오래 들고 있다** (과다 보고) | 로봇이 안 뜬 상태에서 robot3 노드 13 개를 보여줬다 |
+| `ros2 node list --no-daemon` | 기본 `--spin-time` 이 **1 초**뿐이라 디스커버리 서버가 응답할 시간이 없다 (과소 보고) | **0 개**를 돌려줬다 |
+
+디스커버리 서버 방식에서는 `ros2` CLI 호출마다 새 참가자가 만들어지고, 상대를 찾는 데
+**3~10 초**가 걸린다. 그래서 `--no-daemon` 만 붙이고 짧게 끊으면 "아무것도 없다" 가 나온다.
+**9/8 에 이것을 보고 디스커버리 서버가 죽었다고 오진해 로봇을 헛되이 재부팅했다.**
+
+```bash
+ros2 node list --no-daemon --spin-time 8     # 이렇게 본다
+```
+
+`--spin-time` 8 과 20 이 같은 결과(35 개)를 주고, 데몬은 죽은 launch 프로세스 하나를 더
+들고 있었다. `tools/shuttle_preflight.sh` 는 이 방식으로 노드 목록을 받는다.
+
+> **이름이 보이는 것과 데이터가 흐르는 것은 다르다.** 가장 확실한 생존 확인은 실제 데이터다 —
+> `dock_status` 는 약 1 Hz 로 계속 오므로 preflight 는 이것으로 로봇 생존을 판정한다.
+> 유령 판별(D-5)의 `lifecycle get` 무응답도 같은 원리다.
 
 ### D-6. `bt_navigator` 가 `inactive [2]` 에서 안 올라온다 (I-035)
 
@@ -502,15 +617,25 @@ done
 **한 번에 하나만 바꾼다.** 두 개를 같이 바꾸면 어느 것이 효과를 냈는지 영원히 모른다.
 저장소 밖 파일(`turtlebot4_ws`)을 고칠 때는 **먼저 `.orig_<날짜시각>` 로 백업**한다.
 
+**끝난 것 (9/8 주행 보고)**
+
+| 무엇 | 결과 |
+|---|---|
+| `inflation_radius` **global 0.25~0.30 / local 0.10 분리** | **P1 통과 성공.** 경로는 통로 중앙으로 밀고 실행은 벽 가까이 허용한 것이 답이었다. 단일 값(0.25 도 0.15 도)으로는 안 됐다 |
+| I-036 estop 탈출 | 갇힘 76~95 s → **2.1~4.5 s**, 매번 스스로 회전으로 탈출 |
+
+**남은 순서**
+
 | 순서 | 무엇 | 왜 · 무엇을 확인하나 |
 |---|---|---|
-| **1** | **아무것도 바꾸지 않고 줄자 실측** | `적재 체류 5.0 s` 5 초 동안 베이에서 로봇 실제 위치를 잰다. **I-037 을 가르는 유일한 방법** — 다른 것을 바꾸기 전에 해야 기준선이 생긴다 |
-| 2 | `inflation_radius` 0.25 → **0.15** | P1 자유폭이 0.29 → 0.49 m 로 넓어져 통과가 쉬워지는지. **주의 아래** |
-| 3 | **robot8 로 같은 시험** | 개체차·도크 차이·측위 차이를 가른다. `bay:=A`, `-r __ns:=/robot8`, `robot8.yaml` |
-| 4 | `localization.yaml` 튜닝 | `update_min_a`(0.2) · `resample_interval`(1) · `recovery_alpha_slow/fast`(0.0). `update_min_d` 는 9/7 에 0.25→0.05 로 이미 바꿨다 (I-029) |
-| 5 | Nav2 플러그인 튜닝 | `controller_server`(DWB/MPPI 파라미터) · `progress_checker` · `general_goal_checker` |
+| **1** | **3단계 — `real_aruco:=true` 로 실물 마커 + 접근** | 이번 회차의 본 시험. `접근 종료 … 잔차` 를 **줄자 실측과 대조**한다. 잔차가 작은데 줄자가 틀리면 마커 거리(`depth_k`, 0.8 m 아래 pnp)를 의심한다. 판정 3(AMCL)이 나빠도 판정 4(마커)가 좋으면 정상이다 |
+| 2 | **재탐지가 도는지** | 일부러 로봇을 15~30° 틀어 놓고 시작한다. `마커 N 재탐지 성공 — 기준 방위에서 +X°` 가 나와야 한다. 찾은 각도를 매 회차 적는다 |
+| 3 | `bay_align_use_marker_yaw` **true** | 2번에서 모은 `마커 법선 오차` 가 안정적일 때만. 켜면 AMCL 방위 오차까지 지워진다. 게이트(25°) 밖이면 자동으로 측량값으로 되돌아간다 |
+| 4 | **robot8 로 같은 시험** | 개체차·도크 차이·측위 차이를 가른다. `bay:=A`, `-r __ns:=/robot8`, `robot8.yaml`. **카메라가 달라 `depth_k` 재실측이 먼저다** |
+| 5 | `general_goal_checker.stateful` **true → false** | 지금 `nav2.yaml` 37·69 행이 둘 다 `true` 다. **위치 도달을 한 번 선언하면 래치**하고 그 뒤로는 yaw 만 본다 — 래치 직후 AMCL 보정 점프가 오면 로봇이 그 자리에 서 버린다. 9/8 T6 의 오차 0.39 m 중 TF 지연으로 설명되는 것은 약 0.19 m 뿐이고, 남는 0.2 m 의 유력한 후보다. **한 줄만 바꾸면 되고 되돌리기도 쉽다** |
+| 6 | `localization.yaml` 튜닝 | `update_min_a`(0.2) · `resample_interval`(1) · `recovery_alpha_slow/fast`(0.0). `update_min_d` 는 9/7 에 0.25→0.05 로 이미 바꿨다 (I-029) |
 
-> **2번 주의 — `inflation_radius` 0.15 는 양날이다.** 통로 자유폭은 넓어지지만, **로봇 footprint 의 내접 반지름이 0.175 m 라 0.15 는 그보다 작다.** 즉 벽에서 로봇 표면까지 완충이 0 이 되어 몸통이 긁힐 수 있다. I-009 가 "받침대 6.5 cm 를 덮으려면 r ≥ 0.24" 로 0.25 를 고른 근거도 무효가 된다. **P1 통과만 보는 한 회차용 실험으로 쓰고, 결과를 I-009 에 적은 뒤 되돌릴지 결정한다.**
+> **선반 여유 — 3단계 전에 확인할 것.** 마커는 선반 뒤 벽면에 있으므로 **선반 앞면이 마커보다 로봇에 가깝다.** 주행 보고로 최근접점이 0.32 m 라 워치독 `stop_dist` 0.30 m 에는 안 걸리지만 여유가 2 cm 뿐이다. `bay_marker_range_m` 을 0.5 에서 **0.6** 으로 올려 둔 이유다. 선반 위치가 바뀌면 이 값을 먼저 다시 잡는다.
 
 **매 회차 공통** — 기록 5종(`shuttle/status`·`shuttle/arrived`·`/fleet/zone_event`·`amcl_pose`·`tf2_echo map base_link`)을 걸고 시작한다. 2회차에 `amcl_pose` 를 남긴 덕에 교착 좌표와 I-037 이 잡혔다.
 
