@@ -1,4 +1,4 @@
-"""ArUco 마커 검출 — 베이 도착 확정(S4)과 대기공간 측위 검증. BRD v3.5 / 계약 v1.11 6절·9.2.
+"""ArUco 마커 검출 — 베이 도착 확정(S4)과 대기공간 측위 검증. BRD v3.5 / 계약 v1.13 6절·9.2.
 
 입력: oakd/rgb/image_raw/compressed · oakd/rgb/camera_info · oakd/stereo/image_raw/compressedDepth
 출력: aruco/id (Int32, 없으면 -1) · aruco/distance (Float32, m)
@@ -18,10 +18,13 @@
 계산은 전부 core/aruco.py 에 있다. 여기는 토픽을 잇고 파라미터를 읽는 것만 한다.
 
 거리는 **0.8 m 이상에서 depth 를 우선** 쓴다 (distance_source=auto). 스테레오 depth 는 미터를
-직접 내므로 camera_info 의 초점거리 결함(I-031)과 무관하다. depth 는 **원값 × depth_scale**
-(로봇별, perception.yaml) 로 쓴다 — core/depth_distance 의 Kn1_mini 보정식(correct_depth)은
-이 로봇들에서 1 m 이상을 4~7 cm 짧게 만들었다(9/7 robot3·robot4 줄자 5점). 원값은 로봇마다
-+1~3 % 로 일정해서 배율 하나면 0.5 cm 안에 든다.
+직접 내므로 camera_info 의 초점거리 결함(I-031)과 무관하다. depth 원값에는 **로봇별 시차 편향
+보정** z = 1/(1/z_raw + depth_k) 를 건다 (core/aruco.calibrated_depth, 값은 perception.yaml
+/robotN/**). 스테레오 오차는 시차에 상수로 붙어 거리 오차가 z² 로 커지므로 배율(depth_scale)
+하나로는 안 맞는다 — robot3 줄자 4점(0.85·0.98·1.31·1.55 m)에서 배율 0.972 는 1.55 m 를
++3.0 cm 로 냈고(9/8, PM 독립점 기준 2 cm 초과), k=0.024 는 전부 1.5 cm 안이다. core/depth_distance
+의 Kn1_mini 보정식(correct_depth, A=1.023·B=0.024)은 같은 꼴이지만 A 가 이 로봇들에 안 맞아
+1 m 이상을 4~7 cm 짧게 만들었다(9/7 줄자 5점).
 
 depth_min_m(0.8) 아래는 depth 를 버리고 solvePnP 로 낸다 — robot4 0.57 m 에서 depth 원값이
 +6.6 cm(11 %) 였고 474 프레임이 같은 비율이었다(카메라 근거리 한계, CALIB_RANGE_M 하한과 같다).
@@ -78,7 +81,8 @@ class ArucoDetector(Node):
         self.declare_parameter('marker_ids', [1, 2, 3, 4])
         self.declare_parameter('max_distance_m', 2.0)
         self.declare_parameter('distance_source', 'auto')     # auto | depth | pnp
-        self.declare_parameter('depth_scale', 1.0)            # depth 원값에 곱하는 로봇별 배율 (yaml /robotN/**)
+        self.declare_parameter('depth_k', 0.0)                # 역깊이(시차) 편향 1/m, 로봇별 (yaml /robotN/**)
+        self.declare_parameter('depth_scale', 1.0)            # 보정 뒤 배율. 보통 1.0 — core/aruco.calibrated_depth
         self.declare_parameter('depth_min_m', 0.8)            # 이 아래는 depth 대신 pnp
         self.declare_parameter('pair_tol_s', 0.02)            # 같은 프레임 쌍으로 볼 RGB·depth stamp 차
         self.declare_parameter('depth_wait_s', 0.08)          # RGB 가 먼저 오면 짝 depth 를 이만큼 기다린다
@@ -90,6 +94,7 @@ class ArucoDetector(Node):
         self.allowed = {int(v) for v in p('marker_ids')}
         self.max_dist = float(p('max_distance_m'))
         self.source = str(p('distance_source'))
+        self.depth_k = float(p('depth_k'))
         self.depth_scale = float(p('depth_scale'))
         self.depth_min = float(p('depth_min_m'))
         self.pair_tol = float(p('pair_tol_s'))
@@ -127,7 +132,7 @@ class ArucoDetector(Node):
 
         pose_note = ' · aruco/pose 발행' if self.pub_pose else ''
         self.get_logger().info(f'마커 {self.size * 100:.1f} cm · 허용 ID {sorted(self.allowed)} · '
-                               f'거리 {self.source} (depth×{self.depth_scale:.3f}, {self.depth_min} m 아래는 pnp) · '
+                               f'거리 {self.source} (depth 보정 k={self.depth_k:.4f}/m ×{self.depth_scale:.3f}, {self.depth_min} m 아래는 pnp) · '
                                f'한계 {self.max_dist} m{pose_note}')
 
     # ---------- 입력 ----------
@@ -160,7 +165,8 @@ class ArucoDetector(Node):
             return None
         if r['z_raw'] < self.depth_min:
             return None, r
-        return aruco.radial_from_depth(r['z_raw'] * self.depth_scale, pose['tvec']), r
+        r['z_cal'] = aruco.calibrated_depth(r['z_raw'], self.depth_k, self.depth_scale)   # 로봇별 시차 편향 보정
+        return aruco.radial_from_depth(r['z_cal'], pose['tvec']), r
 
     def pnp_scale(self):
         """pnp 거리를 depth 의 자에 맞추는 비. 표본이 아직 없으면 1.0 (그대로 낸다)."""
@@ -211,7 +217,7 @@ class ArucoDetector(Node):
             if got is not None and got[0] is not None:
                 src, dist = 'depth', got[0]
                 if it['pose']['angle_deg'] <= 30:    # 계약 6절 범위. 그 밖은 ROI p20 이 가까운 쪽을 읽어 비가 낮아진다
-                    self.ratios.append(got[1]['z_raw'] * self.depth_scale / it['pose']['z'])
+                    self.ratios.append(got[1]['z_cal'] / it['pose']['z'])
             elif got is not None:                    # depth 는 있지만 근거리 — pnp 로. 비가 있으면 곱한다
                 k = self.pnp_scale()
                 dist *= k

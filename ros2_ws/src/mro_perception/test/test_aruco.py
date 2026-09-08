@@ -9,8 +9,8 @@
 
 실기 정확도는 여기서 보장하지 않는다 — 그건 depth/pnp 비 로그와 TS-U05 줄자가 한다.
 
-실행: ROS 환경을 소싱한 뒤 (core/depth_distance.py 가 rclpy 를 import 한다)
-  source install/setup.bash && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest test/test_aruco.py
+실행: ROS 없이 돈다 (core/depth_distance.py 의 ROS import 는 뷰어 노드 전용이라 없으면 건너뛴다)
+  cd ros2_ws/src/mro_perception && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest test/test_aruco.py
   (venv 의 launch_testing 플러그인이 pytest 9 와 충돌해 자동 로드를 끈다. colcon test 는 그대로 된다)
 """
 import cv2
@@ -41,7 +41,7 @@ def corners_at(x=0.0, y=0.0, z=1.0, tilt_deg=0.0, K=K):
 
 
 def sensor_mm(z_true):
-    """참 거리 → 센서 원값(mm). 노드는 원값 × depth_scale 을 쓴다 (여기서는 배율 1.0)."""
+    """참 거리 → 센서 원값(mm). 노드는 원값에 calibrated_depth(k, scale) 를 건다 (여기서는 k=0·배율 1.0)."""
     return int(round(z_true * 1000.0))
 
 
@@ -162,3 +162,20 @@ def test_rvec_to_quat_matches_rotation_matrix():
         q = np.array([x, y, z])
         v_q = v + 2 * np.cross(q, np.cross(q, v) + w * v)
         assert np.allclose(v_q, R @ v, atol=1e-6)
+
+
+def test_calibrated_depth_identity_and_bias():
+    """k=0·scale=1 이면 원값 그대로. 시차 편향 k 로 만든 원값은 같은 k 로 정확히 되돌아온다."""
+    assert aruco.calibrated_depth(1.234) == pytest.approx(1.234)
+    k = 0.024
+    for z in (0.8, 1.0, 1.5, 2.0):
+        z_raw = 1.0 / (1.0 / z - k)            # 센서가 시차를 k·f·B 만큼 작게 읽었을 때의 원값
+        assert aruco.calibrated_depth(z_raw, k) == pytest.approx(z, abs=1e-9)
+
+
+def test_calibrated_depth_fits_robot3_tape_points():
+    """9/8 robot3 줄자 4점 회귀 — k 하나로 전부 1.5 cm 안. 배율 하나(0.972)는 1.55 m 에서 3 cm 틀린다."""
+    tape_raw = [(0.85, 0.8606), (0.98, 1.0120), (1.31, 1.3440), (1.55, 1.6257)]
+    for tape, raw in tape_raw:
+        assert abs(aruco.calibrated_depth(raw, k=0.024) - tape) <= 0.015
+    assert abs(0.972 * 1.6257 - 1.55) > 0.025

@@ -7,7 +7,7 @@ tools/aruco_offline_check.py 도 같은 함수를 import 한다 — 노드와 �
 거리를 두 가지 방법으로 낸다. 서로 원리가 달라서 하나가 다른 하나의 자가 된다.
 
   depth   스테레오 시차 → 미터. 초점거리를 쓰지 않아 camera_info 결함(I-031)과 무관하다.
-          보정식(depth_distance.correct_depth)은 0.8~2.0 m 에서 맞췄다. 마커 안쪽 40 % 만 읽어
+          원값에 로봇별 시차 편향 보정(calibrated_depth)을 건다. 마커 안쪽 40 % 만 읽어
           가장자리에 배경 depth 가 섞이지 않게 한다.
   pnp     마커 네 꼭짓점으로 평면 자세(solvePnP). 초점거리에 정비례하므로 camera_fx_scale 이
           틀리면 그만큼 틀린다. 대신 좌우·상하 위치와 기운각이 나온다 — depth 는 이걸 못 낸다.
@@ -143,6 +143,19 @@ def marker_depth(depth_mm, corners, scale=1.0):
 def radial_from_depth(z_depth, tvec):
     """depth 의 광축 방향 거리 → 카메라→마커 직선거리. 방향은 pnp 의 tvec 에서 가져온다."""
     return float(z_depth * np.linalg.norm(tvec) / tvec[2])
+
+
+def calibrated_depth(z_raw, k=0.0, scale=1.0):
+    """센서 depth 원값(m) → 보정 거리(m).   z = scale / (1/z_raw + k),  k 단위 1/m
+
+    스테레오는 시차(disparity)로 거리를 내므로 정합·캘리브레이션 오차는 거리가 아니라 **시차에 상수로**
+    붙는다. 시차 편향 Δd 는 역깊이 편향 k = Δd/(f·B) 가 되고, 거리 오차는 z² 에 비례해 커진다.
+    그래서 배율 하나로는 가까운 곳과 먼 곳을 동시에 못 맞춘다 — robot3 줄자 4점(0.85~1.55 m)에서
+    배율 0.972 는 1.55 m 를 +3.0 cm 로 냈고, k=0.024 하나는 전부 1.5 cm 안에 넣었다 (9/8 실측).
+    k 는 로봇마다 다르다 (perception.yaml /robotN/**). scale 은 보통 1.0 — 시차 편향으로 설명이
+    안 되는 원인이 따로 있을 때만 쓴다. Kn1_mini 의 correct_depth 가 같은 꼴(1/(A/z+B))이다.
+    """
+    return float(scale / (1.0 / float(z_raw) + k))
 
 
 def rvec_to_quat(rvec):
