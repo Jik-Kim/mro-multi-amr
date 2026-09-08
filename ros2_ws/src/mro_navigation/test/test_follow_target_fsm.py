@@ -69,6 +69,7 @@ def _follow_target_class():
 
 
 ROBOT = 'robot3'                    # 노드가 ns 로 자기 로봇을 정한다
+GOAL_TOL_M = 0.25                   # Nav2 xy_goal_tolerance (I-029) — 이 안의 목표는 안 움직인다
 
 
 @pytest.fixture(scope='module')
@@ -477,11 +478,128 @@ def test_approach_skip_boundary(ros):
     node = make_node(approach_skip_m=0.5)
     start(node)
     node.paired = True
-    see(node, (0.9, 0.0))                 # 0.5 m 밖
+    see(node, (0.9, 0.0))                 # 0.5 m 밖 → 접근을 쓴다
     node.step()
     see(node, (0.9, 0.0))
     node.step()
+    # gap 0.9 → 목표는 max(0.5, 0.45) = 0.5 = 최종 이격이라 APPROACH_2 다.
+    #   상태 이름의 뜻은 '중간/최종' 이지 '몇 번째 회차' 가 아니다
+    assert node.state == 'APPROACH_2'
+    node.destroy_node()
+
+
+def test_next_standoff_halves_but_never_below_final(ros):
+    """목표 거리 = max(최종 이격, 남은 거리 / 2). 하한을 뚫지 않는다.
+
+    하한이 `follow_standoff_m` 인 것은 접근 단계에서 최소 이격(`min_separation_m` 0.3)을
+    침범하지 않기 위한 것이다 — AC-04 접촉·오추종 0건이 절대 기준이다.
+    """
+    node = make_node()
+    final = node.p('follow_standoff_m')
+
+    assert node.next_standoff(3.0) == 1.5
+    assert node.next_standoff(1.21) == pytest.approx(0.605)
+    assert node.next_standoff(0.9) == final          # 0.45 < 0.5 → 하한
+    assert node.next_standoff(0.2) == final          # 이미 안쪽이어도 하한 아래로 안 간다
+    node.destroy_node()
+
+
+def test_far_target_goal_is_intermediate(ros):
+    """멀면 중간 목표(APPROACH_1)로 간다 — 2 m 밖 좌표는 0.5~0.7 m 틀린다."""
+    node = make_node()
+    start(node)
+    node.paired = True
+    see(node, (3.0, 0.0))
+    node.step()
+    see(node, (3.0, 0.0))
+    node.step()
+
     assert node.state == 'APPROACH_1'
+    gx, gy = node.navigator.goals()[-1][1:3]
+    assert (gx, gy) == pytest.approx((1.5, 0.0), abs=0.01), '작업자 앞 1.5 m'
+    node.destroy_node()
+
+
+def test_goal_actually_moves_the_robot_at_stall_distance(ros):
+    """9/8 실주행이 붙박인 1.21 m 에서 목표가 실제로 움직일 만큼 떨어져 있는가.
+
+    종전에는 1단계 목표가 작업자 앞 1.0 m 로 고정이라 로봇에서 0.21 m 였고, Nav2
+    `xy_goal_tolerance` 0.25 안이라 **한 발도 안 움직이고** SUCCEEDED 가 났다.
+    그 결과 도착 → 재검출 → 도착이 무한히 돌며 로봇이 1.20 m 에 붙박였다.
+    """
+    node = make_node()
+    start(node)
+    node.paired = True
+    see(node, (1.21, 0.0))
+    node.step()
+    see(node, (1.21, 0.0))
+    node.step()
+
+    gx, gy = node.navigator.goals()[-1][1:3]
+    assert math.hypot(gx, gy) > GOAL_TOL_M, '목표가 도착 판정 안이면 로봇이 안 움직인다'
+    node.destroy_node()
+
+
+def test_approach_converges_to_arrived(ros):
+    """회차를 거듭하면 유한 번에 ARRIVED 에 닿는다 — 무한 루프가 구조적으로 불가능하다.
+
+    목표가 항상 `max(최종, gap/2)` 라 gap 이 회차마다 반으로 줄고, 최종 이격에 닿으면
+    하한에 걸려 그 회차가 마지막이 된다. 시험은 로봇을 목표까지 순간이동시켜
+    (Nav2 주행을 대신한다) 회차만 돌린다.
+    """
+    node = make_node()
+    start(node)
+    node.paired = True
+    worker = 3.0
+    rob = 0.0
+    seen_states = []
+
+    for _ in range(10):
+        see(node, (worker - rob, 0.0))       # 좌표는 로봇 기준으로 들어온다 (TF 대역이 원점)
+        node.step()
+        see(node, (worker - rob, 0.0))
+        node.step()
+        seen_states.append(node.state)
+        if node.state in ('ARRIVED', 'FOLLOWING'):
+            break
+        assert node.state in ('APPROACH_1', 'APPROACH_2'), node.state
+        gx, _ = node.navigator.goals()[-1][1:3]
+        rob += gx                            # 목표까지 갔다고 친다
+        while not node.navigator.isTaskComplete():
+            pass
+        node.step()                          # 도착 처리 → SEARCHING 또는 ARRIVED
+
+    assert 'APPROACH_1' in seen_states, '멀리서는 중간 목표를 써야 한다'
+    assert node.state in ('ARRIVED', 'FOLLOWING'), f'수렴하지 못했다: {seen_states}'
+    node.destroy_node()
+
+
+def test_stall_distance_reaches_following(ros):
+    """9/8 붙박인 1.21 m 에서 한 회차 만에 FOLLOWING 까지 간다.
+
+    gap 1.21 → 목표는 작업자 앞 0.605 m (로봇에서 0.605 m — 실제로 움직인다) → 도착하면
+    gap 0.605 로 `approach_skip_m` 1.0 안이라 접근을 끝내고 FOLLOWING 이다.
+    마지막 0.5 m 붙이기는 FOLLOWING 이 맡는다 (AC-05 채점 구간도 여기뿐이다).
+    """
+    node = make_node()
+    start(node)
+    node.paired = True
+    see(node, (1.21, 0.0))
+    node.step()
+    see(node, (1.21, 0.0))
+    node.step()
+    assert node.state == 'APPROACH_1'
+
+    gx, _ = node.navigator.goals()[-1][1:3]
+    while not node.navigator.isTaskComplete():
+        pass
+    node.step()                              # 중간 목표 도착 → SEARCHING
+    see(node, (1.21 - gx, 0.0))              # 목표까지 갔다고 치고 다시 잰다
+    node.step()
+    see(node, (1.21 - gx, 0.0))
+    node.step()
+
+    assert node.state == 'FOLLOWING', '한 회차 뒤에는 추종으로 넘어가야 한다'
     node.destroy_node()
 
 
