@@ -1,4 +1,4 @@
-# Interfaces — 계약 v1.14 (2026-09-08)
+# Interfaces — 계약 v1.15 (2026-09-08)
 
 > v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
 > **v1.11 (9/7 저녁): 세마포어 이벤트 토픽 `/fleet/zone_event` 신설** — 대기·획득·반납·강제 회수를 기록해 K-06(교착 자동 해결률)을 센다 (I-030). `mro_interfaces` 는 바꾸지 않고 `std_msgs/String` 을 쓴다.
@@ -6,7 +6,8 @@
 > **v1.13 (9/8 새벽): 실주행이 드러낸 것 셋을 계약에 반영.** ① `aruco/pose` 비준 (PR #40) — 선택 발행, **회전(yaw)은 정렬에 쓰지 않는다.** ② ArUco 는 **발행 한계(2.0 m)와 수용 조건(1.5 m)을 나눈다** — 경계값 마커가 조용히 사라지지 않게 하되 판정은 소비자가 건다. ③ `cmd_vel` 발행자에 `follow_target`(제자리 회전) 추가, **estop 중 병진은 전부 막고 저속 제자리 회전만 통과** (I-036). **후진은 쓰지 않는다** — 2절 확정. 해제 거리 `CLEAR_DIST` 0.45 → **0.38 m** 로 낮춘다(P1 반폭 0.395 m 보다 작아야 통로 안에서 회전으로 풀린다). estop 이 복구까지 막아 로봇이 벽 앞에서 95 초를 쓴 실주행 기록이 근거다.
 > **v1.14 (9/8 오후, PR #45): `amr_detection` 이 실제 노드가 되면서 드러난 셋.** ① `target/image`(raw `Image`) → **`target/image/compressed`**(CompressedImage) — raw 는 **구독자가 없는데** 대역폭만 먹었다. 계약이 `follow_target` 을 수신자로 적어둔 것이 틀렸다. 사람이 보는 용도이고 안전 판단·KPI 에 쓰지 않는다. ② **`target/visible` 의 의미를 바꾼다** — 「작업자가 보이나」에서 **「내 담당이 보이나」** 로. K-04 Lost 의 원천이라 그냥 둘 수 없다: 재획득은 *대상* 재획득이지 아무나 재획득이 아니다. ③ `mission/assigned` 수신자에 `amr_detection` 추가 — 이 로봇이 누구를 맡았는지는 여기서만 안다 (`WorkerDescriptor.robot_ns` 는 채워지지 않는다).
 >
-> 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더했고, v1.14 는 **더한 것 없이 하나를 갈고 하나의 뜻을 바꿨다.**
+> **v1.15 (9/8): FR-13 관제 내부 전달 경로를 명시.** 기존 `srv/ManualPair` 형식은 바꾸지 않고 `control_ui` 가 `/fleet/manual_pair` 로 `fleet_manager` 에 요청하면, `fleet_manager` 가 선택된 `/robotN/manual_pair` 로 전달한다. 최종 판정과 확정 발행은 계속 `amr_detection` 하나가 맡는다.
+> 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더했고, v1.14 는 하나를 갈고 하나의 뜻을 바꿨으며, v1.15 는 기존 서비스 형식의 관제 내부 경로 하나를 명시했다.
 
 정의 원본은 `ros2_ws/src/mro_interfaces`. 이 문서는 의도·규칙·확정 값을 설명한다.
 
@@ -27,7 +28,7 @@
 | `srv/RequestMission` | UI → fleet | 접수 ≤ 2 s |
 | `srv/ZoneToken` | 로봇 → zone_semaphore | acquire/release, FIFO. 구역은 아래 3절 |
 | `srv/OperatorCommand` | UI → fleet | **RETURN**(해당 로봇) / **RETURN_ALL**(전체) 만. 정지·재개는 9/4 결정으로 제외 |
-| `srv/ManualPair` | fleet → amr_detection | **v1.12.** 명시 페어링 폴백 (FR-13). 서버는 로봇마다 하나 — `/robotN/manual_pair`. 10절 |
+| `srv/ManualPair` | control_ui → fleet → amr_detection | **v1.12 형식, v1.15 경로 명시.** 관제 입구는 `/fleet/manual_pair`, 로봇별 최종 판정 서버는 `/robotN/manual_pair`. 10절 |
 
 ## 2. 확정된 값 — 더 논의하지 않는다
 
@@ -268,6 +269,11 @@ BRD 5.2 도 K-05 의 측정 출처를 **「미션 로그」** 로 적는다. 웹
 **10.3 요청은 서비스다.** `srv/ManualPair` — 요청 `robot_ns`, `worker_id` / 응답 `accepted`, `reason`.
 토픽이면 눌렀는데 됐는지 알 수 없다. **두 필드 모두 필수다** — 어느 로봇이 누구를 따라갈지가 곧 페어링이라
 하나만으로는 성립하지 않는다.
+
+관제 내부 경로는 `control_ui → /fleet/manual_pair → fleet_manager` 다. `fleet_manager` 는 요청의
+`robot_ns` 를 확인한 뒤 같은 `srv/ManualPair` 형식으로 해당 `/robotN/manual_pair` 를 호출하고,
+`amr_detection` 의 `accepted` 와 `reason` 을 `control_ui` 에 그대로 돌려준다. 서비스가 준비되지
+않았거나 응답 시간이 지나면 관제는 성공으로 기록하지 않는다.
 
 **10.4 확정은 `amr_detection` 이 한다.** `target/paired` 와 `target/worker_id` 의 **발행자는 계약상
 amr_detection 하나뿐이며, 명시 페어링에서도 바뀌지 않는다.** 발행자가 둘이 되면 로그만 보고 어느 값이

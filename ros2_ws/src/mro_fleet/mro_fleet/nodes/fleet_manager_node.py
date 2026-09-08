@@ -1,14 +1,14 @@
 """미션 생성·배정, 상태 집계, DB 기록, 종료 명령을 담당한다.
 
-서비스: /fleet/request_mission, /fleet/operator_command
+서비스: /fleet/request_mission, /fleet/operator_command, /fleet/manual_pair
 구독: /webcam1/worker_descriptor, /fleet/intervention, /fleet/zone_event,
-      로봇별 상태·배터리·pose·estop
+      로봇별 상태·배터리·pose·estop·페어링 상태
 발행: /fleet/mission, 로봇별 mission/assigned·mission/finish,
       /fleet/status
 """
+from functools import partial
 import math
 import os
-from functools import partial
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -22,10 +22,15 @@ from mro_interfaces.msg import (
     Mission,
     WorkerDescriptor,
 )
-from mro_interfaces.srv import OperatorCommand, RequestMission
+from mro_interfaces.srv import ManualPair, OperatorCommand, RequestMission
 
 import rclpy
+from rclpy.callback_groups import (
+    MutuallyExclusiveCallbackGroup,
+    ReentrantCallbackGroup,
+)
 from rclpy.node import Node
+from rclpy.task import Future
 
 from sensor_msgs.msg import BatteryState
 
@@ -82,6 +87,7 @@ class FleetManager(Node):
         self.declare_parameter('battery_min', 0.25)
         self.declare_parameter('t_lim_s', 120.0)
         self.declare_parameter('worker_assignment_window_s', 1.0)
+        self.declare_parameter('manual_pair_timeout_s', 2.0)
 
         self.robots = list(self.get_parameter('robot_namespaces').value)
         self.battery_min = float(self.get_parameter('battery_min').value)
@@ -89,8 +95,13 @@ class FleetManager(Node):
         self.worker_assignment_window_s = float(
             self.get_parameter('worker_assignment_window_s').value
         )
+        self.manual_pair_timeout_s = float(
+            self.get_parameter('manual_pair_timeout_s').value
+        )
         if self.worker_assignment_window_s <= 0.0:
             raise ValueError('worker_assignment_window_s must be positive')
+        if self.manual_pair_timeout_s <= 0.0:
+            raise ValueError('manual_pair_timeout_s must be positive')
         schema_path = os.path.join(share, 'config', 'schema.sql')
         self.db = FleetDB(
             self.get_parameter('db_path').value,
@@ -110,12 +121,17 @@ class FleetManager(Node):
                 'paired_worker': '',
                 'estop': False,
                 'target_worker': '',
+                'pair_state': 'NO_TARGET',
             }
             for namespace in self.robots
         }
         self.worker_robot = {}
         self.pending_workers = {}
         self.worker_assignment_timer = None
+        # 중계 서비스가 하위 서비스 응답을 기다리는 동안 다른 ROS 콜백이
+        # 실행될 수 있도록 서버와 클라이언트 그룹을 분리한다.
+        self.manual_pair_service_group = MutuallyExclusiveCallbackGroup()
+        self.manual_pair_client_group = ReentrantCallbackGroup()
 
         self.pub_mission = self.create_publisher(
             Mission, '/fleet/mission', 10
@@ -135,6 +151,14 @@ class FleetManager(Node):
         self.pub_status = self.create_publisher(
             FleetStatus, '/fleet/status', 10
         )
+        self.manual_pair_clients = {
+            namespace: self.create_client(
+                ManualPair,
+                f'{namespace}/manual_pair',
+                callback_group=self.manual_pair_client_group,
+            )
+            for namespace in self.robots
+        }
         self.create_subscription(
             WorkerDescriptor,
             '/webcam1/worker_descriptor',
@@ -165,6 +189,12 @@ class FleetManager(Node):
             OperatorCommand,
             '/fleet/operator_command',
             self._operator_cb,
+        )
+        self.create_service(
+            ManualPair,
+            '/fleet/manual_pair',
+            self._manual_pair_cb,
+            callback_group=self.manual_pair_service_group,
         )
         self.create_timer(1.0, self._publish_status)
         self.create_timer(1.0, self._expire_overdue_missions)
@@ -210,6 +240,12 @@ class FleetManager(Node):
             Bool,
             f'{namespace}/target/paired',
             partial(self._paired_cb, namespace),
+            10,
+        )
+        self.create_subscription(
+            String,
+            f'{namespace}/target/pair_state',
+            partial(self._pair_state_cb, namespace),
             10,
         )
 
@@ -437,6 +473,15 @@ class FleetManager(Node):
     def _target_worker_cb(self, namespace, message):
         self.robot[namespace]['target_worker'] = message.data
 
+    def _pair_state_cb(self, namespace, message):
+        """인지 노드가 확정한 로봇별 페어링 상태를 보관한다."""
+        if message.data not in {'PAIRED', 'GATE_FAIL', 'NO_TARGET'}:
+            self.get_logger().warn(
+                f'{namespace}: 알 수 없는 pair_state {message.data!r}'
+            )
+            return
+        self.robot[namespace]['pair_state'] = message.data
+
     def _paired_cb(self, namespace, message):
         if message.data:
             worker_id = self.robot[namespace]['target_worker']
@@ -659,6 +704,72 @@ class FleetManager(Node):
         response.message = (
             f"{', '.join(targets)} 작업 종료 → 복귀 전달"
         )
+        return response
+
+    @staticmethod
+    def _resolve_manual_pair_wait(completion, result):
+        """응답과 시간 초과 중 먼저 도착한 결과 하나만 확정한다."""
+        if not completion.done():
+            completion.set_result(result)
+
+    async def _manual_pair_cb(self, request, response):
+        """UI 요청을 선택된 로봇의 amr_detection 서비스로 전달한다."""
+        client = self.manual_pair_clients.get(request.robot_ns)
+        if client is None:
+            response.accepted = False
+            response.reason = 'WRONG_ROBOT'
+            return response
+
+        if not client.service_is_ready():
+            self.get_logger().warn(
+                f'{request.robot_ns}: manual_pair 서비스 준비 안 됨'
+            )
+            response.accepted = False
+            response.reason = ''
+            return response
+
+        forwarded_request = ManualPair.Request()
+        forwarded_request.robot_ns = request.robot_ns
+        forwarded_request.worker_id = request.worker_id
+        future = client.call_async(forwarded_request)
+        completion = Future()
+        timeout_timer = self.create_timer(
+            self.manual_pair_timeout_s,
+            lambda: self._resolve_manual_pair_wait(completion, None),
+            callback_group=self.manual_pair_client_group,
+        )
+        future.add_done_callback(
+            lambda done: self._resolve_manual_pair_wait(completion, done)
+        )
+        completed_future = await completion
+        timeout_timer.cancel()
+        self.destroy_timer(timeout_timer)
+
+        if completed_future is None:
+            self.get_logger().warn(
+                f'{request.robot_ns}: manual_pair 응답 시간 초과'
+            )
+            response.accepted = False
+            response.reason = ''
+            return response
+
+        try:
+            forwarded_response = completed_future.result()
+        except Exception as error:
+            self.get_logger().error(
+                f'{request.robot_ns}: manual_pair 호출 실패: {error}'
+            )
+            response.accepted = False
+            response.reason = ''
+            return response
+
+        if forwarded_response is None:
+            response.accepted = False
+            response.reason = ''
+            return response
+
+        response.accepted = bool(forwarded_response.accepted)
+        response.reason = forwarded_response.reason
         return response
 
 
