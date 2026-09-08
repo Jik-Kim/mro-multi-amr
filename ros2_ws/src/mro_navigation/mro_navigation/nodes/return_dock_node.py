@@ -86,8 +86,14 @@ class ReturnDock(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        default_arena = os.path.join(
-            get_package_share_directory('mro_bringup'), 'params', 'arena.yaml')
+        # 런치가 arena_yaml 을 넘기면 이 조회는 쓰이지 않는다. mro_bringup 이 설치되지 않은
+        #   환경(단위 시험·부분 빌드)에서 조회가 예외를 던져 노드가 죽지 않게 감싼다 —
+        #   경로를 못 찾으면 빈 값으로 두고 _load_arena 가 사유를 남긴다
+        try:
+            default_arena = os.path.join(
+                get_package_share_directory('mro_bringup'), 'params', 'arena.yaml')
+        except Exception:
+            default_arena = ''
         self.declare_parameter('dock_retry', 2)            # robotN.yaml
         self.declare_parameter('t_ret_s', 180.0)           # robotN.yaml
         self.declare_parameter('token_retry_s', 2.0)       # robotN.yaml · 계약 3절 '거절되면 2초 후 재요청'
