@@ -6,16 +6,30 @@ import pytest
 from rclpy.time import Time
 
 from test_shuttle_mission_fsm import (
-    assigned, fresh_marker, make_node, stub_token,
+    CAMERA_FRAME, OPTICAL_TO_BASE_Q, assigned, fresh_marker, make_node, marker_frames, stub_token,
 )
 from test_shuttle_mission_fsm import ros  # noqa: F401
 
 pytestmark = pytest.mark.usefixtures('ros')
 
 
+def _camera_transform():
+    """base_link ← 카메라 광학 프레임. 마커 표본을 base_link 로 옮길 때 쓴다 (고정 회전)."""
+    transform = TransformStamped()
+    q = transform.transform.rotation
+    q.x, q.y, q.z, q.w = OPTICAL_TO_BASE_Q
+    return transform
+
+
 def feed_pose(node, x, y, yaw=0.0, age=0.0):
-    """좌표와 시각을 독립적으로 주입한다. 반환 함수는 매 조회 때 새 stamp를 만든다."""
-    def lookup(*args, **kwargs):
+    """좌표와 시각을 독립적으로 주입한다. 반환 함수는 매 조회 때 새 stamp를 만든다.
+
+    카메라 TF 는 이 주입과 무관하게 늘 성립한다 — map→base_link 의 신선도만 시험하려는
+    것이지, 마커를 base_link 로 옮기는 고정 변환까지 없애려는 것이 아니다.
+    """
+    def lookup(target, source, *args, **kwargs):
+        if source == CAMERA_FRAME:
+            return _camera_transform()
         transform = TransformStamped()
         transform.header.stamp = Time(seconds=node.now() - age).to_msg()
         transform.transform.translation.x = x
@@ -23,6 +37,15 @@ def feed_pose(node, x, y, yaw=0.0, age=0.0):
         transform.transform.rotation.z = math.sin(yaw / 2)
         transform.transform.rotation.w = math.cos(yaw / 2)
         return transform
+    node.tf_buffer.lookup_transform = lookup
+
+
+def camera_tf_only(node):
+    """카메라 TF 만 주고 map→base_link 는 없앤다 — 위치를 모르는 상태를 만든다."""
+    def lookup(target, source, *args, **kwargs):
+        if source == CAMERA_FRAME:
+            return _camera_transform()
+        raise LookupError(f'{target}←{source} 없음')
     node.tf_buffer.lookup_transform = lookup
 
 
@@ -58,14 +81,21 @@ def test_stale_or_future_pose_is_not_arrival(age):
         node.destroy_node()
 
 
-def test_missing_pose_cannot_start_advance():
-    """TF가 없으면 베이 waypoint로 대신 계산해 전진시키지 않는다."""
-    node = make_node(simulate_pose=False, tf_pose_timeout_s=0.1)
+def test_missing_pose_cannot_start_approach():
+    """자기 위치를 모르면 마커가 보여도 접근을 시작하지 않는다.
+
+    접근은 마커 상대 이동이지만 회전량 φ 를 '측량된 베이 방위 − 지금 방위' 로 잡으므로
+    map→base_link 가 필요하다. 없는 채로 움직이면 방위를 엉뚱하게 돌린다.
+    """
+    node = make_node(bay_align_enable=True, tf_pose_timeout_s=0.1)
+    camera_tf_only(node)
+    marker_frames(node, fwd=1.0, lat=0.0)
     try:
         from mro_navigation.nodes.shuttle_mission_node import MissionAbort
         with pytest.raises(MissionAbort, match='신선한 TF'):
-            node.advance_into_bay(node.arena['bays']['A'])
+            node.approach_and_align(node.arena['bays']['A'])
         assert node.navigator.goals() == []
+        assert node.navigator.moves() == []
     finally:
         node.destroy_node()
 
@@ -92,23 +122,23 @@ def test_fresh_pose_within_tolerance_is_accepted():
         node.destroy_node()
 
 
-def test_advance_uses_updated_start_pose():
-    """지연 좌표가 새 좌표로 갱신된 뒤 그 자리에서 0.3 m 목표를 만든다."""
-    node = make_node(tf_pose_timeout_s=1.0)
-    feed_pose(node, -0.60, -0.20, age=2.0)
-    timer = node.create_timer(0.05, lambda: feed_pose(node, -0.65, -0.02, yaw=0.0))
-    # 전진 후 TF는 navigator 대역의 도착 좌표를 반환한다.
-    original_goto = node.navigator.goToPose
+def test_approach_waits_for_updated_pose():
+    """지연 좌표가 새 좌표로 갱신되면 포기하지 않고 그 방위로 접근을 계산한다.
 
-    def goto(pose):
-        node.destroy_timer(timer)
-        feed_pose(node, pose.pose.position.x, pose.pose.position.y)
-        return original_goto(pose)
-
-    node.navigator.goToPose = goto
+    옛 '0.3 m 전진' 시험을 접근으로 옮긴 것이다 (I-037). 전진은 사라졌지만 '신선한
+    map→base_link 없이는 다음 단계로 가지 않는다' 는 요구는 접근에 그대로 남아 있다.
+    베이 A 의 측량 방위(-3.050 rad)로 서 있으면 회전은 0 이고 마커까지 1.0 → 0.5 m 라
+    직진만 0.5 m 나와야 한다.
+    """
+    yaw_ref = -3.050
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1, tf_pose_timeout_s=1.0)
+    feed_pose(node, -0.65, -0.02, yaw=yaw_ref, age=2.0)          # 처음엔 2 초 지연된 좌표뿐
+    node.create_timer(0.05, lambda: feed_pose(node, -0.65, -0.02, yaw=yaw_ref))
+    marker_frames(node, fwd=1.0, lat=0.0)
     try:
-        node.advance_into_bay(node.arena['bays']['A'])
-        assert node.navigator.goals() == [('goto', -0.35, -0.02)]
+        node.approach_and_align(node.arena['bays']['A'])
+        assert node.navigator.moves() == [('drive', 0.5)]
+        assert node.navigator.goals() == []
     finally:
         node.destroy_node()
 
@@ -136,7 +166,7 @@ def test_waiting_position_error_does_not_publish_arrived():
 
     def goto(pose):
         accepted = original_goto(pose)
-        if len(node.navigator.goals()) == 3:
+        if len(node.navigator.goals()) == 2:      # 대기공간 목표 (전진은 이제 상대 이동이다)
             feed_pose(node, pose.pose.position.x + 0.55, pose.pose.position.y)
         return accepted
 
