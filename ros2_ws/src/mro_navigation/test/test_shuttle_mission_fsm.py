@@ -369,11 +369,15 @@ def test_bay_approach_drives_to_target_range(ros):
     node.destroy_node()
 
 
-def test_bay_approach_corrects_lateral_offset(ros):
-    """좌우로 치우쳐 보이면 회전–직진–회전으로 접근한다.
+def test_bay_approach_heads_straight_at_the_marker(ros):
+    """좌우로 치우쳐 보여도 **마커 방향으로** 들어간다 — 옆걸음하지 않는다 (9/8 실주행).
 
-    마커가 base_link (1.0, +0.12), 목표가 정면 0.6 m 면 이동은 앞 0.4 · 좌 0.12 라
-    첫 회전이 약 +16.7°, 이동량이 0.418 m, 마지막 회전이 그것을 되돌리는 값이어야 한다.
+    옛 방식은 '마커가 정면 정중앙에 오도록' 을 목표로 삼아 회전 φ 가 거리와 묶이면서
+    r·sin(φ) 만큼 옆으로 파고들었고, 좁은 베이 칸에서 마커가 없는 옆벽을 만나 Nav2 가
+    `Collision Ahead` 로 중단했다. 이제 진행 방위는 **마커 방위와 같아야 한다.**
+
+    마커가 base_link (1.0, +0.12) 이면 거리는 1.0072 이고 목표 0.6 까지 0.4072 m 를
+    마커 방위(+6.84°)로 들어간다.
     """
     node = make_node(bay_align_enable=True, bay_align_max_iter=1)   # 대역은 마커가 안 따라온다
     stub_token(node, [True])
@@ -383,16 +387,39 @@ def test_bay_approach_corrects_lateral_offset(ros):
     moves = node.navigator.moves()
     assert [m[0] for m in moves] == ['spin', 'drive', 'spin']
     turn1, step, turn2 = moves[0][1], moves[1][1], moves[2][1]
-    assert step == pytest.approx(math.hypot(0.4, 0.12), abs=0.002)
-    assert turn1 == pytest.approx(math.atan2(0.12, 0.4), abs=0.002)
+    bearing = math.atan2(0.12, 1.0)
+    # 대역이 호출값을 소수 3자리로 반올림해 기록하므로 그만큼만 느슨하게 본다
+    assert turn1 == pytest.approx(bearing, abs=1e-3)      # 진행 방위 = 마커 방위
+    assert step == pytest.approx(math.hypot(1.0, 0.12) - 0.6, abs=0.002)
     assert turn2 == pytest.approx(-turn1, abs=1e-6)       # 베이 방위로 되돌린다
     assert node.status_log[-2:] == ['WAITING', 'READY']
     node.destroy_node()
 
 
+def test_bay_approach_does_not_sidestep_when_heading_is_off(ros):
+    """방위가 틀어져 있어도 진행 방위는 마커 방위다 — 회전이 옆걸음을 만들지 않는다.
+
+    이것이 9/8 사고의 재발 방지선이다. 옛 방식이면 이 조건에서 진행 방위가 마커 방위와
+    10° 넘게 벌어졌다.
+    """
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.170, lat=-0.098)           # 9/8 실측값
+    node.run_mission(assigned('A'))
+    moves = node.navigator.moves()
+    bearing = math.atan2(-0.098, 1.170)                   # -4.79°
+    assert moves[0][0] == 'spin'
+    assert moves[0][1] == pytest.approx(bearing, abs=1e-3)
+    # 실주행에서 실제로 돈 값은 -19.06° 였다. 마커 방위에서 14° 벗어난 그 각이 옆벽을 불렀다
+    assert abs(moves[0][1] - math.radians(-19.06)) > math.radians(10)
+    assert moves[1] == ('drive', round(math.hypot(1.170, 0.098) - 0.6, 3))
+    node.destroy_node()
+
+
 def test_bay_approach_stops_when_already_at_target(ros):
-    """마커가 이미 목표 자리에 있으면 한 번도 움직이지 않는다."""
-    node = make_node(bay_align_enable=True, bay_marker_range_m=1.0, bay_marker_lat_m=0.0)
+    """마커가 이미 목표 거리에 있으면 한 번도 움직이지 않는다."""
+    node = make_node(bay_align_enable=True, bay_marker_range_m=1.0)
     stub_token(node, [True])
     fresh_marker(node)
     marker_frames(node, fwd=1.0, lat=0.0)

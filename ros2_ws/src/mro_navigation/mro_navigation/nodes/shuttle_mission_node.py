@@ -213,10 +213,9 @@ class ShuttleMission(Node):
         self.declare_parameter('bay_align_enable', True)
         # 접근이 끝났을 때 마커가 base_link 에서 있어야 할 자리 = 이 미션의 최종 정차 위치다.
         #   0.6 m 는 옛 '창고 안쪽 0.3 m 전진' 을 대신한다 (9/8 주행 결정). 선반 최근접점이
-        #   0.32 m 라 워치독 0.30 m 에 걸리지는 않지만 여유가 적어 0.5 에서 올렸다. lat 0.0 은
-        #   마커가 베이 폭 가운데 있다는 전제 — 아니면 여기에 치우침을 적는다.
+        #   0.32 m 라 워치독 0.30 m 에 걸리지는 않지만 여유가 적어 0.5 에서 올렸다.
+        #   좌우 치우침 목표는 두지 않는다 — approach_translation 의 설명 참조 (9/8 실주행).
         self.declare_parameter('bay_marker_range_m', 0.6)
-        self.declare_parameter('bay_marker_lat_m', 0.0)
         # 목표 거리 자체의 하한. footprint 외접 0.189 라 0.35 면 벽까지 여유 0.16 m 다.
         #   이보다 가까운 목표는 설정 오류로 보고 포기한다 — 선반에 밀어 넣는 것을 막는다
         self.declare_parameter('bay_align_min_range_m', 0.35)
@@ -864,17 +863,28 @@ class ShuttleMission(Node):
             return surveyed, '측량(마커 자세 기각)'
         return sample.yaw_error, '마커'
 
-    def align_translation(self, sample, phi):
-        """φ 만큼 돈 뒤 마커가 목표 자리에 오도록 하는 base_link 이동량 (앞, 왼쪽).
+    def approach_translation(self, sample, r_target):
+        """**마커를 향해 곧장** 들어가는 base_link 이동량 (앞, 왼쪽).
 
-        마커를 p, 목표 상대 위치를 p* 라 하면 t = p − R(φ)·p* 다. φ=0 이면 t = p − p* 로,
-        '앞으로 (거리차) · 옆으로 (치우침)' 이라는 상식과 같다. 거리차가 곧 접근량이다.
+        마커 방향 단위벡터에 (지금 거리 − 목표 거리) 를 곱한 것이다. 그래서 이동 방향이 곧
+        마커 방위이고, 로봇은 벽에 거의 수직으로 들어간다.
+
+        **왜 좌우 치우침을 맞추지 않나 (9/8 실주행에서 배웠다).** 예전에는 '마커가 정면
+        정중앙에 오도록' 을 목표로 삼아 t = p − R(φ)·p* 를 썼다. 그러면 회전 φ 가 거리 r 과
+        묶여 **r·sin(φ) 만큼의 옆걸음**이 따라 나온다. 실측: 마커가 9.8 cm 오른쪽 · φ=9.8° ·
+        r=0.6 이었는데 이동 요구가 앞 0.58 · **좌 −0.20** 이 되어, 로봇이 마커를 14° 비껴간
+        방향으로 파고들다 **마커가 없는 옆벽**을 만나 `Collision Ahead` 로 중단됐다.
+        좁은 베이 칸에서 옆걸음은 옆벽으로 밀어 넣는다.
+
+        그래서 좌우는 **보정하지 않는다.** 로봇이 마커에서 좌우로 조금 어긋난 채 서게 되지만,
+        옆벽에 파고드는 것보다 낫고 그 잔차는 로그로 남는다. 정중앙 정렬이 정말 필요해지면
+        '멀리서 옆으로 정렬 → 직진 접근' 2단계로 따로 설계해야 한다 — 지금 방식으로는 안 된다.
         """
-        r_target = self.positive_parameter('bay_marker_range_m')
-        lat_target = float(self.p('bay_marker_lat_m'))
-        c, sn = math.cos(phi), math.sin(phi)
-        return (sample.fwd - (c * r_target - sn * lat_target),
-                sample.lat - (sn * r_target + c * lat_target))
+        reach = math.hypot(sample.fwd, sample.lat)
+        if reach <= r_target:
+            return 0.0, 0.0                    # 이미 목표보다 가깝다 — 후진 금지라 물러나지 않는다
+        scale = 1.0 - r_target / reach
+        return sample.fwd * scale, sample.lat * scale
 
     def behavior_server_ready(self, timeout_s=2.0):
         """Spin·DriveOnHeading 액션 서버가 떠 있는지.
@@ -918,11 +928,16 @@ class ShuttleMission(Node):
             self.run_behavior(lambda: self.navigator.spin(turn2, allow), f'{label} 회전②')
 
     def approach_target(self):
-        """접근 목표 (마커까지 거리, 좌우 치우침) 를 검증해 돌려준다.
+        """접근을 끝낼 마커까지의 거리를 검증해 돌려준다.
 
-        거리 목표는 이제 **미션의 최종 정차 위치**다 (옛 '0.3 m 전진' 을 대신한다). 그래서
-        0 이나 음수를 '거리 보정 안 함' 으로 조용히 넘기지 않는다 — 설정 누락으로 보고 포기한다.
+        이것이 **미션의 최종 정차 위치**다 (옛 '0.3 m 전진' 을 대신한다). 그래서 0 이나 음수를
+        '거리 보정 안 함' 으로 조용히 넘기지 않는다 — 설정 누락으로 보고 포기한다.
         하한(bay_align_min_range_m)은 선반·벽에 밀어 넣는 설정을 막는 유일한 방어다.
+
+        하한을 정할 때 Nav2 쪽 바닥도 같이 봐야 한다: DriveOnHeading 은 앞을
+        `속도 × simulate_ahead_time`(0.1 × 1.9 = 0.19 m) 내다보고 footprint 정면 0.189 m 를
+        더해, **중심에서 약 0.38 m 안에 벽이 들어오면 스스로 중단한다.** 목표 거리가 0.45 m
+        밑이면 정상 접근이 매번 `Collision Ahead` 로 끝난다 (9/8 실측).
         """
         r_target = self.positive_parameter('bay_marker_range_m')
         floor = self.positive_parameter('bay_align_min_range_m')
@@ -930,7 +945,7 @@ class ShuttleMission(Node):
             raise MissionAbort(
                 f'bay_marker_range_m {r_target:.3f} m 가 하한 {floor:.3f} m 보다 가깝다 — '
                 'footprint 외접 0.189 m 를 빼면 벽까지 여유가 없다')
-        return r_target, float(self.p('bay_marker_lat_m'))
+        return r_target
 
     def approach_and_align(self, bay):
         """마커에서 bay_marker_range_m 인 자리로 가서 베이 방위로 선다.
@@ -951,14 +966,15 @@ class ShuttleMission(Node):
                 '베이 접근·정렬 꺼짐 (bay_align_enable=false) — 베이 waypoint 에 선 채로 둔다. '
                 '적재 위치까지 가지 않으므로 판정 3(도달 오차)은 이 회차에 매기지 않는다')
             return
-        r_target, lat_target = self.approach_target()
+        r_target = self.approach_target()
         yaw_ref = float(bay['waypoint'][2])
         tol_xy = self.positive_parameter('bay_align_tol_xy_m')
         tol_yaw = math.radians(self.positive_parameter('bay_align_tol_yaw_deg'))
         max_step = self.positive_parameter('bay_align_max_step_m')
         iters = max(1, int(self.p('bay_align_max_iter')))
         self.get_logger().info(
-            f'베이 접근 — 마커 정면 {r_target:.2f} m · 좌우 {lat_target:+.2f} m 를 목표로 한다')
+            f'베이 접근 — 마커를 향해 곧장 {r_target:.2f} m 까지 들어간다 '
+            '(좌우 치우침은 보정하지 않는다 — 좁은 칸에서 옆걸음은 옆벽으로 민다)')
         for i in range(1, iters + 1):
             sample = self.marker_sample()
             if sample is None:
@@ -970,14 +986,15 @@ class ShuttleMission(Node):
                     'behavior_server 의 spin·drive_on_heading 이 없다 — Nav2(T3) 를 확인할 것')
             here = self.fresh_pose('접근 기준 자세', not_before=self.now())
             phi, source = self.align_yaw(sample, yaw_ref, here.yaw)
-            tx, ty = self.align_translation(sample, phi)
+            tx, ty = self.approach_translation(sample, r_target)
             step = math.hypot(tx, ty)
             self.get_logger().info(
                 f'접근 {i}/{iters} — 마커 base_link ({sample.fwd:.3f}, {sample.lat:.3f}) m, '
                 f'방위 {math.degrees(sample.bearing):+.1f}°, '
                 f'마커 법선 오차 {math.degrees(sample.yaw_error):+.1f}° / '
-                f'이동 앞 {tx:+.3f} · 좌 {ty:+.3f} m (합 {step:.3f}), '
-                f'회전 {math.degrees(phi):+.1f}° [{source}]')
+                f'이동 앞 {tx:+.3f} · 좌 {ty:+.3f} m (합 {step:.3f}, '
+                f'진행 방위 {math.degrees(sample.bearing):+.1f}°), '
+                f'끝나고 회전 {math.degrees(phi):+.1f}° [{source}]')
             if step <= tol_xy and abs(phi) <= tol_yaw:
                 self.get_logger().info(f'접근 완료 ({i}회) — 더 움직이지 않는다')
                 return
@@ -991,9 +1008,10 @@ class ShuttleMission(Node):
             self.get_logger().warn('접근 후 마커를 다시 못 봤다 — 잔차를 남기지 못한다')
         else:
             self.get_logger().info(
-                f'접근 종료 — 마커 base_link ({final.fwd:.3f}, {final.lat:.3f}) m '
-                f'(목표 {r_target:.3f}, 잔차 {final.fwd - r_target:+.3f} m), '
-                f'좌우 잔차 {final.lat - lat_target:+.3f} m, '
+                f'접근 종료 — 마커까지 {math.hypot(final.fwd, final.lat):.3f} m '
+                f'(목표 {r_target:.3f}, 잔차 {math.hypot(final.fwd, final.lat) - r_target:+.3f} m), '
+                f'base_link ({final.fwd:.3f}, {final.lat:.3f}), '
+                f'좌우 치우침 {final.lat:+.3f} m (보정하지 않은 값), '
                 f'법선 오차 {math.degrees(final.yaw_error):+.1f}°')
 
     def dwell(self):
