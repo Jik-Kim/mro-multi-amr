@@ -62,6 +62,7 @@ import time
 import cv2
 import numpy as np
 import rclpy
+from rclpy.duration import Duration
 from rclpy.node import Node
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 from std_msgs.msg import Bool, Float32, String
@@ -354,7 +355,9 @@ class AmrDetection(Node):
                     # TF 와 무관하게 여기서 낸다 (map 없이도 줄자 대조가 되게). 품질 게이트 통과분만 — p95 오염 방지
                     dist = math.hypot(pt.point.x, pt.point.y, pt.point.z)
                     self.pub_distance.publish(Float32(data=dist))
-                    pm = to_map(self.tf_buffer, pt, self.get_logger())   # 같은 점을 map 좌표로
+                    # 같은 점을 map 좌표로. timeout=0 — 기다리면 실행기가 멈춰 /tf 가 못 들어오므로(단일 스레드)
+                    # 즉시 판정. 없으면 이 프레임만 건너뛴다. 1 s 대기 두 번이 탐지 프레임마다 2 s 렉을 만들었다 (9/8)
+                    pm = to_map(self.tf_buffer, pt, self.get_logger(), timeout=Duration())
                     if pm is not None:                       # TF 가 아직 없으면(기동 직후·시계 어긋남) 건너뛴다
                         # ⑧ follow_target 이 받아 "이 앞 0.5 m" 를 목표로 삼는다 (paired 일 때만 쓴다 — 주행 TODO ④)
                         self.pub_point.publish(pm)

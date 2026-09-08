@@ -29,13 +29,19 @@ def back_project(K, u, v, z, frame_id, stamp):
     return pt
 
 
-def to_map(tf_buffer, pt, logger=None):
-    """camera → map. 메시지 시각 TF 가 없으면(시계 어긋남) 최신 TF 로 재시도. 실패 시 None."""
+def to_map(tf_buffer, pt, logger=None, timeout=TF_TIMEOUT):
+    """camera → map. 메시지 시각 TF 가 없으면(시계 어긋남) 최신 TF 로 재시도. 실패 시 None.
+
+    timeout — tf2_ros 는 기다리는 동안 호출 스레드를 잠재운다(sleep 루프, 실행기 정지). 단일 스레드 노드에서는
+    그 사이 /tf 콜백이 돌지 않아 아무리 기다려도 변환이 도착하지 않고 시간만 잃는다 — amr_detection 에서 탐지된
+    프레임마다 1 s × 2회 = 2 s 가 멈춰 렉의 원인이었다 (9/8 실측 proc max 2036 ms). 그런 노드는 Duration()(0) 을
+    넘겨 즉시 판정하고 그 프레임을 건너뛴다. 기본값 1 s 는 다른 호출자(follow_target)의 이관 당시 동작 유지.
+    """
     last_err = None
     for stamp in (pt.header.stamp, Time().to_msg()):
         pt.header.stamp = stamp
         try:
-            return tf_buffer.transform(pt, MAP_FRAME, timeout=TF_TIMEOUT)
+            return tf_buffer.transform(pt, MAP_FRAME, timeout=timeout)
         except Exception as e:
             last_err = e
     if logger:

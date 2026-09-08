@@ -26,7 +26,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rcl_interfaces.msg import Log
-from sensor_msgs.msg import CompressedImage, Image
+from sensor_msgs.msg import CompressedImage, Image, LaserScan
 from std_msgs.msg import Bool
 from tf2_msgs.msg import TFMessage
 
@@ -68,6 +68,8 @@ class Diag(Node):
         self.create_subscription(CompressedImage, f'{self.ns}/oakd/stereo/image_raw/compressedDepth',
                                  lambda m: self._img('depth', m, len(m.data)), qos)
         self.create_subscription(TFMessage, f'{self.ns}/tf', lambda m: self._cnt('tf', m, 0), qos)
+        # /scan 은 RPi 가 stamp 를 찍고 실제 지연이 수십 ms 뿐 — 카메라 지연과 같은 값이면 시계 어긋남이다
+        self.create_subscription(LaserScan, f'{self.ns}/scan', lambda m: self._img('scan', m, 0), qos)
         self.create_subscription(Bool, f'{self.ns}/target/visible', lambda m: self._cnt('visible', m, 1), qos)
         self.create_subscription(Image, f'{self.ns}/target/image',
                                  lambda m: self._img('out_image', m, len(m.data)), qos)
@@ -139,7 +141,7 @@ def main():
         n, b, d = node.n, node.b, node.delay
         print('\n=== 결과 ===')
         print(f"{'토픽':<22}{'Hz':>7}{'MB/s':>8}   stamp→지금 지연")
-        for k, label in (('rgb', '입력 rgb(jpeg)'), ('depth', '입력 depth(png)'), ('tf', '/tf'),
+        for k, label in (('rgb', '입력 rgb(jpeg)'), ('depth', '입력 depth(png)'), ('scan', '/scan (시계 기준)'), ('tf', '/tf'),
                          ('visible', '노드 처리(visible)'), ('out_image', '출력 target/image')):
             print(f'{label:<22}{n[k] / dt:>7.1f}{b[k] / dt / 1e6:>8.2f}   {stats(d[k]) if k in d else ""}')
         print('\n노드 [diag] 로그 (최근 3줄):')
@@ -150,10 +152,22 @@ def main():
         rgb_hz, vis_hz, tf_hz = n['rgb'] / dt, n['visible'] / dt, n['tf'] / dt
         out_mb = b['out_image'] / dt / 1e6
         rgb_delay = sorted(d['rgb'])[len(d['rgb']) // 2] if d['rgb'] else None
+        scan_delay = sorted(d['scan'])[len(d['scan']) // 2] if d['scan'] else None
+        import re
+        procs = [re.search(r'proc avg \d+ max (\d+)', line) for line in node.diag_lines]
+        proc_max = max((int(m.group(1)) for m in procs if m), default=0)
         if rgb_hz == 0:
             print('입력이 0 Hz — 이 PC 에 카메라 토픽이 안 온다. 네임스페이스(--ns)·Discovery 확인')
         else:
-            if rgb_delay is not None and (rgb_delay < -0.5 or rgb_delay > 5):
+            if proc_max >= 900:
+                print(f'⑤ TF 대기 블로킹 — process 최대 {proc_max} ms (1 s 단위 = to_map timeout 횟수). '
+                      f'탐지된 프레임마다 실행기가 멈춘다. to_map(timeout=0) 이 적용된 빌드인지 확인 (9/8 수정)')
+            skew = (rgb_delay is not None and scan_delay is not None and scan_delay > 0.3
+                    and abs(rgb_delay - scan_delay) < 0.3)
+            if skew:
+                print(f'시계 어긋남 ≈ {scan_delay * 1000:.0f} ms (RPi vs PC) — /scan 도 같은 값. 지연이 아니므로 무시. '
+                      f'맞추려면 RPi 에 chrony 로 PC 시계 동기화')
+            elif rgb_delay is not None and (rgb_delay < -0.5 or rgb_delay > 5):
                 print(f'입력 지연 {rgb_delay * 1000:.0f} ms 는 시계 어긋남(RPi vs PC) — 지연값은 무시하고 Hz 만 본다')
             elif rgb_delay is not None and rgb_delay > 0.3:
                 print(f'③ 입력이 늦게 온다 — 카메라 stamp→도착 중앙값 {rgb_delay * 1000:.0f} ms. RPi·Wi-Fi 쪽')

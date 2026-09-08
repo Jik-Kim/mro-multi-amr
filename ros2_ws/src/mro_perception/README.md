@@ -144,7 +144,8 @@ nvidia-smi                                                 # YOLO 가 GPU 를 �
 |---|---|---|
 | `proc avg` ≫ 100 ms | **계산이 느림** — GPU 미사용, 또는 SSH -X 로 창 띄움 | `nvidia-smi`, `show_window:=false` 로 다시 |
 | `cb rgb` ≪ `topic hz` 입력 | **콜백이 굶음** — 노드가 메시지를 못 꺼냄 | `tf` 콜백 수가 높으면 TF 리스너를 별도 스레드로(`spin_thread=True`) |
-| `age` 큰데 `topic delay` 도 큼 | **입력이 늦게 옴** — RPi·Wi-Fi | 로봇 Wi-Fi, RPi 부하 |
+| `age` 큰데 `topic delay` 도 큼 | **입력이 늦게 옴** — RPi·Wi-Fi | 로봇 Wi-Fi, RPi 부하. 단 `/scan` 지연도 같은 값이면 **시계 어긋남**(지연 아님) |
+| `proc max` 가 **1000·2000 ms** | **TF 대기 블로킹** — `to_map` 이 실행기를 세움 | 9/8 수정(`timeout=0`)이 든 빌드인지. 탐지될 때만 렉이 나는 게 지문 |
 | 노드 `age` 는 작은데 rqt 만 늦음 | **출력 대역폭** — raw 2.97 MB/프레임 = 214 Mbit/s | rqt 를 다른 PC 에서 보고 있으면 Wi-Fi 포화. `bw` 확인, rqt 끄고 `age` 재확인 |
 
 한 번에 하나씩 끄면서 본다: ① rqt 끄기 → ② `show_window:=false` → ③ 그래도 `age` 크면 `cb` 와 `topic hz` 비교.
