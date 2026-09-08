@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 80/143 완료** (███████████░░░░░░░░░)  ·  기준 09/08
+**전체 82/145 완료** (███████████░░░░░░░░░)  ·  기준 09/08
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 6/6 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 8/23 | `███░░░░░░░` | — |
 | mro_webcam [웹캠 — 한세교, 김학민] | 21/28 | `████████░░` | — |
-| mro_navigation [주행 — 박병후, 이시율] | 28/59 | `█████░░░░░` | **1** |
+| mro_navigation [주행 — 박병후, 이시율] | 30/61 | `█████░░░░░` | **1** |
 | mro_fleet [관제 — 김민준] | 10/16 | `██████░░░░` | — |
 | mro_bringup [PM 김병직] | 7/11 | `██████░░░░` | — |
 
@@ -20,7 +20,7 @@
 
 - `9/7` mro_navigation — 측위 검증 마커 설치·실측 — ArUco ID 4 거치대(웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 …
 
-**오늘 마감 45건**
+**오늘 마감 43건**
 
 - mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - mro_perception — amr_detection_node.py: target/distance 발행 (FR-29) — 추종거리 판정의 기준값. kpi_l…
@@ -36,7 +36,6 @@
 - mro_webcam — webcam_hint_node.py: worker.pt 교체 후 TS-U02 — 힌트 map 좌표 vs 실측 ≤ 0.3 m, 지…
 - mro_navigation — Nav2 복구 행동에서 후진(BackUp)을 뺀다 (계약 2절 후진 금지) — 우리 코드에는 linear.x < 0 이 없지만 …
 - mro_navigation — safety_watchdog_node.py: estop 중 병진 전부 차단 · 저속 회전만 통과 · CLEAR_DIST 0.45…
-- mro_navigation — shuttle_mission_node.py: 초기자세를 노드 기동 시로 (I-035) — 미션을 받은 뒤 보내면 Nav2 가 이…
 - mro_navigation — test_follow_target_fsm.py 신규 (PR #39 후속) — 상태기계 검사 18개가 저장소에 없어 재현·회귀 검…
 - mro_navigation — arena.yaml loc_check_marker.xy 실측 — 지금 [0.0, 0.0] 은 맵 원점이라 관제가 그대로 읽으면 …
 - mro_navigation — inflation_radius 0.05 → 0.25 적용 (I-009) — 주행 합의값. 승인 후 PC-R3·PC-R4 의 na…
@@ -44,7 +43,6 @@
 - mro_navigation — estop 중 Nav2 복구 행동이 막히는 문제 (I-036) — 벽 앞에서 후진·회전까지 0 으로 덮여 95 초를 못 빠져나왔…
 - mro_navigation — 도착 오차 수치 신뢰성 확인 (I-037) — 노드 TF 0.84 m vs 같은 순간 amcl_pose 0.18 m. 3회차에 …
 - mro_navigation — P1 통과 실주행 확인 (I-009) — 여유 0.175 m < 실측 측위 오차 0.32 m 라 통과가 운에 좌우된다. infl…
-- mro_navigation — Nav2 초기자세 선후 문제 해결 (I-035) — 초기자세 없이 뜬 Nav2 가 global_costmap 활성화에 실패하고 …
 - mro_navigation — return_dock_node.py: 복귀 시 P1 토큰 획득·반납 — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P…
 - mro_navigation — follow_target_node.py: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, est…
 - mro_navigation — AMCL update_min_d 0.05 실주행 확인 (I-029) — 9/7 저녁 적용(0.25→0.05). 도착 판정이 안정…
@@ -141,7 +139,9 @@
 - [ ] `Smac`·`MPPI` 교체와 지도 덧칠은 **하지 않는다** (9/8 PM) — 원인이 플래너도 지도도 아니라 측위다. Phase 2 후보로만 적어둔다 · 마감 —
 - [ ] **Nav2 복구 행동에서 후진(`BackUp`)을 뺀다 (계약 2절 후진 금지)** — 우리 코드에는 `linear.x < 0` 이 없지만 **Nav2 기본 BT 의 복구가 후진을 낸다.** 로봇 PC 의 `turtlebot4_navigation/config/nav2.yaml` 과 BT xml 소관이라 저장소 밖이다 — `nav2.yaml`·`localization.yaml` 과 같은 종류의 문제로, PC-R3·R4 둘 다 손으로 맞추고 무엇을 바꿨는지 적어둔다. 제자리 회전(`Spin`)과 `Wait` 만 남긴다 · 마감 9/8
 - [ ] **`safety_watchdog_node.py`: estop 중 병진 전부 차단 · 저속 회전만 통과 · `CLEAR_DIST` 0.45 → 0.38 (I-036, 계약 v1.13)** — **후진은 쓰지 않는다**(계약 2절 확정: 범퍼·클리프가 전방에만 있다). 각속도 상한 0.4 rad/s — 제자리 회전이 쓸고 가는 폭은 1.4 cm 뿐이고 유일한 탈출 수단이다. `CLEAR_DIST` 0.45 는 **P1 반폭 0.395 m 보다 커서 통로 안에서는 어느 방향으로 돌아도 해제가 안 된다.** Nav2 goal cancel 도 함께. **변경 뒤 TS-04·TS-14 재실행** — 해제가 너무 일러 재진입이 반복되지 않는지 특히 본다 · 마감 9/8
-- [ ] **`shuttle_mission_node.py`: 초기자세를 노드 기동 시로 (I-035)** — 미션을 받은 뒤 보내면 Nav2 가 이미 활성화에 실패한 뒤다. `dock_pose`·`getDockedStatus()` 는 기동 시에도 안다. Nav2 가 정해진 횟수 안에 `active` 가 안 되면 **T_lim 을 태우지 말고 즉시 FAILED + 사유** · 마감 9/8
+- [ ] **I-035 실주행 확인** — 새 기동 순서(T1 → 리그 → T7 → T3)로 `global_costmap` 이 곧바로 `active` 가 되는지. 9/8 에는 로봇을 쓰지 못해 단위 검증까지만 했다. **TS-07(9/9) 전에** · 마감 9/9
+- [ ] **신규 파라미터 2개 `robotN.yaml` 이관 요청 (I-035)** — `nav2_poll_max`(3) · `dock_status_wait_s`(5.0) 가 아직 코드 기본값뿐이다. 값의 단일 출처는 params 다 (계약 5절). **PM 요청 필요** · 마감 9/9
+- [x] **`shuttle_mission_node.py`: 초기자세를 노드 기동 시로 (I-035)** — 미션을 받은 뒤 보내면 Nav2 가 이미 활성화에 실패한 뒤다. `dock_pose`·`getDockedStatus()` 는 기동 시에도 안다. Nav2 가 정해진 횟수 안에 `active` 가 안 되면 **T_lim 을 태우지 말고 즉시 FAILED + 사유** · 마감 9/8
 - [ ] **`test_follow_target_fsm.py` 신규 (PR #39 후속)** — 상태기계 검사 18개가 저장소에 없어 재현·회귀 검출이 안 된다. 셔틀의 `test_shuttle_mission_fsm.py` 와 같은 방식으로 · 마감 9/8
 - [ ] **P1 통과 10회 연속 성공 (4단계 게이트, I-009)** — 측위 오차 0.32 m > 통과 여유 0.175 m 인 동안 2대 교행을 잡지 않는다. I-029·I-037 이 선행 · 마감 9/9
 - [ ] `arena.yaml` `loc_check_marker.xy` 실측 — 지금 `[0.0, 0.0]` 은 맵 원점이라 관제가 그대로 읽으면 정상인데도 측위 의심으로 기록한다 (PR #39 지적) · 마감 9/8
@@ -165,7 +165,7 @@
 - [ ] **estop 중 Nav2 복구 행동이 막히는 문제 (I-036)** — 벽 앞에서 후진·회전까지 0 으로 덮여 95 초를 못 빠져나왔다. 후보 ①전진 성분만 차단 ②N초 후 워치독이 후진 ③goal cancel — **PM·안전 검토 필요** · 마감 9/8
 - [ ] **도착 오차 수치 신뢰성 확인 (I-037)** — 노드 TF 0.84 m vs 같은 순간 `amcl_pose` 0.18 m. 3회차에 `tf2_echo` 기록 + **베이에서 줄자 실측**으로 가른다 · 마감 9/8
 - [ ] **P1 통과 실주행 확인 (I-009)** — 여유 0.175 m < 실측 측위 오차 0.32 m 라 통과가 운에 좌우된다. `inflation_radius` 0.15 실험 후 결정. **PC-R3 는 0.25 적용 확인됨, PC-R4 미확인** · 마감 9/8
-- [ ] **Nav2 초기자세 선후 문제 해결 (I-035)** — 초기자세 없이 뜬 Nav2 가 `global_costmap` 활성화에 실패하고 재시도하지 않아 셔틀이 T_lim 을 날린다. 조치 후보 ①절차 ②노드가 RESUME ③`t0` 이동 — **PM 판단 필요** · 마감 9/8
+- [x] **I-035 조치 결정** — PM 이 ①(절차+코드)로 확정하고 ②(노드가 RESUME)·③(`t0` 이동)은 반려했다 (9/8). ③은 T_lim 기준점이 요청 접수 시각이라(계약 9절·FR-09) 옮기면 AC-08 이 실제보다 좋게 나온다. 구현은 위 줄 · 마감 9/8
 - [ ] `return_dock_node.py`: 복귀 시 **P1 토큰 획득·반납** — 지금은 DOCK 토큰만 있다 (계약 3절: S10 도 P1 통과) · 마감 9/8
 - [x] **`shuttle_mission_node.py`: `shuttle/status` 발행 (I-024)** — READY/SHUTTLE/AT_BAY/WAITING/FAILED. 지금은 발행자가 없어 배송 성공률이 구조적으로 0 % 다. **`FAILED` 는 포기할 때만** — 재시도 중이면 SHUTTLE 유지 (관제가 FAILED 를 미션 실패로 기록한다, I-026). **TS-07 이 9/9** · 마감 9/7
 - [ ] `follow_target_node.py`: standoff 0.5, 힌트 방향 회전, STANDBY, paired 게이트, estop 존중 · 마감 9/8

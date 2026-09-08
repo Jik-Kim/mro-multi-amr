@@ -91,45 +91,51 @@ source /etc/turtlebot4_discovery/setup.bash && source /home/hv-04/turtlebot4_ws/
 
 ### B-3. 터미널 기동 — 순서를 지킬 것
 
+> **기동 순서가 9/8 에 바뀌었다 (I-035).** 셔틀 노드(T7)를 **Nav2(T3) 보다 먼저** 띄운다.
+> 셔틀이 기동 시 초기자세를 보내고, 그 TF 위에서 Nav2 의 `global_costmap` 이 정상 활성화된다.
+> 거꾸로 띄우면 costmap 활성화가 실패하고 `lifecycle_manager` 는 **나중에 TF 가 생겨도 재시도하지
+> 않는다** — 예전 순서로는 매 회차 T_lim 120 초를 통째로 태웠다.
+>
+> ```
+> T1 localization → T2 RViz → T4 리그 → T7 셔틀(초기자세) → T3 Nav2 → 게이트 → 미션
+> ```
+
 **T1 · localization**
 ```bash
 ros2 launch turtlebot4_navigation localization.launch.py namespace:=/robot3 map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
 ```
 
-**T2 · RViz** — **2D Pose Estimate 클릭 금지.** 초기자세는 셔틀 노드가 `dock_pose` 로 잡는다
+**T2 · RViz** — **2D Pose Estimate 클릭 금지.** 초기자세는 셔틀 노드가 기동 시 `dock_pose` 로 잡는다
 ```bash
 ros2 launch turtlebot4_viz view_navigation.launch.py namespace:=/robot3
 ```
 
-**T3 · Nav2** — 이 터미널만 `ROS_SUPER_CLIENT=False` (`shuttle_env.sh nav2` 가 해준다)
+**T3 · Nav2** — **T7 을 먼저 띄운 뒤에** 온다. 이 터미널만 `ROS_SUPER_CLIENT=False`
+(`shuttle_env.sh nav2` 가 해준다)
 ```bash
 ros2 launch turtlebot4_navigation nav2.launch.py namespace:=/robot3
 ```
 
-**T3 직후 · Nav2 활성화 확인 — 건너뛰면 T_lim 120 초를 날린다 (I-035)**
+T7 이 이미 초기자세를 보냈으므로 `map→odom` TF 가 있고, `global_costmap` 이 곧바로 활성화된다.
+T7 에 `초기자세 (0.02, -0.80, 8°) 전송` 이 안 보였다면 **T3 를 띄우기 전에 원인을 잡는다** —
+그 상태로 띄우면 아래 복구 절차를 타게 된다.
 
-Nav2 는 초기자세가 없으면 `global_costmap` 활성화에 실패하고 **스스로 재시도하지 않는다.**
-셔틀 노드는 미션을 받은 뒤에야 초기자세를 보내므로, 그때 보내도 Nav2 는 `inactive` 그대로다.
+<details><summary>순서를 거꾸로 띄웠을 때 — 복구 (I-035)</summary>
+
+`bt_navigator` 가 `inactive [2]` 로 남아 있고 **초기자세를 나중에 보내도 낫지 않는다.**
+`lifecycle_manager` 가 재시도하지 않기 때문이다 (9/7 실측: `initialpose` 발행 8 초 뒤에도
+`global_costmap` 은 `inactive`). 활성화를 사람이 다시 걸어야 한다.
 
 ```bash
-tools/shuttle_preflight.sh nav
-```
-
-`bt_navigator = active [3]` 이면 넘어간다. **`inactive [2]` 면 아래 둘 중 하나를 한다.**
-
-```bash
-# ① 초기자세를 먼저 주고 활성화를 다시 건다 (지금 상태에서 복구)
 ros2 topic pub --once /robot3/initialpose geometry_msgs/msg/PoseWithCovarianceStamped \
   "{header: {frame_id: 'map'}, pose: {pose: {position: {x: 0.019, y: -0.795}, orientation: {z: 0.066451, w: 0.997790}}}}"
 ros2 service call /robot3/lifecycle_manager_navigation/manage_nodes nav2_msgs/srv/ManageLifecycleNodes "{command: 2}"
 ```
 
-② 아예 겪지 않으려면 **T3 를 띄우기 전에** 위 `initialpose` 발행을 먼저 한다. Nav2 가 기동할 때
-TF 가 이미 있어 정상 활성화된다.
-
-> 좌표는 `robot3.yaml` 의 `dock_pose` `[0.019, -0.795, 0.133]` 이다 (yaw 0.133 rad → z 0.066451,
-> w 0.997790). **RViz 의 2D Pose Estimate 로 대신하지 않는다** — 사람이 찍은 값이 들어가면
-> 두 로봇의 map 프레임이 어긋난다 (I-013).
+좌표는 `robot3.yaml` 의 `dock_pose` `[0.019, -0.795, 0.133]` 이다 (yaw 0.133 rad → z 0.066451,
+w 0.997790). **RViz 의 2D Pose Estimate 로 대신하지 않는다** — 사람이 찍은 값이 들어가면
+두 로봇의 map 프레임이 어긋난다 (I-013).
+</details>
 
 **T4 · 시험 리그** — 세마포어 + 안전 감시 + 마커 주입을 한 터미널로 (옛 T4·T5·T6)
 ```bash
@@ -153,7 +159,8 @@ ros2 topic pub -r 5 /robot3/aruco/id std_msgs/msg/Int32 "{data: 1}" & ros2 topic
 ```
 </details>
 
-**T7 · 셔틀 미션** — `robot.launch.py` 대신 단독 실행(그쪽은 아직 준비 안 된 인지 노드까지 띄운다)
+**T7 · 셔틀 미션** — **T3 보다 먼저.** `robot.launch.py` 대신 단독 실행(그쪽은 아직 준비 안 된
+인지 노드까지 띄운다)
 ```bash
 ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/robot3.yaml 2>&1 | tee ~/shuttle_step1_$(date +%m%d_%H%M).log
 ```
@@ -165,21 +172,32 @@ ros2 topic echo /robot3/shuttle/status
 
 ### B-4. 미션 발행 — 확인하고 보낼 것
 
-**⓪ 한 번에 확인** — 아래 ①②③ 과 마커 주기까지 전부 본다
+**⓪ 하드 게이트 — 통과하지 못하면 회차를 시작하지 않는다 (I-035 PM 결정 9/8)**
 
 ```bash
-tools/shuttle_preflight.sh mission
+tools/shuttle_preflight.sh nav       # bt_navigator = active [3] 인가
+tools/shuttle_preflight.sh mission   # 위 + 토큰·마커 주기·미션 구독
 ```
+
+**`bt_navigator` 가 `active [3]` 가 아니면 미션을 발행하지 않는다.** 그 상태로 보내면 회차가
+"Nav2 미준비" 로 끝나 아레나·측위에 대해 아무것도 알려주지 않는다. 회차 하나를 버리는 것보다
+1 분 먼저 확인하는 편이 싸다. 스크립트는 FAIL 이 있으면 **종료 코드 1** 을 낸다.
 
 **FAIL 이 없으면 ④ 발행으로 간다.** 손으로 확인하려면 아래를 차례로 한다.
 
 **① 노드·세마포어가 떴는지**
 
-T7 에 아래 두 줄이 보여야 한다. 이게 곧 `arena.yaml` 과 `dock_pose` 가 정상 적재됐다는 뜻이다.
+T7 에 아래가 보여야 한다. `arena.yaml`·`dock_pose` 적재와 **기동 시 초기자세 전송**을 함께 뜻한다.
 ```
 [robot3.shuttle_mission]: [READY]
 [robot3.shuttle_mission]: 대기: /robot3/mission/assigned 에 Mission(ASSIGNED) 오면 출발
+[robot3.shuttle_mission]: 초기자세 (0.02, -0.80, 8°) 전송 — 자신의 도크 map 좌표
+[robot3.shuttle_mission]: Nav2 를 아직 띄우지 않았다면 지금 띄울 것 — 이 TF 로 global_costmap 이 활성화된다 (I-035)
 ```
+**초기자세 줄이 없으면 T3 를 띄우지 않는다.** 대신 이유가 로그에 적혀 있다 —
+`기동 시 초기자세 보류 — 도크에 물려 있지 않다` (로봇을 도크에 올린다) ·
+`… dock_status 를 N s 안에 받지 못했다` (로봇 전원·디스커버리) ·
+`기동 시 초기자세 보류: dock_pose 가 유효하지 않다` (`--params-file` 경로).
 T4 는 로그가 없으므로 서비스로 확인한다.
 ```bash
 ros2 service list | grep zone_token
@@ -353,6 +371,8 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 | `T_lim 120.0 s 초과` | 전체 시간 초과 | D-1·D-2 |
 | `ArUco 불일치 — 오도착 (기대 1, 관측 2)` | 요청 베이와 다른 마커 | T6 값을 베이에 맞춘다 (A=1, B=2, C=3) |
 | `ArUco 불일치 — 오도착 (기대 1, 관측 None)` | 마커 토픽이 없다 | T6 미기동·주기 부족 |
+| `Nav2 미준비 — N회 확인 동안 active 가 아니다: …` | Nav2 가 `active` 가 아니다 | **T_lim 을 태우지 않고 곧장 포기한다** (9/8, I-035). 기동 순서를 B-3 대로 (T7 → T3) |
+| `dock_status 를 N s 안에 받지 못했다` | 로봇이 안 보인다 | 예전에는 여기서 무한 대기라 `FAILED` 도 안 났다 (D-2). 로봇 전원·디스커버리 |
 | `dock_pose 가 유효하지 않다 ([0.0, 0.0, 0.0])` | params 미전달 | `--params-file` 경로 확인 (I-013) |
 | `arena.yaml 미적재` / `arena_yaml 경로가 비었다` | 파일을 못 읽음 | B-1 빌드, B-2 source |
 | `arena.yaml 에 베이 X waypoint 가 없다` | 미션 `bay` 오타 | A/B/C 만 유효 |
@@ -378,9 +398,13 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 
 ### D-2. `미션 T1 · 베이 A…` 뒤 아무것도 안 나온다
 
-`getDockedStatus()` 가 `dock_status` 를 **무한 대기**한다 (타임아웃이 없다). 로봇 전원·
-네임스페이스·디스커버리를 확인한다. **이 구간은 T_lim 도 돌지 않으므로** `FAILED` 도 안 나온다 —
-Ctrl+C 로 내리고 원인을 고친 뒤 다시 한다.
+**9/8 에 고쳤다.** 예전에는 `navigator.getDockedStatus()` 가 `dock_status` 를 **무한 대기**해
+(타임아웃이 없다) T_lim 조차 돌지 않아 `FAILED` 도 안 나왔다. 지금은 셔틀 노드가 같은 구독을
+쓰되 `dock_status_wait_s`(기본 5 s) 상한을 두고, 시간 안에 못 받으면
+`dock_status 를 N s 안에 받지 못했다` 로 **포기한다.**
+
+그래도 로그가 멎는다면 그 구간은 `undock()`·`dock()` 블로킹이다 (수 초). 그보다 오래 멎으면
+로봇 전원·네임스페이스·디스커버리를 확인한다.
 
 ### D-3. 전진이 0.3 m 에 한참 못 미친다
 
