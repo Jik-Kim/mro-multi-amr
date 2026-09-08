@@ -101,20 +101,24 @@ source /etc/turtlebot4_discovery/setup.bash && source /home/hv-04/turtlebot4_ws/
 > T1 localization → T2 RViz → T4 리그 → T7 셔틀(초기자세) → T3 Nav2 → 게이트 → 미션
 > ```
 
+> **⚠ 아래 명령마다 `source` 를 앞에 붙여 놓았다. 떼지 말 것 (9/8 실주행).** B-2 를 따로 치는
+> 구조였더니 T3 에서 실제로 빠졌고, `failed to send response to …/change_state (timeout)` 로
+> 라이프사이클 기동이 중간에 멈췄다 (D-7).
+
 **T1 · localization**
 ```bash
-ros2 launch turtlebot4_navigation localization.launch.py namespace:=/robot3 map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch turtlebot4_navigation localization.launch.py namespace:=/robot3 map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
 ```
 
 **T2 · RViz** — **2D Pose Estimate 클릭 금지.** 초기자세는 셔틀 노드가 기동 시 `dock_pose` 로 잡는다
 ```bash
-ros2 launch turtlebot4_viz view_navigation.launch.py namespace:=/robot3
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch turtlebot4_viz view_navigation.launch.py namespace:=/robot3
 ```
 
-**T3 · Nav2** — **T7 을 먼저 띄운 뒤에** 온다. 이 터미널만 `ROS_SUPER_CLIENT=False`
-(`shuttle_env.sh nav2` 가 해준다)
+**T3 · Nav2** — **T7 을 먼저 띄운 뒤에** 온다. 이 터미널만 `shuttle_env.sh nav2`
+(`ROS_SUPER_CLIENT=False`). **`nav2` 를 빼거나 source 를 건너뛰면 기동이 중간에 멈춘다 (D-7).**
 ```bash
-ros2 launch turtlebot4_navigation nav2.launch.py namespace:=/robot3
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh nav2 && ros2 launch turtlebot4_navigation nav2.launch.py namespace:=/robot3
 ```
 
 T7 이 이미 초기자세를 보냈으므로 `map→odom` TF 가 있고, `global_costmap` 이 곧바로 활성화된다.
@@ -140,7 +144,7 @@ w 0.997790). **RViz 의 2D Pose Estimate 로 대신하지 않는다** — 사람
 
 **T4 · 시험 리그** — 세마포어 + 안전 감시 + 마커 주입을 한 터미널로 (옛 T4·T5·T6)
 ```bash
-ros2 launch mro_navigation shuttle_step1_rig.launch.py
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch mro_navigation shuttle_step1_rig.launch.py
 ```
 
 세 노드는 시험 중에 볼 로그가 사실상 없어서 묶었다. 화면에는 워치독 기동 한 줄과 세마포어의
@@ -149,7 +153,7 @@ ros2 launch mro_navigation shuttle_step1_rig.launch.py
 
 **실물 마커를 쓰는 3단계 — 진짜 검출기를 띄운다** (주입은 자동으로 꺼진다)
 ```bash
-ros2 launch mro_navigation shuttle_step1_rig.launch.py real_aruco:=true
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch mro_navigation shuttle_step1_rig.launch.py real_aruco:=true
 ```
 `aruco_detector_node` 가 `aruco/id`·`aruco/distance` 에 더해 **`aruco/pose`** 를 낸다.
 **베이 접근(마커까지 0.6 m)은 이것 없이는 못 한다** — 주입은 pose 를 만들 수 없어 셔틀이
@@ -175,7 +179,7 @@ ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/robot3 -r /tf:
 
 **T8 · 상태 관찰**
 ```bash
-ros2 topic echo /robot3/shuttle/status
+cd ~/rokey_intel1/main_project/mro-multi-amr && source tools/shuttle_env.sh && ros2 topic echo /robot3/shuttle/status
 ```
 
 ### B-4. 미션 발행 — 확인하고 보낼 것
@@ -475,6 +479,36 @@ ros2 topic pub --once /robot3/mission/assigned mro_interfaces/msg/Mission "{miss
 **접근 이동은 `progress_checker` 에 안 걸린다** — `Spin`·`DriveOnHeading` 은 behavior_server 의
 상대 이동이라 controller 의 `SimpleProgressChecker`(10 초 안에 0.5 m)를 지나지 않는다.
 대신 `time_allowance`(`bay_align_timeout_s`, 20 s)가 상한이다.
+
+### D-7. 라이프사이클 기동이 중간에 멈춘다 — `failed to send response to …/change_state (timeout)`
+
+**증상.** `lifecycle_manager` 가 어느 노드까지는 `Configuring …` 을 찍다가 거기서 멈춘다.
+멈춘 노드 쪽 로그에는 이렇게 남는다.
+
+```
+[smoother_server] [WARN] failed to send response to /robot3/smoother_server/change_state
+                         (timeout): client will not receive response
+```
+
+**무슨 일인가.** 요청은 갔고 노드는 **실제로 수행했다**(`Created smoother …` 까지 찍힌다).
+돌아오는 **응답만** 못 왔다. `lifecycle_manager` 는 영영 안 올 응답을 기다리며 멈추고,
+그 뒤 순서(`planner_server`·`bt_navigator`·`behavior_server` …)는 configure 조차 시작되지 않는다.
+그래서 **T7 은 `Nav2 미준비` 로 미션을 포기**하게 된다.
+
+**9/8 실주행에서 확인된 원인 — `source` 누락.** T3 를 `source tools/shuttle_env.sh nav2` 없이
+띄웠을 때 났고, 붙여서 다시 띄우니 정상 기동했다. 같은 날 아침 T1(`map_server/change_state`)에서도
+같은 문장이 났고 그때는 터미널 재시작으로 풀렸다.
+
+**조치.**
+1. **멈춘 터미널만** 내렸다가 `source` 를 붙여 다시 띄운다. T1·T7 은 건드리지 않는다 —
+   초기자세는 이미 나갔고 다시 띄우면 순서(I-035)를 처음부터 다시 만들어야 한다.
+2. T3 는 반드시 `shuttle_env.sh **nav2**` 다 (`ROS_SUPER_CLIENT=False`). 나머지는 인자 없이.
+3. 다시 떠도 같은 곳에서 멈추면 디스커버리 문제다 — D-5·D-5-1 로 간다.
+
+**같이 나오지만 무관한 것.**
+`The configured inflation radius (0.100) is smaller than the computed inscribed radius (0.186)`
+는 **의도한 설정**이다 (local 0.10 / global 0.30 분리, 9/8 P1 통과 설정). ERROR 로 찍히지만
+기동 실패와 무관하니 여기서 원인을 찾지 말 것.
 
 ### D-5. 노드 이름은 보이는데 서비스가 응답하지 않는다 (유령 노드)
 
