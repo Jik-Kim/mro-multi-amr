@@ -264,21 +264,22 @@ class ScriptedPoses(list):
         self.extend(self.script)
 
 
-EXIT_TURN = ('spin', round(math.pi, 3))    # 체류 뒤 칸 밖을 향하는 제자리 180° 회전
+# 체류 뒤 칸을 벗어나는 두 동작: 제자리 180° 회전 + 칸 밖으로 직진
+EXIT_MOVES = [('spin', round(math.pi, 3)), ('drive', 0.5)]
 
 
 def approach_moves(node):
-    """탈출 회전을 뺀 '접근 구간' 의 상대 이동만 추린다.
+    """탈출 동작을 뺀 '접근 구간' 의 상대 이동만 추린다.
 
-    탈출 회전은 체류 뒤 항상 마지막에 한 번 붙는다 — 그것까지 매 시험이 세면 접근 자체를
-    보는 검증이 흐려진다. 대신 여기서 그 존재를 한 번에 확인한다.
+    탈출 회전·전진은 체류 뒤 항상 뒤에 붙는다 — 그것까지 매 시험이 세면 접근 자체를 보는
+    검증이 흐려진다. 대신 여기서 그 존재를 한 번에 확인한다.
     """
     moves = node.navigator.moves()
-    assert moves and moves[-1] == EXIT_TURN, f'탈출 회전이 마지막에 없다: {moves}'
-    return moves[:-1]
+    assert moves[-len(EXIT_MOVES):] == EXIT_MOVES, f'탈출 동작이 뒤에 없다: {moves}'
+    return moves[:-len(EXIT_MOVES)]
 
 
-def marker_frames(node, fwd, lat, count=5, flip_normal=False):
+def marker_frames(node, fwd, lat, count=5, flip_normal=False, set_distance=True):
     """마커가 base_link 에서 (fwd, lat) 에 정면으로 보이는 aruco/pose 를 대본으로 넣는다.
 
     광학 프레임에서 (px, py, pz) 는 base 에서 (pz, −px, −py) 이므로 px = −lat, pz = fwd 다.
@@ -301,6 +302,10 @@ def marker_frames(node, fwd, lat, count=5, flip_normal=False):
             q.x, q.y, q.z, q.w = 1.0, 0.0, 0.0, 0.0   # x 축 180° — 법선이 카메라를 향한다
         script.append((m, node.now()))
     node.aruco_poses = ScriptedPoses(script)
+    if set_distance:
+        # 노드는 크기를 aruco/distance 에서 가져온다 (pose 는 방향만) — 기하와 맞춰 둔다.
+        #   fresh_marker() 뒤에 부를 것: 그쪽이 임의의 거리 0.9 를 넣어 둔다
+        node.aruco_dist = (math.hypot(fwd, lat), node.now())
 
 
 def stub_token(node, granted_sequence):
@@ -453,18 +458,19 @@ def test_bay_approach_stops_when_already_at_target(ros):
 
 
 def test_exit_turn_happens_before_leaving_the_bay(ros):
-    """체류 뒤 **제자리 180° 회전**을 하고 나서 대기공간 목표를 준다.
+    """체류 뒤 **제자리 180° 회전 + 칸 밖으로 직진**을 하고 나서 대기공간 목표를 준다.
 
     벽을 마주 본 채 출발시키면 Nav2 가 좁은 칸에서 방향을 못 바꾼다 — 실주행 2회 연속으로
-    (마커까지 0.6 m·0.7 m 둘 다) 여기서 90 초 넘게 진전을 못 내고 T_lim 을 넘겼다.
-    회전은 **토큰 획득보다 먼저** 해야 60 s 강제 회수 예산을 회전에 쓰지 않는다.
+    (마커까지 0.6 m·0.7 m 둘 다) 90 초 넘게 진전을 못 내고 T_lim 을 넘겼다. 돌기만 하고
+    넘겼더니 이번엔 DWB 가 칸 안에서 35 초를 헤맸다 (T17) — 칸을 벗어나는 구간까지 우리가
+    곧게 빼 준다. 둘 다 **토큰 획득보다 먼저** 해야 60 s 강제 회수 예산을 여기 쓰지 않는다.
     """
     node = make_node()
     stub_token(node, [True])
     fresh_marker(node)
     node.run_mission(assigned('A', 'M9'))
     moves = node.navigator.moves()
-    assert moves[-1] == EXIT_TURN
+    assert moves[-len(EXIT_MOVES):] == EXIT_MOVES
     # 시점: 베이 목표는 이미 보냈고 대기공간 목표는 아직 안 보낸 사이여야 한다
     assert node.token_marks == [('acquire', 1), ('release', 2)]
     assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
@@ -537,11 +543,16 @@ def test_losing_the_marker_after_first_approach_does_not_kill_the_mission(ros):
 
 
 def test_bay_approach_refuses_oversized_move(ros):
-    """이동량이 상한을 넘으면 움직이지 않고 포기한다 — 선반 충돌을 막는 마지막 방어다."""
-    node = make_node(bay_align_enable=True, bay_align_max_step_m=0.6)
+    """이동량이 상한을 넘으면 움직이지 않고 포기한다 — 선반 충돌을 막는 마지막 방어다.
+
+    거리를 aruco/distance 에서 가져오게 된 뒤로는 aruco_max_dist_m(1.5) 가 이미 걸러 주므로
+    정상 검출로는 상한을 넘기기 어렵다. 그래도 bay_marker_range_m 설정 오류나 튄 값이 남으니
+    상한 자체는 살려 둔다 — 여기서는 상한을 낮춰 그 경로를 확인한다.
+    """
+    node = make_node(bay_align_enable=True, bay_align_max_step_m=0.3)
     stub_token(node, [True])
     fresh_marker(node)
-    marker_frames(node, fwd=1.9, lat=0.0)                 # 이동 1.4 m — 측정을 의심할 크기
+    marker_frames(node, fwd=1.4, lat=0.0)                 # 이동 0.5 m > 상한 0.3
     node.run_mission(assigned('A'))
     assert node.status_log[-2:] == ['FAILED', 'READY']
     assert node.arrived_log == []

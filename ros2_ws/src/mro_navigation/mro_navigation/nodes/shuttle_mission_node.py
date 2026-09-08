@@ -85,7 +85,7 @@ from statistics import median
 from threading import Thread
 
 from ament_index_python.packages import get_package_share_directory
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped
 from lifecycle_msgs.srv import GetState
 from mro_interfaces.msg import Mission
 from mro_interfaces.srv import ZoneToken
@@ -239,6 +239,8 @@ class ShuttleMission(Node):
         self.declare_parameter('bay_align_max_step_m', 1.0)
         # 체류 뒤 칸 밖을 향해 제자리에서 도는 각. 0 이면 끈다 (turn_out_of_bay 설명 참조)
         self.declare_parameter('bay_exit_turn_deg', 180.0)
+        # 돌고 나서 칸 밖으로 스스로 빠져나올 거리 [m]. 0 이면 바로 Nav2 에 넘긴다
+        self.declare_parameter('bay_exit_drive_m', 0.5)
         self.declare_parameter('bay_align_speed_mps', 0.10)   # DriveOnHeading 속도
         self.declare_parameter('bay_align_timeout_s', 20)     # Spin·DriveOnHeading time_allowance
         # 마커 자세(yaw)로 각도를 잡을지. **9/8 저녁에 켜 봤다가 되돌렸다.**
@@ -809,15 +811,32 @@ class ShuttleMission(Node):
         self.cam_tf = (frame, found)
         return found
 
-    def marker_in_base(self, msg, tf):
+    def marker_in_base(self, msg, tf, distance=None):
         """aruco/pose 한 장을 base_link 로 옮겨 (앞, 왼쪽, 법선 방위) 로 돌려준다.
+
+        **거리를 주면 그 값으로 다시 재서 쓴다 — 방향만 pose 에서 가져온다 (9/8).**
+        두 값은 계산 방법이 다르다: `aruco/distance` 는 depth 에 로봇별 보정(k)을 건 값이라
+        줄자 대조 ±1.5 cm 인 반면, `aruco/pose` 의 위치는 solvePnP 의 tvec 에 depth/pnp 비
+        **중앙값**을 곱한 것이라 프레임별 오차가 그대로 남는다. 실측에서 같은 순간에
+        1.188 m 대 0.943 m 로 26 % 어긋났고, 그 때문에 목표 0.9 m 인데 0.66 m 까지 들어가
+        하드 바닥(0.80 m) 아래로 내려갔다. 크기는 정확한 쪽을, 방향은 pose 를 쓴다.
 
         마커 법선은 마커 좌표계의 +z 를 base_link 로 옮긴 것이다(회전행렬 3열). 로봇이 벽을
         정면으로 보면 법선은 로봇 쪽 = base_link −x 를 향하므로 방위가 π 가 된다.
         solvePnP 의 두 해 중 법선이 반대로 나온 해는 부호를 되돌려 흡수한다 — 이건 뒤집힘이
         분명해 안전하지만, 남는 기울기 모호성까지 지우지는 못한다 (그래서 기본은 안 쓴다).
         """
-        p = do_transform_pose(msg.pose, tf)
+        pose = msg.pose
+        if distance is not None:
+            pos = pose.position
+            reach = math.sqrt(pos.x ** 2 + pos.y ** 2 + pos.z ** 2)
+            if reach < 1e-6:
+                return None
+            k = distance / reach          # 카메라 프레임에서 크기만 갈아끼운다 (방향 보존)
+            pose = Pose()
+            pose.position.x, pose.position.y, pose.position.z = pos.x * k, pos.y * k, pos.z * k
+            pose.orientation = msg.pose.orientation
+        p = do_transform_pose(pose, tf)
         q = p.orientation
         nx = 2.0 * (q.x * q.z + q.w * q.y)
         ny = 2.0 * (q.y * q.z - q.w * q.x)
@@ -861,9 +880,17 @@ class ShuttleMission(Node):
         tf = self.camera_transform(frames[0][0].header.frame_id or CAMERA_FRAME_FALLBACK)
         if tf is None:
             return None
+        # 거리는 검출기가 vetting 한 aruco/distance 를 쓴다 (위 marker_in_base 설명)
+        distance = None
+        if self.aruco_dist is not None:
+            value, stamp = self.aruco_dist
+            if self.now() - stamp <= self.p('aruco_valid_s') and math.isfinite(value):
+                distance = float(value)
+        if distance is None:
+            self.get_logger().warn('aruco/distance 가 신선하지 않다 — pose 크기를 그대로 쓴다')
         rows, last = [], None
         for msg, recv in frames:
-            row = self.marker_in_base(msg, tf)
+            row = self.marker_in_base(msg, tf, distance)
             if row is not None:
                 rows.append(row)
                 last = recv
@@ -1002,8 +1029,17 @@ class ShuttleMission(Node):
             raise MissionAbort('behavior_server 의 spin 이 없다 — Nav2(T3) 를 확인할 것')
         allow = max(1, int(self.p('bay_align_timeout_s')))
         self.get_logger().info(
-            f'칸 밖을 향해 제자리 {math.degrees(turn):.0f}° 회전 — Nav2 는 앞으로 나오기만 하면 된다')
+            f'칸 밖을 향해 제자리 {math.degrees(turn):.0f}° 회전')
         self.run_behavior(lambda: self.navigator.spin(wrap_pi(turn), allow), '탈출 회전')
+        # 돌기만 하고 Nav2 에 넘겼더니 좁은 칸 안에서 DWB 가 앞뒤로 헤매다 진행하지 못했다
+        #   (9/8 T17: 35 초 넘게 제자리에서 흔들리고 P1 이 강제 회수됐다). 칸을 벗어나는
+        #   구간까지 우리가 곧게 빼 준 뒤 넘긴다 — 열린 곳에서는 Nav2 가 잘 한다
+        out = float(self.p('bay_exit_drive_m'))
+        if out <= 0.0:
+            return
+        speed = self.positive_parameter('bay_align_speed_mps')
+        self.get_logger().info(f'칸 밖으로 {out:.2f} m 전진 — 여기까지만 우리가 뺀다')
+        self.run_behavior(lambda: self.navigator.driveOnHeading(out, speed, allow), '탈출 전진')
 
     def approach_target(self):
         """접근을 끝낼 마커까지의 거리를 검증해 돌려준다.
