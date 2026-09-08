@@ -8,14 +8,29 @@
 <button>요청</button> <span id="req_msg"></span></form>
 <h2>로봇 상태 (≤ 2 s 갱신, 뷰어)</h2>
 <p><button onclick="cmd('','RETURN_ALL')">전체 작업 종료 → 순차 복귀</button> <span style="color:#666">두 대가 동시에 복귀해도 도크 구역은 한 대씩 진입합니다 (S10)</span></p>
-<table id="st"><tr><th>로봇</th><th>상태</th><th>배터리</th><th>위치</th><th>미션</th><th>작업자</th><th>E-STOP</th><th>종료</th><th>개입 기록</th></tr></table>
+<table id="st"><tr><th>로봇</th><th>상태</th><th>배터리</th><th>위치</th><th>미션</th><th>작업자</th><th>페어링</th><th>E-STOP</th><th>종료</th><th>명시 페어링</th></tr></table>
 <script>
 const post=(u,d)=>fetch(u,{method:'POST',body:new URLSearchParams(d)}).then(r=>r.json());
 document.getElementById('req').onsubmit=e=>{e.preventDefault();post('/request',new FormData(e.target)).then(j=>req_msg.textContent=j.message)};
 const cmd=(ns,c)=>post('/command',{robot_ns:ns,command:c});
-const intv=(ns,k)=>post('/intervention',{robot_ns:ns,kind:k});
+const pairPending={};
+const pairMessages={};
+const manualPair=async(ns,key,button)=>{
+  if(pairPending[ns])return;
+  pairPending[ns]=true;
+  button.disabled=true;
+  const worker=document.getElementById(`worker_${key}`).value;
+  try{
+    const j=await post('/manual_pair',{robot_ns:ns,worker_id:worker});
+    pairMessages[ns]=j.message;
+  }catch(_){
+    pairMessages[ns]='관제 서버 응답 없음';
+  }finally{
+    pairPending[ns]=false;
+  }
+};
 setInterval(()=>fetch('/status').then(r=>r.json()).then(s=>{const t=document.getElementById('st');while(t.rows.length>1)t.deleteRow(1);
-for(const [ns,r] of Object.entries(s)){const tr=t.insertRow();tr.innerHTML=`<td>${ns}</td><td>${r.state}</td><td>${(r.battery*100).toFixed(0)}%</td><td>${r.x.toFixed(2)}, ${r.y.toFixed(2)}</td><td>${r.mission}</td><td>${r.worker}</td><td>${r.estop?'⛔':''}</td>
+for(const [ns,r] of Object.entries(s)){const key=ns.replace(/[^a-zA-Z0-9]/g,'_');const pairState=r.pair_state||'NO_TARGET';const disabled=pairPending[ns]?' disabled':'';const pairMessage=pairMessages[ns]||'';const pairControl=pairState==='GATE_FAIL'?`<select id="worker_${key}"><option>W1</option><option>W2</option></select><button${disabled} onclick="manualPair('${ns}','${key}',this)">작업자 지정</button><span id="pair_result_${key}">${pairMessage}</span>`:'자동 판정 대기';const tr=t.insertRow();tr.innerHTML=`<td>${ns}</td><td>${r.state}</td><td>${(r.battery*100).toFixed(0)}%</td><td>${r.x.toFixed(2)}, ${r.y.toFixed(2)}</td><td>${r.mission}</td><td>${r.worker}</td><td>${pairState}</td><td>${r.estop?'⛔':''}</td>
 <td><button onclick="cmd('${ns}','RETURN')">작업 종료 → 복귀</button></td>
-<td><button onclick="intv('${ns}','REPAIR')">재페어링</button><button onclick="intv('${ns}','MANUAL_MOVE')">수동이동</button><button onclick="intv('${ns}','RESTART')">재시작</button></td>`}}),1000);
+<td>${pairControl}</td>`}}),1000);
 </script></body></html>

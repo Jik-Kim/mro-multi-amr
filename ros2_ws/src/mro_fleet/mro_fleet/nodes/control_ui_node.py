@@ -10,11 +10,17 @@ from ament_index_python.packages import get_package_share_directory
 from flask import Flask, jsonify, render_template, request
 
 from mro_interfaces.msg import FleetStatus, Intervention
-from mro_interfaces.srv import OperatorCommand, RequestMission
+from mro_interfaces.srv import ManualPair, OperatorCommand, RequestMission
 
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+
+from std_msgs.msg import String
+
+
+DEFAULT_ROBOTS = ['/robot3', '/robot8']
+PAIR_STATES = {'PAIRED', 'GATE_FAIL', 'NO_TARGET'}
 
 
 class ControlUI(Node):
@@ -23,6 +29,12 @@ class ControlUI(Node):
     def __init__(self):
         """상태 구독자, 서비스 클라이언트와 공유 상태를 만든다."""
         super().__init__('control_ui')
+        self.declare_parameter('robot_namespaces', DEFAULT_ROBOTS)
+        self.declare_parameter('manual_pair_timeout_s', 3.0)
+        self.robots = list(self.get_parameter('robot_namespaces').value)
+        self.manual_pair_timeout_s = float(
+            self.get_parameter('manual_pair_timeout_s').value
+        )
         self.status = {}
         self.status_lock = threading.Lock()
         self.create_subscription(
@@ -34,9 +46,21 @@ class ControlUI(Node):
         self.cli_op = self.create_client(
             OperatorCommand, '/fleet/operator_command'
         )
+        self.cli_manual_pair = self.create_client(
+            ManualPair, '/fleet/manual_pair'
+        )
         self.pub_int = self.create_publisher(
             Intervention, '/fleet/intervention', 10
         )
+        for namespace in self.robots:
+            self.create_subscription(
+                String,
+                f'{namespace}/target/pair_state',
+                lambda message, ns=namespace: self._pair_state_cb(
+                    ns, message
+                ),
+                10,
+            )
 
     def _status_cb(self, message):
         status = {
@@ -50,7 +74,20 @@ class ControlUI(Node):
             'estop': message.estop,
         }
         with self.status_lock:
+            status['pair_state'] = self.status.get(
+                message.robot_ns, {}
+            ).get('pair_state', 'NO_TARGET')
             self.status[message.robot_ns] = status
+
+    def _pair_state_cb(self, namespace, message):
+        """인지 노드의 페어링 상태를 로봇별 UI 상태에 합친다."""
+        if message.data not in PAIR_STATES:
+            self.get_logger().warn(
+                f'{namespace}: 알 수 없는 pair_state {message.data!r}'
+            )
+            return
+        with self.status_lock:
+            self.status.setdefault(namespace, {})['pair_state'] = message.data
 
     def _status_snapshot(self):
         with self.status_lock:
@@ -71,6 +108,29 @@ class ControlUI(Node):
         if future.exception():
             return None
         return future.result()
+
+    def _request_manual_pair(self, robot_ns, worker_id):
+        """명시 페어링을 요청하고 성공한 개입만 한 번 기록한다."""
+        service_request = ManualPair.Request()
+        service_request.robot_ns = robot_ns
+        service_request.worker_id = worker_id
+        response = self._call(
+            self.cli_manual_pair,
+            service_request,
+            timeout_sec=self.manual_pair_timeout_s,
+        )
+        if response is None:
+            return False, 'fleet_manager 또는 인지 서비스 응답 없음'
+        if not response.accepted:
+            return False, response.reason or '인지 서비스 응답 없음'
+
+        message = Intervention()
+        message.header.stamp = self.get_clock().now().to_msg()
+        message.robot_ns = robot_ns
+        message.kind = 'MANUAL_PAIR'
+        message.note = worker_id
+        self.pub_int.publish(message)
+        return True, '명시 페어링 완료'
 
 
 def main():
@@ -128,6 +188,15 @@ def main():
         message.note = request.form.get('note', '')
         node.pub_int.publish(message)
         return jsonify(ok=True)
+
+    @app.route('/manual_pair', methods=['POST'])
+    def manual_pair():
+        """운영자의 명시 페어링 요청과 인지 판단 결과를 전달한다."""
+        accepted, reason = node._request_manual_pair(
+            request.form.get('robot_ns', ''),
+            request.form.get('worker_id', ''),
+        )
+        return jsonify(ok=accepted, message=reason)
 
     @app.route('/status')
     def status():

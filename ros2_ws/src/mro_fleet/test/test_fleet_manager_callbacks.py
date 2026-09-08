@@ -1,4 +1,5 @@
 """ROS 네트워크 없이 관제 콜백의 분기 규칙을 검증한다."""
+import asyncio
 from types import MethodType, SimpleNamespace
 
 from mro_fleet.nodes.fleet_manager_node import FleetManager
@@ -98,6 +99,7 @@ class FakeLogger:
         """로그 목록을 준비한다."""
         self.infos = []
         self.warnings = []
+        self.errors = []
 
     def info(self, message):
         """정보 로그를 보관한다."""
@@ -106,6 +108,69 @@ class FakeLogger:
     def warn(self, message):
         """경고 로그를 보관한다."""
         self.warnings.append(message)
+
+    def error(self, message):
+        """오류 로그를 보관한다."""
+        self.errors.append(message)
+
+
+class ImmediateFuture:
+    """등록 즉시 완료 콜백을 부르는 서비스 Future 대역."""
+
+    def __init__(self, result):
+        """반환할 서비스 응답을 저장한다."""
+        self._result = result
+
+    def add_done_callback(self, callback):
+        """실제 서비스가 완료된 것처럼 콜백을 즉시 부른다."""
+        callback(self)
+
+    def result(self):
+        """저장한 서비스 응답을 반환한다."""
+        return self._result
+
+
+class PendingFuture:
+    """완료되지 않아 시간 초과를 재현하는 Future 대역."""
+
+    def add_done_callback(self, _callback):
+        """완료 콜백을 호출하지 않는다."""
+
+
+class FakeTimeoutTimer:
+    """필요하면 생성 즉시 시간 초과 콜백을 실행하는 타이머 대역."""
+
+    def __init__(self, callback, fire):
+        """콜백 실행 여부와 취소 상태를 저장한다."""
+        self.cancelled = False
+        if fire:
+            callback()
+
+    def cancel(self):
+        """타이머가 취소됐음을 기록한다."""
+        self.cancelled = True
+
+
+class FakeManualPairClient:
+    """전달된 명시 페어링 요청을 보관하는 클라이언트 대역."""
+
+    def __init__(self, result=None, ready=True, pending=False):
+        """준비 상태와 반환할 응답을 저장한다."""
+        self.ready = ready
+        self.result = result
+        self.pending = pending
+        self.requests = []
+
+    def service_is_ready(self):
+        """설정한 서비스 준비 상태를 반환한다."""
+        return self.ready
+
+    def call_async(self, request):
+        """요청을 보관하고 완료 또는 대기 Future를 반환한다."""
+        self.requests.append(request)
+        if self.pending:
+            return PendingFuture()
+        return ImmediateFuture(self.result)
 
 
 def make_worker_manager(assigned=None, batteries=None):
@@ -260,6 +325,87 @@ def test_return_all_accepts_empty_robot_namespace():
     assert len(fake.pub_finish['/robot3'].messages) == 1
     assert len(fake.pub_finish['/robot8'].messages) == 1
     assert all(event[2] == 'OPERATOR' for event in fake.db.events)
+
+
+def test_manual_pair_is_forwarded_to_selected_robot():
+    """UI 요청과 인지 응답이 선택한 로봇 서비스로 전달되는지 확인한다."""
+    robot3_client = FakeManualPairClient(
+        SimpleNamespace(accepted=True, reason='')
+    )
+    robot8_client = FakeManualPairClient()
+    fake = SimpleNamespace(
+        manual_pair_clients={
+            '/robot3': robot3_client,
+            '/robot8': robot8_client,
+        },
+        manual_pair_timeout_s=0.01,
+        get_logger=lambda: FakeLogger(),
+        create_timer=lambda _period, callback, callback_group: (
+            FakeTimeoutTimer(callback, False)
+        ),
+        destroy_timer=lambda _timer: True,
+        manual_pair_client_group=object(),
+        _resolve_manual_pair_wait=FleetManager._resolve_manual_pair_wait,
+    )
+    request = SimpleNamespace(robot_ns='/robot3', worker_id='W1')
+    response = SimpleNamespace(accepted=False, reason='')
+
+    result = asyncio.run(
+        FleetManager._manual_pair_cb(fake, request, response)
+    )
+
+    assert result.accepted is True
+    assert result.reason == ''
+    assert len(robot3_client.requests) == 1
+    assert robot3_client.requests[0].robot_ns == '/robot3'
+    assert robot3_client.requests[0].worker_id == 'W1'
+    assert robot8_client.requests == []
+
+
+def test_manual_pair_rejects_unknown_robot_without_forwarding():
+    """계약에 없는 로봇 이름은 하위 서비스를 부르지 않고 거부하는지 확인한다."""
+    robot3_client = FakeManualPairClient()
+    fake = SimpleNamespace(
+        manual_pair_clients={'/robot3': robot3_client},
+        manual_pair_timeout_s=0.01,
+        get_logger=lambda: FakeLogger(),
+        _resolve_manual_pair_wait=FleetManager._resolve_manual_pair_wait,
+    )
+    request = SimpleNamespace(robot_ns='/robot5', worker_id='W1')
+    response = SimpleNamespace(accepted=True, reason='')
+
+    result = asyncio.run(
+        FleetManager._manual_pair_cb(fake, request, response)
+    )
+
+    assert result.accepted is False
+    assert result.reason == 'WRONG_ROBOT'
+    assert robot3_client.requests == []
+
+
+def test_manual_pair_timeout_does_not_report_success():
+    """인지 서비스 응답이 없을 때 관제가 성공으로 답하지 않는지 확인한다."""
+    client = FakeManualPairClient(pending=True)
+    fake = SimpleNamespace(
+        manual_pair_clients={'/robot3': client},
+        manual_pair_timeout_s=0.001,
+        get_logger=lambda: FakeLogger(),
+        create_timer=lambda _period, callback, callback_group: (
+            FakeTimeoutTimer(callback, True)
+        ),
+        destroy_timer=lambda _timer: True,
+        manual_pair_client_group=object(),
+        _resolve_manual_pair_wait=FleetManager._resolve_manual_pair_wait,
+    )
+    request = SimpleNamespace(robot_ns='/robot3', worker_id='W1')
+    response = SimpleNamespace(accepted=True, reason='old')
+
+    result = asyncio.run(
+        FleetManager._manual_pair_cb(fake, request, response)
+    )
+
+    assert result.accepted is False
+    assert result.reason == ''
 
 
 def test_low_battery_rejects_mission_and_records_reason():

@@ -8,7 +8,8 @@ kpi_logger 는 fleet 토픽을 가장 많이 구독하므로 관제 PC 에 둔�
   ros2 launch mro_bringup fleet_pc.launch.py                                  # fleet.yaml 그대로
   ros2 launch mro_bringup fleet_pc.launch.py robots:="[/robot3,/robot8,/robot9]"
 
-zone_semaphore·control_ui 는 요청에 실려 온 robot_ns 로만 동작해서 명단이 필요 없다.
+zone_semaphore 는 요청에 실려 온 robot_ns 로만 동작해서 명단이 필요 없다.
+control_ui 는 로봇별 target/pair_state 를 구독하므로 fleet.yaml 의 명단을 함께 받는다.
 """
 import os
 
@@ -46,7 +47,7 @@ def _launch_setup(context, *args, **kwargs):
     return [
         n('mro_fleet', 'zone_semaphore_node', 'zone_semaphore'),
         n('mro_fleet', 'fleet_manager_node', 'fleet_manager', params),
-        n('mro_fleet', 'control_ui_node', 'control_ui'),
+        n('mro_fleet', 'control_ui_node', 'control_ui', params),
         n('mro_webcam', 'kpi_logger_node', 'kpi_logger', params),
     ]
 
