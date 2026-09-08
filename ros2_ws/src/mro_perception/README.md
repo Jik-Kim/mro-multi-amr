@@ -32,6 +32,10 @@ ros2 topic echo /robot3/target/visible      # 매 프레임 True/False
 ros2 topic echo /robot3/target/distance     # 대상까지 직선거리 m — 거리 품질 게이트 통과분만
 ros2 topic echo /robot3/target/paired       # 재식별 게이트 통과 여부 (바뀔 때 + 1 Hz)
 ros2 topic echo /robot3/target/worker_id    # 짝이 된 W1/W2. 미확정이면 ''
+ros2 topic echo /robot3/target/pair_state   # PAIRED / GATE_FAIL(보이는데 30 s 못 넘음 → 관제 버튼) / NO_TARGET
+# 명시 페어링(FR-13)을 손으로 흉내: 관제 UI 대신 서비스를 직접 부른다. 수락이면 accepted=true, 거부면 reason 에 사유
+ros2 service call /robot3/manual_pair mro_interfaces/srv/ManualPair "{robot_ns: '/robot3', worker_id: 'W1'}"
+ros2 topic pub -1 /robot3/mission/finish std_msgs/msg/Bool "{data: true}"   # 페어링(자동·수동) 해제
 ros2 run rqt_image_view rqt_image_view /robot3/target/image/compressed   # 오버레이 JPEG (창 대신 이걸로 본다)
 ```
 
@@ -64,6 +68,8 @@ ros2 run rqt_image_view rqt_image_view /robot3/target/image/compressed   # 오�
 | `jpeg_quality` | 80 | `target/image/compressed` 품질 | 웹캠 노드와 같은 값 유지 |
 | `diag_log_s` | 1.0 | `[diag]` 계측 로그 주기 | 0 이면 끔. 렉 의심될 때 1 |
 | `tf_wait_s` | 0.0 | `to_map` 이 TF 를 기다리는 시간 | **항상 0.** 1.0 은 9/8 렉 재현용 (7절) |
+| `gate_fail_s` | 30.0 | 보이는데 게이트 미달이 이 시간 이어지면 `pair_state=GATE_FAIL` (FR-13) | 계약 10.1 의 30 s. 시연 때만 5 |
+| `manual_pair_max_m` | 1.0 | 명시 페어링을 받는 최대 거리 (FR-14) | — |
 
 실행 중 바꾸기: `ros2 param set /robot3/amr_detection detect_conf 0.6` (다음 프레임부터는 안 먹는 값도 있다 — `sync_slop_s`·`show_window` 는 재시작).
 
@@ -72,6 +78,7 @@ ros2 run rqt_image_view rqt_image_view /robot3/target/image/compressed   # 오�
 ```bash
 cd ros2_ws/src/mro_perception
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest test/test_reid.py -q     # 11개. 게이트 논리, ROS 불필요
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest test/test_manual_pair.py -q   # 18개. FR-13 pair_state·수동 요청 판정
 ```
 
 `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` 은 설치된 pytest 와 `launch_testing` 플러그인이 안 맞아서 필요하다 (환경 문제). `colcon test` 는 그대로 된다.
@@ -111,6 +118,11 @@ python3 tools/reid_threshold.py --dataset <그 폴더> --splits train --current 
   FOLLOWING 구간으로 안 걸러 Lost 로 셀 수 있다 — 웹캠팀 이슈
 - `follow_target` 이 `target/paired` 를 보고 추종을 시작하는 연동은 주행 TODO ④. 그 전까지 `paired` 는 발행만 된다
 - `/webcam1/worker_descriptor` 는 절대 이름 — 네임스페이스 리맵에 걸리지 않는다. "내 담당" 은 `mission/assigned` 의 `worker_id` 로 안다
+- **명시 페어링 폴백 (FR-13, 계약 10절)** — 작업자가 보이는데 게이트를 `gate_fail_s`(30 s) 넘게 못 넘으면 `target/pair_state=GATE_FAIL`
+  을 내고, 관제 UI 버튼 → fleet_manager → `/robotN/manual_pair` 요청을 이 노드가 받아 `core/reid.manual_pair_decision` 으로
+  판정한다 (남의 로봇·이미 짝·안 보임·1 m 밖·그새 스스로 통과 → 거부 + 사유). 수락하면 `paired=True`·`worker_id` 를 여기서 내고
+  자동 게이트가 뒤집지 못하게 잠근다. `mission/finish` 가 오면 잠금과 게이트를 함께 푼다. **30 s 를 채우기 전 구간의 값은 계약에
+  없어 `NO_TARGET` 을 유지한다 — PM 확인 항목.** 테스트는 `test/test_manual_pair.py` 18개
 
 ## 7. 렉 진단 — 추측 말고 숫자로
 
