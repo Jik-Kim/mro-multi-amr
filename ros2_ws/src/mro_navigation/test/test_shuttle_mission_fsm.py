@@ -14,6 +14,8 @@
   · dock_pose 가 (0,0,0) 이면 거부한다 (I-013 — 두 로봇의 맵 좌표계가 어긋난다)
   · 초기자세를 **미션이 아니라 기동 시** 보낸다 (I-035). 도크 밖이면 보내지 않고, 기동 경로는
     미션이 없으므로 FAILED 를 내지 않는다. Nav2 가 active 가 아니면 T_lim 을 태우지 않고 곧장 포기
+  · 마커 재탐지 (9/8): 베이에서 못 보면 **제자리 회전만으로** 좌우 교대로 훑는다. 병진하지
+    않는다 — 위치를 못 믿는 상태라 어디로 갈지 모른다. 다 훑고도 없으면 오도착으로 포기한다
   · 베이 접근·정렬 (9/8, 옛 '창고 안쪽 0.3 m 전진' 대체): 마커에서 bay_marker_range_m 인 자리로
     회전–직진–회전으로 간다. aruco/pose 가 없으면 **목적지를 모르므로 포기**하고, 이동량이
     상한을 넘어도 포기한다. Nav2 목표가 아니라 Spin·DriveOnHeading 이다 — SimpleGoalChecker
@@ -63,6 +65,7 @@ BASE = {
     #   목적지를 모르니 포기가 정상이다 (test_bay_approach_without_marker_pose_aborts 가 그것을 본다).
     #   접근을 보는 시험은 marker_frames() 와 함께 bay_align_enable=True 로 켠다.
     'bay_align_enable': False,
+    'aruco_search_dwell_s': 0.05,  # 재탐지 정지점 대기. 시험을 빠르게 끝내려고 줄인다
 }
 
 
@@ -350,14 +353,18 @@ def test_bay_approach_without_marker_pose_aborts(ros):
 
 
 def test_bay_approach_drives_to_target_range(ros):
-    """마커가 1.0 m 앞에 있고 목표가 0.5 m 면 0.5 m 전진한다 — 이것이 옛 0.3 m 전진을 대신한다."""
-    node = make_node(bay_align_enable=True, bay_align_max_iter=1, bay_marker_range_m=0.5)
+    """마커가 1.0 m 앞이면 기본 목표 0.6 m 까지 0.4 m 접근한다 — 옛 0.3 m 전진을 대신한다.
+
+    0.6 m 는 코드 기본값을 그대로 쓴다 (9/8 주행 결정). 선반 최근접점 0.32 m 에 여유를 둔 값이라
+    바뀌면 여기서 먼저 드러나야 한다.
+    """
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1)
     stub_token(node, [True])
     fresh_marker(node)
     marker_frames(node, fwd=1.0, lat=0.0)
     node.run_mission(assigned('A'))
     # 정면이라 첫 회전·마지막 회전이 0 이고 직진만 남는다
-    assert node.navigator.moves() == [('drive', 0.5)]
+    assert node.navigator.moves() == [('drive', 0.4)]
     assert node.status_log[-2:] == ['WAITING', 'READY']
     node.destroy_node()
 
@@ -365,8 +372,8 @@ def test_bay_approach_drives_to_target_range(ros):
 def test_bay_approach_corrects_lateral_offset(ros):
     """좌우로 치우쳐 보이면 회전–직진–회전으로 접근한다.
 
-    마커가 base_link (1.0, +0.12), 목표가 정면 0.5 m 면 이동은 앞 0.5 · 좌 0.12 라
-    첫 회전이 약 +13.5°, 이동량이 0.514 m, 마지막 회전이 그것을 되돌리는 값이어야 한다.
+    마커가 base_link (1.0, +0.12), 목표가 정면 0.6 m 면 이동은 앞 0.4 · 좌 0.12 라
+    첫 회전이 약 +16.7°, 이동량이 0.418 m, 마지막 회전이 그것을 되돌리는 값이어야 한다.
     """
     node = make_node(bay_align_enable=True, bay_align_max_iter=1)   # 대역은 마커가 안 따라온다
     stub_token(node, [True])
@@ -376,8 +383,8 @@ def test_bay_approach_corrects_lateral_offset(ros):
     moves = node.navigator.moves()
     assert [m[0] for m in moves] == ['spin', 'drive', 'spin']
     turn1, step, turn2 = moves[0][1], moves[1][1], moves[2][1]
-    assert step == pytest.approx(math.hypot(0.5, 0.12), abs=0.002)
-    assert turn1 == pytest.approx(math.atan2(0.12, 0.5), abs=0.002)
+    assert step == pytest.approx(math.hypot(0.4, 0.12), abs=0.002)
+    assert turn1 == pytest.approx(math.atan2(0.12, 0.4), abs=0.002)
     assert turn2 == pytest.approx(-turn1, abs=1e-6)       # 베이 방위로 되돌린다
     assert node.status_log[-2:] == ['WAITING', 'READY']
     node.destroy_node()
@@ -457,27 +464,82 @@ def test_marker_yaw_is_rejected_when_it_disagrees_with_survey(ros):
     node.destroy_node()
 
 
-def test_aruco_mismatch_aborts_without_waiting(ros):
-    """다른 베이의 마커가 보이면 재정렬 후 포기한다 — 오도착 0건 (FR-08)."""
-    node = make_node()
-    stub_token(node, [True])
+def always_wrong_marker(node, marker_id=1):
+    """매 tick 마커를 갱신해 '신선하지만 ID 가 다른' 상황을 만든다 (콜백이 없으므로)."""
     original_wait = node.wait
 
     def wait(cond, timeout=None, on_tick=None):
-        # 콜백이 없으므로 매 tick 마커를 갱신해 '신선하지만 ID 가 다른' 상황을 만든다
         def tick():
-            fresh_marker(node, marker_id=1)
+            fresh_marker(node, marker_id=marker_id)
             if on_tick:
                 on_tick()
         return original_wait(cond, timeout, tick)
 
     node.wait = wait
+
+
+def test_aruco_mismatch_aborts_without_waiting(ros):
+    """다른 베이의 마커만 보이면 재탐지를 다 돌고 포기한다 — 오도착 0건 (FR-08)."""
+    node = make_node()
+    stub_token(node, [True])
+    always_wrong_marker(node, marker_id=1)
     node.run_mission(assigned('B', 'M2'))
     assert node.status_log == ['SHUTTLE', 'AT_BAY', 'FAILED', 'READY']
     assert node.arrived_log == []
-    assert len(node.navigator.goals()) == 2      # 베이 + 재정렬 1회
+    assert len(node.navigator.goals()) == 1      # 베이 목표뿐 — 재탐지는 제자리 회전이다
     assert 'cancel' in node.navigator.calls
     assert node.token_log == []                  # 토큰은 잡지도 않았다
+    node.destroy_node()
+
+
+def test_marker_search_is_rotation_only(ros):
+    """재탐지는 제자리 회전만 쓴다 — 병진하면 위치를 모르는 채 움직이는 것이다."""
+    node = make_node()
+    stub_token(node, [True])
+    always_wrong_marker(node, marker_id=1)
+    node.run_mission(assigned('B', 'M2'))
+    moves = node.navigator.moves()
+    assert moves, '재탐지 회전이 하나도 없다'
+    assert {m[0] for m in moves} == {'spin'}     # drive 가 섞이면 안 된다
+    assert len(moves) == len(node.search_offsets())
+    node.destroy_node()
+
+
+def test_search_offsets_alternate_from_nearest(ros):
+    """훑는 순서는 가까운 쪽부터 좌우 교대여야 한다 (−Δ, +Δ, −2Δ, +2Δ …)."""
+    node = make_node(aruco_search_step_deg=15.0, aruco_search_max_deg=45.0)
+    degrees = [round(math.degrees(a), 3) for a in node.search_offsets()]
+    assert degrees == [-15.0, 15.0, -30.0, 30.0, -45.0, 45.0]
+    node.destroy_node()
+
+
+def test_marker_search_stops_as_soon_as_it_finds(ros):
+    """세 번째 정지점에서 마커가 보이면 거기서 멈추고 미션을 계속한다."""
+    node = make_node()
+    stub_token(node, [True])
+    original_spin = node.navigator.spin
+
+    def spin(spin_dist=1.57, time_allowance=10):
+        accepted = original_spin(spin_dist, time_allowance)
+        if len(node.navigator.moves()) >= 3:     # 3번째 회전 뒤부터 마커가 보인다
+            fresh_marker(node, marker_id=1)
+        return accepted
+
+    node.navigator.spin = spin
+    node.run_mission(assigned('A', 'M7'))
+    assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
+    assert len(node.navigator.moves()) == 3      # 다 안 훑고 멈춘다
+    node.destroy_node()
+
+
+def test_marker_search_can_be_disabled(ros):
+    """aruco_search_enable=false 면 회전하지 않고 곧장 포기한다."""
+    node = make_node(aruco_search_enable=False)
+    stub_token(node, [True])
+    always_wrong_marker(node, marker_id=1)
+    node.run_mission(assigned('B', 'M8'))
+    assert node.status_log[-2:] == ['FAILED', 'READY']
+    assert node.navigator.moves() == []
     node.destroy_node()
 
 

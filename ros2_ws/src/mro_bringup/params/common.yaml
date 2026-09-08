@@ -19,7 +19,19 @@
     aruco_max_dist_m: 1.5     # 계약 6절 검출 조건. 인지도 max_distance_m 로 이미 자른다 (PR #30) — 이중 방어
     aruco_valid_s: 1.0        # aruco/id 와 aruco/distance 는 헤더가 없어 각자 수신 시각으로 신선도를 본다
     aruco_confirm_s: 3.0      # 베이 도착 확정까지 마커를 기다리는 시간
-    aruco_retry: 1            # 미확인 시 정차 자세 재정렬 횟수. 넘으면 오도착으로 포기 (FR-08)
+    aruco_retry: 1            # 미확인 시 **제자리 회전 재탐지** 스윕 횟수. 넘으면 오도착으로 포기 (FR-08).
+                              #   9/8 의미 변경 — 옛 '정차 자세 재정렬'(같은 waypoint 로 goToPose 재전송)은
+                              #   Nav2 허용오차 0.25 m 안이면 로봇이 안 움직여 사실상 무동작이었다
+    # --- 마커 재탐지 (9/8 추가) — 병진 없이 제자리 회전만으로 좌우를 훑는다 ---
+    #   마커를 못 본다는 것은 자기 위치를 못 믿는다는 뜻이라 어디로 갈지 모른다. 제자리 회전이
+    #   footprint 밖으로 쓸고 가는 폭은 내접 0.175 / 외접 0.189 라 1.4 cm 뿐이다 (워치독과 같은 근거)
+    aruco_search_enable: true
+    aruco_search_step_deg: 15.0   # 정지점 간격. **카메라 수평 FOV 보다 확실히 작아야** 사이로 마커가 빠지지 않는다.
+                                  #   OAK-D 는 704x704 정사각 crop 이라 유효 FOV 가 30~45° 로 추정된다 — camera_info 로 확정할 것
+    aruco_search_max_deg: 60.0    # ±이 각까지 훑는다. 방위가 이보다 틀렸으면 마커가 아니라 측위가 깨진 것이고,
+                                  #   더 돌면 옆 베이 마커를 볼 위험이 생긴다
+    aruco_search_dwell_s: 0.8     # 정지점마다 확인하는 시간. 검출기 약 10 Hz 라 8프레임, aruco_valid_s 1.0 s 안이다
+                                  #   총 예산 = 8 정지점 x (회전 ~1 s + 0.8 s) 약 15 s < T_lim 120 s
     token_retry_s: 2.0        # 계약 3절 '거절되면 2초 후 재요청'
     nav2_poll_s: 5.0          # bt_navigator 가 active 가 될 때까지 폴링 간격
     nav2_poll_max: 3          # 이 횟수 안에 active 가 아니면 T_lim 을 태우지 않고 곧장 포기 (I-035, PR #44). 기본값에서 약 10 s
@@ -35,8 +47,9 @@
     #   어디든 도착점이 같다. Nav2 목표로는 못 한다 — SimpleGoalChecker 가 xy 0.25 m ·
     #   yaw 0.25 rad 라 이 크기의 이동을 '이미 도착' 으로 처리한다. Spin·DriveOnHeading 을 쓴다.
     bay_align_enable: true
-    bay_marker_range_m: 0.5     # 접근 뒤 마커까지의 거리 [m] = **미션의 최종 정차 위치** (9/8 주행 결정).
-                                #   0 이나 음수는 설정 누락으로 보고 미션을 포기한다
+    bay_marker_range_m: 0.6     # 접근 뒤 마커까지의 거리 [m] = **미션의 최종 정차 위치** (9/8 주행 결정).
+                                #   선반 최근접점이 0.32 m 라 워치독 0.30 m 에 걸리지는 않지만 여유가 적어
+                                #   0.5 에서 0.6 으로 올렸다. 0 이나 음수는 설정 누락으로 보고 미션을 포기한다
     bay_marker_lat_m: 0.0       # 접근 뒤 마커의 좌우 치우침 [m], 왼쪽 +. 마커가 베이 폭 가운데라는 전제
     bay_align_min_range_m: 0.35  # 목표 거리의 하한. footprint 외접 0.189 라 여유 0.16 m. 선반에 밀어 넣는 설정을 막는다
     bay_align_max_iter: 2       # 실행 오차가 남으므로 다시 재고 한 번 더 잡는다

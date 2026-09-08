@@ -127,8 +127,8 @@ def test_approach_waits_for_updated_pose():
 
     옛 '0.3 m 전진' 시험을 접근으로 옮긴 것이다 (I-037). 전진은 사라졌지만 '신선한
     map→base_link 없이는 다음 단계로 가지 않는다' 는 요구는 접근에 그대로 남아 있다.
-    베이 A 의 측량 방위(-3.050 rad)로 서 있으면 회전은 0 이고 마커까지 1.0 → 0.5 m 라
-    직진만 0.5 m 나와야 한다.
+    베이 A 의 측량 방위(-3.050 rad)로 서 있으면 회전은 0 이고 마커까지 1.0 → 0.6 m 라
+    직진만 0.4 m 나와야 한다.
     """
     yaw_ref = -3.050
     node = make_node(bay_align_enable=True, bay_align_max_iter=1, tf_pose_timeout_s=1.0)
@@ -137,7 +137,7 @@ def test_approach_waits_for_updated_pose():
     marker_frames(node, fwd=1.0, lat=0.0)
     try:
         node.approach_and_align(node.arena['bays']['A'])
-        assert node.navigator.moves() == [('drive', 0.5)]
+        assert node.navigator.moves() == [('drive', 0.4)]
         assert node.navigator.goals() == []
     finally:
         node.destroy_node()

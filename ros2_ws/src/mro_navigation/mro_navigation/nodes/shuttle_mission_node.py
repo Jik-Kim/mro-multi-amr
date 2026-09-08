@@ -3,8 +3,8 @@
 
 역할 변경: '웹캠 차 좌표 앞 1.5 m 로 이동' → 'S4 셔틀 미션'.
   **기동 시** 도크 초기자세 → (미션 대기) → mission/assigned 수신 → Nav2 준비 → undock
-  → 베이 waypoint → ArUco 로 도착 확정 → **마커까지 0.5 m 접근·정렬** → 적재 체류
-  → P1 토큰 → 대기공간 → WAITING
+  → 베이 waypoint → ArUco 로 도착 확정(못 보면 제자리 회전 재탐지) → **마커까지 접근·정렬**
+  → 적재 체류 → P1 토큰 → 대기공간 → WAITING
 
 기동 순서가 중요하다 (I-035) — **이 노드를 Nav2(T3) 보다 먼저 띄운다.** Nav2 의 global_costmap 은
   기동할 때 map→base_link TF 를 요구하고, AMCL 은 초기자세를 받아야 map→odom 을 낸다. 초기자세가
@@ -22,6 +22,16 @@
   지금은 한 단계다: **마커에서 bay_marker_range_m(0.5 m) 인 자리로 간다.** 목적지가 마커 기준
   절대 위치라 출발점이 어디든 도착점이 같다 — `aruco/pose` 는 카메라→마커의 상대 측정이라
   AMCL 오차와 무관하기 때문이다. 그래서 별도의 전진 단계가 필요 없다.
+
+**마커 재탐지 (9/8 추가)** — 베이에서 마커를 못 보면 **제자리 회전만으로** 좌우를 훑는다.
+  기준 방위에서 가까운 쪽부터 좌우 교대로(−Δ, +Δ, −2Δ, +2Δ …) 돌며 정지점마다 확인한다.
+  · **병진하지 않는다.** 마커를 못 본다는 것은 자기 위치를 못 믿는다는 뜻이라 어디로 갈지
+    모른다. 제자리 회전이 footprint 밖으로 쓸고 가는 폭은 내접 0.175 / 외접 0.189 라 1.4 cm
+    뿐이다 (safety_watchdog 과 같은 근거).
+  · 스텝은 카메라 수평 FOV 보다 확실히 작아야 정지점 **사이로 마커가 빠지지 않는다.**
+  · 옛 '정차 자세 재정렬'(같은 waypoint 로 goToPose 재전송)을 대체한다 — Nav2 허용오차
+    0.25 m 안이면 로봇이 아예 안 움직여 사실상 무동작이었다.
+  · 찾으면 **원래 방위로 되돌리지 않는다.** 접근 단계가 어차피 측량 베이 방위로 돌려세운다.
   · **Nav2 목표로는 못 한다.** SimpleGoalChecker 가 xy 0.25 m · yaw 0.25 rad 라 12 cm 보정 목표를
     보내면 로봇이 움직이지 않고 곧장 SUCCEEDED 가 난다 (nav2.yaml 9/8 확인). 그래서 보정과 전진은
     behavior_server 의 Spin·DriveOnHeading(상대 이동, 허용오차 없음) 으로 실행한다.
@@ -185,7 +195,11 @@ class ShuttleMission(Node):
         self.declare_parameter('aruco_max_dist_m', 1.5)        # 계약 6절 검출 조건
         self.declare_parameter('aruco_valid_s', 1.0)
         self.declare_parameter('aruco_confirm_s', 3.0)
-        self.declare_parameter('aruco_retry', 1)
+        self.declare_parameter('aruco_retry', 1)          # 재탐지 스윕 횟수 (9/8 의미 변경)
+        self.declare_parameter('aruco_search_enable', True)
+        self.declare_parameter('aruco_search_step_deg', 15.0)   # 카메라 수평 FOV 보다 작게
+        self.declare_parameter('aruco_search_max_deg', 60.0)    # 이보다 틀렸으면 측위가 깨진 것
+        self.declare_parameter('aruco_search_dwell_s', 0.8)     # 정지점마다 확인하는 시간
         self.declare_parameter('token_retry_s', 2.0)           # 계약 3절 '거절되면 2초 후 재요청'
         self.declare_parameter('nav2_poll_s', 5.0)
         # I-035 로 추가 (9/8) — robotN.yaml 이관은 PM 요청 필요 (위 TODO ①)
@@ -198,9 +212,10 @@ class ShuttleMission(Node):
         # 베이 정렬 보정 (9/8 추가) — 값의 단일 출처는 common.yaml. 여기 기본값은 대체값이다.
         self.declare_parameter('bay_align_enable', True)
         # 접근이 끝났을 때 마커가 base_link 에서 있어야 할 자리 = 이 미션의 최종 정차 위치다.
-        #   0.5 m 는 옛 '창고 안쪽 0.3 m 전진' 을 대신하는 값이다 (9/8 주행 결정). lat 0.0 은
+        #   0.6 m 는 옛 '창고 안쪽 0.3 m 전진' 을 대신한다 (9/8 주행 결정). 선반 최근접점이
+        #   0.32 m 라 워치독 0.30 m 에 걸리지는 않지만 여유가 적어 0.5 에서 올렸다. lat 0.0 은
         #   마커가 베이 폭 가운데 있다는 전제 — 아니면 여기에 치우침을 적는다.
-        self.declare_parameter('bay_marker_range_m', 0.5)
+        self.declare_parameter('bay_marker_range_m', 0.6)
         self.declare_parameter('bay_marker_lat_m', 0.0)
         # 목표 거리 자체의 하한. footprint 외접 0.189 라 0.35 면 벽까지 여유 0.16 m 다.
         #   이보다 가까운 목표는 설정 오류로 보고 포기한다 — 선반에 밀어 넣는 것을 막는다
@@ -673,20 +688,77 @@ class ShuttleMission(Node):
         raise MissionAbort(f'Nav2 미준비 — {tries}회 확인 동안 active 가 아니다: {reason}')
 
     def confirm_aruco(self, bay):
-        """베이 도착 확정. 마커를 확인하지 못하면 전진·체류하지 않고 포기한다 (FR-08 오도착 0건)."""
-        retry = int(self.p('aruco_retry'))
-        for attempt in range(retry + 1):
+        """베이 도착 확정. 못 보면 제자리 회전으로 재탐지하고, 그래도 없으면 포기한다 (FR-08).
+
+        포기하면 접근·체류를 하지 않는다 — 오도착 0건이 절대 기준이다.
+        """
+        sweeps = max(0, int(self.p('aruco_retry')))
+        seen = None
+        for attempt in range(sweeps + 1):
             if self.wait(lambda: self.aruco_ok(bay['aruco_id']),
                          timeout=self.p('aruco_confirm_s')):
                 self.get_logger().info(
                     f"마커 {bay['aruco_id']} 확인 (거리 {self.aruco_dist[0]:.2f} m)")
                 return
             seen = self.aruco_id[0] if self.aruco_id else None
-            if attempt == retry:
-                raise MissionAbort(f"ArUco 불일치 — 오도착 (기대 {bay['aruco_id']}, 관측 {seen})")
+            if attempt == sweeps:
+                break
             self.get_logger().warn(
-                f'마커 미확인 {attempt + 1}/{retry + 1} (관측 {seen}) — 정차 자세 재정렬')
-            self.goto(self.pose_of(*bay['waypoint']), '베이 재정렬')  # 아직 포기 아님 → AT_BAY 유지
+                f'마커 미확인 {attempt + 1}/{sweeps + 1} (관측 {seen}) — 제자리 회전으로 재탐지')
+            if self.search_marker(bay):     # 아직 포기 아님 → AT_BAY 를 유지한다 (I-026)
+                return
+        raise MissionAbort(f"ArUco 불일치 — 오도착 (기대 {bay['aruco_id']}, 관측 {seen})")
+
+    def search_offsets(self):
+        """훑을 상대 각도들 — 가까운 쪽부터 좌우 교대 [−Δ, +Δ, −2Δ, +2Δ …].
+
+        AMCL 방위 오차는 대개 작아 가까운 쪽이 먼저 맞을 확률이 높다. 좌우를 교대하면 한쪽으로
+        편향되지 않고, 못 찾고 끝나도 총 회전량이 최소다.
+        """
+        step = math.radians(self.positive_parameter('aruco_search_step_deg'))
+        limit = math.radians(self.positive_parameter('aruco_search_max_deg'))
+        offsets, k = [], 1
+        while k * step <= limit + 1e-9:
+            offsets.extend((-k * step, k * step))
+            k += 1
+        return offsets
+
+    def search_marker(self, bay):
+        """제자리 회전만으로 마커를 다시 찾는다. 찾으면 True.
+
+        **병진하지 않는다.** 마커를 못 본다는 것은 자기 위치를 못 믿는다는 뜻이라 어디로 갈지
+        모른다. 제자리 회전이 footprint 밖으로 쓸고 가는 폭은 1.4 cm 뿐이다.
+
+        찾은 뒤 원래 방위로 되돌리지 않는다 — 접근 단계가 측량 베이 방위로 돌려세우므로
+        되돌리면 같은 회전을 두 번 한다.
+        """
+        if not self.p('aruco_search_enable'):
+            return False
+        if not self.behavior_server_ready():
+            raise MissionAbort('behavior_server 의 spin 이 없다 — Nav2(T3) 를 확인할 것')
+        dwell = self.positive_parameter('aruco_search_dwell_s')
+        allow = max(1, int(self.p('bay_align_timeout_s')))
+        offsets = self.search_offsets()
+        self.get_logger().info(
+            f'마커 재탐지 — 제자리 회전 {len(offsets)}회, '
+            f"±{self.p('aruco_search_max_deg'):.0f}° 를 "
+            f"{self.p('aruco_search_step_deg'):.0f}° 간격으로")
+        at = 0.0
+        for i, target in enumerate(offsets, start=1):
+            delta = wrap_pi(target - at)
+            self.run_behavior(lambda d=delta: self.navigator.spin(d, allow),
+                              f'마커 재탐지 회전 {math.degrees(target):+.0f}°')
+            at = target
+            if self.wait(lambda: self.aruco_ok(bay['aruco_id']), timeout=dwell):
+                self.get_logger().info(
+                    f"마커 {bay['aruco_id']} 재탐지 성공 — 기준 방위에서 "
+                    f'{math.degrees(at):+.0f}° ({i}/{len(offsets)}), '
+                    f'거리 {self.aruco_dist[0]:.2f} m')
+                return True
+        self.get_logger().warn(
+            f"마커 재탐지 실패 — ±{self.p('aruco_search_max_deg'):.0f}° 안에 없다 "
+            f'(지금 방위는 기준에서 {math.degrees(at):+.0f}°)')
+        return False
 
     # ── 베이 접근·정렬 (마커 기준 상대 이동) ─────────────────────────
     def marker_in_base(self, msg):
