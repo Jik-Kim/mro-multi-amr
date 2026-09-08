@@ -50,6 +50,7 @@ ID 와 NaN 거리를 함께 내보내면 관제의 비교가 조용히 깨진다
 확인: ros2 topic echo /robot3/aruco/id · /robot3/aruco/distance
 """
 import statistics
+import time
 from collections import deque
 
 import cv2
@@ -85,7 +86,7 @@ class ArucoDetector(Node):
         self.declare_parameter('depth_scale', 1.0)            # 보정 뒤 배율. 보통 1.0 — core/aruco.calibrated_depth
         self.declare_parameter('depth_min_m', 0.8)            # 이 아래는 depth 대신 pnp
         self.declare_parameter('pair_tol_s', 0.02)            # 같은 프레임 쌍으로 볼 RGB·depth stamp 차
-        self.declare_parameter('depth_wait_s', 0.08)          # RGB 가 먼저 오면 짝 depth 를 이만큼 기다린다
+        self.declare_parameter('depth_wait_s', 0.25)          # RGB 뒤 짝 depth 를 이만큼 기다린다 (robot8 +117 ms, 최대 209)
         self.declare_parameter('publish_pose', True)          # aruco/pose (계약 4절 추가 — PR #40)
         self.declare_parameter('publish_pose_log', True)
         self.declare_parameter('fx_ratio_log_s', 10.0)        # 0 이면 끔
@@ -107,8 +108,10 @@ class ArucoDetector(Node):
 
         self.K = None
         self.D = np.zeros((5, 1))
-        self.depth = None            # (depth_mm, stamp_s) 최신 한 장. RGB 와 stamp 로 짝짓는다
-        self.pending = None          # 짝 depth 를 기다리는 RGB 프레임의 계산 결과
+        self.depths = deque(maxlen=8)   # 최근 depth (depth_mm, stamp_s) 들. RGB 와 stamp 로 짝짓는다
+        self.pending = deque()          # 짝 depth 를 기다리는 RGB 프레임들 — 도착 순서대로 낸다
+        self.depth_alive_t = None       # 마지막 depth 도착 시각 (스트림 생존 판정)
+        self.paired_t = None            # 마지막으로 짝이 성립한 시각 (짝이 계속 안 맞으면 경고)
         self.prev = None             # (id, rvec, stamp) — 자세 두 해 사이 동점 해소용. 1 초 넘게 끊기면 버린다
         self.ratios = deque(maxlen=20)    # depth/pnp 비, 최근 2 초. pnp 대체값·pose 에 곱한다
         self.det = aruco.make_detector()
@@ -124,11 +127,11 @@ class ArucoDetector(Node):
         self.pub_pose = self.create_publisher(PoseStamped, 'aruco/pose', 10) if p('publish_pose') else None
         if float(p('fx_ratio_log_s')) > 0:
             self.create_timer(float(p('fx_ratio_log_s')), self.report_ratio)
-        # RGB 와 depth 는 같은 트리거로 나와 stamp 가 거의 같지만(9/7 median 0.1 ms) 도착 순서는 매번
-        # 다르다. RGB 가 먼저 오면 짝 depth 를 잠깐 기다렸다가 처리한다 — 안 기다리면 프레임 절반이
-        # pnp 로 떨어져 거리가 두 기준 사이를 오간다 (robot3 실측 4 %). 이 타이머가 그 대기 시한이다
-        self.wait_timer = self.create_timer(self.depth_wait, self.wait_expired)
-        self.wait_timer.cancel()
+        # RGB 와 depth 는 같은 트리거로 나와 stamp 가 같지만(median 0.1 ms) depth 가 늦게 온다 — robot3 +83 ms,
+        # robot8 +117 ms(최대 209, 9/8 실측). RGB 주기(100 ms)보다 길어서 '최신 한 장'만 들고 있으면 짝이 거의
+        # 안 맞는다(robot8 0 %). 그래서 depth 를 여러 장 보관하고 RGB 프레임은 큐에서 depth_wait_s 까지
+        # 기다린 뒤 도착 순서대로 낸다. 이 타이머가 큐를 20 ms 마다 비운다
+        self.create_timer(0.02, self.flush_ready)
 
         pose_note = ' · aruco/pose 발행' if self.pub_pose else ''
         self.get_logger().info(f'마커 {self.size * 100:.1f} cm · 허용 ID {sorted(self.allowed)} · '
@@ -146,20 +149,27 @@ class ArucoDetector(Node):
 
     def depth_cb(self, msg):
         depth = decode_compressed_depth(msg)
-        if depth is not None:
-            self.depth = (depth, stamp_s(msg.header))
-            if self.pending is not None:
-                self.flush(final=False)
+        if depth is None:
+            return
+        self.depths.append((depth, stamp_s(msg.header)))
+        self.depth_alive_t = time.monotonic()
+        self.flush_ready()
 
     # ---------- 계산 ----------
-    def depth_distance(self, corners, pose, rgb_shape, t_rgb):
-        """짝이 맞는 depth 가 있으면 (직선거리 | None, roi dict). 짝이 없으면 None.
+    def depth_for(self, t_rgb):
+        """같은 프레임(stamp 차 ≤ pair_tol_s)의 depth. 없으면 None."""
+        best = min(self.depths, key=lambda d: abs(d[1] - t_rgb), default=None)
+        return best if best is not None and abs(best[1] - t_rgb) <= self.pair_tol else None
+
+    def depth_alive(self):
+        return self.depth_alive_t is not None and time.monotonic() - self.depth_alive_t < 1.0
+
+    def depth_distance(self, corners, pose, rgb_shape, depth):
+        """짝 depth 로 (직선거리 | None, roi dict). ROI 가 불량이면 None.
 
         직선거리가 None 이면 depth 는 있었지만 depth_min_m 아래라 못 믿는 것이다.
         """
-        if self.depth is None or abs(self.depth[1] - t_rgb) > self.pair_tol:
-            return None
-        depth_mm = self.depth[0]
+        depth_mm = depth[0]
         r = aruco.marker_depth(depth_mm, corners, scale=depth_mm.shape[1] / rgb_shape[1])
         if r is None:
             return None
@@ -196,49 +206,54 @@ class ArucoDetector(Node):
         if pose is None:
             return self.none(f'ID {mid} 자세 실패 — 프레임 버림')
         self.prev = (mid, pose['rvec'], t)
+        self.pending.append({'mid': mid, 'corners': corners, 'pose': pose, 'shape': frame.shape,
+                             't': t, 'header': msg.header, 'arrived': time.monotonic()})
+        self.flush_ready()
 
-        if self.pending is not None:
-            self.flush(final=True)       # 앞 프레임의 depth 는 이제 안 온다 — pnp 로 마무리하고 넘어간다
-        self.pending = {'mid': mid, 'corners': corners, 'pose': pose, 'shape': frame.shape,
-                        't': stamp_s(msg.header), 'header': msg.header}
-        self.flush(final=(self.source == 'pnp'))
+    def flush_ready(self):
+        """큐 앞에서부터 — 짝 depth 가 왔으면 depth 경로로, 대기 시한이 지났으면 pnp 경로로 낸다.
 
-    def wait_expired(self):
-        self.wait_timer.cancel()
-        if self.pending is not None:
-            self.flush(final=True)
+        앞 프레임이 아직 기다리는 중이면 뒤 프레임도 기다린다 — 발행 순서가 뒤집히면 소비자가 오래된 값을
+        최신으로 보게 된다. 지연은 최대 depth_wait_s 다.
+        """
+        now = time.monotonic()
+        while self.pending:
+            it = self.pending[0]
+            depth = None if self.source == 'pnp' else self.depth_for(it['t'])
+            if depth is None and self.source != 'pnp' and now - it['arrived'] < self.depth_wait:
+                return                                   # 아직 올 수 있다 — 기다린다
+            self.pending.popleft()
+            self.publish(it, depth)
 
-    def flush(self, final):
-        """pending 프레임을 발행한다. final=False 면 짝 depth 가 없을 때 기다리고, True 면 pnp 로 낸다."""
-        it = self.pending
+    def publish(self, it, depth):
+        """프레임 하나를 발행한다. depth 는 짝 depth 또는 None(시한 초과·pnp 강제)."""
         src, dist = 'pnp', it['pose']['dist']
         if self.source != 'pnp':
-            got = self.depth_distance(it['corners'], it['pose'], it['shape'], it['t'])
+            got = self.depth_distance(it['corners'], it['pose'], it['shape'], depth) if depth is not None else None
             if got is not None and got[0] is not None:
                 src, dist = 'depth', got[0]
+                self.paired_t = time.monotonic()
                 if it['pose']['angle_deg'] <= 30:    # 계약 6절 범위. 그 밖은 ROI p20 이 가까운 쪽을 읽어 비가 낮아진다
                     self.ratios.append(got[1]['z_cal'] / it['pose']['z'])
             elif got is not None:                    # depth 는 있지만 근거리 — pnp 로. 비가 있으면 곱한다
                 k = self.pnp_scale()
                 dist *= k
                 src = f'pnp×{k:.3f}(근거리)' if k != 1.0 else 'pnp(근거리)'
-            elif not final and (self.depth is None or self.depth[1] < it['t']):
-                self.wait_timer.reset()              # depth 가 아직 안 왔다 — 조금 기다린다
-                return
             elif self.source == 'depth':
-                self.pending = None
                 return self.none(f"ID {it['mid']} depth 없음 — 프레임 버림 (distance_source=depth)")
-            elif len(self.ratios) < 5 and self.depth is not None:
+            elif len(self.ratios) < 5 and self.depth_alive():
                 # depth 스트림은 살아 있는데 비 표본이 아직 없다(시작 직후). 원 pnp 는 자리에 따라 10 % 틀리므로
-                # 한 장이라도 내보내면 관제 판정을 건드린다 — 비가 쌓일 때까지 '못 봤다'로 낸다
-                self.pending = None
-                return self.none()
+                # 한 장이라도 내보내면 관제 판정을 건드린다 — 비가 쌓일 때까지 '못 봤다'로 낸다.
+                # 2 초 넘게 한 번도 짝이 안 맞으면 pair_tol_s·depth_wait_s 문제다 — 조용히 굶지 않게 경고한다
+                why = None
+                if self.paired_t is None and time.monotonic() - self.depth_alive_t > 2.0:
+                    why = (f"depth 는 오는데 RGB 와 짝이 안 맞는다 — stamp 차 {self.pair_tol * 1000:.0f} ms, "
+                           f"대기 {self.depth_wait * 1000:.0f} ms 안에 안 옴. pair_tol_s/depth_wait_s 확인")
+                return self.none(why)
             else:
                 k = self.pnp_scale()
                 dist *= k
                 src = f'pnp×{k:.3f}' if k != 1.0 else 'pnp'
-        self.pending = None
-        self.wait_timer.cancel()
 
         if not np.isfinite(dist) or dist > self.max_dist:
             return self.none(f"ID {it['mid']} 버림 — 거리 {dist:.2f} m (한계 {self.max_dist} m)")
