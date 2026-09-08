@@ -25,3 +25,7 @@
     nav2_poll_s: 5.0          # bt_navigator 가 active 가 될 때까지 폴링 간격
     nav2_poll_max: 3          # 이 횟수 안에 active 가 아니면 T_lim 을 태우지 않고 곧장 포기 (I-035, PR #44). 기본값에서 약 10 s
     dock_status_wait_s: 5.0   # dock_status 를 기다리는 상한. 예전에는 무한 대기라 T_lim 조차 안 돌아 FAILED 도 안 나왔다 (가이드 D-2)
+    # I-037 실험 초깃값 (9/8 병후 승인). 실물 검증 전 팀 확정값이 아니다.
+    tf_pose_timeout_s: 3.0   # Nav2 완료 이후 새 TF를 기다리는 상한
+    tf_max_age_s: 0.3        # map→base_link 공통 시각의 최대 지연
+    arrival_xy_tolerance_m: 0.25  # Nav2 성공 후 별도로 검사. Nav2 설정 자체는 바꾸지 않는다

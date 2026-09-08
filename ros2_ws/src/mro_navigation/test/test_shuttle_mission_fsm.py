@@ -23,13 +23,13 @@
 
 실행 (`colcon build` 로 `mro_interfaces` 가 설치돼 있어야 한다):
 
-    cd ros2_ws/src/mro_navigation
-    PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest test/test_shuttle_mission_fsm.py -v
+    bash tools/test_shuttle_offline.sh -v
 
 `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` 은 이 PC 의 `launch_testing_ros` 플러그인이 pytest 9 와
 맞지 않아 붙인 것이다 (이 저장소 문제가 아니라 환경 문제 — `test_flake8.py` 도 같은 이유로 못 돈다).
 """
 import math
+import os
 from pathlib import Path
 import sys
 import types
@@ -74,6 +74,7 @@ class StubNavigator(Node):
         self.result_name = 'SUCCEEDED'
         self.goal_accepted = True
         self._ticks = 0
+        self.pose = None
 
     def deliver_dock_status(self, value):
         """실물의 _dockCallback 이 도착한 것과 같다 — is_docked 는 이 경로로만 바뀐다."""
@@ -109,6 +110,7 @@ class StubNavigator(Node):
 
     def goToPose(self, pose, behavior_tree=''):  # noqa: N802
         """목표 전송을 기록하고 nav_ticks 만큼 미완료 상태를 유지한다."""
+        self.pose = pose
         self.calls.append(
             ('goto', round(pose.pose.position.x, 3), round(pose.pose.position.y, 3)))
         self._ticks = self.nav_ticks
@@ -152,13 +154,16 @@ def ros():
     네임스페이스도 함께 준다 — 노드가 ns 없이는 뜨지 않는다 (9/8). ns 는 arena.yaml 의
     waiting_zone·dock_zone 조회 키라 대체값을 쓰면 남의 자리로 가므로, 대체값 대신 죽게 했다.
     """
-    rclpy.init(args=['--ros-args', '-r', f'__ns:={TEST_NS}', '-p', f'arena_yaml:={ARENA}'])
+    if os.environ.get('ROS_DOMAIN_ID') != '201' or os.environ.get('ROS_DISCOVERY_SERVER'):
+        pytest.fail('실물과 분리해 실행할 것: bash tools/test_shuttle_offline.sh -v')
+    rclpy.init(args=['--ros-args', '-r', f'__ns:={TEST_NS}', '-p', f'arena_yaml:={ARENA}',
+                     '-r', '/tf:=tf', '-r', '/tf_static:=tf_static'])
     yield
     rclpy.shutdown()
 
 
-def make_node(**params):
-    """발행 내용을 기록하도록 감싼 노드를 만든다. Nav2 준비 확인은 통과시킨다."""
+def make_node(simulate_pose=True, **params):
+    """FSM 시험은 목표 도달 TF를 공급한다. TF 갱신 시험은 simulate_pose=False로 분리한다."""
     node = _shuttle_mission_class()()
     node.status_log = []
     node.arrived_log = []
@@ -169,6 +174,24 @@ def make_node(**params):
     node.pub_arrived.publish = lambda m: (node.arrived_log.append(m.data), pub_arrived(m))
     node.nav2_state = lambda: (True, 'active')
     node.set_parameters([Parameter(k, value=v) for k, v in {**BASE, **params}.items()])
+    if simulate_pose:
+        from geometry_msgs.msg import TransformStamped
+
+        def lookup(*args, **kwargs):
+            transform = TransformStamped()
+            transform.header.stamp = node.get_clock().now().to_msg()
+            transform.header.frame_id = 'map'
+            transform.child_frame_id = 'base_link'
+            if node.navigator.pose is not None:
+                pose = node.navigator.pose.pose
+                transform.transform.translation.x = pose.position.x
+                transform.transform.translation.y = pose.position.y
+                transform.transform.rotation = pose.orientation
+            else:
+                transform.transform.rotation.w = 1.0
+            return transform
+
+        node.tf_buffer.lookup_transform = lookup
     return node
 
 

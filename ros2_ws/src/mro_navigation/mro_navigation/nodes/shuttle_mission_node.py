@@ -49,16 +49,19 @@ TODO([주행]): ① 파라미터 7개와 arena_yaml 경로는 PM 이 robotN.yaml
 ⑤ navigator.undock()/dock() 은 블로킹이라 그 동안 이 노드의 콜백·T_lim 검사가 멈춘다
   (수 초 규모라 그대로 둔다)
 """
+from dataclasses import dataclass
 import math
 import os
+from threading import Thread
 
 from ament_index_python.packages import get_package_share_directory
 from lifecycle_msgs.srv import GetState
 from mro_interfaces.msg import Mission
 from mro_interfaces.srv import ZoneToken
 import rclpy
-from rclpy.executors import ExternalShutdownException
+from rclpy.executors import ExternalShutdownException, SingleThreadedExecutor
 from rclpy.node import Node
+from rclpy.parameter import Parameter
 from rclpy.time import Time
 from std_msgs.msg import Bool, Float32, Int32, String
 from tf2_ros import Buffer, TransformListener
@@ -82,6 +85,21 @@ TICK_S = 0.1                      # spin_once 주기
 
 class MissionAbort(Exception):
     """미션을 포기하는 유일한 경로. 사유를 담아 FAILED 로 빠진다."""
+
+
+@dataclass(frozen=True)
+class PoseSample:
+    """한 번의 TF 조회에서 얻은 좌표와 시각. 실측 위치가 아닌 map 추정값이다."""
+
+    x: float
+    y: float
+    yaw: float
+    stamp_s: float
+
+    @property
+    def pose(self):
+        """목표 계산에 쓰는 좌표와 방향."""
+        return self.x, self.y, self.yaw
 
 
 class ShuttleMission(Node):
@@ -124,11 +142,27 @@ class ShuttleMission(Node):
         # I-035 로 추가 (9/8) — robotN.yaml 이관은 PM 요청 필요 (위 TODO ①)
         self.declare_parameter('nav2_poll_max', 3)          # 이 횟수 안에 active 가 아니면 포기
         self.declare_parameter('dock_status_wait_s', 15.0)   # dock_status 를 기다리는 상한
+        # I-037 실험값 — common.yaml 이 단일 출처. 실물 검증 전 팀 확정값이 아니다.
+        self.declare_parameter('tf_pose_timeout_s', 3.0)
+        self.declare_parameter('tf_max_age_s', 0.3)
+        self.declare_parameter('arrival_xy_tolerance_m', 0.25)
 
         self.arena = self._load_arena(self.p('arena_yaml'))
 
-        self.tf_buffer = Buffer()
-        self.tf_listener = TransformListener(self.tf_buffer, self)
+        # navigator의 블로킹 호출 동안에도 TF 수신은 계속한다 (I-037).
+        # 셔틀 자신을 다른 executor에 넣으면 기존 spin_once와 충돌하므로 TF 전용 Node를 쓴다.
+        # 전역 __node 리맵은 상속하지 않고, 로봇별 TF 토픽과 시계만 명시적으로 맞춘다.
+        self.tf_node = Node(
+            'shuttle_tf', namespace=self.ns, context=self.context, use_global_arguments=False,
+            cli_args=['--ros-args', '-r', '/tf:=tf', '-r', '/tf_static:=tf_static'],
+            parameter_overrides=[Parameter(
+                'use_sim_time', value=self.get_parameter('use_sim_time').value)])
+        self.tf_buffer = Buffer(node=self.tf_node)
+        self.tf_listener = TransformListener(self.tf_buffer, self.tf_node)
+        self.tf_executor = SingleThreadedExecutor(context=self.context)
+        self.tf_executor.add_node(self.tf_node)
+        self.tf_thread = Thread(target=self._spin_tf, name='shuttle_tf', daemon=True)
+        self.tf_thread.start()
 
         # 콜백이 채우는 값들 — 실행은 전부 메인 루프에서 한다
         self.pending = None      # 채택 대기 중인 Mission
@@ -154,8 +188,31 @@ class ShuttleMission(Node):
         self.get_logger().info(f'대기: {self.ns}/{MISSION_TOPIC} 에 Mission(ASSIGNED) 오면 출발')
 
     # ── 파라미터·설정 ────────────────────────────────────────────────
+    def _spin_tf(self):
+        """TF 전용 실행기는 navigator나 미션 상태를 건드리지 않는다."""
+        try:
+            self.tf_executor.spin()
+        except ExternalShutdownException:
+            pass
+
+    def destroy_node(self):
+        """콜백 종료를 기다린 뒤 TF·navigator 자원을 회수한다."""
+        self.tf_executor.shutdown()
+        self.tf_thread.join()
+        self.tf_listener.unregister()
+        self.tf_node.destroy_node()
+        self.navigator.destroy_node()
+        return super().destroy_node()
+
     def p(self, name):
         return self.get_parameter(name).value
+
+    def positive_parameter(self, name):
+        """도착 검증을 우회하는 0·음수·NaN 설정은 미션 실패로 처리한다."""
+        value = float(self.p(name))
+        if not math.isfinite(value) or value <= 0.0:
+            raise MissionAbort(f'{name} 은 유한한 양수여야 한다: {value}')
+        return value
 
     def _load_arena(self, path):
         """arena.yaml 은 ROS 파라미터 형식이 아닌 데이터 yaml 이라 파일로 직접 읽는다."""
@@ -236,7 +293,14 @@ class ShuttleMission(Node):
         """유일한 대기 수단. 모든 대기가 여기를 지나므로 T_lim 검사가 한 곳에 모인다."""
         t_start = self.now()
         while rclpy.ok():
-            if cond():
+            # 완료와 제한시간 초과가 같은 tick에 와도 늦은 성공을 내지 않는다.
+            if self.over_tlim():
+                raise MissionAbort(f"T_lim {self.p('t_lim_s')} s 초과")
+            done = cond()
+            # navigator 완료 폴링 자체가 블로킹이므로 그 사이 지난 제한시간도 확인한다.
+            if self.over_tlim():
+                raise MissionAbort(f"T_lim {self.p('t_lim_s')} s 초과")
+            if done:
                 return True
             rclpy.spin_once(self, timeout_sec=TICK_S)   # 콜백은 대기 중에도 살아 있다
             if on_tick:
@@ -247,11 +311,8 @@ class ShuttleMission(Node):
                 return False
         raise MissionAbort('노드 종료')
 
-    def tf_pose(self, warn=True):
-        """(x, y, yaw) 또는 None. yaw 식은 계약 2절 FleetStatus.yaw 와 같다.
-
-        warn=False 는 도착 로그용 — 좌표를 못 얻어도 미션에 지장이 없으니 경고를 남기지 않는다.
-        """
+    def tf_sample(self, warn=True):
+        """최신 공통 시각의 map→base_link 좌표와 stamp를 함께 읽는다."""
         try:
             t = self.tf_buffer.lookup_transform(MAP_FRAME, BASE_FRAME, Time())
         except Exception as e:
@@ -261,7 +322,33 @@ class ShuttleMission(Node):
         q = t.transform.rotation
         yaw = math.atan2(2.0 * (q.w * q.z + q.x * q.y),
                          1.0 - 2.0 * (q.y * q.y + q.z * q.z))
-        return t.transform.translation.x, t.transform.translation.y, yaw
+        return PoseSample(t.transform.translation.x, t.transform.translation.y, yaw,
+                          Time.from_msg(t.header.stamp).nanoseconds * 1e-9)
+
+    def tf_pose(self, warn=True):
+        """관측용 좌표. 도착 판정과 목표 계산은 신선도를 검사하는 fresh_pose를 쓴다."""
+        sample = self.tf_sample(warn=warn)
+        return None if sample is None else sample.pose
+
+    def fresh_pose(self, label, not_before=None):
+        """새 TF를 제한시간 안에 얻지 못하면 좌표를 추측하지 않고 포기한다."""
+        timeout = self.positive_parameter('tf_pose_timeout_s')
+        max_age = self.positive_parameter('tf_max_age_s')
+        sample = None
+
+        def ready():
+            nonlocal sample
+            sample = self.tf_sample(warn=False)
+            return (sample is not None
+                    and all(math.isfinite(v) for v in (*sample.pose, sample.stamp_s))
+                    and 0.0 <= self.now() - sample.stamp_s <= max_age
+                    and (not_before is None or sample.stamp_s >= not_before))
+
+        if not self.wait(ready, timeout=timeout):
+            detail = ('TF 없음' if sample is None else
+                      f'TF 시각 {sample.stamp_s:.3f}, 지연 {self.now() - sample.stamp_s:.3f} s')
+            raise MissionAbort(f'{label}: 신선한 TF를 {timeout:.1f} s 안에 받지 못함 ({detail})')
+        return sample
 
     def pose_of(self, x, y, yaw):
         """회전 인자는 도 단위다 — getPoseStamped 규약이라 라디안을 넘기면 조용히 틀어진다."""
@@ -269,6 +356,9 @@ class ShuttleMission(Node):
 
     def goto(self, pose, label):
         """목표 1건. 콜백 밖에서만 불린다."""
+        tolerance = self.positive_parameter('arrival_xy_tolerance_m')
+        self.positive_parameter('tf_pose_timeout_s')
+        self.positive_parameter('tf_max_age_s')
         if self.estop:
             self.get_logger().warn(f'estop 중 — 해제까지 {label} 보류')
             self.wait(lambda: not self.estop)        # 계약 4절: estop 동안 주행 명령 금지
@@ -280,15 +370,19 @@ class ShuttleMission(Node):
         result = self.navigator.getResult().name
         if result != 'SUCCEEDED':
             raise MissionAbort(f'{label} 이동 실패: {result}')
-        # 실제 정차 위치를 같이 남긴다 — Nav2 의 xy_goal_tolerance(0.25 m) 때문에
-        #   목표와 실제가 그만큼 벌어질 수 있어서, 전진 거리를 로그로 확인해야 한다
-        at = self.tf_pose(warn=False)
-        if at is None:
-            self.get_logger().info(f'{label} 도착')
-        else:
-            self.get_logger().info(
-                f'{label} 도착 — 목표 ({gx:.2f}, {gy:.2f}) / 실제 ({at[0]:.2f}, {at[1]:.2f}), '
-                f'오차 {math.hypot(at[0] - gx, at[1] - gy):.2f} m')
+        completed = self.now()
+        # SUCCEEDED 직전 캐시가 아닌 완료 이후 관측으로 검증한다. 목표 전송 시각으로
+        # 조회하면 출발 위치를 읽게 되므로 쓰지 않는다. TF는 물리적 실측과 구분해 표시한다.
+        at = self.fresh_pose(label, not_before=completed)
+        error = math.hypot(at.x - gx, at.y - gy)
+        measurement = (f'목표 ({gx:.2f}, {gy:.2f}) / TF 추정 ({at.x:.2f}, {at.y:.2f}), '
+                       f'오차 {error:.3f} m, TF 시각 {at.stamp_s:.3f}, '
+                       f'지연 {self.now() - at.stamp_s:.3f} s')
+        if error > tolerance:
+            raise MissionAbort(
+                f'{label} 도착 검증 실패 — Nav2 SUCCEEDED, {measurement}, 허용 {tolerance:.3f} m')
+        self.get_logger().info(f'{label} 도착 검증 통과 — {measurement}')
+        return at
 
     def token(self, acquire):
         """P1 토큰 획득/반납. 서비스가 없으면 (관제 미기동) 통과시켜 단독 시험을 막지 않는다."""
@@ -515,16 +609,15 @@ class ShuttleMission(Node):
 
     def advance_into_bay(self, bay):
         """확인된 자리에서 창고 안쪽(로봇 전방)으로 bay_advance_m 전진."""
-        # 주의 — Nav2 xy_goal_tolerance 가 0.25 m 로 고정이라(I-029, 낮추면 목표 근처에서 진동한다)
-        #   0.3 m 목표를 줘도 실제 이동은 0.05~0.3 m 사이다. 도착 로그의 실제 좌표로 확인할 것
+        # 0.3 m는 목표 오프셋이다. Nav2 허용오차 때문에 실제 이동량과 같지 않으므로 함께 잰다.
         d = self.p('bay_advance_m')
-        pose = self.tf_pose()
-        if pose is None:
-            self.get_logger().warn('TF 없음 — 베이 waypoint 기준으로 전진 목표를 계산한다')
-            pose = tuple(bay['waypoint'])
-        x, y, yaw = pose
-        self.goto(self.pose_of(x + d * math.cos(yaw), y + d * math.sin(yaw), yaw),
-                  f'창고 안쪽 {d} m 전진')
+        start = self.fresh_pose('전진 시작 위치', not_before=self.now())
+        x, y, yaw = start.pose
+        end = self.goto(self.pose_of(x + d * math.cos(yaw), y + d * math.sin(yaw), yaw),
+                        f'창고 안쪽 {d} m 전진')
+        forward = (end.x - x) * math.cos(yaw) + (end.y - y) * math.sin(yaw)
+        self.get_logger().info(
+            f'베이 전진량 — 목표 오프셋 {d:.3f} m / TF 전방 변위 {forward:.3f} m')
 
     def dwell(self):
         dwell_s = self.p('bay_dwell_s')
