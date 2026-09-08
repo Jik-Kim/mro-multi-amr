@@ -123,7 +123,7 @@ class ShuttleMission(Node):
         self.declare_parameter('nav2_poll_s', 5.0)
         # I-035 로 추가 (9/8) — robotN.yaml 이관은 PM 요청 필요 (위 TODO ①)
         self.declare_parameter('nav2_poll_max', 3)          # 이 횟수 안에 active 가 아니면 포기
-        self.declare_parameter('dock_status_wait_s', 5.0)   # dock_status 를 기다리는 상한
+        self.declare_parameter('dock_status_wait_s', 15.0)   # dock_status 를 기다리는 상한
 
         self.arena = self._load_arena(self.p('arena_yaml'))
 
