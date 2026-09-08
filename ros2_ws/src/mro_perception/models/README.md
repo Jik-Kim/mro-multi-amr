@@ -3,7 +3,6 @@
 | 파일 | 클래스 | 용도 | 상태 |
 |---|---|---|---|
 | `worker.pt` | `amr`, `worker_b`, `worker_a` | 인형 2종(작업별 복장) + 상대 로봇 검출. 웹캠1 등록·AMR 검출이 **같은 파일**을 쓴다 | **학습 완료 (9/7)** |
-| `my_best.pt` | car, dummy | Kn1_mini OAK-D 모델. 골격 동작 확인용 | 이관 — `amr_detection` 교체 후 삭제 |
 
 **이 파일이 단일 출처다.** `mro_webcam` 은 사본을 두지 않고 `model_path` 파라미터로 이 경로를 가리킨다
 (`mro_webcam/package.xml` 에 `mro_perception` 의존이 이미 선언돼 있다). 사본을 두면 한쪽만 갱신되는 사고가 난다.

@@ -64,7 +64,7 @@ class KpiLogger(Node):
         self.create_subscription(TargetHint, '/webcam2/target_hint',
                                  lambda m: self.row('hint', '', m.worker_id, m.confidence,
                                                     m.point.point.x, m.point.point.y),
-                                 qos_profile_sensor_data)
+                                                    qos_profile_sensor_data)
         # 미션·개입·집계 상태 — RELIABLE
         self.create_subscription(Mission, '/fleet/mission',
                                  lambda m: self.row('mission', m.robot_ns, m.mission_id, m.state, extra=m.bay), 10)
