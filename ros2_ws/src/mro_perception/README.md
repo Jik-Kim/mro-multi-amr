@@ -11,8 +11,8 @@
 ros2 launch mro_bringup robot.launch.py namespace:=/robot3      # 두 번째 로봇은 /robot8 (9/8 robot4 → robot8 교체)
 ```
 
-launch 가 붙여주는 것: `namespace`, `/tf → tf` 리맵, `params/robot3.yaml`. **`config/perception.yaml` 은 아직 안 넘긴다**
-(PM 9/8 항목) — 그 전까지 아래 파라미터는 노드 기본값이 쓰이고, 바꾸려면 `robot3.yaml` 에 키를 넣거나 `-p` 로 준다.
+launch 가 붙여주는 것: `namespace`, `/tf → tf` 리맵, `params/robotN.yaml`, 그 뒤에 `config/perception.yaml` (9/7 연결됨).
+같은 키가 둘 다에 있으면 뒤에 오는 `perception.yaml` 이 이긴다. launch 로 띄울 때는 `-p` 를 못 주니 값은 이 파일에서 바꾼다.
 
 **단독 시험** (웹캠·관제·Nav2 없이 카메라만) — TS-U03·U04·U05 는 이걸로 한다.
 
