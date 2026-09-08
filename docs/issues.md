@@ -273,6 +273,7 @@
 - **조치·남은 것** — **바로 조치** ① `CAP_PROP_BUFFERSIZE=1` ② 캡처와 발행 주기 분리 — 카메라 30, 타이머 10 ③ MJPG 강제(`CAP_PROP_FOURCC`), `v4l2-ctl --list-formats-ext` 로 지원 확인. **안 잡히면 구간 분리** ⓐ 구독자 전부 끄고 `ros2 topic hz` — 구독자 없이도 느리면 read·변환, 붙일 때만 느리면 발행 비용 ⓑ `publish_frame` 안 read / `cv2_to_imgmsg` / publish 세 구간 소요 시간 로깅 ⓒ read 가 범인이면 별도 스레드 `grab()` + 타이머는 `retrieve()` 만. **통합(9/9) 전 필수** — raw Image 는 다른 PC 에서 구독하는 순간 Wi-Fi 를 막는다. CompressedImage 로 바꾸거나 로컬 전용으로 못박는다 (NR-03). TS-U02 에 지연 측정 포함 (손 흔들기 → 화면 반응 ≤ 0.2 s)
   **원인은 잡혔다 — 코드가 저장소에 안 올라왔을 뿐 (9/6 저녁 PM 확인).** 한세교가 **웹캠2 에서 먼저** `BUFFERSIZE=1`·캡처/발행 주기 분리·Compressed 로 해결하고 그 방법을 웹캠1 로 넘겼다. 웹캠1 쪽은 PR #6 에 실려 `main` 에 있다(`webcam_register_node.py`). **웹캠2 쪽 수정분은 PR 에 실리지 않아 `main` 의 `webcam2.py` 는 아직 raw `Image`·30 Hz 타이머·BUFFERSIZE 없음**이다 — 이 파일을 바꾸는 브랜치·PR 이 없다. 시트 Time Line 27행 "촬영포맷 확정 100 %" 가 그 결정이다.
   **해결 (9/7, PR #14 머지).** 수정분은 `webcam2.py` 가 아니라 **`webcam_hint_node.py` 에 병합**돼 들어왔다 — 캡처 전용 스레드가 V4L2 큐를 계속 비우고 최신 프레임만 보관(`LatestFrameCamera`), MJPG 강제, `CAP_PROP_BUFFERSIZE` 5, 카메라 30 fps · YOLO 10 Hz · 압축 발행 10 Hz 로 주기 분리, `/webcam2/image_raw/compressed`(jpeg 80) 만 발행. raw `Image` 발행은 없어졌다. `webcam2.py`·`webcam2_subscriber.py` 는 잔재로 남아 있어 정리 todo 로 넘겼다. PR 브랜치가 9/5 main 기준이라 `homography.py`·`kpi_logger_node.py` 가 PR #8·#9 이전 사본이었고, 머지 때 main 을 유지했다(PR 의 의도인 `homography` 키·힌트 sensor_data QoS 는 main 에 이미 있음). 남은 위험은 I-027
+  **9/8 정량 재검증:** `/dev/video2`에서 YOLO 10 Hz와 JPEG 발행 10 Hz를 동시에 실행하고 별도 BEST_EFFORT 구독자로 측정했다. DDS 발견이 끝난 뒤 수신률 9.9~10.1 Hz, 대역폭 1.57~1.62 Mbps, pub→sub p95 최대 3.1 ms·단발 최대 75.8 ms였고 2초 이상 중단이나 시간 경과에 따른 지연 누적은 없었다. 가짜 `TargetHint` 20건을 10 Hz로 보내 KPI CSV 20건 기록(누락 0%)도 확인했다. 전체 TS-U02 중 실제 Detection 경로·손 흔들기→화면·위치 정확도는 별도 잔여 항목이다 (`docs/TS-U02_20260908.md`).
 
 ### I-017
 
@@ -391,7 +392,7 @@
 `mro_webcam` · 심각도 중 · 담당 웹캠 한세교·김학민 · 등록 2026-09-07 (PR #14 PM 검증)
 
 - **내용·재현** — PR #14 의 `webcam_hint_node.py` 는 YOLO 처리 타이머(10 Hz)와 압축 발행 타이머(10 Hz)를 **하나의 `ReentrantCallbackGroup`** 에 두고 `MultiThreadedExecutor(num_threads=2)` 로 돈다. Reentrant 그룹은 **같은 콜백의 동시 실행**도 허용하므로, `model.track()` 한 번이 100 ms 를 넘는 순간(CPU 추론 640×480 이면 흔하다) 다음 틱이 두 번째 스레드에서 같은 모델을 다시 부른다. ultralytics 의 `persist=True` 추적기는 스레드 안전하지 않고, `self.last_frame_number` 도 잠금 없이 두 스레드가 쓴다. 증상은 간헐적 예외·트랙 ID 튐·힌트 좌표 튐이라 재현이 어렵다
-- **조치·남은 것** — **9/7 코드 조치 완료 (`43e0b54`).** YOLO·압축 발행 타이머에 각각 `MutuallyExclusiveCallbackGroup`을 적용해 같은 YOLO 콜백의 중복 실행을 차단했다. `read()` 실패 루프에 50 ms 대기를 추가했고, 정상 종료 순서를 `stop → join → release`로 변경했다. 문법·종료 순서·추적 상태 단위 검사 통과. PM 검증 (PR #21): 그룹 분리·sleep·종료 순서 diff 확인, 트랙 확정 로직(3회 확정·0.5 s 유지·1.0 s 정리) 가짜 시각으로 단위 검사 일치. **추가 조치 (`6679782`):** `detection_confirm_count`를 `detection_confirm_s=0.3`으로 바꾸고 `process_hz`로 횟수를 환산해 계약의 시간 상수 규칙을 반영했다. 남은 것은 실장비에서 YOLO 추론과 압축 발행을 동시 실행하여 재진입·CPU 과점유·종료 행을 확인하는 것이다 (9/8).
+- **조치·남은 것** — 9/7 코드 조치(`43e0b54`)로 YOLO·압축 발행 타이머에 각각 `MutuallyExclusiveCallbackGroup`을 적용해 같은 YOLO 콜백의 중복 실행을 차단했다. `read()` 실패 루프에 50 ms 대기를 추가했고, 정상 종료 순서를 `stop → join → release`로 변경했다. 추가 조치(`6679782`)로 `detection_confirm_count`를 `detection_confirm_s=0.3`으로 바꾸고 `process_hz`로 횟수를 환산했다. **9/8 `/dev/video2` 부분 검증:** YOLO·JPEG 동시 실행에서 이미지 수신 9.9~10.1 Hz 유지, 시간 경과에 따른 지연 누적·2초 이상 중단 없음, 정상 종료 확인. 시험 중 실제 Detection이 지속되지 않아 track ID 안정성과 CPU 사용률은 아직 확인하지 못했다. 두 항목을 실장비에서 확인한 뒤 닫는다.
 
 ### I-029
 

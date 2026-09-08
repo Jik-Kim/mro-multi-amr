@@ -25,11 +25,18 @@ from sensor_msgs.msg import CompressedImage
 from ultralytics import YOLO
 
 from mro_interfaces.msg import TargetHint, WorkerDescriptor
-from mro_webcam.core.homography import bbox_to_map, load_homography
+from mro_webcam.core.homography import bbox_to_map, load_homography, pixel_to_map
 
 
 PERCEPTION_SHARE = get_package_share_directory('mro_perception')
+WEBCAM_SHARE = get_package_share_directory('mro_webcam')
 DEFAULT_MODEL_PATH = os.path.join(PERCEPTION_SHARE, 'models', 'worker.pt')
+DEFAULT_HOMOGRAPHY_PATH = os.path.join(
+    WEBCAM_SHARE,
+    'config',
+    'WebCam2',
+    'homography_cam2.json',
+)
 DEFAULT_CLASSES = ['worker_a', 'worker_b']
 
 
@@ -189,11 +196,19 @@ class WebcamHint(Node):
         self.class_names = self.model.names
         self.workers = {}  # worker_id -> outfit_class
         self.track_states = {}  # track_id -> first_seen, last_seen, confirmed
+        self.preview_lock = threading.Lock()
+        self.preview_frame = None
 
         # ROS I/O: 등록 작업자를 받고 작업자 map 좌표를 보낸다.
         self.create_subscription(WorkerDescriptor, '/webcam1/worker_descriptor', self._on_worker_descriptor, 10)
         self.hint_publisher = self.create_publisher(TargetHint, '/webcam2/target_hint', qos_profile_sensor_data)
         self.image_publisher = self.create_publisher(CompressedImage, config.compressed_topic, qos_profile_sensor_data)
+        self.hint_publish_count = 0
+        self.image_publish_count = 0
+        self.get_logger().info(
+            f'Publisher 생성: hint={self.hint_publisher.topic_name}, '
+            f'image={self.image_publisher.topic_name}'
+        )
 
         # 캡처, YOLO 처리, 압축 영상 발행을 서로 다른 실행 경로로 분리한다.
         self.camera = LatestFrameCamera(config.camera, self.get_logger())
@@ -202,6 +217,10 @@ class WebcamHint(Node):
         self.image_callback_group = MutuallyExclusiveCallbackGroup()
         self.create_timer(1.0 / config.process_hz, self._process_latest_frame, callback_group=self.yolo_callback_group)
         self.create_timer(1.0 / config.image_publish_hz, self._publish_compressed_image, callback_group=self.image_callback_group)
+        self.publisher_status_timer = self.create_timer(
+            1.0,
+            self._log_publisher_status_once,
+        )
         self.camera.start()
         self.get_logger().info(
             f'webcam_hint: {self.camera.description()} | '
@@ -227,7 +246,12 @@ class WebcamHint(Node):
             image_frame_id=str(self.declare_parameter('image_frame_id', 'webcam2_optical_frame').value),
             jpeg_quality=int(self.declare_parameter('jpeg_quality', 80).value),
             model_path=str(self.declare_parameter('model_path', DEFAULT_MODEL_PATH).value),
-            homography_path=str(self.declare_parameter('homography_json', '').value),
+            homography_path=str(
+                self.declare_parameter(
+                    'homography_json',
+                    DEFAULT_HOMOGRAPHY_PATH,
+                ).value
+            ),
             confidence=float(self.declare_parameter('confidence', 0.5).value),
             target_classes=list(self.declare_parameter('target_classes', DEFAULT_CLASSES).value),
             detection_confirm_s=float(self.declare_parameter('detection_confirm_s', 0.3).value),
@@ -272,10 +296,27 @@ class WebcamHint(Node):
         hint.point = point
         hint.confidence = float(confidence)
         self.hint_publisher.publish(hint)
+        self.hint_publish_count += 1
 
-    # 캡처 스레드의 최신 프레임을 JPEG로 압축해 독립 주기로 발행한다.
+    # Discovery 반영 후 Publisher 연결과 초기 Publish 상태를 한 번만 보여준다.
+    def _log_publisher_status_once(self):
+        self.get_logger().info(
+            'Publisher 상태: '
+            f'{self.hint_publisher.topic_name} '
+            f'published={self.hint_publish_count}, '
+            f'subscribers={self.hint_publisher.get_subscription_count()} | '
+            f'{self.image_publisher.topic_name} '
+            f'published={self.image_publish_count}, '
+            f'subscribers={self.image_publisher.get_subscription_count()}'
+        )
+        self.publisher_status_timer.cancel()
+
+    # YOLO bbox가 그려진 최신 프레임을 JPEG로 압축해 독립 주기로 발행한다.
     def _publish_compressed_image(self):
-        frame, _ = self.camera.latest(-1)
+        with self.preview_lock:
+            frame = None if self.preview_frame is None else self.preview_frame.copy()
+        if frame is None:
+            frame, _ = self.camera.latest(-1)
         if frame is None:
             return
 
@@ -297,6 +338,7 @@ class WebcamHint(Node):
         message.format = 'jpeg'
         message.data = encoded.tobytes()
         self.image_publisher.publish(message)
+        self.image_publish_count += 1
 
     # ------------------------------------------------------- YOLO + homography
     # 처리하지 않은 최신 프레임을 YOLO에 넣고 각 검출 결과를 처리한다.
@@ -312,15 +354,54 @@ class WebcamHint(Node):
             conf=self.confidence,
             verbose=False,
         )[0]
+        display_frame = result.plot()
         now = self.get_clock().now().nanoseconds / 1e9
         if result.boxes is not None:
             for box in result.boxes:
-                self._process_detection(frame, box, now)
+                self._log_detection(box)
+                self._process_detection(display_frame, box, now)
         self._remove_lost_tracks(now)
 
-        if self.show_window:
+        with self.preview_lock:
+            self.preview_frame = display_frame.copy()
+
+    # OpenCV GUI 이벤트는 메인 스레드에서 처리해 화면 멈춤을 방지한다.
+    def show_preview_frame(self):
+        if not self.show_window:
+            return
+
+        with self.preview_lock:
+            frame = None if self.preview_frame is None else self.preview_frame.copy()
+        if frame is None:
+            frame, _ = self.camera.latest(-1)
+        if frame is not None:
             cv2.imshow('webcam2 hint', frame)
-            cv2.waitKey(1)
+        cv2.waitKey(1)
+
+    # YOLO 검출 객체의 bbox 중심 픽셀과 변환된 map 좌표를 출력한다.
+    def _log_detection(self, box):
+        class_name = self._class_name(int(box.cls[0]))
+        track_id = int(box.id[0]) if box.id is not None else None
+        confidence = float(box.conf[0])
+        x1, y1, x2, y2 = map(float, box.xyxy[0])
+        center_u = (x1 + x2) / 2.0
+        center_v = (y1 + y2) / 2.0
+        center_map_x, center_map_y = pixel_to_map(
+            self.homography, center_u, center_v
+        )
+        ground_u = center_u
+        ground_v = y2
+        ground_map_x, ground_map_y = pixel_to_map(
+            self.homography, ground_u, ground_v
+        )
+        self.get_logger().info(
+            f'detection track_id={track_id} class={class_name} '
+            f'confidence={confidence:.3f} '
+            f'bbox_center_px=({center_u:.1f}, {center_v:.1f}) '
+            f'bbox_center_map=({center_map_x:.3f}, {center_map_y:.3f}) '
+            f'ground_px=({ground_u:.1f}, {ground_v:.1f}) '
+            f'ground_map=({ground_map_x:.3f}, {ground_map_y:.3f})'
+        )
 
     # 대상 클래스를 작업자와 연결하고 bbox를 SLAM map 좌표로 변환한다.
     def _process_detection(self, frame, box, now):
@@ -417,7 +498,9 @@ def main(args=None):
         node = WebcamHint()
         executor = MultiThreadedExecutor(num_threads=2)
         executor.add_node(node)
-        executor.spin()
+        while rclpy.ok():
+            executor.spin_once(timeout_sec=0.01)
+            node.show_preview_frame()
     except KeyboardInterrupt:
         pass
     finally:
