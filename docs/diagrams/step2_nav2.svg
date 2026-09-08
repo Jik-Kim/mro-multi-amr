@@ -9,29 +9,29 @@
 </defs>
 <rect width="100%" height="100%" fill="#FFFFFF"/>
 <text x="24" y="34" font-size="19" font-weight="700" fill="#1A1D22">STEP 2 — 로봇 1대(/robotN) 내부 구성과 Nav2 스택과의 교환</text>
-<text x="24" y="55" font-size="12" fill="#5A5F6A">robot3 · robot4 는 네임스페이스만 다르고 구성은 같다 · SDD 3.2</text>
+<text x="24" y="55" font-size="12" fill="#5A5F6A">robot3 · robot8 는 네임스페이스만 다르고 구성은 같다 · SDD 3.2</text>
 <rect x="24" y="74" width="300" height="694" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/><text x="36" y="93" font-size="12" font-weight="700" fill="#5A5F6A">A. 센서 · 구동 (로봇 온보드) 및 외부 입력</text>
 <rect x="356" y="74" width="350" height="694" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/><text x="368" y="93" font-size="12" font-weight="700" fill="#5A5F6A">B. 우리가 만드는 노드 (PC-RN 에서 실행)</text>
 <rect x="748" y="74" width="340" height="694" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/><text x="760" y="93" font-size="12" font-weight="700" fill="#5A5F6A">C. Nav2 스택 (turtlebot4_navigation)</text>
 <rect x="1112" y="74" width="200" height="694" rx="6" fill="#FAFBFC" stroke="#D7DBE0" stroke-width="1" stroke-dasharray="5 4"/><text x="1124" y="93" font-size="12" font-weight="700" fill="#5A5F6A">D. 구동 출력</text>
-<path d="M 308 158.5 L 334 158.5 L 334 352.5 L 372 352.5" fill="none" stroke="#3576C8" stroke-width="1.4" marker-end="url(#arB)"/>
-<path d="M 308 158.5 L 342 158.5 L 342 143.5 L 372 143.5" fill="none" stroke="#3576C8" stroke-width="1.4" marker-end="url(#arB)"/>
+<path d="M 308 143.95 L 334 143.95 L 334 352.5 L 372 352.5" fill="none" stroke="#3576C8" stroke-width="1.4" marker-end="url(#arB)"/>
+<path d="M 308 173.05 L 342 173.05 L 342 143.5 L 372 143.5" fill="none" stroke="#3576C8" stroke-width="1.4" marker-end="url(#arB)"/>
 <path d="M 308 263 L 344 263 L 344 673.5 L 372 673.5" fill="none" stroke="#C0392B" stroke-width="1.4" marker-end="url(#arR)"/>
-<path d="M 308 472 L 326 472 L 326 240.5 L 372 240.5" fill="none" stroke="#5A5F6A" stroke-width="1.4" marker-end="url(#ar)"/>
-<path d="M 308 472 L 372 472" fill="none" stroke="#5A5F6A" stroke-width="1.4" marker-end="url(#ar)"/>
-<path d="M 308 472 L 338 472 L 338 569 L 372 569" fill="none" stroke="#5A5F6A" stroke-width="1.4" marker-end="url(#ar)"/>
+<path d="M 308 449.6 L 326 449.6 L 326 250.55 L 372 250.55" fill="none" stroke="#5A5F6A" stroke-width="1.4" marker-end="url(#ar)"/>
+<path d="M 308 472 L 330 472 L 330 459.7 L 372 459.7" fill="none" stroke="#5A5F6A" stroke-width="1.4" marker-end="url(#ar)"/>
+<path d="M 308 494.4 L 338 494.4 L 338 576.8 L 372 576.8" fill="none" stroke="#5A5F6A" stroke-width="1.4" marker-end="url(#ar)"/>
 <path d="M 531 401 L 531 431" fill="none" stroke="#3576C8" stroke-width="1.4" marker-end="url(#arB)"/>
 <path d="M 531 177 L 531 207" fill="none" stroke="#3576C8" stroke-width="1.4" marker-end="url(#arB)"/>
-<path d="M 690 240.5 L 714 240.5 L 714 143.5 L 764 143.5" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
+<path d="M 690 230.45 L 714 230.45 L 714 130.1 L 764 130.1" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
 <path d="M 690 472 L 722 472 L 722 143.5 L 764 143.5" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
-<path d="M 690 569 L 730 569 L 730 143.5 L 764 143.5" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
-<path d="M 690 240.5 L 738 240.5 L 738 673 L 764 673" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
-<path d="M 690 569 L 744 569 L 744 673 L 764 673" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
+<path d="M 690 561.2 L 730 561.2 L 730 156.9 L 764 156.9" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
+<path d="M 690 250.55 L 738 250.55 L 738 665.2 L 764 665.2" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
+<path d="M 690 576.8 L 744 576.8 L 744 680.8 L 764 680.8" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
 <path d="M 764 583.5 L 710 583.5 L 710 352.5 L 690 352.5" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
 <path d="M 1072 315 L 1128 315" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
 <path d="M 1212 341 L 1212 381" fill="none" stroke="#6B4FA8" stroke-width="1.4" marker-end="url(#arP)"/>
 <path d="M 690 673.5 L 730 673.5 L 730 742 L 1212 742 L 1212 433" fill="none" stroke="#C0392B" stroke-width="2.2" marker-end="url(#arR)"/>
-<path d="M 372 673.5 L 348 673.5 L 348 472 L 372 472" fill="none" stroke="#C0392B" stroke-width="1.4" marker-end="url(#arR)"/>
+<path d="M 372 673.5 L 348 673.5 L 348 488.4 L 372 488.4" fill="none" stroke="#C0392B" stroke-width="1.4" marker-end="url(#arR)"/>
 <rect x="40" y="110" width="268" height="97" rx="5" fill="#F1F2F4" stroke="#5A5F6A" stroke-width="1.6"/><text x="52" y="131" font-size="12.5" font-weight="700" fill="#333840">OAK-D Pro  ·  depthai_ros_driver</text><text x="52" y="150" font-size="11" fill="#3A3E46">oakd/rgb/image_raw/compressed</text><text x="52" y="165" font-size="11" fill="#3A3E46">oakd/stereo/…/compressedDepth</text><text x="52" y="180" font-size="11" fill="#3A3E46">oakd/rgb/camera_info</text><text x="52" y="195" font-size="11" fill="#3A3E46">704×704 @10 Hz · 깊이 정렬 · subpixel</text>
 <rect x="40" y="237" width="268" height="52" rx="5" fill="#F1F2F4" stroke="#5A5F6A" stroke-width="1.6"/><text x="52" y="258" font-size="12.5" font-weight="700" fill="#333840">RPLIDAR A1  ·  rplidar_ros</text><text x="52" y="277" font-size="11" fill="#3A3E46">scan  (LaserScan, 10 Hz)</text>
 <rect x="40" y="319" width="268" height="67" rx="5" fill="#F1F2F4" stroke="#5A5F6A" stroke-width="1.6"/><text x="52" y="340" font-size="12.5" font-weight="700" fill="#333840">iRobot Create3</text><text x="52" y="359" font-size="11" fill="#3A3E46">odom · tf · battery_state</text><text x="52" y="374" font-size="11" fill="#3A3E46">범퍼 · 클리프 (하드웨어 안전)</text>
@@ -52,23 +52,23 @@
 <rect x="1128" y="289" width="168" height="52" rx="5" fill="#F3EEFA" stroke="#6B4FA8" stroke-width="1.6"/><text x="1140" y="310" font-size="12.5" font-weight="700" fill="#4B357A">velocity_smoother</text><text x="1140" y="329" font-size="11" fill="#3A3E46">cmd_vel (TwistStamped)</text>
 <rect x="1128" y="381" width="168" height="52" rx="5" fill="#F1F2F4" stroke="#5A5F6A" stroke-width="1.6"/><text x="1140" y="402" font-size="12.5" font-weight="700" fill="#333840">Create3 구동부</text><text x="1140" y="421" font-size="11" fill="#3A3E46">v ≤ 0.3 m/s</text>
 <rect x="24" y="784" width="1292" height="217" rx="5" fill="#F7F8FA" stroke="#C9CFD6" stroke-width="1.6"/><text x="36" y="805" font-size="12.5" font-weight="700" fill="#333840">교환 지점 — 번호별 내용</text><text x="36" y="824" font-size="11" fill="#3A3E46">①  rgb + depth + camera_info 를 message_filters 로 동기화해 사람 검출과 거리 산출에 쓴다.      ②  rgb 만 받아 ArUco 를 읽는다.</text><text x="36" y="839" font-size="11" fill="#3A3E46">③  scan 은 안전 감시가 직접 구독한다. 인지·웹캠·관제 어느 것도 이 경로에 끼지 않는다.</text><text x="36" y="854" font-size="11" fill="#3A3E46">④⑤⑥  관제·웹캠에서 오는 트리거. mission/assigned → 셔틀 시작 · /webcam2/target_hint → 재탐지 방향 · mission/finish → 추종 즉시 중단 및 복귀 시작.</text><text x="36" y="869" font-size="11" fill="#3A3E46">⑦  target/paired 가 참일 때만 추종이 시작된다 (재식별 게이트).      ⑧  베이 도착 판정의 근거.</text><text x="36" y="884" font-size="11" fill="#3A3E46">⑨⑩⑪  우리 노드가 Nav2 에 붙는 주행 인터페이스는 navigate_to_pose 액션 하나뿐이다. 경로 계획과 지역 제어는 Nav2 에 맡긴다.</text><text x="36" y="899" font-size="11" fill="#3A3E46">⑫⑬  도킹도 opennav_docking 액션에 맡긴다. 우리가 정하는 것은 언제 부를지와 실패 시 몇 번 다시 부를지뿐이다.</text><text x="36" y="914" font-size="11" fill="#3A3E46">⑭  amcl_pose 로 카메라가 본 대상을 map 프레임 좌표로 옮긴다. 두 로봇이 같은 맵 원점을 쓰기 때문에 이 값이 서로 통한다.</text><text x="36" y="929" font-size="11" fill="#3A3E46">⑮⑯  Nav2 가 낸 속도 명령이 평활화를 거쳐 Create3 로 간다.</text><text x="36" y="944" font-size="11" fill="#3A3E46">⑰  안전 감시는 정지 조건에서 cmd_vel 에 0 을 20 Hz 로 덮어써 Nav2 출력을 이긴다.      ⑱  safety/estop 을 받은 우리 노드는 새 주행 명령을 내지 않는다.</text><text x="36" y="959" font-size="11" fill="#3A3E46"></text><text x="36" y="974" font-size="11" fill="#3A3E46">설계 원칙 — 안전은 온보드(scan + costmap)에서만 성립시킨다. 웹캠 · 재식별 · 관제는 &quot;더 잘 하게&quot; 할 뿐 &quot;안 부딪히게&quot; 하는 일에는 관여하지 않는다.</text><text x="36" y="989" font-size="11" fill="#3A3E46">           그래야 Wi-Fi 가 끊기거나 웹캠이 죽어도 무사고가 유지된다. (AGENTS.md 안전 계층 원칙)</text>
-<text x="334" y="249.5" font-size="10.5" fill="#3576C8" text-anchor="middle">①</text>
-<text x="342" y="145" font-size="10.5" fill="#3576C8" text-anchor="middle">②</text>
+<text x="334" y="242.225" font-size="10.5" fill="#3576C8" text-anchor="middle">①</text>
+<text x="342" y="152.275" font-size="10.5" fill="#3576C8" text-anchor="middle">②</text>
 <text x="344" y="462.25" font-size="10.5" fill="#C0392B" text-anchor="middle">③</text>
-<text x="326" y="350.25" font-size="10.5" fill="#5A5F6A" text-anchor="middle">④</text>
-<text x="330" y="466" font-size="10.5" fill="#5A5F6A" text-anchor="middle">⑤</text>
-<text x="338" y="514.5" font-size="10.5" fill="#5A5F6A" text-anchor="middle">⑥</text>
+<text x="326" y="344.075" font-size="10.5" fill="#5A5F6A" text-anchor="middle">④</text>
+<text x="330" y="459.85" font-size="10.5" fill="#5A5F6A" text-anchor="middle">⑤</text>
+<text x="338" y="529.6" font-size="10.5" fill="#5A5F6A" text-anchor="middle">⑥</text>
 <text x="531" y="410" font-size="10.5" fill="#3576C8" text-anchor="middle">⑦</text>
 <text x="531" y="186" font-size="10.5" fill="#3576C8" text-anchor="middle">⑧</text>
-<text x="714" y="186" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑨</text>
+<text x="714" y="174.275" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑨</text>
 <text x="722" y="301.75" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑩</text>
-<text x="730" y="350.25" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑪</text>
-<text x="738" y="450.75" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑫</text>
-<text x="744" y="615" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑬</text>
+<text x="730" y="353.05" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑪</text>
+<text x="738" y="451.875" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑫</text>
+<text x="744" y="622.8" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑬</text>
 <text x="710" y="462" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑭</text>
 <text x="1100" y="309" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑮</text>
 <text x="1212" y="355" font-size="10.5" fill="#6B4FA8" text-anchor="middle">⑯</text>
 <text x="730" y="701.75" font-size="10.5" fill="#C0392B" text-anchor="middle">⑰</text>
-<text x="348" y="566.75" font-size="10.5" fill="#C0392B" text-anchor="middle">⑱</text>
+<text x="348" y="574.95" font-size="10.5" fill="#C0392B" text-anchor="middle">⑱</text>
 <text x="24" y="1021" font-size="10" fill="#8A8F98">생성: tools/build_diagrams.py   ·   원본 근거: docs/architecture.md, docs/interfaces.md 4절, SDD 3.2</text>
 </svg>
