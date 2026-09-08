@@ -2,8 +2,13 @@
 """[이관] Kn1_mini/nav/goto_goal_node.py → mro_navigation/nodes/shuttle_mission_node.py.
 
 역할 변경: '웹캠 차 좌표 앞 1.5 m 로 이동' → 'S4 셔틀 미션'.
-  mission/assigned 수신 → 도크 초기자세 → Nav2 준비 → undock → 베이 waypoint
-  → ArUco 로 도착 확정 → 창고 안쪽 전진 → 적재 체류 → P1 토큰 → 대기공간 → WAITING
+  **기동 시** 도크 초기자세 → (미션 대기) → mission/assigned 수신 → Nav2 준비 → undock
+  → 베이 waypoint → ArUco 로 도착 확정 → 창고 안쪽 전진 → 적재 체류 → P1 토큰 → 대기공간 → WAITING
+
+기동 순서가 중요하다 (I-035) — **이 노드를 Nav2(T3) 보다 먼저 띄운다.** Nav2 의 global_costmap 은
+  기동할 때 map→base_link TF 를 요구하고, AMCL 은 초기자세를 받아야 map→odom 을 낸다. 초기자세가
+  늦으면 costmap 활성화가 실패하는데 lifecycle_manager 는 **나중에 TF 가 생겨도 재시도하지 않는다**
+  (9/7 실측). 그래서 초기자세를 미션이 아니라 기동 시에 보낸다.
 
 유지한 골격: 도크 초기자세(dock_pose), Nav2 준비 폴링, undock, goToPose 폴링,
   그리고 **콜백 안에서 navigator 를 부르지 않는다** — 콜백은 값만 저장하고 메인 루프가 실행한다.
@@ -28,10 +33,10 @@
   · T_lim 초과로 포기한 미션은 폐기한다 — 그 뒤 늦게 도착해도 WAITING·arrived 를 내지 않는다
     (계약 7절, 이중 계상 금지). 늦은 도착은 관제가 arrived_late 로 따로 남긴다.
 
-TODO([주행]): ① 신규 파라미터 7개(bay_advance_m·aruco_* 4종·token_retry_s·nav2_poll_s)를
-  mro_bringup/params/robotN.yaml 로 옮기고, arena_yaml 경로도 robot.launch.py 가 넘기게 할 것 —
-  파라미터 단일 출처는 params 다 (계약 5절). 지금은 이 노드가 mro_bringup 의 share 디렉터리를
-  런타임 조회로 들여다본다. 의존을 선언하면 순환이라 막을 수 없고, 런치가 넘겨주면 깨끗해진다. PM 요청 필요
+TODO([주행]): ① 파라미터 7개와 arena_yaml 경로는 PM 이 robotN.yaml·robot.launch.py 로 옮겼다
+  (PR #36 후속, 9/8). **I-035 로 추가한 nav2_poll_max·dock_status_wait_s 두 개는 아직 코드 기본값뿐이라
+  robotN.yaml 이관을 PM 에 요청해야 한다** — 값의 단일 출처는 params 다 (계약 5절). 런타임 share 조회는
+  런치가 안 넘겨줄 때의 대체값으로만 남아 있다 (의존을 선언하면 순환이라 막을 수 없다)
 ② follow_target_node.py 가 아직 옛 goto_goal/arrived 를 구독한다. shuttle/arrived 로 바꾸지 않으면
   S5 합류가 시작되지 않는다 (docs/todo.md 에 등록)
 ③ ArUco '정면 ±30°'(계약 6절)는 여전히 아무도 검사하지 않는다. aruco_detector 가 PR #30 으로
@@ -110,6 +115,9 @@ class ShuttleMission(Node):
         self.declare_parameter('aruco_retry', 1)
         self.declare_parameter('token_retry_s', 2.0)           # 계약 3절 '거절되면 2초 후 재요청'
         self.declare_parameter('nav2_poll_s', 5.0)
+        # I-035 로 추가 (9/8) — robotN.yaml 이관은 PM 요청 필요 (위 TODO ①)
+        self.declare_parameter('nav2_poll_max', 3)          # 이 횟수 안에 active 가 아니면 포기
+        self.declare_parameter('dock_status_wait_s', 5.0)   # dock_status 를 기다리는 상한
 
         self.arena = self._load_arena(self.p('arena_yaml'))
 
@@ -193,6 +201,23 @@ class ShuttleMission(Node):
 
     def over_tlim(self):
         return self.t0 is not None and self.now() - self.t0 > self.p('t_lim_s')
+
+    def elapsed(self):
+        """미션 시작 이후 경과 초. 미션 밖(기동 시)에는 t0 가 없으므로 0.0 을 준다."""
+        return 0.0 if self.t0 is None else self.now() - self.t0
+
+    def docked_status(self, timeout_s):
+        """도킹 여부를 돌려준다. 시간 안에 알 수 없으면 None.
+
+        navigator.getDockedStatus() 는 dock_status 가 올 때까지 **무한히** 기다린다
+        (turtlebot4_navigator.py: `while self.is_docked is None`). 로봇이 안 떠 있으면 거기서
+        영영 멈추고, 미션 경로에서는 T_lim 조차 돌지 않아 FAILED 도 안 나온다 (가이드 D-2).
+        구독은 navigator 의 것을 그대로 쓰되 기다리는 시간에 상한을 둔다.
+        """
+        deadline = self.now() + float(timeout_s)
+        while self.navigator.is_docked is None and self.now() < deadline:
+            rclpy.spin_once(self.navigator, timeout_sec=0.1)
+        return self.navigator.is_docked
 
     def wait(self, cond, timeout=None, on_tick=None):
         """유일한 대기 수단. 모든 대기가 여기를 지나므로 T_lim 검사가 한 곳에 모인다."""
@@ -364,8 +389,8 @@ class ShuttleMission(Node):
             f"미션 {m.mission_id} · 베이 {m.bay} · 마커 {bay['aruco_id']} · 작업자 {m.worker_id}")
         return bay, waiting
 
-    def init_pose(self):
-        """도킹 상태에서 자신의 도크 map 좌표로 초기화한다.
+    def dock_pose(self):
+        """robotN.yaml 의 dock_pose 를 검증해 [x, y, yaw] 로 돌려준다.
 
         각 로봇이 (0,0) 으로 초기화하면 두 map 프레임의 원점이 물리적으로 다른 점이 되어
         세마포어 폴리곤·waypoint·FleetStatus 가 전부 어긋난다 — 1대로 시험하면 안 드러난다 (I-013).
@@ -378,24 +403,86 @@ class ShuttleMission(Node):
             raise MissionAbort(
                 f'dock_pose 가 유효하지 않다 ({v}) — robotN.yaml 의 dock_pose 를 확인할 것. '
                 '이대로 초기화하면 두 로봇의 맵 좌표계가 어긋난다 (I-013)')
-        if not self.navigator.getDockedStatus():
-            self.get_logger().info('초기자세 설정을 위해 도킹')
-            self.navigator.dock()
+        return v
+
+    def send_initial_pose(self, v):
+        """검증된 dock_pose 를 AMCL 에 보낸다. 이 시점부터 map→odom TF 가 나온다."""
         x, y, yaw = float(v[0]), float(v[1]), float(v[2])
         self.navigator.setInitialPose(self.pose_of(x, y, yaw))
         self.get_logger().info(
             f'초기자세 ({x:.2f}, {y:.2f}, {math.degrees(yaw):.0f}°) 전송 — 자신의 도크 map 좌표')
 
-    def wait_nav2(self):
-        ready, reason = self.nav2_state()
-        while not ready:
-            # 경과 시간을 같이 남긴다 — 같은 문구가 반복되면 진행 중인지 멈춘 건지 알 수 없다
+    def startup(self):
+        """미션을 받기 전에 초기자세를 보낸다 — 메인 루프에서만 부른다 (I-035).
+
+        왜 여기서 보내나 — Nav2 의 global_costmap 은 기동할 때 map→base_link TF 를 요구하고,
+        AMCL 은 초기자세를 받아야 map→odom 을 낸다. 초기자세가 늦으면 costmap 활성화가 실패하는데
+        lifecycle_manager 는 나중에 TF 가 생겨도 재시도하지 않는다 (9/7 robot3 실측: initialpose
+        발행 8 초 뒤에도 global_costmap 은 inactive). 미션을 받은 뒤에 보내면 이미 늦어
+        T_lim 120 초를 통째로 태운다.
+
+        기동 시에는 로봇을 움직이지 않는다 — 도킹돼 있지 않으면 초기자세를 보내지 않고 미션
+        경로에 맡긴다. 도크 밖에서 dock_pose 로 초기화하면 측위가 대놓고 틀어지기 때문이다.
+        여기서는 상태를 바꾸지 않는다 — 미션이 없으므로 FAILED 를 낼 수 없다 (I-024·I-026).
+        """
+        try:
+            v = self.dock_pose()
+        except MissionAbort as e:
+            # 같은 검사가 미션 경로에서 다시 걸려 그때 FAILED 로 처리된다
+            self.get_logger().error(f'기동 시 초기자세 보류: {e}')
+            return
+        wait_s = self.p('dock_status_wait_s')
+        docked = self.docked_status(wait_s)
+        if docked is None:
             self.get_logger().warn(
-                f"Nav2 미준비 ({self.now() - self.t0:.0f} s 경과 / T_lim {self.p('t_lim_s'):.0f} s): "
-                f'{reason}')
-            self.wait(lambda: False, timeout=self.p('nav2_poll_s'))
+                f'기동 시 초기자세 보류 — dock_status 를 {wait_s} s 안에 받지 못했다. '
+                '로봇 전원·네임스페이스·디스커버리를 확인할 것 (가이드 D-2)')
+            return
+        if not docked:
+            self.get_logger().warn(
+                '기동 시 초기자세 보류 — 도크에 물려 있지 않다. 도크 밖에서 dock_pose 로 '
+                '초기화하면 측위가 틀어진다. 로봇을 도크에 올리고 다시 띄울 것')
+            return
+        self.send_initial_pose(v)
+        self.get_logger().info(
+            'Nav2 를 아직 띄우지 않았다면 지금 띄울 것 — 이 TF 로 global_costmap 이 활성화된다 (I-035)')
+
+    def init_pose(self):
+        """미션 경로의 초기자세. 기동 시 이후 로봇이 옮겨졌을 수 있어 다시 잡는다."""
+        v = self.dock_pose()
+        wait_s = self.p('dock_status_wait_s')
+        docked = self.docked_status(wait_s)
+        if docked is None:
+            # 예전에는 여기서 무한 대기라 T_lim 도 안 돌고 FAILED 도 안 나왔다 (가이드 D-2)
+            raise MissionAbort(
+                f'dock_status 를 {wait_s} s 안에 받지 못했다 — '
+                '로봇 전원·네임스페이스·디스커버리를 확인할 것')
+        if not docked:
+            self.get_logger().info('초기자세 설정을 위해 도킹')
+            self.navigator.dock()
+        self.send_initial_pose(v)
+
+    def wait_nav2(self):
+        """Nav2 가 active 가 될 때까지 **정해진 횟수만** 확인한다 (I-035).
+
+        무한히 기다리면 T_lim 120 초를 통째로 태운다. 그런데 초기자세 없이 뜬 Nav2 는 스스로
+        활성화를 재시도하지 않으므로 더 기다린다고 낫지 않는다 — 사유와 함께 빨리 포기해야
+        '120 초 뒤 실패' 와 '10 초 만의 Nav2 미기동' 이 회차 기록에서 구분된다.
+        경과 시간은 elapsed() 로 찍는다 — t0 가 없는 경로에서도 안전해야 한다.
+        """
+        tries = max(1, int(self.p('nav2_poll_max')))
+        reason = ''
+        for attempt in range(1, tries + 1):
             ready, reason = self.nav2_state()
-        self.get_logger().info('Nav2 준비됨 (bt_navigator active)')
+            if ready:
+                self.get_logger().info('Nav2 준비됨 (bt_navigator active)')
+                return
+            self.get_logger().warn(
+                f'Nav2 미준비 {attempt}/{tries} ({self.elapsed():.0f} s 경과 / '
+                f"T_lim {self.p('t_lim_s'):.0f} s): {reason}")
+            if attempt < tries:
+                self.wait(lambda: False, timeout=self.p('nav2_poll_s'))
+        raise MissionAbort(f'Nav2 미준비 — {tries}회 확인 동안 active 가 아니다: {reason}')
 
     def confirm_aruco(self, bay):
         """베이 도착 확정. 마커를 확인하지 못하면 전진·체류하지 않고 포기한다 (FR-08 오도착 0건)."""
@@ -448,6 +535,10 @@ def main():
     rclpy.init()
     node = ShuttleMission()
     try:
+        try:
+            node.startup()       # 초기자세를 미션보다 먼저 (I-035). 콜백 밖 메인 루프다
+        except Exception as e:   # 기동 초기화 실패로 노드를 죽이면 미션조차 못 받는다
+            node.get_logger().error(f'기동 초기화 실패 — 미션 경로에서 다시 시도한다: {e}')
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=TICK_S)
             if node.pending is not None and node.mission is None:

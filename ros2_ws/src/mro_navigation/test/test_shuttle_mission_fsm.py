@@ -12,6 +12,8 @@
     (순서 기반 판정 = 방법 B, 9/7 팀 회의. 그 전제인 '베이·대기공간이 P1 폴리곤 밖' 을
      arena.yaml 좌표로 함께 확인한다)
   · dock_pose 가 (0,0,0) 이면 거부한다 (I-013 — 두 로봇의 맵 좌표계가 어긋난다)
+  · 초기자세를 **미션이 아니라 기동 시** 보낸다 (I-035). 도크 밖이면 보내지 않고, 기동 경로는
+    미션이 없으므로 FAILED 를 내지 않는다. Nav2 가 active 가 아니면 T_lim 을 태우지 않고 곧장 포기
 
 **보장하지 못하는 것 — 실주행에서만 확인된다.**
   · Nav2 가 실제로 베이 → P1 → 대기공간 순서로 지나는지. 방법 B 는 이 순서를 전제로 한다
@@ -57,7 +59,7 @@ class StubNavigator:
         """호출 기록과 도킹 상태를 초기화한다."""
         self.ns = namespace
         self.calls = []
-        self.docked = True
+        self.is_docked = True     # 실물 TurtleBot4Navigator 와 같은 이름 (노드가 직접 읽는다)
         self.result_name = 'SUCCEEDED'
         self.goal_accepted = True
         self._ticks = 0
@@ -75,17 +77,17 @@ class StubNavigator:
 
     def getDockedStatus(self):  # noqa: N802
         """현재 도킹 상태."""
-        return self.docked
+        return self.is_docked
 
     def dock(self):
         """도킹."""
         self.calls.append('dock')
-        self.docked = True
+        self.is_docked = True
 
     def undock(self):
         """언독."""
         self.calls.append('undock')
-        self.docked = False
+        self.is_docked = False
 
     def setInitialPose(self, pose):  # noqa: N802
         """초기자세 전송을 기록한다."""
@@ -245,6 +247,83 @@ def test_dock_pose_missing_is_refused(ros):
     node.run_mission(assigned('A', 'M4'))
     assert node.status_log == ['FAILED', 'READY']
     assert 'undock' not in node.navigator.calls
+    node.destroy_node()
+
+
+def test_initial_pose_sent_at_startup(ros):
+    """초기자세는 미션이 아니라 기동 시 나간다 (I-035).
+
+    미션을 받은 뒤에 보내면 Nav2 의 global_costmap 이 이미 활성화에 실패한 뒤라 늦다.
+    """
+    node = make_node()
+    node.startup()
+    assert ('initpose', 0.019, -0.795) in node.navigator.calls
+    # 기동 시에는 로봇을 움직이지 않고, 미션이 없으므로 상태도 바꾸지 않는다
+    assert 'dock' not in node.navigator.calls
+    assert 'undock' not in node.navigator.calls
+    assert node.status_log == []
+    node.destroy_node()
+
+
+def test_startup_skips_initial_pose_when_undocked(ros):
+    """도크 밖이면 기동 시 초기자세를 보내지 않는다 — dock_pose 로 초기화하면 측위가 틀어진다."""
+    node = make_node()
+    node.navigator.is_docked = False
+    node.startup()
+    assert not [c for c in node.navigator.calls if c[0] == 'initpose']
+    assert 'dock' not in node.navigator.calls      # 노드를 띄웠다고 로봇이 움직이면 안 된다
+    assert node.status_log == []
+    node.destroy_node()
+
+
+def test_startup_unknown_dock_status_is_tolerated(ros):
+    """dock_status 를 못 받아도 기동은 끝난다 — 예전에는 여기서 무한 대기였다 (가이드 D-2)."""
+    node = make_node()
+    node.docked_status = lambda timeout_s: None
+    node.startup()
+    assert not [c for c in node.navigator.calls if c[0] == 'initpose']
+    assert node.status_log == []
+    node.destroy_node()
+
+
+def test_startup_bad_dock_pose_does_not_publish_failed(ros):
+    """기동 경로에서는 FAILED 를 내지 않는다 — 포기할 미션이 없다 (I-024·I-026)."""
+    node = make_node(dock_pose=[0.0, 0.0, 0.0])
+    node.startup()
+    assert node.status_log == []
+    assert not [c for c in node.navigator.calls if c[0] == 'initpose']
+    # 같은 검사가 미션 경로에서 다시 걸려 그때 FAILED 로 처리된다
+    node.run_mission(assigned('A', 'M-startup'))
+    assert node.status_log == ['FAILED', 'READY']
+    node.destroy_node()
+
+
+def test_nav2_not_ready_fails_fast(ros):
+    """Nav2 가 active 가 아니면 T_lim 을 태우지 않고 곧장 포기한다 (I-035 ⓑ)."""
+    node = make_node(t_lim_s=30.0, nav2_poll_max=2, nav2_poll_s=0.05)
+    node.nav2_state = lambda: (False, 'bt_navigator 가 inactive 이다')
+    started = node.now()
+    node.run_mission(assigned('A', 'M-nav2'))
+    assert node.status_log == ['FAILED', 'READY']
+    assert 'undock' not in node.navigator.calls    # 준비 안 됐으면 언독하지 않는다
+    assert node.arrived_log == []
+    # 120 초를 태우지 않는다는 것이 이 검사의 요점이다
+    assert node.now() - started < 5.0
+    node.destroy_node()
+
+
+def test_wait_nav2_without_mission_does_not_crash(ros):
+    """t0 가 없는 경로에서도 경과 시간 로그가 터지지 않는다 (elapsed()).
+
+    초기자세를 기동 시로 옮기면서 wait_nav2() 가 미션 밖에서 불릴 수 있게 됐다.
+    self.now() - self.t0 를 그대로 두면 TypeError 다.
+    """
+    node = make_node(nav2_poll_max=1)
+    node.nav2_state = lambda: (False, '서비스가 없다')
+    assert node.t0 is None
+    from mro_navigation.nodes.shuttle_mission_node import MissionAbort
+    with pytest.raises(MissionAbort):
+        node.wait_nav2()
     node.destroy_node()
 
 
