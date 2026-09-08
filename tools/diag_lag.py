@@ -131,15 +131,21 @@ def main():
     time.sleep(0.5)                                   # 디스커버리가 노드 목록을 채울 시간
     names = sorted({f'{ns}/{n}'.replace('//', '/') for n, ns in node.get_node_names_and_namespaces()})
     print('보이는 노드: ' + ', '.join(x for x in names if 'diag_lag' not in x)[:400])
-    print(f'\n=== {a.seconds:.0f} 초 측정 중 ... ===')
-    end = time.monotonic() + a.seconds
+    print(f'\n=== 첫 메시지를 기다린 뒤 {a.seconds:.0f} 초 측정 ... (디스커버리 서버 경유라 맞물리는 데 몇 초 걸린다) ===')
+    wait_until = time.monotonic() + 20.0                       # 20 s 안에 아무것도 안 오면 포기
     try:
-        while rclpy.ok() and time.monotonic() < end:
+        while rclpy.ok() and node.t0 is None and time.monotonic() < wait_until:
             rclpy.spin_once(node, timeout_sec=0.1)
+        if node.t0 is None:
+            print('20 s 동안 메시지 없음 — 네임스페이스(--ns)·Discovery·노드 실행 여부 확인')
+        else:
+            end = node.t0 + a.seconds
+            while rclpy.ok() and time.monotonic() < end:
+                rclpy.spin_once(node, timeout_sec=0.1)
     finally:
-        dt = a.seconds
+        dt = (time.monotonic() - node.t0) if node.t0 else a.seconds   # 실제 수신 구간으로 나눈다
         n, b, d = node.n, node.b, node.delay
-        print('\n=== 결과 ===')
+        print(f'\n=== 결과 (수신 {dt:.1f} s 기준) ===')
         print(f"{'토픽':<22}{'Hz':>7}{'MB/s':>8}   stamp→지금 지연")
         for k, label in (('rgb', '입력 rgb(jpeg)'), ('depth', '입력 depth(png)'), ('scan', '/scan (시계 기준)'), ('tf', '/tf'),
                          ('visible', '노드 처리(visible)'), ('out_image', '출력 target/image(jpeg)')):
