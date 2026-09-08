@@ -27,7 +27,8 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
                                              카메라 3D 점의 노름 — 화면 어디 있든 줄자와 같다. TF 없이 나간다 (TS-U05)
   target/paired     Bool                     재식별 게이트 통과 여부 (바뀔 때 + 1 Hz)     → follow_target 추종 허가,
   target/worker_id  String                   짝이 된 작업자 ID (W1/W2, 미확정이면 '')        fleet_manager → PAIRED
-  target/image      Image(bgr8)              모니터링. 좌 RGB+bbox / 우 depth 컬러맵       → rqt_image_view
+  target/image/compressed  CompressedImage(jpeg)  모니터링. 좌 RGB+bbox / 우 depth 컬러맵 → rqt_image_view
+                                             raw 는 내지 않는다 — 2.97 MB×9 Hz=214 Mbit/s 라 Wi-Fi 를 막는다 (I-016 교훈)
 
 ■ "대상" 이 누구인가
   서술자·미션이 아직 없으면(S1~S3 전)  → 보이는 작업자 중 확신도 최고. paired 는 False (단독 시험용 동작)
@@ -86,7 +87,7 @@ MODEL_PATH = os.path.join(get_package_share_directory('mro_perception'), 'models
 
 # ── 토픽 (계약 interfaces.md 6절) ─────────────────────────────────────────────────────────────────────
 POINT_TOPIC = 'target/map_point'     # 대상 위치(map). 거리 품질 게이트를 통과한 검출만. → follow_target
-IMAGE_TOPIC = 'target/image'         # 모니터링 오버레이. 좌 RGB+bbox, 우 depth 컬러맵
+IMAGE_TOPIC = 'target/image/compressed'   # 모니터링 오버레이 JPEG. raw 로 내면 다른 PC 의 rqt 가 Wi-Fi 를 막는다
 VISIBLE_TOPIC = 'target/visible'     # 매 프레임 True/False. 거리 품질과 무관 → kpi_logger 가 Lost(1→0) 를 센다
 DISTANCE_TOPIC = 'target/distance'   # 대상까지 직선거리(m). AC-05 의 기준값(FR-29) → kpi_logger. 품질 통과분만
 PAIRED_TOPIC = 'target/paired'       # 재식별 게이트 통과 여부 → follow_target(추종 허가), fleet_manager(PAIRED 전이)
@@ -106,6 +107,7 @@ DESCRIPTOR_FRAMES = 10       # 지문 평균 창. 웹캠1 의 DESCRIPTOR_FRAMES 
 PAIR_ON_S = 1.0              # 이 시간 연속 통과해야 paired=True (웹캠1 register_s 와 같은 발상)
 PAIR_OFF_S = 3.0             # 이 시간 연속 실패·미검출이면 paired=False. 짧은 가림에 짝이 풀리지 않게 [팀 확정]
 PUBLISH_HZ = 1.0             # paired·worker_id 재발행 주기. 늦게 켜진 노드도 받게 한다
+JPEG_QUALITY = 80            # 모니터 영상 압축 품질. 웹캠 노드와 같은 값 (webcam.yaml jpeg_quality)
 DIAG_LOG_S = 1.0             # 계측 로그 주기(초). 0 이면 끔. 렉 원인 분리용 — 처리 프레임 나이·루프/콜백/처리 속도
 
 # ── 거리 측정 (파라미터 기본값) ──────────────────────────────────────────────────────────────────────
@@ -165,6 +167,7 @@ class AmrDetection(Node):
         self.declare_parameter('sync_slop_s', SYNC_SLOP_S)
         self.declare_parameter('show_window', SHOW_WINDOW)
         self.declare_parameter('diag_log_s', DIAG_LOG_S)
+        self.declare_parameter('jpeg_quality', JPEG_QUALITY)
         p = lambda k: self.get_parameter(k).value  # noqa: E731
         self.detect_conf = float(p('detect_conf'))
         self.max_core_gap_mm = float(p('max_core_gap_mm'))
@@ -172,6 +175,7 @@ class AmrDetection(Node):
         self.show_window = bool(p('show_window'))
         # 계측 — 렉이 '입력이 늦게 오는 것'인지 '노드가 못 따라가는 것'인지 가른다 (README 7절)
         self.diag_log_s = float(p('diag_log_s'))
+        self.jpeg_quality = int(p('jpeg_quality'))
         self.diag = dict(t0=time.monotonic(), loops=0, rgb_cb=0, depth_cb=0, synced=0, processed=0,
                          age_sum=0.0, age_max=0.0, proc_ms_sum=0.0, proc_ms_max=0.0, tf_cb=0)
 
@@ -213,7 +217,7 @@ class AmrDetection(Node):
 
         # 출력
         self.pub_point = self.create_publisher(PointStamped, POINT_TOPIC, 1)
-        self.pub_image = self.create_publisher(Image, IMAGE_TOPIC, 1)
+        self.pub_image = self.create_publisher(CompressedImage, IMAGE_TOPIC, 1)
         self.pub_visible = self.create_publisher(Bool, VISIBLE_TOPIC, 1)
         self.pub_distance = self.create_publisher(Float32, DISTANCE_TOPIC, 10)   # p95 표본이라 큐를 넉넉히
         self.pub_paired = self.create_publisher(Bool, PAIRED_TOPIC, 10)
@@ -374,7 +378,15 @@ class AmrDetection(Node):
         frame = np.hstack((vis, colorize_depth(depth)))
         cv2.rectangle(frame, (0, 0), (frame.shape[1], 26), (0, 0, 0), -1)
         cv2.putText(frame, label, (8, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
-        self.pub_image.publish(self.bridge.cv2_to_imgmsg(frame, encoding='bgr8'))
+        # JPEG 로 압축해 발행 (16 ms, 0.7 MB). raw Image 3 MB 는 같은 PC 안에서만 감당된다
+        ok, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])
+        if ok:
+            msg = CompressedImage()
+            msg.header.stamp = stamp                          # 원본 프레임 시각 — ros2 topic delay 로 지연을 잴 수 있게
+            msg.header.frame_id = frame_id
+            msg.format = 'jpeg'
+            msg.data = buf.tobytes()
+            self.pub_image.publish(msg)
         if self.show_window:
             cv2.imshow('AMR Detection', frame)
         ms = (time.perf_counter() - t_proc) * 1000

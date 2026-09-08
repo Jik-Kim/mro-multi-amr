@@ -13,4 +13,5 @@
     pair_on_s: 1.0             # 이 시간 연속 통과해야 paired=True (웹캠1 register_s 와 같은 발상)
     pair_off_s: 3.0            # 이 시간 연속 실패·미검출이면 paired=False [팀 확정 필요]
     publish_hz: 1.0            # target/paired · target/worker_id 재발행 주기
+    jpeg_quality: 80           # target/image/compressed 품질. 웹캠 노드와 같은 값
     marker_size_m: 0.10

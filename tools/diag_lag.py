@@ -26,7 +26,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rcl_interfaces.msg import Log
-from sensor_msgs.msg import CompressedImage, Image, LaserScan
+from sensor_msgs.msg import CompressedImage, LaserScan
 from std_msgs.msg import Bool
 from tf2_msgs.msg import TFMessage
 
@@ -71,7 +71,7 @@ class Diag(Node):
         # /scan 은 RPi 가 stamp 를 찍고 실제 지연이 수십 ms 뿐 — 카메라 지연과 같은 값이면 시계 어긋남이다
         self.create_subscription(LaserScan, f'{self.ns}/scan', lambda m: self._img('scan', m, 0), qos)
         self.create_subscription(Bool, f'{self.ns}/target/visible', lambda m: self._cnt('visible', m, 1), qos)
-        self.create_subscription(Image, f'{self.ns}/target/image',
+        self.create_subscription(CompressedImage, f'{self.ns}/target/image/compressed',
                                  lambda m: self._img('out_image', m, len(m.data)), qos)
         self.create_subscription(Log, '/rosout', self._rosout, 10)
 
@@ -142,7 +142,7 @@ def main():
         print('\n=== 결과 ===')
         print(f"{'토픽':<22}{'Hz':>7}{'MB/s':>8}   stamp→지금 지연")
         for k, label in (('rgb', '입력 rgb(jpeg)'), ('depth', '입력 depth(png)'), ('scan', '/scan (시계 기준)'), ('tf', '/tf'),
-                         ('visible', '노드 처리(visible)'), ('out_image', '출력 target/image')):
+                         ('visible', '노드 처리(visible)'), ('out_image', '출력 target/image(jpeg)')):
             print(f'{label:<22}{n[k] / dt:>7.1f}{b[k] / dt / 1e6:>8.2f}   {stats(d[k]) if k in d else ""}')
         print('\n노드 [diag] 로그 (최근 3줄):')
         for line in node.diag_lines[-3:] or ['  (없음 — 노드가 이 빌드가 아니거나 diag_log_s=0)']:
@@ -177,7 +177,7 @@ def main():
             else:
                 print(f'노드는 입력을 따라간다 — 입력 {rgb_hz:.1f} Hz, 처리 {vis_hz:.1f} Hz. '
                       f'그래도 늦어 보이면 [diag] age 를 본다')
-            if out_mb > 5:
+            if out_mb > 12:
                 print(f'④ 출력 target/image {out_mb:.1f} MB/s ({out_mb * 8:.0f} Mbit/s) — rqt 를 다른 PC 에서 보면 Wi-Fi 포화. '
                       f'rqt 끄고 다시 재보면 갈린다')
         node.destroy_node()

@@ -32,7 +32,7 @@ ros2 topic echo /robot3/target/visible      # 매 프레임 True/False
 ros2 topic echo /robot3/target/distance     # 대상까지 직선거리 m — 거리 품질 게이트 통과분만
 ros2 topic echo /robot3/target/paired       # 재식별 게이트 통과 여부 (바뀔 때 + 1 Hz)
 ros2 topic echo /robot3/target/worker_id    # 짝이 된 W1/W2. 미확정이면 ''
-ros2 run rqt_image_view rqt_image_view /robot3/target/image     # 오버레이 (창 대신 이걸로 본다)
+ros2 run rqt_image_view rqt_image_view /robot3/target/image/compressed   # 오버레이 JPEG (창 대신 이걸로 본다)
 ```
 
 오버레이 읽는 법 — 좌 RGB, 우 depth 컬러맵, 위 검은 띠가 상태.
@@ -134,7 +134,7 @@ python3 tools/diag_lag.py --ns /robot3 --seconds 10     # 입력·tf·처리·�
 ros2 topic hz    /robot3/oakd/rgb/image_raw/compressed     # 입력이 몇 Hz 로 도착하나
 ros2 topic delay /robot3/oakd/rgb/image_raw/compressed     # 입력이 찍힌 뒤 도착까지 (RPi→Wi-Fi 지연)
 ros2 topic hz    /robot3/tf                                # tf 가 초당 몇 개 오나
-ros2 topic bw    /robot3/target/image                      # 우리가 내보내는 모니터 영상 대역폭
+ros2 topic bw    /robot3/target/image/compressed           # 모니터 영상 대역폭 (JPEG ≈ 6 MB/s. raw 였으면 27)
 nvidia-smi                                                 # YOLO 가 GPU 를 쓰나 (python 프로세스가 보여야)
 ```
 
@@ -146,6 +146,6 @@ nvidia-smi                                                 # YOLO 가 GPU 를 �
 | `cb rgb` ≪ `topic hz` 입력 | **콜백이 굶음** — 노드가 메시지를 못 꺼냄 | `tf` 콜백 수가 높으면 TF 리스너를 별도 스레드로(`spin_thread=True`) |
 | `age` 큰데 `topic delay` 도 큼 | **입력이 늦게 옴** — RPi·Wi-Fi | 로봇 Wi-Fi, RPi 부하. 단 `/scan` 지연도 같은 값이면 **시계 어긋남**(지연 아님) |
 | `proc max` 가 **1000·2000 ms** | **TF 대기 블로킹** — `to_map` 이 실행기를 세움 | 9/8 수정(`timeout=0`)이 든 빌드인지. 탐지될 때만 렉이 나는 게 지문 |
-| 노드 `age` 는 작은데 rqt 만 늦음 | **출력 대역폭** — raw 2.97 MB/프레임 = 214 Mbit/s | rqt 를 다른 PC 에서 보고 있으면 Wi-Fi 포화. `bw` 확인, rqt 끄고 `age` 재확인 |
+| 노드 `age` 는 작은데 rqt 만 늦음 | **출력 대역폭** — JPEG 로 ≈ 6 MB/s (raw 였으면 27, 9/8 압축으로 전환) | rqt 를 다른 PC 에서 보면 그래도 Wi-Fi 부담. `bw` 확인, rqt 끄고 `age` 재확인 |
 
 한 번에 하나씩 끄면서 본다: ① rqt 끄기 → ② `show_window:=false` → ③ 그래도 `age` 크면 `cb` 와 `topic hz` 비교.
