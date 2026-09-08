@@ -27,7 +27,8 @@
     #   footprint 밖으로 쓸고 가는 폭은 내접 0.175 / 외접 0.189 라 1.4 cm 뿐이다 (워치독과 같은 근거)
     aruco_search_enable: true
     aruco_search_step_deg: 15.0   # 정지점 간격. **카메라 수평 FOV 보다 확실히 작아야** 사이로 마커가 빠지지 않는다.
-                                  #   OAK-D 는 704x704 정사각 crop 이라 유효 FOV 가 30~45° 로 추정된다 — camera_info 로 확정할 것
+                                  #   robot3 실측 (9/8, camera_info): fx 566.7 -> 1007.4 (x1.7778 보정), 704 px 정사각 crop
+                                  #   -> 수평 FOV = 2*atan(704/(2*1007.4)) = 38.5°. 15° 면 인접 정지점이 23.5° 겹친다
     aruco_search_max_deg: 60.0    # ±이 각까지 훑는다. 방위가 이보다 틀렸으면 마커가 아니라 측위가 깨진 것이고,
                                   #   더 돌면 옆 베이 마커를 볼 위험이 생긴다
     aruco_search_dwell_s: 0.8     # 정지점마다 확인하는 시간. 검출기 약 10 Hz 라 8프레임, aruco_valid_s 1.0 s 안이다
