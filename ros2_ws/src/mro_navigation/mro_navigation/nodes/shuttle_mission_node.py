@@ -223,17 +223,25 @@ class ShuttleMission(Node):
         self.declare_parameter('bay_align_max_iter', 2)
         self.declare_parameter('bay_align_tol_xy_m', 0.05)
         self.declare_parameter('bay_align_tol_yaw_deg', 5.0)
+        # 이보다 작은 회전은 **명령하지 않는다.** Nav2 의 Spin 은 min_rotational_vel 0.4 rad/s ·
+        #   10 Hz 라 한 사이클에 최소 2.3° 를 돌고 그만큼 지나친다 — 0.4° 를 시키면 6배가
+        #   실행된다 (9/8 실측). 수렴 판정(tol_yaw)과 같은 값으로 두어야 앞뒤가 맞는다
+        self.declare_parameter('bay_align_min_turn_deg', 5.0)
         self.declare_parameter('bay_align_samples', 5)        # 중앙값을 낼 표본 수
         self.declare_parameter('bay_align_sample_s', 2.0)     # 표본을 모으는 상한
         # 한 번에 움직일 상한. **접근 거리 전체가 여기 들어온다** — 잔차 보정만 하던 때보다 커야
         #   한다 (waypoint 가 마커에서 1.2 m 면 보정이 0.7 m 다). 넘으면 측정을 의심하고 포기한다
         self.declare_parameter('bay_align_max_step_m', 1.0)
+        # 체류 뒤 칸 밖을 향해 제자리에서 도는 각. 0 이면 끈다 (turn_out_of_bay 설명 참조)
+        self.declare_parameter('bay_exit_turn_deg', 180.0)
         self.declare_parameter('bay_align_speed_mps', 0.10)   # DriveOnHeading 속도
         self.declare_parameter('bay_align_timeout_s', 20)     # Spin·DriveOnHeading time_allowance
-        # 마커 자세(yaw)로 각도를 잡을지. **9/8 실주행에서 켜기로 결정 (실험값, 표본 1회)** —
-        #   마커 법선이 회전량 +10.44° 를 0.3° 오차로 따라왔고, 반대로 [측량] 기준은 이미 거의
-        #   정면이던 로봇을 8.3° 틀어지게 만들었다. 두 해 뒤집힘은 아래 게이트가 막는다.
-        self.declare_parameter('bay_align_use_marker_yaw', True)
+        # 마커 자세(yaw)로 각도를 잡을지. **9/8 저녁에 켜 봤다가 되돌렸다.**
+        #   T11 [측량] +1.8° → −8.3° · T12 [마커] +8.3° → +16.4° → −14.1°. **둘 다 나빠졌다** —
+        #   기준의 문제가 아니라 회전 분해능과 루프의 문제였다(아래 bay_align_min_turn_deg).
+        #   T12 에서는 검출기 기운각도 9→17→22° 로 튀어 인지가 경고한 두 해 문제가 실제로
+        #   관측됐다. 루프를 고친 뒤에 다시 시험할 것.
+        self.declare_parameter('bay_align_use_marker_yaw', False)
         self.declare_parameter('bay_align_yaw_gate_deg', 25.0)  # 측량값과 이보다 어긋나면 두 해 뒤집힘
 
         self.arena = self._load_arena(self.p('arena_yaml'))
@@ -558,6 +566,7 @@ class ShuttleMission(Node):
             self.confirm_aruco(bay)
             self.approach_and_align(bay)
             self.dwell()
+            self.turn_out_of_bay()   # 토큰보다 먼저 — 회전에 쓰는 몇 초가 60 s 강제 회수를 깎지 않게
             self.acquire_p1()
 
             self.set_status('SHUTTLE')
@@ -913,6 +922,16 @@ class ShuttleMission(Node):
         if result != 'SUCCEEDED':
             raise MissionAbort(f'{label} 실패: {result}')
 
+    def turn_worth_doing(self, angle):
+        """분해능보다 작은 회전은 명령하지 않는다 — 명령하면 되레 나빠진다.
+
+        Nav2 의 Spin 은 `min_rotational_vel` 0.4 rad/s 를 밑돌지 않고 제어 주기가 10 Hz 라
+        **한 사이클에 최소 0.04 rad = 2.3° 를 돌고, 정지 판정도 사이클 단위라 그만큼 지나친다.**
+        9/8 실주행에서 0.37° 를 명령했는데 실제로는 그 몇 배가 실행됐고, 그 오차가 매 회전마다
+        쌓여 법선 오차가 8.3° → 16.4° → −14.1° 로 **발산**했다. 작은 각은 그냥 두는 편이 낫다.
+        """
+        return abs(angle) >= math.radians(self.positive_parameter('bay_align_min_turn_deg'))
+
     def relative_move(self, tx, ty, phi, label):
         """회전–직진–회전. 차동구동이라 옆으로 못 가고, 직진은 항상 전진이다 (후진 금지)."""
         speed = self.positive_parameter('bay_align_speed_mps')
@@ -920,14 +939,52 @@ class ShuttleMission(Node):
         step = math.hypot(tx, ty)
         turn1 = 0.0
         if step >= 1e-3:
-            turn1 = math.atan2(ty, tx)             # 이동 방향을 정면으로 — 그래야 전진만으로 간다
-            if abs(turn1) >= 1e-3:
+            heading = math.atan2(ty, tx)           # 이동 방향을 정면으로 — 그래야 전진만으로 간다
+            if self.turn_worth_doing(heading):
+                turn1 = heading
                 self.run_behavior(lambda: self.navigator.spin(turn1, allow), f'{label} 회전①')
+            else:
+                # 안 돌았다. 지금 방위 그대로 가면 옆으로 step·sin(heading) 만큼 어긋나는데,
+                #   불감대(5°)에서 그 값은 수렴 허용치와 같은 자리수다. 회전 오차보다 낫다
+                self.get_logger().info(
+                    f'{label} 회전① 생략 — {math.degrees(heading):+.1f}° 는 Spin 분해능 미만')
             self.run_behavior(
                 lambda: self.navigator.driveOnHeading(step, speed, allow), f'{label} 전진')
         turn2 = wrap_pi(phi - turn1)
-        if abs(turn2) >= 1e-3:
+        if self.turn_worth_doing(turn2):
             self.run_behavior(lambda: self.navigator.spin(turn2, allow), f'{label} 회전②')
+        elif abs(turn2) > 1e-6:
+            self.get_logger().info(
+                f'{label} 회전② 생략 — {math.degrees(turn2):+.1f}° 는 Spin 분해능 미만')
+
+    def turn_out_of_bay(self):
+        """체류 뒤 제자리에서 돌아 칸 밖을 향한다 — Nav2 가 좁은 칸에서 방향을 못 바꾼다.
+
+        **실주행 2회 연속으로 여기서 죽었다** (마커까지 0.6 m·0.7 m 둘 다). 체류를 마치고
+        대기공간 목표를 받은 Nav2 가 90 초 넘게 진전을 못 내고 T_lim 을 넘겼다. 두 번째
+        회차에는 워치독 estop 조차 없었다 — 장애물이 가까워서가 아니라 **경로를 못 푼 것**이다.
+
+        로봇이 **벽을 마주 본 채** 출발 명령을 받기 때문이다. 후진이 금지돼 있어(계약 2절)
+        좁은 칸 안에서 스스로 180° 를 돌아야 하는데 DWB 가 그걸 풀지 못한다.
+
+        그래서 우리가 대신 돌려 준다. 돌고 나면 Nav2 는 앞으로 나오기만 하면 된다.
+          · 제자리 회전이 footprint 밖으로 쓸고 가는 폭은 1.4 cm 다 (safety_watchdog 과 같은
+            근거) — 칸 안에서도 안전하고, '제자리 회전 뒤 전진' 은 계약이 정한 탈출 방식이다.
+          · **AMCL 을 쓰지 않는다.** 목표 방위를 계산하지 않고 그냥 뒤로 돈다 — 칸 밖은 무조건
+            로봇 뒤쪽이고, 그 판단에 측위는 필요 없다.
+          · 제자리 회전이라 위치가 바뀌지 않으므로 방법 B 의 전제(획득 시점이 P1 폴리곤 밖)를
+            건드리지 않는다.
+        """
+        turn = math.radians(float(self.p('bay_exit_turn_deg')))
+        if abs(turn) < 1e-6:
+            self.get_logger().info('탈출 회전 꺼짐 (bay_exit_turn_deg=0)')
+            return
+        if not self.behavior_server_ready():
+            raise MissionAbort('behavior_server 의 spin 이 없다 — Nav2(T3) 를 확인할 것')
+        allow = max(1, int(self.p('bay_align_timeout_s')))
+        self.get_logger().info(
+            f'칸 밖을 향해 제자리 {math.degrees(turn):.0f}° 회전 — Nav2 는 앞으로 나오기만 하면 된다')
+        self.run_behavior(lambda: self.navigator.spin(wrap_pi(turn), allow), '탈출 회전')
 
     def approach_target(self):
         """접근을 끝낼 마커까지의 거리를 검증해 돌려준다.

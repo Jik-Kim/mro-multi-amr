@@ -16,6 +16,10 @@
     미션이 없으므로 FAILED 를 내지 않는다. Nav2 가 active 가 아니면 T_lim 을 태우지 않고 곧장 포기
   · 마커 재탐지 (9/8): 베이에서 못 보면 **제자리 회전만으로** 좌우 교대로 훑는다. 병진하지
     않는다 — 위치를 못 믿는 상태라 어디로 갈지 모른다. 다 훑고도 없으면 오도착으로 포기한다
+  · 탈출 회전 (9/8): 체류 뒤 **제자리에서 돌아 칸 밖을 향한 다음** 대기공간 목표를 준다.
+    벽을 마주 본 채 출발시키면 Nav2 가 좁은 칸에서 방향을 못 바꿔 실주행 2회 연속 T_lim 이었다
+  · 회전 불감대 (9/8): Spin 분해능(약 2.3°)보다 작은 회전은 명령하지 않는다. 명령하면 오차만
+    쌓여 정렬 루프가 발산한다 (실측 8.3° → 16.4° → −14.1°)
   · 베이 접근·정렬 (9/8, 옛 '창고 안쪽 0.3 m 전진' 대체): 마커에서 bay_marker_range_m 인 자리로
     회전–직진–회전으로 간다. aruco/pose 가 없으면 **목적지를 모르므로 포기**하고, 이동량이
     상한을 넘어도 포기한다. Nav2 목표가 아니라 Spin·DriveOnHeading 이다 — SimpleGoalChecker
@@ -260,6 +264,20 @@ class ScriptedPoses(list):
         self.extend(self.script)
 
 
+EXIT_TURN = ('spin', round(math.pi, 3))    # 체류 뒤 칸 밖을 향하는 제자리 180° 회전
+
+
+def approach_moves(node):
+    """탈출 회전을 뺀 '접근 구간' 의 상대 이동만 추린다.
+
+    탈출 회전은 체류 뒤 항상 마지막에 한 번 붙는다 — 그것까지 매 시험이 세면 접근 자체를
+    보는 검증이 흐려진다. 대신 여기서 그 존재를 한 번에 확인한다.
+    """
+    moves = node.navigator.moves()
+    assert moves and moves[-1] == EXIT_TURN, f'탈출 회전이 마지막에 없다: {moves}'
+    return moves[:-1]
+
+
 def marker_frames(node, fwd, lat, count=5, flip_normal=False):
     """마커가 base_link 에서 (fwd, lat) 에 정면으로 보이는 aruco/pose 를 대본으로 넣는다.
 
@@ -329,7 +347,7 @@ def test_normal_mission(ros):
     # 베이 → 대기공간. 접근은 Nav2 목표가 아니라 상대 이동이고, 이 시험은 마커를 안 주므로
     #   접근 단계를 끈다 (마커가 없으면 목적지를 모른다 → 포기가 정상이다)
     assert node.navigator.goals() == [('goto', -0.78, 0.138), ('goto', -0.998, 0.937)]
-    assert node.navigator.moves() == []
+    assert approach_moves(node) == []          # 접근은 껐고, 탈출 회전만 남는다
     assert ('initpose', 0.019, -0.795) in node.navigator.calls
     assert (node.mission, node.t0) == (None, None)
     node.destroy_node()
@@ -365,7 +383,7 @@ def test_bay_approach_drives_to_target_range(ros):
     assert node.p('bay_marker_range_m') == 0.7
     node.run_mission(assigned('A'))
     # 정면이라 첫 회전·마지막 회전이 0 이고 직진만 남는다
-    assert node.navigator.moves() == [('drive', 0.3)]
+    assert approach_moves(node) == [('drive', 0.3)]
     assert node.status_log[-2:] == ['WAITING', 'READY']
     node.destroy_node()
 
@@ -385,7 +403,7 @@ def test_bay_approach_heads_straight_at_the_marker(ros):
     fresh_marker(node)
     marker_frames(node, fwd=1.0, lat=0.12)
     node.run_mission(assigned('A'))
-    moves = node.navigator.moves()
+    moves = approach_moves(node)
     assert [m[0] for m in moves] == ['spin', 'drive', 'spin']
     turn1, step, turn2 = moves[0][1], moves[1][1], moves[2][1]
     bearing = math.atan2(0.12, 1.0)
@@ -404,12 +422,13 @@ def test_bay_approach_does_not_sidestep_when_heading_is_off(ros):
     이것이 9/8 사고의 재발 방지선이다. 옛 방식이면 이 조건에서 진행 방위가 마커 방위와
     10° 넘게 벌어졌다.
     """
-    node = make_node(bay_align_enable=True, bay_align_max_iter=1)
+    # 불감대를 낮춰 **명령된 방향 자체**를 본다. 불감대 동작은 별도 시험이 맡는다
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1, bay_align_min_turn_deg=1.0)
     stub_token(node, [True])
     fresh_marker(node)
     marker_frames(node, fwd=1.170, lat=-0.098)           # 9/8 실측값
     node.run_mission(assigned('A'))
-    moves = node.navigator.moves()
+    moves = approach_moves(node)
     bearing = math.atan2(-0.098, 1.170)                   # -4.79°
     assert moves[0][0] == 'spin'
     assert moves[0][1] == pytest.approx(bearing, abs=1e-3)
@@ -427,8 +446,55 @@ def test_bay_approach_stops_when_already_at_target(ros):
     fresh_marker(node)
     marker_frames(node, fwd=1.0, lat=0.0)
     node.run_mission(assigned('A'))
+    assert approach_moves(node) == []
+    assert node.status_log[-2:] == ['WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_exit_turn_happens_before_leaving_the_bay(ros):
+    """체류 뒤 **제자리 180° 회전**을 하고 나서 대기공간 목표를 준다.
+
+    벽을 마주 본 채 출발시키면 Nav2 가 좁은 칸에서 방향을 못 바꾼다 — 실주행 2회 연속으로
+    (마커까지 0.6 m·0.7 m 둘 다) 여기서 90 초 넘게 진전을 못 내고 T_lim 을 넘겼다.
+    회전은 **토큰 획득보다 먼저** 해야 60 s 강제 회수 예산을 회전에 쓰지 않는다.
+    """
+    node = make_node()
+    stub_token(node, [True])
+    fresh_marker(node)
+    node.run_mission(assigned('A', 'M9'))
+    moves = node.navigator.moves()
+    assert moves[-1] == EXIT_TURN
+    # 시점: 베이 목표는 이미 보냈고 대기공간 목표는 아직 안 보낸 사이여야 한다
+    assert node.token_marks == [('acquire', 1), ('release', 2)]
+    assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_exit_turn_can_be_disabled(ros):
+    """bay_exit_turn_deg=0 이면 돌지 않는다 — 옛 동작과 비교할 수 있게 남겨 둔다."""
+    node = make_node(bay_exit_turn_deg=0.0)
+    stub_token(node, [True])
+    fresh_marker(node)
+    node.run_mission(assigned('A'))
     assert node.navigator.moves() == []
     assert node.status_log[-2:] == ['WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_turns_below_spin_resolution_are_not_commanded(ros):
+    """Spin 분해능(약 2.3°)보다 작은 회전은 명령하지 않는다.
+
+    9/8 실주행에서 0.37° 를 명령했다가 실제로는 몇 배가 실행됐고, 그 오차가 매 회전마다
+    쌓여 법선 오차가 8.3° → 16.4° → −14.1° 로 발산했다. 작은 각은 그냥 두는 편이 낫다.
+    """
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1,
+                     bay_align_min_turn_deg=5.0)
+    stub_token(node, [True])
+    fresh_marker(node)
+    marker_frames(node, fwd=1.0, lat=0.02)       # 방위 +1.15° — 불감대 안이다
+    node.run_mission(assigned('A'))
+    moves = approach_moves(node)
+    assert [m[0] for m in moves] == ['drive']    # 회전 없이 직진만
     node.destroy_node()
 
 
@@ -528,7 +594,7 @@ def test_marker_search_is_rotation_only(ros):
     stub_token(node, [True])
     always_wrong_marker(node, marker_id=1)
     node.run_mission(assigned('B', 'M2'))
-    moves = node.navigator.moves()
+    moves = node.navigator.moves()               # 포기한 미션이라 탈출 회전이 없다
     assert moves, '재탐지 회전이 하나도 없다'
     assert {m[0] for m in moves} == {'spin'}     # drive 가 섞이면 안 된다
     assert len(moves) == len(node.search_offsets())
@@ -558,7 +624,7 @@ def test_marker_search_stops_as_soon_as_it_finds(ros):
     node.navigator.spin = spin
     node.run_mission(assigned('A', 'M7'))
     assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
-    assert len(node.navigator.moves()) == 3      # 다 안 훑고 멈춘다
+    assert len(approach_moves(node)) == 3        # 다 안 훑고 멈춘다
     node.destroy_node()
 
 
