@@ -1,4 +1,5 @@
 """ROS 네트워크 없이 FR-13 관제 UI 콜백을 검증한다."""
+import os
 import sys
 import threading
 from types import ModuleType
@@ -21,6 +22,23 @@ from mro_fleet.nodes import control_ui_node
 from mro_fleet.nodes.control_ui_node import ControlUI
 from mro_fleet.nodes.control_ui_node import load_dock_landmarks
 from mro_fleet.nodes.control_ui_node import load_map_config
+
+
+TEMPLATE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), 'templates', 'index.html'
+)
+
+
+def test_dashboard_keeps_existing_control_endpoints():
+    """대시보드가 기존 요청·복귀·명시 페어링 API를 계속 호출하는지 확인한다."""
+    with open(TEMPLATE_PATH, encoding='utf-8') as template_file:
+        html = template_file.read()
+
+    assert "postForm('/request'" in html
+    assert "postForm('/command'" in html
+    assert "postForm('/manual_pair'" in html
+    assert "command:'RETURN'" in html
+    assert "command:'RETURN_ALL'" in html
 
 
 class FakeLogger:
