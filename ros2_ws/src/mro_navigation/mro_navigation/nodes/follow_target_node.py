@@ -12,7 +12,9 @@
      목표가 `max(follow_standoff_m, gap/2)` 라 gap 이 반씩 줄고 하한에서 저절로 끝난다.
      상태는 계약 4절의 두 값으로 낸다: **APPROACH_1 = 중간 목표, APPROACH_2 = 최종 목표**
   4. FOLLOWING — `follow_standoff_m` 를 유지하며 따라간다. **추종거리 채점 구간은 여기뿐이다**
-  5. `lost_s` 안 보이면 주행 취소·제자리 대기 → 8 초면 회전 탐색 → `standby_s` 면 STANDBY
+  5. `lost_s` 안 보이면 주행 취소·제자리 대기 → `research_s` 면 회전 탐색 → `standby_s` 면 STANDBY.
+     **회전 방향은 힌트 > 마지막으로 본 쪽 > 기본 30° 순으로 정한다** — 천장 카메라가 없어도
+     놓치기 직전 위치를 우리가 들고 있으므로 아무 쪽이나 돌지 않는다
   6. 재등장하면 게이트를 다시 통과해야 재개 (계약 3절 재획득)
   7. `mission/finish` 오면 즉시 페어링 해제·goal 취소 → IDLE (**FAILED 가 아니다, 정상 종료**)
 
@@ -70,20 +72,24 @@ STATUS_TOPIC = 'approach/status'
 HINT_TOPIC = '/webcam2/target_hint'   # 전역 이름. BEST_EFFORT 라 sensor_data QoS 로 받아야 온다
 
 # 검출 좌표를 믿기 위한 조건. 실측으로 검증된 값이라 건드리지 않는다
-SETTLE_S = 2.0                # 이동/회전 끝난 뒤 이 시간 지나서 받은 좌표만 신뢰 (AMCL yaw 수렴 대기)
 CONSIST_N = 2                 # 연속 N 개의 검출이
 CONSIST_M = 0.3               # 서로 이 거리(m) 안에 있어야 목표로 인정 (TF 타이밍으로 튄 좌표 제거)
 CONSIST_DT = 0.5              # 검사에 쓰는 검출 사이 최소 간격(s) — 같은 순간 TF 를 공유하지 않게
-SEARCH_WAIT_S = 3.0           # 회전 후 이만큼 기다려도 못 찾으면 다시 회전
-                              #   최소 필요치 = SETTLE_S + CONSIST_DT + 검출 몇 프레임 ≈ 2.7 s
-VISIBLE_WAIT_S = 8.0          # 보이는데 좌표가 계속 걸러지면 이만큼만 기다리고 회전 (화각 63.7°)
 
-SEARCH_ROTATE_DEG = 30.0      # 재탐색 때 한 번에 도는 각도 (부호 = 방향, 힌트가 있으면 힌트가 정한다)
+# 재탐지 시간 넷은 **파라미터**다 (settle_s · research_s · search_wait_s · visible_wait_s).
+#   상수로 두면 실주행 중에 재빌드 없이 못 만진다. 9/9 실주행에서 '놓친 뒤 첫 회전까지 11 s'
+#   가 너무 느리다는 것이 드러나 값을 내리면서 같이 파라미터로 뺐다.
+#   **lost_s 1.0 과 standby_s 30.0 은 SOT 계약값이라 건드리지 않는다.**
+
+# 재탐색 회전 각도는 **파라미터**다 (search_step_deg). 카메라 수평 시야가 실측 38.5° 라
+#   (robot3 9/8: camera_info fx 566.7 × camera_fx_scale 1.7778 = 1007.4, 704 px 정사각 crop
+#   → 2·atan(704/(2·1007.4))) 30° 로 돌면 인접 정지점이 8.5° 만 겹친다. 화면 가장자리는
+#   bbox 가 잘리고 depth 가 흔들려 검출이 약하므로 **실효 시야는 38.5° 보다 좁다** —
+#   그래서 30° 에서는 정지점 사이에 못 보는 구간이 생겼다 (9/9 실주행).
 SEARCH_ROTATE_SPEED = 1.5     # rad/s. Nav2 Spin 은 behavior_server max_rotational_vel(1.0)에 묶이고
                               #   액션 왕복 지연도 있어 cmd_vel 로 직접 돌린다
 SEARCH_ROTATE_ACC = 6.0       # rad/s^2 명령 감속 프로파일 (실제 가감속은 Create 3 가 자체 제한)
 USE_NAV2_SPIN = False         # True 면 Nav2 Spin 사용 (충돌 예측 포함, 대신 느림)
-MAX_SEARCH_TRIES = 12         # 30° × 12 = 한 바퀴
 NAV_TIMEOUT_S = 90.0
 
 FOLLOW_REGOAL_M = 0.35        # 표적이 마지막 목표 기준 이만큼 움직였을 때만 새 목표 (재계획 남발 방지)
@@ -91,7 +97,6 @@ FOLLOW_REGOAL_DT = 1.0        # 새 목표 최소 간격(s)
 FOLLOW_MAX_SPEED = 1.0        # 표적 최대 속도(m/s) 가정 — 이보다 빨리 튄 좌표는 TF 오차로 보고 버림
 FOLLOW_EMA = 0.5             # 표적 좌표 지수평활 (1.0 = 평활 없음, 작을수록 부드럽지만 지연)
 FOLLOW_TOL_M = 0.15          # 표적이 멈춘 뒤 거리 오차가 이보다 크면 한 번 더 보정
-FOLLOW_RESEARCH_S = 8.0      # 이 시간 안 보이면 회전 탐색으로 복귀 (계약에 값이 없어 팀 가정)
 TICK_S = 0.05                # 메인 루프 주기
 
 
@@ -116,6 +121,23 @@ class FollowTarget(Node):
         self.declare_parameter('standby_s', 30.0)           # Lost 가 이만큼 지속되면 STANDBY (SOT 'Standby 30 s')
         self.declare_parameter('approach_skip_m', 1.0)      # 페어링 시 이 거리 안이면 접근 없이 바로 추종
         self.declare_parameter('hint_valid_s', 2.0)         # 계약 4절 '힌트 유효 2 s'
+
+        # ---- 재탐지 시간. 놓친 뒤 첫 회전까지 = research_s + search_wait_s ----
+        #   **lost_s 는 더해지지 않는다** — 같은 시계(마지막으로 본 뒤 지난 시간) 안의
+        #   앞 단계다. lost_s 에 주행을 멈추고, research_s 에 탐색으로 넘어간다.
+        #   9/9 실주행에서 종전 값(8.0 + 3.0 = 11 s)이 너무 느렸다. 아래로 3.5 s 다.
+        #   더 줄이려면 각 값의 바닥을 알아야 한다:
+        #     research_s     사람이 앞을 지나가는 시간이 1~2 s 다. 이보다 짧으면 **잠깐 가린 것만으로
+        #                    로봇이 등을 돌린다** — 작업자가 바로 앞에 있는데 돌아서는 것이 가장 나쁘다
+        #     settle_s       30° 회전이 0.5 s 이고 그 뒤 AMCL 방위가 수렴할 시간. 이보다 짧으면
+        #                    틀린 좌표로 목표를 낸다
+        #     search_wait_s  settle_s + 검출 몇 프레임. 인지가 초당 5~8 장이라 1.5 s 면 8~12 장이다
+        #   빨리 도는 것이 안전해진 이유는 **방향을 알게 됐기 때문**이다 (search_rotate_deg).
+        self.declare_parameter('research_s', 2.0)           # 이 시간 안 보이면 회전 탐색으로
+        self.declare_parameter('settle_s', 1.0)             # 이동·회전 뒤 이 시간 지난 좌표만 신뢰
+        self.declare_parameter('search_wait_s', 1.5)        # 회전 후 이만큼 기다려도 못 찾으면 또 회전
+        self.declare_parameter('visible_wait_s', 3.0)       # 보이는데 좌표가 걸러지면 이만큼만 기다린다
+        self.declare_parameter('search_step_deg', 20.0)     # 재탐색 정지점 간격 (시야 38.5° 보다 작게)
 
         # ---- 구독 ----
         self.create_subscription(Bool, ARRIVED_TOPIC, self.arrived_cb, 1)
@@ -150,6 +172,11 @@ class FollowTarget(Node):
         self.accept_after = 0.0       # 이 시각 이후 수신된 검출만 사용
         self.search_started = 0.0
         self.search_tries = 0
+        # **한 번 정한 회전 방향을 끝까지 지킨다.** last_seen_bearing 은 '지금 보는 방향
+        #   기준' 이라, 그쪽으로 돌고 나면 그 지점이 0° 근처가 되고 조금 지나치면 음수가
+        #   된다 — 매 회차 다시 계산하면 좌우로 왕복한다 (9/9 실주행). 방향을 잠가 두면
+        #   같은 쪽으로 계속 훑어 한 바퀴를 덮는다. 힌트가 오면 그것이 다시 정한다.
+        self.search_dir = None        # +1 반시계 · -1 시계 · None 아직 안 정함
         self.nav_started = None
         self.hint = None              # (x, y, 수신 시각, worker_id)
         self.worker_started = 0.0     # 작업자 찾기 시작 시각 — 못 찾은 시간을 로그에 적으려고
@@ -169,15 +196,34 @@ class FollowTarget(Node):
         self.get_logger().info(
             f'[{self.state}] 대기공간 도착 신호 {self.ns}/{ARRIVED_TOPIC} 를 기다린다 · '
             f'추종거리 {self.p("follow_standoff_m")} m · 최소 이격 {self.p("min_separation_m")} m · '
-            f'Lost {self.p("lost_s")} s · STANDBY {self.p("standby_s")} s')
+            f'Lost {self.p("lost_s")} s · STANDBY {self.p("standby_s")} s · '
+            f'재탐지 {self.p("research_s") + self.p("search_wait_s"):.1f} s '
+            f'(대기 {self.p("research_s")} + 확인 {self.p("search_wait_s")})')
 
     def p(self, name):
         return self.get_parameter(name).value
 
+    def max_search_tries(self):
+        """한 바퀴에 필요한 회전 횟수. 정지점 간격에서 계산한다 (못 박지 않는다)."""
+        return max(1, round(360.0 / max(self.p('search_step_deg'), 1.0)))
+
     def set_state(self, state, msg=''):
+        """상태를 바꾸고 알린다. 값이 실제로 바뀔 때만 발행한다.
+
+        같은 값을 다시 넣는 호출에서도 발행하면, 상태 기계가 어딘가에서 진동할 때
+        그것이 그대로 네트워크 폭주가 된다 (9/9: 772 Hz · 574,501 건). 유지 발행은
+        1 초 타이머가 따로 하므로 관제·기록기가 값을 놓치지 않는다.
+
+        같은 상태로 다시 들어오는 것 자체는 정상이다 (재탐색 회차마다 SEARCHING).
+        그때 이유가 다르면 알아야 하니 로그는 남기되 5 초에 한 번으로 묶는다.
+        """
+        changed = state != self.state
         self.state = state
-        self.pub_status.publish(String(data=state))
-        self.get_logger().info(f'[{state}] {msg}')
+        if changed:
+            self.pub_status.publish(String(data=state))
+            self.get_logger().info(f'[{state}] {msg}')
+        elif msg:
+            self.get_logger().info(f'[{state}] {msg}', throttle_duration_sec=5.0)
 
     # ================= 콜백: 값만 저장한다 =================
     # navigator 를 콜백에서 부르면 단일 스레드가 막혀 다른 토픽이 끊긴다. 실행은 메인 루프가 한다.
@@ -225,14 +271,14 @@ class FollowTarget(Node):
     # ================= 공통 =================
 
     def rearm(self):
-        """이동·회전 직후 호출. 큐에 남은 좌표를 버리고 SETTLE_S 뒤부터 받은 것만 쓴다.
+        """이동·회전 직후 호출. 큐에 남은 좌표를 버리고 settle_s 뒤부터 받은 것만 쓴다.
 
         움직이는 동안 들어온 좌표는 TF 타이밍 때문에 틀려 있다. AMCL 이 수렴할 시간을 준다.
         """
         self.latest = None
         self.recent = []
         self.recent_t = 0.0
-        self.accept_after = time.time() + SETTLE_S
+        self.accept_after = time.time() + self.p('settle_s')
         self.search_started = time.time()
 
     def gate_ok(self):
@@ -257,6 +303,7 @@ class FollowTarget(Node):
         self.start_req = False
         self.approach_final = False
         self.search_tries = 0
+        self.search_dir = None        # 새 사이클이면 방향을 다시 정한다
         self.follow_est = None
         self.follow_goal = None
         self.last_target = None
@@ -265,6 +312,8 @@ class FollowTarget(Node):
         self.circles = 0
         self.gate_warned = 0.0
         self.worker_started = time.time()
+        # 재탐지 시계의 기준. 이 사이클에서 한 번도 못 찾아도 여기서부터 standby_s 를 잰다
+        self.follow_seen = time.time()
         self.rearm()
         self.set_state('SEARCHING', '대기공간 도착 — 작업자를 찾는다 (정차 자세가 이미 작업자 쪽이다)')
 
@@ -338,15 +387,30 @@ class FollowTarget(Node):
                         return
                     self.search_tries = 0
                     return self.on_paired(mx, my)
+                # 인지가 초당 8장을 보내므로 그대로 찍으면 판정 로그가 묻힌다
                 self.get_logger().info(f'좌표 ({tx:.2f},{ty:.2f}) 수신 — '
-                                       f'일관성 확인 중 ({len(self.recent)}/{CONSIST_N})')
+                                       f'일관성 확인 중 ({len(self.recent)}/{CONSIST_N})',
+                                       throttle_duration_sec=2.0)
+
+        # **여기에 STANDBY 판정이 있어야 한다.** 종전에는 step_following 에만 있었는데,
+        #   추종은 research_s 에 무조건 SEARCHING 으로 빠져나오므로 lost 가 standby_s 까지
+        #   자랄 수가 없었다 — standby_s 30 s 가 **닿을 수 없는 값**이었다. 그래서 관제는
+        #   사람이 필요하다는 것을 영원히 모르고, 재획득 실패가 한 건도 집계되지 않았다
+        #   (계약 3절 '재획득 실패면 STANDBY' · 9절 'STANDBY 로 끝난 건은 실패로 센다').
+        #   기준은 **마지막으로 본 시각(follow_seen)** 이다. 사이클 시작 시각을 쓰면
+        #   30 초 넘게 잘 따라간 뒤 놓친 순간 곧바로 STANDBY 가 되어 버린다 — 오래 따라간
+        #   것이 벌이 되면 안 된다. begin_cycle 이 follow_seen 을 지금으로 놓으므로
+        #   '한 번도 못 찾은 사이클' 도 30 초를 기준으로 재진다.
+        unseen = time.time() - self.follow_seen
+        if self.follow_seen and unseen > self.p('standby_s'):
+            return self.enter_standby(unseen)
 
         waited = time.time() - self.search_started
         visible = time.time() - self.visible_at < 1.0
-        if waited < SEARCH_WAIT_S or (visible and waited < VISIBLE_WAIT_S):
+        if waited < self.p('search_wait_s') or (visible and waited < self.p('visible_wait_s')):
             return                                  # 보이면 회전하지 말고 좋은 좌표를 기다린다
         self.search_tries += 1
-        if self.search_tries > MAX_SEARCH_TRIES:
+        if self.search_tries > self.max_search_tries():
             self.search_tries = 0                   # 계속 돈다 — FAILED 로 죽지 않는다
             self.circles += 1
             self.get_logger().error(
@@ -355,7 +419,7 @@ class FollowTarget(Node):
                 f'확인할 것: 작업자가 시야에 있는가 · 1 m 안인가 · '
                 f'인지 노드가 target/map_point 를 내고 있는가. 탐색은 계속한다')
         deg = self.search_rotate_deg()
-        self.rotate_in_place(deg)
+        self.rotate_in_place(deg, stop_on_sight=True)
         self.rearm()
 
     def on_paired(self, tx, ty):
@@ -367,7 +431,8 @@ class FollowTarget(Node):
         """
         rob = robot_xy(self.tf_buffer, self.get_logger())
         if rob is None:
-            self.get_logger().warn('로봇 위치 TF 없음 — 다음 주기에 다시')
+            self.get_logger().warn('로봇 위치 TF 없음 — 다음 주기에 다시',
+                                   throttle_duration_sec=3.0)
             return
         gap = math.hypot(tx - rob[0], ty - rob[1])
         if gap <= self.p('approach_skip_m'):
@@ -404,17 +469,65 @@ class FollowTarget(Node):
         diff = math.atan2(math.sin(want - yaw), math.cos(want - yaw))
         return math.degrees(diff)
 
+    def last_seen_bearing(self):
+        """마지막으로 본 작업자가 로봇 기준 몇 도였나. 모르면 None.
+
+        **천장 카메라가 없어도 방향을 알 수 있다.** 놓치기 직전에 작업자가 어디 있었는지는
+        우리가 이미 들고 있다 — 그 방향이 '아무 쪽이나 왼쪽으로' 보다 훨씬 나은 첫 추측이다.
+        빠져나간 쪽으로 먼저 돌면 대개 한 번에 다시 잡힌다.
+
+        마지막 목표 위치(follow_goal)와 마지막 추정 위치(follow_est)가 둘 다 있으면
+        **그 사이 이동 방향을 더해** 시야 밖으로 나간 쪽을 가리킨다 — 작업자가 오른쪽으로
+        걸어 나갔다면 마지막으로 본 자리보다 더 오른쪽에 있다.
+        """
+        if self.follow_est is None:
+            return None
+        rob = robot_xy(self.tf_buffer)
+        yaw = self.map_yaw()
+        if rob is None or yaw is None:
+            return None
+        ex, ey = self.follow_est
+        if self.follow_goal is not None:
+            gx, gy = self.follow_goal
+            # 이동분을 한 번 더 외삽한다. 크게 잡으면 지나치므로 마지막 이동량만큼만
+            ex, ey = ex + (ex - gx), ey + (ey - gy)
+        want = math.atan2(ey - rob[1], ex - rob[0])
+        diff = math.atan2(math.sin(want - yaw), math.cos(want - yaw))
+        return math.degrees(diff)
+
     def search_rotate_deg(self):
-        """돌 각도. 힌트가 있으면 그 방향으로 한 번에, 없으면 기존 30° 씩."""
+        """돌 각도. 힌트 > 잠근 방향 > 마지막으로 본 쪽 순으로 정한다.
+
+        **한 번 정한 방향은 끝까지 지킨다.** 매 회차 `last_seen_bearing()` 을 다시
+        계산하면 좌우로 왕복한다 — 그 값은 '지금 보는 방향 기준' 이라, 그쪽으로 돌고
+        나면 목표 지점이 0° 근처가 되고 조금 지나치면 부호가 뒤집힌다. 실제로 9/9
+        실주행에서 +30° 를 돈 뒤 −30° 로 되돌아왔다. **한 방향으로 계속 훑으면 한
+        바퀴에 반드시 덮는다** (정지점 간격 × 횟수 = 360°).
+
+        힌트는 예외다 — 천장 카메라가 **지금** 보고 있는 정보이므로 방향을 다시 정한다.
+        """
+        step = self.p('search_step_deg')
         b = self.hint_bearing()
-        if b is None:
-            self.get_logger().info(f'작업자 없음 — {SEARCH_ROTATE_DEG:.0f}° 회전 '
-                                   f'({self.search_tries}/{MAX_SEARCH_TRIES}) · 힌트 없음')
-            return SEARCH_ROTATE_DEG
-        # 부호가 방향이다 — 양수 반시계, 음수 시계. 너무 작은 각은 30° 로 올려 실제로 시야가 바뀌게
-        deg = b if abs(b) >= SEARCH_ROTATE_DEG else math.copysign(SEARCH_ROTATE_DEG, b or 1.0)
-        self.get_logger().info(f'힌트 방위 {b:+.0f}° → {deg:+.0f}° 회전')
-        return deg
+        if b is not None:
+            self.search_dir = 1.0 if b >= 0 else -1.0
+            deg = b if abs(b) >= step else math.copysign(step, b or 1.0)
+            self.get_logger().info(f'힌트 방위 {b:+.0f}° → {deg:+.0f}° 회전 '
+                                   f'({self.search_tries}/{self.max_search_tries()})')
+            return deg
+
+        if self.search_dir is None:
+            seen = self.last_seen_bearing()
+            self.search_dir = (1.0 if seen >= 0 else -1.0) if seen is not None else 1.0
+            why = (f'마지막으로 본 쪽 {seen:+.0f}°' if seen is not None
+                   else '마지막 위치도 없어 반시계부터')
+            self.get_logger().info(
+                f'작업자 없음 — {why} → {self.search_dir * step:+.0f}° 씩 한 방향으로 훑는다 '
+                f'(한 바퀴 {self.max_search_tries()}회) · 천장 카메라 힌트 없음')
+        else:
+            self.get_logger().info(
+                f'작업자 없음 — {self.search_dir * step:+.0f}° 회전 '
+                f'({self.search_tries}/{self.max_search_tries()}) · 같은 방향 유지')
+        return self.search_dir * step
 
     def map_yaw(self):
         """map→base_link yaw. 힌트는 map 좌표이므로 비교도 map 프레임에서 해야 한다."""
@@ -468,17 +581,28 @@ class FollowTarget(Node):
         q = t.transform.rotation
         return math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
 
-    def rotate_in_place(self, deg):
+    def rotate_in_place(self, deg, stop_on_sight=False):
         """제자리 회전. 병진이 없고 Nav2 목표를 수행하지 않는 동안에만 부른다.
 
         블로킹이라 도는 동안 상태기계가 멈춘다. 그래서 estop·mission/finish 가 들어오면
         즉시 끊고 나온다 — finish 는 1 초 안에 멈춰야 한다 (계약 4절).
+
+        `stop_on_sight` 는 **재탐색 회전에만** 쓴다. 도는 중에 작업자가 시야를 스쳐 지나가면
+        그 자리에서 멈춘다 — 정지점 사이의 애매한 자리에 서 있으면 돌기 전에도 돌고 나서도
+        못 보던 것을 잡는다 (9/9 실주행). 도는 동안 콜백은 계속 돌아가므로(`spin_once`)
+        `target/visible` 이 들어온다. 회전 시작 시각 이후에 온 것만 센다 — 이전의 묵은
+        참을 보고 곧바로 멈추면 회전이 시작되지 않는다.
         """
+        t_start = time.time()
         if USE_NAV2_SPIN or self.setup_cmd_vel() is None:
             self.navigator.spin(spin_dist=math.radians(deg))
             while not self.navigator.isTaskComplete():
                 rclpy.spin_once(self, timeout_sec=0.05)
                 if self.abort_motion():
+                    self.navigator.cancelTask()
+                    return
+                if stop_on_sight and self.visible_at > t_start:
+                    self.get_logger().info('회전 중 작업자 발견 — 그 자리에서 멈춘다')
                     self.navigator.cancelTask()
                     return
             return
@@ -492,6 +616,10 @@ class FollowTarget(Node):
             rclpy.spin_once(self, timeout_sec=0.02)
             if self.abort_motion():
                 self.get_logger().info('회전 중단 — 종료 또는 estop')
+                stopped = True
+                break
+            if stop_on_sight and self.visible_at > t_start:
+                self.get_logger().info('회전 중 작업자 발견 — 그 자리에서 멈춘다')
                 stopped = True
                 break
             if prev is None:                                  # 시작 때 TF 가 없었음 → 시간으로 추정
@@ -592,6 +720,7 @@ class FollowTarget(Node):
 
     def enter_follow(self):
         now = time.time()
+        self.search_dir = None        # 찾았으니 다음에 놓치면 방향을 새로 정한다
         self.latest = None
         self.follow_est = None
         self.follow_goal = self.last_target   # 이 위치에서 움직여야 새 목표를 낸다
@@ -637,7 +766,7 @@ class FollowTarget(Node):
         lost = now - self.follow_seen
         if lost > self.p('standby_s'):
             return self.enter_standby(lost)
-        if lost > FOLLOW_RESEARCH_S:
+        if lost > self.p('research_s'):
             self.navigator.cancelTask()
             self.search_tries = 0
             self.rearm()
@@ -709,9 +838,25 @@ class FollowTarget(Node):
             return
         # 여기서 '가까우니 최종 목표로 가라' 고 지정하지 않는다 — 재획득 시점의 거리를
         #   next_standoff 가 다시 재서 정한다. 재등장한 작업자가 멀어졌을 수도 있다
+        self.begin_reacquire('작업자 재등장 + 게이트 통과 — 재획득 시작')
+
+    def begin_reacquire(self, why):
+        """STANDBY 를 벗어나 다시 찾기 시작하며 시계를 지금으로 되돌린다.
+
+        이 한 줄이 없으면 `SEARCHING ↔ STANDBY` 가 초당 수백 번 진동한다 (9/9 실주행):
+        STANDBY 에서 작업자가 보여 SEARCHING 으로 나가도 `follow_seen` 이 30 초 전
+        값이라, SEARCHING 의 STANDBY 판정이 즉시 다시 STANDBY 로 돌려보낸다.
+        574,501 건이 발행돼 관제·기록기로 쏟아졌다.
+
+        `rearm()` 에 넣지 않는 이유 — rearm 은 회전마다 불린다. 거기서 시계를 되돌리면
+        회전을 반복하는 동안 30 초가 영원히 안 차서 STANDBY 에 도달하지 못한다.
+        되돌릴 자리는 '다시 찾기 시작한 순간' 하나뿐이다.
+        """
+        self.follow_seen = time.time()
         self.search_tries = 0
+        self.search_dir = None        # 재획득이면 방향을 다시 정한다
         self.rearm()
-        self.set_state('SEARCHING', '작업자 재등장 + 게이트 통과 — 재획득 시작')
+        self.set_state('SEARCHING', why)
 
 
 def main():

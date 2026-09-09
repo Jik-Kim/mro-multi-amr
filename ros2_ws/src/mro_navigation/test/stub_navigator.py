@@ -73,8 +73,14 @@ class StubNavigator(Node):
             ('initpose', round(pose.pose.position.x, 3), round(pose.pose.position.y, 3)))
 
     def spin(self, spin_dist=0.0):
-        """제자리 회전. 추종이 `USE_NAV2_SPIN` 일 때만 쓴다."""
+        """제자리 회전. 추종이 `USE_NAV2_SPIN` 일 때만 쓴다.
+
+        **goToPose 와 같이 nav_ticks 뒤 완료로 만든다** — 실물에서도 회전은 액션이라
+        여러 주기 걸린다. 세우지 않으면 첫 물음에 완료로 답해서 '도는 동안' 을 보는
+        시험이 성립하지 않는다 (9/9, 회전 중 조기 정지 시험).
+        """
         self.calls.append(('spin', round(spin_dist, 3)))
+        self._ticks = self.nav_ticks
 
     def goToPose(self, pose, behavior_tree=''):  # noqa: N802
         """목표 전송을 기록하고 nav_ticks 만큼 미완료 상태를 유지한다."""
