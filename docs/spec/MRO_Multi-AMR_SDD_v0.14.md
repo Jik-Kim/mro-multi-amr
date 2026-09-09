@@ -249,8 +249,11 @@ BRD v3.2 부록 B 참조. 본 문서 추가: **PC-R3/PC-R8**(로봇 제어 PC), 
 
 > 교재 STEP 1~3 순서로 그린다. **9/8(화) 09:30 설계도 리뷰 산출물 = 3.1~3.3 그림.**
 >
-> **그림 4장 작성 완료 (9/5 3장 · 9/6 STEP 3-2 추가).** 저장소 `docs/diagrams/` — `step1_deployment.svg` · `step2_nav2.svg` · `step3_scenario.svg` · `step3b_system_flow.svg`,
-> draw.io 편집본은 `mro_design_diagrams.drawio` (4 페이지). 손으로 그리지 않고 `tools/build_diagrams.py` 가 만든다.
+> **9/9 전면 재작성.** 저장소 `docs/diagrams/system_flowchart.drawio` **한 장**으로 합쳤다 —
+> PC1 웹캠1 · PC2 웹캠2 · PC3 관제 · PC4/PC5 AMR 제어 PC · 터틀봇 2대,
+> 그 안의 노드 12개와 노드마다의 동작 순서도, PC 를 건너는 토픽 계약까지.
+> 손으로 그리지 않고 `tools/flowchart/` 가 만든다 (규칙은 `docs/diagrams/README.md`).
+> 옛 4장(STEP 1~3-2)은 이 한 장으로 대체했다.
 > 아래 3.1~3.3 본문은 각 그림이 무엇을 말하는지에 대한 설명이며, 값이 바뀌면 스크립트와 함께 고친다.
 
 ### 3.1 배치 다이어그램 (STEP 1 — PC / AMR / 네트워크 블록, OS·ROS2·패키지 표기)

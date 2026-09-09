@@ -45,4 +45,6 @@ mission/assigned ─▶ shuttle_mission ─ shuttle/arrived ─▶ follow_target
 
 ## 그림
 
-설계도 4장은 `docs/diagrams/` 에 있다 (STEP 1 배치 · STEP 2 Nav2 교환 · STEP 3-1 시나리오 · STEP 3-2 전체 흐름). 이 문서의 내용이 바뀌면 `python3 tools/build_diagrams.py` 로 다시 만든다.
+시스템 플로우차트는 `docs/diagrams/system_flowchart.drawio` 한 장이다 — PC 5대와 로봇 2대, 그 안의 노드 12개와 노드마다의 순서도, PC 를 건너는 토픽까지 담았다.
+손으로 그리지 않고 `tools/flowchart/` 가 만든다. 이 문서의 내용이 바뀌면 `cd tools/flowchart && python3 main.py && python3 check.py` 로 다시 만든다.
+그리는 규칙은 `docs/diagrams/README.md`.
