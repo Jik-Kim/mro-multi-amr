@@ -5,14 +5,14 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 117/187 완료** (█████████████░░░░░░░)  ·  기준 09/10
+**전체 117/188 완료** (████████████░░░░░░░░)  ·  기준 09/10
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 7/9 | `████████░░` | — |
 | mro_perception [인지 — 정정인, 민범진] | 17/29 | `██████░░░░` | **10** |
 | mro_webcam [웹캠 — 한세교, 김학민] | 24/34 | `███████░░░` | **6** |
-| mro_navigation [주행 — 박병후, 이시율] | 45/83 | `█████░░░░░` | **25** |
+| mro_navigation [주행 — 박병후, 이시율] | 45/84 | `█████░░░░░` | **25** |
 | mro_fleet [관제 — 김민준] | 14/19 | `███████░░░` | **4** |
 | mro_bringup [PM 김병직] | 10/13 | `████████░░` | **1** |
 
@@ -65,7 +65,7 @@
 - `9/8` mro_fleet — fleet_manager_node.py: aruco/id·aruco/distance 구독 → ID 4 수신 시 |amcl_pos…
 - `9/8` mro_bringup — v_max 0.3 m/s 와 Nav2 max_vel_x 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘…
 
-**오늘 마감 16건**
+**오늘 마감 17건**
 
 - mro_interfaces — 계약 v1.20 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤) — 신규 토픽 safety/state(STOPPING/…
 - mro_interfaces — docs/setup.md:92 의 nav2 런치 줄 (I-049 후속) — turtlebot4_navigation/nav2.la…
@@ -74,6 +74,7 @@
 - mro_webcam — webcam_hint 의 target_classes 를 yaml 로 (PR #62 후속) — webcam_hint 의 코드 전용…
 - mro_webcam — webcam.yaml 의 show_window 줄 삭제 (PR #65 후속) — launch 가 yaml 뒤에 딕셔너리로 넘겨 …
 - mro_webcam — mro_webcam flake8 — 9/9 실측 365건 (등록 시 345건) — 이번 PR 탓은 아니지만 이 정도면 아무도 이…
+- mro_navigation — T_lim 120 s 실측 확정 (BRD Q-14) — 오늘 오전 중 — 새 축소 아레나 동선에서 요청 접수 → 대기공간(Z-0…
 - mro_navigation — 웹캠2 힌트 발행이 48 s 끊긴 사유 (I-050 곁가지) — follow_0909_1609 에서 10 Hz 로 오다 48.0…
 - mro_navigation — bag 기록 목록에 target/worker_id 를 넣는다 — hint_bearing() 이 이 값으로 남의 작업자 힌트를 거…
 - mro_navigation — estop 탈출 회전을 워치독이 직접 만든다 (I-049, 상) — PM 승인 완료 9/9 — 1차 SAFE_ROTATE(병진 …
@@ -167,6 +168,7 @@
 - [x] `kpi_report.py` K-06 마무리 셋 (PR #34 후속, 막지 않음) — ① `zone_resolution` docstring 의 `[REJECT, GRANT)` 를 양끝 포함으로 정정(안쪽 주석과 어긋남) ② `reclaimed_between(...): pass` 죽은 코드 삭제 ③ **`강제 회수` 라벨을 `강제 회수(구역)` 로** — 이제 구역 전체 RECLAIM 수라 대기자 없이 보유만 초과해도 세어져 `대기 1 · 자동 해결 1 · 강제 회수 1 → 100.0%` 로 읽힌다 (I-032) · 마감 9/9 TS-08 전  **→ 완료 (PR #42) — 9/9 확인: `[REJECT, GRANT]` 양끝 포함(:189), `reclaimed_between` 이 :234 에서 실제로 쓰임(죽은 코드 아님), 라벨 `강제 회수(구역)`(:366)**
 
 ## mro_navigation [주행 — 박병후, 이시율]
+- [ ] **T_lim 120 s 실측 확정 (BRD Q-14) — 오늘 오전 중** — 새 축소 아레나 동선에서 **요청 접수 → 대기공간(Z-05) 도착** 실제 리드타임을 재고 120 s 를 유지할지 고칠지 정한다. 측정 수단은 이미 있다 — `tools/kpi_report.py --db ~/mro_fleet.db` 가 `waiting_at − created_at` 으로 K-05 평균·p95 를 낸다 (PR #15). **깨끗한 완주 회차만 센다** — I-033(P1 잠금)·I-035(Nav2 미활성)로 태운 시간은 동선 시간이 아니라 버그 시간이다. 짧게 잡으면 멀쩡히 배송한 회차가 실패로 찍혀 AC-08(≥ 95 %)이 떨어지고, 길게 잡으면 기준이 아무것도 거르지 못한다. **바꾸면 `common.yaml` 한 곳만 고친다** — 로봇(`shuttle_mission`)과 관제(`fleet_manager`)의 공유 계약값이라 갈라지면 로봇은 계속 가는데 관제만 `TLIM_EXCEEDED` 를 찍는다. **BRD v3.6 제출이 9/11 09:30 이라 오전 중 결론이 필요하다** · 마감 9/10
 - [x] **PR #56 실주행 확인 — 재탐지 3.5 s · 회전 방향 잠금** — 9/9 세 회차로 확인했다. 재탐지: `SEARCHING` 316.98 s → 첫 회전 318.49 s = 1.51 s, 마지막 본 뒤로는 `research_s` 2.0 + `search_wait_s` 1.5 = **3.5 s** (`follow_0909_1451`). 방향 잠금: `+20°` **8회 연속 · 되돌아옴 0회**. **단 힌트가 있으면 잠금이 풀린다 — I-050 으로 등록했다.** **보이면 즉시 정지(`stop_on_sight`)도 확인됐다** — `follow_0909_1609` 에서 3건 발동 (`회전 중 작업자 발견 — 그 자리에서 멈춘다` 167.99·189.91 s). 그중 한 건은 회전 0.8 s 만에 끊고 1.6 s 뒤 FOLLOWING 에 들어갔다. **PR #56 의 미확인 3건이 전부 닫혔다** · 마감 9/10
 - [ ] **웹캠2 힌트 발행이 48 s 끊긴 사유 (I-050 곁가지)** — `follow_0909_1609` 에서 10 Hz 로 오다 48.09 s 공백. 우리 쪽은 `hint_valid_s` 2 s 로 걸러 오동작하지 않으나 사각지대인지 노드 재시작인지 웹캠팀에 확인. 데모 때 그 구간이 길면 힌트 없는 재탐색으로 돌아간다 · 마감 9/10
 - [ ] **bag 기록 목록에 `target/worker_id` 를 넣는다** — `hint_bearing()` 이 이 값으로 남의 작업자 힌트를 거르는데(`if self.worker_id and hw and hw != self.worker_id`), 비어 있으면 **조건이 통째로 건너뛰어져 모든 힌트를 받는다.** 힌트 토픽이 전역(`/webcam2/target_hint`)이라 **2대 운용에서 상대 로봇의 작업자 힌트로 회전 방향을 정할 수 있다.** 9/9 세 회차 모두 이 토픽을 기록하지 않아 실제로 채워지는지 확인이 안 됐다 · 마감 9/10
