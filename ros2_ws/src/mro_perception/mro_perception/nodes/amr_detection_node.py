@@ -65,7 +65,7 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
 파라미터 (robotN.yaml / config/perception.yaml 이 덮어쓴다. 아래 모듈 상수는 기본값):
   detect_conf · reid_threshold · descriptor_frames · pair_on_s · pair_off_s · publish_hz
   · max_core_gap_mm · bbox_inner · sync_slop_s · show_window · camera_fx_scale(I-031, aruco 와 공용)
-  · gate_fail_s · manual_pair_max_m (FR-13)
+  · gate_fail_s · manual_pair_max_m · target_stale_s (FR-13)
 """
 import math
 import os
@@ -126,7 +126,10 @@ PAIR_OFF_S = 3.0             # 이 시간 연속 실패·미검출이면 paired=
 PUBLISH_HZ = 1.0             # paired·worker_id·pair_state 재발행 주기. 늦게 켜진 노드도 받게 한다
 GATE_FAIL_S = 30.0           # 작업자가 보이는데 게이트를 이 시간 넘게 못 넘으면 pair_state=GATE_FAIL → 관제에 폴백 버튼 (FR-13)
 MANUAL_PAIR_MAX_M = 1.0      # 명시 페어링도 이 거리 안에서만 받는다 (FR-14). 멀면 좌표 오차가 커서 수동이든 자동이든 결과가 같다
-TARGET_STALE_S = 1.0         # 이 시간 안에 본 후보·거리만 "지금 보인다" 로 친다 — 서비스 요청 시점의 판정용
+# 마지막으로 본 후보·거리를 "지금" 으로 치는 시간. 정상(10 fps)이면 열 배 여유지만, 프레임이 이보다 늦어지면
+# 폴백 경로가 통째로 닫힌다 — 버튼도 안 뜨고(1 Hz 타이머가 NO_TARGET 으로 내림) 요청도 NO_TARGET 으로 거절된다.
+# 렉이 나는 현장에서 ros2 param 으로 늘릴 수 있어야 하므로 파라미터다 (I-045)
+TARGET_STALE_S = 1.0
 JPEG_QUALITY = 80            # 모니터 영상 압축 품질. 웹캠 노드와 같은 값 (webcam.yaml jpeg_quality)
 DIAG_LOG_S = 1.0             # 계측 로그 주기(초). 0 이면 끔. 렉 원인 분리용 — 처리 프레임 나이·루프/콜백/처리 속도
 TF_WAIT_S = 0.0              # to_map 이 TF 를 기다리는 시간. 0 = 즉시 판정(정상). 1.0 이면 9/8 렉(프레임당 2 s)이 재현된다 — 시연·검증용
@@ -199,6 +202,7 @@ class AmrDetection(Node):
         self.declare_parameter('tf_wait_s', TF_WAIT_S)
         self.declare_parameter('gate_fail_s', GATE_FAIL_S)
         self.declare_parameter('manual_pair_max_m', MANUAL_PAIR_MAX_M)
+        self.declare_parameter('target_stale_s', TARGET_STALE_S)
         p = lambda k: self.get_parameter(k).value  # noqa: E731
         self.detect_conf = float(p('detect_conf'))
         self.max_core_gap_mm = float(p('max_core_gap_mm'))
@@ -208,6 +212,11 @@ class AmrDetection(Node):
         self.diag_log_s = float(p('diag_log_s'))
         self.jpeg_quality = int(p('jpeg_quality'))
         self.manual_pair_max_m = float(p('manual_pair_max_m'))
+        self.target_stale_s = float(p('target_stale_s'))
+        if self.target_stale_s <= 0:
+            # 0 이하면 _fresh 가 항상 거짓이라 '아무도 안 보인다' 가 되어 폴백이 통째로 죽는다 — 조용히 먹으면 안 된다
+            self.get_logger().error(f'target_stale_s={self.target_stale_s} 는 0 보다 커야 한다 — 기본값 {TARGET_STALE_S} 로 진행')
+            self.target_stale_s = TARGET_STALE_S
         self.tf_wait = Duration(seconds=float(p('tf_wait_s')))   # 0 이 아니면 실행기가 그만큼 멈춘다 (재현용)
         # camera_info 의 초점거리가 704×704 crop 영상에 안 맞아(I-031) fx·fy 에 곱하는 배율. 기본 16/9.
         # 선언·범위 검증은 core/camera.read_fx_scale 이 한다 — aruco_detector 와 같은 이름·같은 기본값을 쓰기 위해
@@ -296,7 +305,8 @@ class AmrDetection(Node):
                                f'conf≥{self.detect_conf} | reid_threshold={self.gate.threshold} '
                                f'| 출력: {POINT_TOPIC}, {VISIBLE_TOPIC}, {DISTANCE_TOPIC}, '
                                f'{PAIRED_TOPIC}, {WORKER_ID_TOPIC}, {PAIR_STATE_TOPIC} | 서비스: {MANUAL_PAIR_SERVICE} '
-                               f'(gate_fail_s={self.tracker.fail_s:.0f}, manual_pair_max_m={self.manual_pair_max_m})')
+                               f'(gate_fail_s={self.tracker.fail_s:.0f}, manual_pair_max_m={self.manual_pair_max_m}, '
+                               f'target_stale_s={self.target_stale_s})')
 
     def _now_s(self):
         """ROS 시각(초). 게이트·pair_state 시계와 서비스의 신선도 판정이 같은 시계를 쓰도록 한 곳에서."""
@@ -371,7 +381,7 @@ class AmrDetection(Node):
     # ── 출력 ─────────────────────────────────────────────────────────────────────────────────────────
     def publish_pairing(self, force=False):
         """worker_id·paired·pair_state 발행. 타이머(1 Hz)와 값이 바뀐 순간 둘 다에서 부른다."""
-        # 프레임이 끊기면 process() 가 안 돌아 pair_state 가 굳는다 — 후보를 못 본 지 TARGET_STALE_S 가 지났으면 여기서
+        # 프레임이 끊기면 process() 가 안 돌아 pair_state 가 굳는다 — 후보를 못 본 지 target_stale_s 가 지났으면 여기서
         # 시계를 돌려 NO_TARGET 으로 내린다 (관제 버튼은 떠 있는데 요청은 NO_TARGET 으로 거절되는 모순 방지)
         if not self.paired and not self._fresh(self.last_seen_t, self._now_s()):
             self._set_pair_state(self.tracker.update(self._now_s(), False, False, self.gate.ready()), publish=False)
@@ -407,8 +417,8 @@ class AmrDetection(Node):
         return True
 
     def _fresh(self, t_ref, t):
-        """t_ref 가 TARGET_STALE_S 안의 최근 값인가 — 서비스가 '지금' 을 판단하는 기준."""
-        return t_ref is not None and t - t_ref <= TARGET_STALE_S
+        """t_ref 가 target_stale_s 안의 최근 값인가 — 서비스가 '지금' 을 판단하는 기준."""
+        return t_ref is not None and t - t_ref <= self.target_stale_s
 
     # ── 명시 페어링 폴백 (FR-13, 계약 10절) ─────────────────────────────────────────────────────────
     def manual_pair_cb(self, req, res):
