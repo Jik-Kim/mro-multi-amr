@@ -29,7 +29,6 @@
 | [I-042](#i-042) | 중 | **열림** | 웹캠 한세교·김학민 | `/webcam2/image_raw/compressed` 에 오버레이 프레임과 원본이 **섞여** 나간다 — 받는 쪽이 어느 쪽인지 알 수 없다 |
 | [I-043](#i-043) | 하 | **열림** | 인지 정정인·민범진 | `perception.yaml` 의 `show_window` 기본값이 `true` — 화면 없는 로봇 PC 에서 노드가 죽는다 |
 | [I-044](#i-044) | **상** | **열림** | 주행 박병후·이시율 | 베이 접근의 **여유(0.095 m)가 관측된 잔차(0.275 m)보다 작다** — TS-07 20회 중 몇 회는 estop·`Collision Ahead` 로 끝난다 |
-| [I-045](#i-045) | 중 | **열림** | 인지 정정인·민범진 | `TARGET_STALE_S` 1 s 가 상수라 못 바꾼다 — 프레임 지연이 1 s 를 넘으면 FR-13 폴백 버튼이 뜨지 않고 요청도 거절된다 |
 
 ## 해결된 이슈
 
@@ -40,6 +39,7 @@
 | [I-024](#i-024) | 주행 박병후·이시율 | `shuttle/status` 발행자가 없어 배송 성공률이 구조적으로 0 % |
 | [I-038](#i-038) | 인지 정정인·민범진 | depth 가 RGB 보다 늦게 와 ArUco 짝이 안 맞는다 (robot8 은 발행 0 %) |
 | [I-040](#i-040) | PM · 인지 정정인·민범진 | `perception.yaml` 의 로봇별 `depth_k` 가 노드에 안 들어가고 있었다 |
+| [I-045](#i-045) | 인지 정정인·민범진 | `TARGET_STALE_S` 가 상수라 렉 중에 FR-13 폴백을 못 살린다 |
 | [I-004](#i-004) | 주행 박병후·이시율 | 벽 받침대(발)가 LiDAR 사각지대 |
 | [I-005](#i-005) | 주행·인지 박병후·정정인 | 벽 높이 vs OAK-D 높이 미측정 |
 | [I-006](#i-006) | 주행 박병후·이시율 | 도크 실물 배치 미확인 |
@@ -661,6 +661,18 @@
   `perception.yaml` 의 "16개 전부 declare_parameter" 주석도 17 로 맞춘다.
 - **당장의 우회** — 시연 전에 `tools/diag_lag.py --ns /robotN --seconds 10` 으로 `age` 를 확인한다.
   200 ms 대면 그대로 가도 된다.
+
+**해결 (9/9, PR #54).** `target_stale_s` 파라미터가 되었고, 더 나아가 노드의 파라미터 17개 전부가
+`_live_params`(실행 중 변경 12) / `RESTART_ONLY`(기동 전용 5) 로 갈렸다. 범위 밖 값은 `SetParametersResult`
+로 **거절**하므로 파라미터 서버와 노드가 다른 값을 갖는 일이 없다.
+
+첫 푸시는 값을 `__init__` 에서 캐시해 `ros2 param set` 이 판정에 안 닿았고 — `ros2 param get` 만 새 값을
+보여줬다 — PM 이 rclpy 로 재현해 변경 요청했다. 재푸시분은 원본 코드를 그대로 떼어내 실측했다:
+`param set target_stale_s 3.0` 뒤 2 s 늦은 프레임의 `_fresh` 가 False → **True**. `setattr` 대상 4개
+(`gate.threshold`·`on_s`·`off_s`, `tracker.fail_s`)가 실재하고 뜨거운 경로가 읽는 것도 확인했다.
+
+**현장 조치** — 렉으로 폴백 버튼이 안 뜨면
+`ros2 param set /robotN/amr_detection target_stale_s 3.0`. 이제 실제로 먹는다.
 
 ### I-043
 
