@@ -77,6 +77,7 @@ import rclpy
 from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
+from rcl_interfaces.msg import SetParametersResult
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 from std_msgs.msg import Bool, Float32, String
 from geometry_msgs.msg import PointStamped
@@ -150,6 +151,10 @@ SYNC_QUEUE = 20
 # 카메라 구독 QoS — "최신 한 장만". 처리가 잠깐 밀려도 전송 계층이 묵은 프레임을 버려 화면이 '몇 초 전' 이 되지 않는다.
 # RELIABLE·큐 10 이던 이관 설정은 밀린 10장을 순서대로 재생했다 (9/8 렉 분석). BEST_EFFORT 구독은 RELIABLE 발행자도 받는다
 CAMERA_QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST, depth=1)
+# 실행 중에 못 바꾸는 파라미터 — 값이 구조를 만들기 때문이다. 동기화기·창·타이머·지문 버퍼·보정 K 는
+# 기동 때 한 번 만들어지고, 뒤에 값만 바꿔도 이미 만들어진 것에는 닿지 않는다. 바꾸려면 노드를 다시 띄운다
+RESTART_ONLY = ('sync_slop_s', 'show_window', 'publish_hz', 'descriptor_frames', 'camera_fx_scale')
+
 SHOW_WINDOW = True           # 로컬 미리보기 창. 모니터 없는 로봇 PC 에서는 yaml 로 false — 창을 못 만들면 노드가 죽는다
 
 
@@ -214,13 +219,19 @@ class AmrDetection(Node):
         self.manual_pair_max_m = float(p('manual_pair_max_m'))
         self.target_stale_s = float(p('target_stale_s'))
         if self.target_stale_s <= 0:
-            # 0 이하면 _fresh 가 항상 거짓이라 '아무도 안 보인다' 가 되어 폴백이 통째로 죽는다 — 조용히 먹으면 안 된다
+            # 0 이하면 _fresh 가 항상 거짓이라 '아무도 안 보인다' 가 되어 폴백이 통째로 죽는다 — 조용히 먹으면 안 된다.
+            # 기동 때는 launch 가 넘긴 yaml 이 틀린 경우라 거절할 상대가 없다. 로그를 남기고 기본값으로 뜬다
             self.get_logger().error(f'target_stale_s={self.target_stale_s} 는 0 보다 커야 한다 — 기본값 {TARGET_STALE_S} 로 진행')
             self.target_stale_s = TARGET_STALE_S
         self.tf_wait = Duration(seconds=float(p('tf_wait_s')))   # 0 이 아니면 실행기가 그만큼 멈춘다 (재현용)
         # camera_info 의 초점거리가 704×704 crop 영상에 안 맞아(I-031) fx·fy 에 곱하는 배율. 기본 16/9.
         # 선언·범위 검증은 core/camera.read_fx_scale 이 한다 — aruco_detector 와 같은 이름·같은 기본값을 쓰기 위해
         self.fx_scale = read_fx_scale(self)
+        # 실행 중 파라미터 변경을 실제로 반영한다. 이게 없으면 ros2 param set 이 성공했다고 답하면서 노드는 옛 값을
+        # 계속 쓴다 — 파라미터 서버와 노드가 다른 값을 갖는 상태가 되고, 현장에서 '바꿨는데 안 변한다' 가 된다.
+        # 선언과 초기 읽기가 다 끝난 뒤에 단다 — 앞에 달면 declare_parameter 도 이 콜백을 타는데 그때는 속성이 없다
+        self.add_on_set_parameters_callback(self._on_set_parameters)
+
         self.diag = dict(t0=time.monotonic(), loops=0, rgb_cb=0, depth_cb=0, synced=0, processed=0,
                          age_sum=0.0, age_max=0.0, proc_ms_sum=0.0, proc_ms_max=0.0, tf_cb=0)
 
@@ -307,6 +318,62 @@ class AmrDetection(Node):
                                f'{PAIRED_TOPIC}, {WORKER_ID_TOPIC}, {PAIR_STATE_TOPIC} | 서비스: {MANUAL_PAIR_SERVICE} '
                                f'(gate_fail_s={self.tracker.fail_s:.0f}, manual_pair_max_m={self.manual_pair_max_m}, '
                                f'target_stale_s={self.target_stale_s})')
+
+    # ── 실행 중 파라미터 변경 ───────────────────────────────────────────────────────────────────────
+    def _live_params(self):
+        """실행 중 바꿀 수 있는 값 — 이름 → (범위 설명, 검사, 적용). 여기 없는 선언 값은 RESTART_ONLY 다.
+
+        적용이 setattr 로 끝나는 이유는 뜨거운 경로가 전부 속성을 그때그때 읽기 때문이다 — 값만 갈아두면
+        다음 프레임부터 새 값으로 돈다. 게이트·트래커도 자기 속성을 매번 읽으므로 같다.
+        """
+        return {
+            'detect_conf': ('0 초과 1 이하', lambda v: 0 < v <= 1,
+                            lambda v: setattr(self, 'detect_conf', float(v))),
+            'reid_threshold': ('0 이상 1 이하', lambda v: 0 <= v <= 1,
+                               lambda v: setattr(self.gate, 'threshold', float(v))),
+            'pair_on_s': ('0 초과', lambda v: v > 0, lambda v: setattr(self.gate, 'on_s', float(v))),
+            'pair_off_s': ('0 초과', lambda v: v > 0, lambda v: setattr(self.gate, 'off_s', float(v))),
+            'gate_fail_s': ('0 초과', lambda v: v > 0, lambda v: setattr(self.tracker, 'fail_s', float(v))),
+            'target_stale_s': ('0 초과', lambda v: v > 0,
+                               lambda v: setattr(self, 'target_stale_s', float(v))),
+            'manual_pair_max_m': ('0 초과', lambda v: v > 0,
+                                  lambda v: setattr(self, 'manual_pair_max_m', float(v))),
+            'max_core_gap_mm': ('0 초과', lambda v: v > 0,
+                                lambda v: setattr(self, 'max_core_gap_mm', float(v))),
+            'bbox_inner': ('0 초과 1 이하', lambda v: 0 < v <= 1,
+                           lambda v: setattr(self, 'bbox_inner', float(v))),
+            'jpeg_quality': ('1 이상 100 이하', lambda v: 1 <= v <= 100,
+                             lambda v: setattr(self, 'jpeg_quality', int(v))),
+            'diag_log_s': ('0 이상 (0 이면 끔)', lambda v: v >= 0,
+                           lambda v: setattr(self, 'diag_log_s', float(v))),
+            'tf_wait_s': ('0 이상 (렉 재현용)', lambda v: v >= 0,
+                          lambda v: setattr(self, 'tf_wait', Duration(seconds=float(v)))),
+        }
+
+    def _on_set_parameters(self, params):
+        """ros2 param set 을 받는 자리. 범위 밖이면 **거절**하고, 통과하면 노드가 쓰는 값까지 갈아준다.
+
+        거절이 핵심이다 — 로그만 남기고 넘어가면 파라미터 서버에는 나쁜 값이 들어앉고 노드는 옛 값을 쓴다.
+        나중에 ros2 param get 으로 확인한 사람이 노드도 그 값으로 돈다고 믿게 된다.
+        """
+        live = self._live_params()
+        for prm in params:
+            if prm.name in RESTART_ONLY:
+                return SetParametersResult(successful=False,
+                                           reason=f'{prm.name} 은 실행 중에 못 바꾼다 — 노드를 다시 띄운다')
+            spec = live.get(prm.name)
+            if spec is None:                 # 우리가 선언하지 않은 값(use_sim_time 등)은 건드리지 않는다
+                continue
+            rng, ok, _ = spec
+            if not ok(prm.value):
+                return SetParametersResult(successful=False,
+                                           reason=f'{prm.name}={prm.value} 는 범위 밖 — {rng} 여야 한다')
+        for prm in params:                   # 전부 통과한 뒤에 적용 — 하나라도 틀리면 아무것도 안 바꾼다
+            spec = live.get(prm.name)
+            if spec is not None:
+                spec[2](prm.value)
+                self.get_logger().info(f'파라미터 변경: {prm.name} = {prm.value}')
+        return SetParametersResult(successful=True)
 
     def _now_s(self):
         """ROS 시각(초). 게이트·pair_state 시계와 서비스의 신선도 판정이 같은 시계를 쓰도록 한 곳에서."""

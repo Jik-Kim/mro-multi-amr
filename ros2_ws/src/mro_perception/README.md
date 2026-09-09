@@ -72,7 +72,10 @@ ros2 run rqt_image_view rqt_image_view /robot3/target/image/compressed   # 오�
 | `manual_pair_max_m` | 1.0 | 명시 페어링을 받는 최대 거리 (FR-14) | — |
 | `target_stale_s` | 1.0 | 마지막으로 본 후보·거리를 "지금" 으로 치는 시간 | **렉으로 프레임이 늦으면 2~3.** 안 늘리면 폴백이 닫힌다 (I-045) |
 
-실행 중 바꾸기: `ros2 param set /robot3/amr_detection detect_conf 0.6` (다음 프레임부터는 안 먹는 값도 있다 — `sync_slop_s`·`show_window` 는 재시작).
+실행 중 바꾸기: `ros2 param set /robot3/amr_detection detect_conf 0.6` — 다음 프레임부터 먹는다.
+범위 밖이면 **거절**되고 (`Set parameter failed`) 노드는 옛 값으로 계속 돈다. 파라미터 서버와 노드가 다른 값을
+갖는 일이 없게 한 것이다. `sync_slop_s`·`show_window`·`publish_hz`·`descriptor_frames`·`camera_fx_scale` 은
+값이 기동 때 구조(동기화기·창·타이머·버퍼·보정 K)를 만들어서 **재시작해야 한다** — 바꾸려 하면 그 이유로 거절된다.
 
 ## 4. 테스트
 
