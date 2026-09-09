@@ -3,7 +3,9 @@
 담당: 주행 [박병후, 이시율]. 대상 맵: `mro_bringup/maps/auto_map.yaml`(9/5 재작성본, 커밋 `b1fb6f1`).
 값을 채운 뒤에는 이 문서가 아니라 실제 대상 파일(`arena.yaml`, `robot3.yaml`, `robot8.yaml`)에 반영하고,
 `9/8` 로봇 2호기가 robot4 → **robot8** 로 교체됐다. 아래 `robot8` 항목의 좌표는 같은 도크·같은 자리라
-구 robot4 실측값을 승계했지만, **`dock_zone.pose.robot8` 은 robot8 로 실제 도킹시켜 한 번 재확인**한다.
+구 robot4 실측값을 **그대로 쓴다 (9/9 PM 판단)** — 교체한 것은 기체뿐이고 도크는 옮기지 않았으므로
+기체 개체차는 도킹 후 amcl_pose 편차 20 cm 에 묻힌다 (I-013). robot8 이 기동부터 측위가 어긋나면
+그때 이 값을 첫 번째로 의심한다.
 `docs/issues.md`·`docs/todo.md` 상태도 같이 갱신한다.
 
 ## 0. 공통 준비
