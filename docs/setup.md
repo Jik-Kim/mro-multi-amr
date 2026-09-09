@@ -139,8 +139,10 @@ ros2 launch mro_bringup fleet_pc.launch.py robots:="[/robot3,/robot8,/robot9]"
 - 노드가 토픽 0개: 그 터미널의 Discovery 환경 확인
 - PC 를 바꿔 쓸 때 이전 PC 노드를 반드시 내린다 (`pkill -INT -f "ros2 launch|nav2_|rviz2|_node"`)
 - 2대 운용 시 카메라 노드 소실·디스커버리 지연 → 카메라 구독자 수 확인 (로봇당 1개)
-- **estop 이 안 풀려 로봇이 굳었을 때 (I-049)** — 워치독이 `cmd_vel` 에 20 Hz 로 0 을 덮으므로
-  **텔레옵을 그냥 띄워도 이깁니다.** 그 로봇 제어 PC 에서 워치독만 내리고 빼낸다.
+- **estop 이 안 풀려 로봇이 굳었을 때 (I-049)** — **최후의 수단이다.** 워치독의 탈출 회전
+  (`SAFE_ROTATE`, 채택 9/9)이 먼저 시도하고, 실패하면 `STANDBY` 로 사람을 부른다. 그것마저
+  안 될 때만 아래를 쓴다 — **워치독을 내리는 것은 안전 계층을 끄는 조작이다.**
+  워치독이 `cmd_vel` 에 20 Hz 로 0 을 덮으므로 **텔레옵만 띄워서는 이기지 못한다.**
   ```bash
   pkill -INT -f safety_watchdog_node
   ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r __ns:=/robot3 -r /cmd_vel:=/robot3/cmd_vel
