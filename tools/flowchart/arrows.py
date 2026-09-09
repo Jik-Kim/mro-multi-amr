@@ -219,11 +219,19 @@ def draw(d, A, G, BOX):
                ['컬러·거리를 한 쌍으로 묶어 쓴다', '같은 카메라를 아르코 검출도 읽는다'], 21, SENS, gapx=g)
         hlink(t + ':out', k('safety_watchdog', 'scan_in'),
               'scan · LaserScan\n전방 좌우 35° 최단거리', 23, SENS, gapx=g)
-        hlink(t + ':out', 'fm:in',
-              'battery_state · BatteryState\namcl_pose · PoseWithCovarianceStamped', 24, SENS, gapx=g)
+        hlink(t + ':out', 'fm:in', 'battery_state · BatteryState\n남은 배터리', 24, SENS, gapx=g)
 
-        # ── Nav2 — 주행 세 노드가 목표를 주고, 안전 감시가 회전분을 빌려 쓴다 ──
+        # ── 위치 추정 · Nav2 — 우리가 만들지 않았지만 이 PC 에서 같이 돈다 ────
         nav = f'{rp}_Nav2  (길찾기 · 도킹)'
+        loc = f'{rp}_위치 추정  (localization)'
+        near(k('shuttle_mission', 'initpose'), loc + ':in',
+             '처음 위치 — 자기 도크 좌표\n기동할 때 한 번 (화면에서 손으로 찍지 않는다)', LINE)
+        near(loc + ':out', nav + ':goal_in',
+             '지도 위 로봇 위치 · 지도 기준 좌표 변환\n길찾기가 시작할 때 이것을 요구한다', SENS)
+        hlink(t + ':out', loc + ':in', '라이다 스캔 · 바퀴가 돈 양\n지도와 맞춰 위치를 추정한다',
+              21, SENS, gapx=g)
+        hlink(loc + ':out', 'fm:in', f'{tag}/amcl_pose · PoseWithCovarianceStamped\n지도 위 로봇 위치',
+              13, SENS, gapx=g)
         for src in ('shuttle_mission', 'follow_target', 'return_dock'):
             near(k(src, 'status' if src != 'return_dock' else 'status'), nav + ':goal_in',
                  '갈 곳과 도킹을 맡긴다\n(ROS 토픽이 아니라 이 프로그램에 거는 요청이다)', LINE)

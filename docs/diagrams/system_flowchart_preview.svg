@@ -1,17 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="6168" height="9146" viewBox="0 0 6168 9146">
-<rect width="6168" height="9146" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="6168" height="9628" viewBox="0 0 6168 9628">
+<rect width="6168" height="9628" fill="#ffffff"/>
 <style>text{font-family:"Malgun Gothic","Noto Sans CJK KR",sans-serif}</style>
 <defs><marker id="m0" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 z" fill="#4A4A4A"/></marker><marker id="m1" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 z" fill="#1F5FBF"/></marker><marker id="m2" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 z" fill="#C0272D"/></marker><marker id="m3" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto"><path d="M0,0 L9,3 L0,6 z" fill="#D97706"/></marker></defs>
-<rect x="40.0" y="330.0" width="1576.0" height="8675.0" fill="none" stroke="#2C6E9B" stroke-width="2"/>
-<rect x="4552.0" y="330.0" width="1576.0" height="8675.0" fill="none" stroke="#2C6E9B" stroke-width="2"/>
+<rect x="40.0" y="330.0" width="1576.0" height="9258.0" fill="none" stroke="#2C6E9B" stroke-width="2"/>
+<rect x="4552.0" y="330.0" width="1576.0" height="9258.0" fill="none" stroke="#2C6E9B" stroke-width="2"/>
 <rect x="2296.0" y="3806.0" width="1576.0" height="3696.0" fill="none" stroke="#B03A2E" stroke-width="2"/>
 <rect x="244.0" y="418.0" width="1168.0" height="1670.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
 <rect x="4756.0" y="418.0" width="1168.0" height="1670.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
 <rect x="2436.0" y="2175.0" width="1296.0" height="1461.0" fill="none" stroke="#6E5AA0" stroke-width="2"/>
 <rect x="2360.0" y="5676.0" width="1448.0" height="1136.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
 <rect x="2500.0" y="2263.0" width="1168.0" height="1309.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
-<rect x="104.0" y="7908.0" width="1448.0" height="1033.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
-<rect x="4616.0" y="7908.0" width="1448.0" height="1033.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
+<rect x="104.0" y="8491.0" width="1448.0" height="1033.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
+<rect x="4616.0" y="8491.0" width="1448.0" height="1033.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
 <rect x="244.0" y="2136.0" width="1168.0" height="1254.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
 <rect x="4756.0" y="2136.0" width="1168.0" height="1254.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
 <rect x="2666.0" y="330.0" width="836.0" height="1675.0" fill="none" stroke="#6E5AA0" stroke-width="2"/>
@@ -27,13 +27,15 @@
 <text x="40.0" y="91.2" font-size="12.0" fill="#444444" text-anchor="start" font-weight='700'>ROKEY 9기 2PM · Phase 1 · 로봇 2대(/robot3 · /robot8) · 웹캠 2대 · 관제 1대</text>
 <text x="40.0" y="107.2" font-size="12.0" fill="#444444" text-anchor="start" font-weight='700'>PC 한 대 = 테두리 하나. 테두리 안이 그 PC 에서 도는 노드, 노드 안이 그 노드가 하는 일의 순서다.</text>
 <text x="40.0" y="123.1" font-size="12.0" fill="#444444" text-anchor="start" font-weight='700'>PC 를 건너는 화살표에 ROS 토픽 이름 · 타입 · 값의 뜻을 적었다.</text>
-<rect x="2806.0" y="7672.0" width="556.0" height="632.0" fill="none" stroke="#7A5C1E" stroke-width="2"/>
-<rect x="2806.0" y="8474.0" width="556.0" height="632.0" fill="none" stroke="#7A5C1E" stroke-width="2"/>
+<rect x="2806.0" y="7672.0" width="556.0" height="647.0" fill="none" stroke="#7A5C1E" stroke-width="2"/>
+<rect x="2806.0" y="8489.0" width="556.0" height="647.0" fill="none" stroke="#7A5C1E" stroke-width="2"/>
+<rect x="614.0" y="7836.0" width="428.0" height="607.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
+<rect x="5126.0" y="7836.0" width="428.0" height="607.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
 <rect x="2870.0" y="6860.0" width="428.0" height="578.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
-<rect x="614.0" y="7297.0" width="428.0" height="563.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
-<rect x="5126.0" y="7297.0" width="428.0" height="563.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
-<rect x="2870.0" y="7760.0" width="428.0" height="480.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
-<rect x="2870.0" y="8562.0" width="428.0" height="480.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
+<rect x="2870.0" y="7760.0" width="428.0" height="495.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
+<rect x="2870.0" y="8577.0" width="428.0" height="495.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
+<rect x="614.0" y="7297.0" width="428.0" height="491.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
+<rect x="5126.0" y="7297.0" width="428.0" height="491.0" fill="none" stroke="#6F7B8A" stroke-width="2"/>
 <text x="40.0" y="63.0" font-size="30.0" fill="#111111" text-anchor="start" font-weight='700'>MRO Multi-AMR — 시스템 플로우차트</text>
 <text x="40.0" y="232.1" font-size="11.0" fill="#444444" text-anchor="start" font-weight='700'>말풍선　토픽 이름은 제 선 위에 흰 바탕 상자로 얹었다 — 상자를 덮고 있는 선이 그 토픽의 선이다.</text>
 <text x="40.0" y="246.7" font-size="11.0" fill="#444444" text-anchor="start" font-weight='700'>둥근 점　한 토픽이 여럿에게 갈라지는 자리. 이름과 타입은 줄기에 한 번만 적고, 갈래에는 받는 노드가 그것으로 무엇을 하는지만 적었다.</text>
@@ -52,28 +54,28 @@
 <text x="3084.0" y="7934.4" font-size="11.0" fill="#111111" text-anchor="middle">토픽 이름 앞에 /robot3 가 붙는다 · 도메인 3</text>
 <text x="3084.0" y="7949.0" font-size="11.0" fill="#111111" text-anchor="middle">통신은 PC-F 192.168.108.41 의 서버 한 대만 본다</text>
 <text x="3084.0" y="7963.6" font-size="11.0" fill="#111111" text-anchor="middle">도크 · Create 3 도크 — 두 도크 사이 0.84 m · 한 번에 한 대만</text>
-<rect x="2884.0" y="8600.0" width="400.0" height="177.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
-<text x="3084.0" y="8619.3" font-size="11.0" fill="#111111" text-anchor="middle">/robot8  TurtleBot4 Standard</text>
-<text x="3084.0" y="8633.9" font-size="11.0" fill="#111111" text-anchor="middle">바닥 · iRobot Create 3 — 구동 · 범퍼 · 낭떠러지 감지 · 도크 적외선</text>
-<text x="3084.0" y="8648.6" font-size="11.0" fill="#111111" text-anchor="middle">몸통 반지름 안쪽 0.175 m · 바깥 0.189 m · 최고 속도 0.3 m/s</text>
-<text x="3084.0" y="8663.2" font-size="11.0" fill="#111111" text-anchor="middle">범퍼와 낭떠러지 감지가 앞쪽에만 있다 → 후진을 쓰지 않는 근거</text>
-<text x="3084.0" y="8677.8" font-size="11.0" fill="#111111" text-anchor="middle">라이다 · RPLIDAR A1 — 스캔 높이 바닥에서 18.5 cm</text>
-<text x="3084.0" y="8692.5" font-size="11.0" fill="#111111" text-anchor="middle">카메라 · OAK-D Pro — 렌즈 높이 23.5 cm · 704×704 · 초당 10장</text>
-<text x="3084.0" y="8707.1" font-size="11.0" fill="#111111" text-anchor="middle">컬러와 거리를 같은 순간에 찍는다 (시각 차 0.1 ms 안팎)</text>
-<text x="3084.0" y="8721.7" font-size="11.0" fill="#111111" text-anchor="middle">계산기 · Raspberry Pi 4 — 위 장치의 ROS 토픽을 발행한다</text>
-<text x="3084.0" y="8736.4" font-size="11.0" fill="#111111" text-anchor="middle">토픽 이름 앞에 /robot8 가 붙는다 · 도메인 3</text>
-<text x="3084.0" y="8751.0" font-size="11.0" fill="#111111" text-anchor="middle">통신은 PC-F 192.168.108.41 의 서버 한 대만 본다</text>
-<text x="3084.0" y="8765.6" font-size="11.0" fill="#111111" text-anchor="middle">도크 · Create 3 도크 — 두 도크 사이 0.84 m · 한 번에 한 대만</text>
-<rect x="118.0" y="7946.0" width="400.0" height="147.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
-<text x="318.0" y="7964.9" font-size="11.0" fill="#111111" text-anchor="middle">바꿀 수 있는 값</text>
-<text x="318.0" y="7979.6" font-size="11.0" fill="#111111" text-anchor="middle">세우는 거리 0.30 m  ·  푸는 거리 0.38 m — 8 cm 여유는 라이다 오차의 네</text>
-<text x="318.0" y="7994.2" font-size="11.0" fill="#111111" text-anchor="middle">배</text>
-<text x="318.0" y="8008.8" font-size="11.0" fill="#111111" text-anchor="middle">0.45 로 두면 좁은 목 안에서 어느 방향으로 돌아도 풀리지 않는다 (통로</text>
-<text x="318.0" y="8023.5" font-size="11.0" fill="#111111" text-anchor="middle">반폭 0.395 m)</text>
-<text x="318.0" y="8038.1" font-size="11.0" fill="#111111" text-anchor="middle">정지 중 통과시킬 회전 속도 상한 0.4 rad/s</text>
-<text x="318.0" y="8052.7" font-size="11.0" fill="#111111" text-anchor="middle">주행 명령 신선도 0.5초 — 이보다 오래된 명령이면 회전도 0</text>
-<text x="318.0" y="8067.3" font-size="11.0" fill="#111111" text-anchor="middle">고정값 — 앞을 보는 각도 좌우 35° · 세움 2회 연속 · 풀림 5회 연속 · 초당</text>
-<text x="318.0" y="8082.0" font-size="11.0" fill="#111111" text-anchor="middle">20회 발행</text>
+<rect x="2884.0" y="8615.0" width="400.0" height="177.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="3084.0" y="8634.3" font-size="11.0" fill="#111111" text-anchor="middle">/robot8  TurtleBot4 Standard</text>
+<text x="3084.0" y="8648.9" font-size="11.0" fill="#111111" text-anchor="middle">바닥 · iRobot Create 3 — 구동 · 범퍼 · 낭떠러지 감지 · 도크 적외선</text>
+<text x="3084.0" y="8663.6" font-size="11.0" fill="#111111" text-anchor="middle">몸통 반지름 안쪽 0.175 m · 바깥 0.189 m · 최고 속도 0.3 m/s</text>
+<text x="3084.0" y="8678.2" font-size="11.0" fill="#111111" text-anchor="middle">범퍼와 낭떠러지 감지가 앞쪽에만 있다 → 후진을 쓰지 않는 근거</text>
+<text x="3084.0" y="8692.8" font-size="11.0" fill="#111111" text-anchor="middle">라이다 · RPLIDAR A1 — 스캔 높이 바닥에서 18.5 cm</text>
+<text x="3084.0" y="8707.5" font-size="11.0" fill="#111111" text-anchor="middle">카메라 · OAK-D Pro — 렌즈 높이 23.5 cm · 704×704 · 초당 10장</text>
+<text x="3084.0" y="8722.1" font-size="11.0" fill="#111111" text-anchor="middle">컬러와 거리를 같은 순간에 찍는다 (시각 차 0.1 ms 안팎)</text>
+<text x="3084.0" y="8736.7" font-size="11.0" fill="#111111" text-anchor="middle">계산기 · Raspberry Pi 4 — 위 장치의 ROS 토픽을 발행한다</text>
+<text x="3084.0" y="8751.4" font-size="11.0" fill="#111111" text-anchor="middle">토픽 이름 앞에 /robot8 가 붙는다 · 도메인 3</text>
+<text x="3084.0" y="8766.0" font-size="11.0" fill="#111111" text-anchor="middle">통신은 PC-F 192.168.108.41 의 서버 한 대만 본다</text>
+<text x="3084.0" y="8780.6" font-size="11.0" fill="#111111" text-anchor="middle">도크 · Create 3 도크 — 두 도크 사이 0.84 m · 한 번에 한 대만</text>
+<rect x="118.0" y="8529.0" width="400.0" height="147.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="318.0" y="8547.9" font-size="11.0" fill="#111111" text-anchor="middle">바꿀 수 있는 값</text>
+<text x="318.0" y="8562.6" font-size="11.0" fill="#111111" text-anchor="middle">세우는 거리 0.30 m  ·  푸는 거리 0.38 m — 8 cm 여유는 라이다 오차의 네</text>
+<text x="318.0" y="8577.2" font-size="11.0" fill="#111111" text-anchor="middle">배</text>
+<text x="318.0" y="8591.8" font-size="11.0" fill="#111111" text-anchor="middle">0.45 로 두면 좁은 목 안에서 어느 방향으로 돌아도 풀리지 않는다 (통로</text>
+<text x="318.0" y="8606.5" font-size="11.0" fill="#111111" text-anchor="middle">반폭 0.395 m)</text>
+<text x="318.0" y="8621.1" font-size="11.0" fill="#111111" text-anchor="middle">정지 중 통과시킬 회전 속도 상한 0.4 rad/s</text>
+<text x="318.0" y="8635.7" font-size="11.0" fill="#111111" text-anchor="middle">주행 명령 신선도 0.5초 — 이보다 오래된 명령이면 회전도 0</text>
+<text x="318.0" y="8650.3" font-size="11.0" fill="#111111" text-anchor="middle">고정값 — 앞을 보는 각도 좌우 35° · 세움 2회 연속 · 풀림 5회 연속 · 초당</text>
+<text x="318.0" y="8665.0" font-size="11.0" fill="#111111" text-anchor="middle">20회 발행</text>
 <rect x="2744.0" y="598.0" width="400.0" height="147.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
 <text x="2944.0" y="616.9" font-size="11.0" fill="#111111" text-anchor="middle">바꿀 수 있는 값 (기본값)</text>
 <text x="2944.0" y="631.6" font-size="11.0" fill="#111111" text-anchor="middle">검출 모델 — 작업자 복장 두 가지를 가르도록 학습한 것. 인지팀과 같은</text>
@@ -84,16 +86,16 @@
 <text x="2944.0" y="704.7" font-size="11.0" fill="#111111" text-anchor="middle">재등록 판정 기준  0.45  — 끊긴 사람이 기존 등록자와 같은지 (실측</text>
 <text x="2944.0" y="719.4" font-size="11.0" fill="#111111" text-anchor="middle">0.55~0.91 에서 여유 0.10)</text>
 <text x="2944.0" y="734.0" font-size="11.0" fill="#111111" text-anchor="middle">카메라 번호 — 자동 탐색(−1) · 화면 창 표시 켬</text>
-<rect x="4630.0" y="7946.0" width="400.0" height="147.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
-<text x="4830.0" y="7964.9" font-size="11.0" fill="#111111" text-anchor="middle">바꿀 수 있는 값</text>
-<text x="4830.0" y="7979.6" font-size="11.0" fill="#111111" text-anchor="middle">세우는 거리 0.30 m  ·  푸는 거리 0.38 m — 8 cm 여유는 라이다 오차의 네</text>
-<text x="4830.0" y="7994.2" font-size="11.0" fill="#111111" text-anchor="middle">배</text>
-<text x="4830.0" y="8008.8" font-size="11.0" fill="#111111" text-anchor="middle">0.45 로 두면 좁은 목 안에서 어느 방향으로 돌아도 풀리지 않는다 (통로</text>
-<text x="4830.0" y="8023.5" font-size="11.0" fill="#111111" text-anchor="middle">반폭 0.395 m)</text>
-<text x="4830.0" y="8038.1" font-size="11.0" fill="#111111" text-anchor="middle">정지 중 통과시킬 회전 속도 상한 0.4 rad/s</text>
-<text x="4830.0" y="8052.7" font-size="11.0" fill="#111111" text-anchor="middle">주행 명령 신선도 0.5초 — 이보다 오래된 명령이면 회전도 0</text>
-<text x="4830.0" y="8067.3" font-size="11.0" fill="#111111" text-anchor="middle">고정값 — 앞을 보는 각도 좌우 35° · 세움 2회 연속 · 풀림 5회 연속 · 초당</text>
-<text x="4830.0" y="8082.0" font-size="11.0" fill="#111111" text-anchor="middle">20회 발행</text>
+<rect x="4630.0" y="8529.0" width="400.0" height="147.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="4830.0" y="8547.9" font-size="11.0" fill="#111111" text-anchor="middle">바꿀 수 있는 값</text>
+<text x="4830.0" y="8562.6" font-size="11.0" fill="#111111" text-anchor="middle">세우는 거리 0.30 m  ·  푸는 거리 0.38 m — 8 cm 여유는 라이다 오차의 네</text>
+<text x="4830.0" y="8577.2" font-size="11.0" fill="#111111" text-anchor="middle">배</text>
+<text x="4830.0" y="8591.8" font-size="11.0" fill="#111111" text-anchor="middle">0.45 로 두면 좁은 목 안에서 어느 방향으로 돌아도 풀리지 않는다 (통로</text>
+<text x="4830.0" y="8606.5" font-size="11.0" fill="#111111" text-anchor="middle">반폭 0.395 m)</text>
+<text x="4830.0" y="8621.1" font-size="11.0" fill="#111111" text-anchor="middle">정지 중 통과시킬 회전 속도 상한 0.4 rad/s</text>
+<text x="4830.0" y="8635.7" font-size="11.0" fill="#111111" text-anchor="middle">주행 명령 신선도 0.5초 — 이보다 오래된 명령이면 회전도 0</text>
+<text x="4830.0" y="8650.3" font-size="11.0" fill="#111111" text-anchor="middle">고정값 — 앞을 보는 각도 좌우 35° · 세움 2회 연속 · 풀림 5회 연속 · 초당</text>
+<text x="4830.0" y="8665.0" font-size="11.0" fill="#111111" text-anchor="middle">20회 발행</text>
 <rect x="488.0" y="3475.0" width="400.0" height="133.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
 <text x="688.0" y="3494.3" font-size="11.0" fill="#111111" text-anchor="middle">바꿀 수 있는 값</text>
 <text x="688.0" y="3508.9" font-size="11.0" fill="#111111" text-anchor="middle">베이에서 마커까지 붙는 거리 0.5 m — 마커 기준 절대 위치라 출발점이</text>
@@ -112,14 +114,22 @@
 <text x="5200.0" y="3567.4" font-size="11.0" fill="#111111" text-anchor="middle">마커 재탐지 회전 폭 — 카메라 가로 시야보다 확실히 작게</text>
 <text x="5200.0" y="3582.0" font-size="11.0" fill="#111111" text-anchor="middle">적재 체류 5초  ·  토큰 재요청 2초  ·  베이 좌표와 방위는 아레나 설정</text>
 <text x="5200.0" y="3596.7" font-size="11.0" fill="#111111" text-anchor="middle">파일에서 읽는다</text>
-<rect x="628.0" y="7630.0" width="400.0" height="118.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="828.0" y="7649.1" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것</text>
-<text x="828.0" y="7663.7" font-size="11.0" fill="#111111" text-anchor="middle">의도한 바퀴 속도 — 안전 감시가 정지 중에 회전분만 빌려 쓴다</text>
-<text x="828.0" y="7678.3" font-size="11.0" fill="#111111" text-anchor="middle">최종 바퀴 명령을 그대로 읽으면 자기가 낸 것을 되먹으므로 앞단 값을</text>
-<text x="828.0" y="7693.0" font-size="11.0" fill="#111111" text-anchor="middle">읽는다</text>
-<text x="828.0" y="7707.6" font-size="11.0" fill="#111111" text-anchor="middle">평소 바퀴 명령은 그대로 로봇으로 나간다 (정지 중에는 안전 감시가</text>
-<text x="828.0" y="7722.2" font-size="11.0" fill="#111111" text-anchor="middle">덮어쓴다)</text>
-<text x="828.0" y="7736.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 로봇 위치 — 관제가 화면에 쓴다</text>
+<rect x="628.0" y="7987.0" width="400.0" height="118.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="828.0" y="8006.1" font-size="11.0" fill="#111111" text-anchor="middle">기동 순서가 중요하다</text>
+<text x="828.0" y="8020.7" font-size="11.0" fill="#111111" text-anchor="middle">① 위치 추정  ② 셔틀 노드(처음 위치를 넣는다)  ③ 길찾기  순서로 띄운다</text>
+<text x="828.0" y="8035.3" font-size="11.0" fill="#111111" text-anchor="middle">길찾기는 시작할 때 지도 기준 좌표 변환을 요구한다</text>
+<text x="828.0" y="8050.0" font-size="11.0" fill="#111111" text-anchor="middle">처음 위치가 늦으면 그 변환이 없어 준비가 실패하고,</text>
+<text x="828.0" y="8064.6" font-size="11.0" fill="#111111" text-anchor="middle">한 번 실패하면 나중에 생겨도 다시 시도하지 않는다</text>
+<text x="828.0" y="8079.2" font-size="11.0" fill="#111111" text-anchor="middle">길찾기는 로봇당 한 PC 에서만 띄운다 — 두 곳에서 띄우면 바퀴 명령을</text>
+<text x="828.0" y="8093.8" font-size="11.0" fill="#111111" text-anchor="middle">둘이 낸다</text>
+<rect x="628.0" y="8213.0" width="400.0" height="118.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="828.0" y="8232.1" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것</text>
+<text x="828.0" y="8246.7" font-size="11.0" fill="#111111" text-anchor="middle">의도한 바퀴 속도 — 안전 감시가 정지 중에 회전분만 빌려 쓴다</text>
+<text x="828.0" y="8261.3" font-size="11.0" fill="#111111" text-anchor="middle">최종 바퀴 명령을 그대로 읽으면 자기가 낸 것을 되먹으므로 앞단 값을</text>
+<text x="828.0" y="8276.0" font-size="11.0" fill="#111111" text-anchor="middle">읽는다</text>
+<text x="828.0" y="8290.6" font-size="11.0" fill="#111111" text-anchor="middle">평소 바퀴 명령은 그대로 로봇으로 나간다 (정지 중에는 안전 감시가</text>
+<text x="828.0" y="8305.2" font-size="11.0" fill="#111111" text-anchor="middle">덮어쓴다)</text>
+<text x="828.0" y="8319.9" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 로봇 위치 — 관제가 화면에 쓴다</text>
 <rect x="2744.0" y="456.0" width="400.0" height="118.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
 <text x="2944.0" y="475.1" font-size="11.0" fill="#111111" text-anchor="middle">웹캠 1 · USB 카메라</text>
 <text x="2944.0" y="489.7" font-size="11.0" fill="#111111" text-anchor="middle">출입구 정면 · 출입구만 본다 (관제탑 구역은 시야 밖)</text>
@@ -136,14 +146,22 @@
 <text x="2714.0" y="2506.6" font-size="11.0" fill="#111111" text-anchor="middle">트랙 확정 0.3초 연속 보이면  ·  0.5초 넘게 끊기면 세던 것을 버린다</text>
 <text x="2714.0" y="2521.2" font-size="11.0" fill="#111111" text-anchor="middle">놓침 확정 1.0초 안 보이면  ·  받는 쪽이 힌트를 믿는 시간 2.0초</text>
 <text x="2714.0" y="2535.9" font-size="11.0" fill="#111111" text-anchor="middle">화면 압축 품질 80  ·  검출 모델과 바닥 좌표 변환표는 파일에서 읽는다</text>
-<rect x="5140.0" y="7630.0" width="400.0" height="118.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="5340.0" y="7649.1" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것</text>
-<text x="5340.0" y="7663.7" font-size="11.0" fill="#111111" text-anchor="middle">의도한 바퀴 속도 — 안전 감시가 정지 중에 회전분만 빌려 쓴다</text>
-<text x="5340.0" y="7678.3" font-size="11.0" fill="#111111" text-anchor="middle">최종 바퀴 명령을 그대로 읽으면 자기가 낸 것을 되먹으므로 앞단 값을</text>
-<text x="5340.0" y="7693.0" font-size="11.0" fill="#111111" text-anchor="middle">읽는다</text>
-<text x="5340.0" y="7707.6" font-size="11.0" fill="#111111" text-anchor="middle">평소 바퀴 명령은 그대로 로봇으로 나간다 (정지 중에는 안전 감시가</text>
-<text x="5340.0" y="7722.2" font-size="11.0" fill="#111111" text-anchor="middle">덮어쓴다)</text>
-<text x="5340.0" y="7736.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 로봇 위치 — 관제가 화면에 쓴다</text>
+<rect x="5140.0" y="7987.0" width="400.0" height="118.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="5340.0" y="8006.1" font-size="11.0" fill="#111111" text-anchor="middle">기동 순서가 중요하다</text>
+<text x="5340.0" y="8020.7" font-size="11.0" fill="#111111" text-anchor="middle">① 위치 추정  ② 셔틀 노드(처음 위치를 넣는다)  ③ 길찾기  순서로 띄운다</text>
+<text x="5340.0" y="8035.3" font-size="11.0" fill="#111111" text-anchor="middle">길찾기는 시작할 때 지도 기준 좌표 변환을 요구한다</text>
+<text x="5340.0" y="8050.0" font-size="11.0" fill="#111111" text-anchor="middle">처음 위치가 늦으면 그 변환이 없어 준비가 실패하고,</text>
+<text x="5340.0" y="8064.6" font-size="11.0" fill="#111111" text-anchor="middle">한 번 실패하면 나중에 생겨도 다시 시도하지 않는다</text>
+<text x="5340.0" y="8079.2" font-size="11.0" fill="#111111" text-anchor="middle">길찾기는 로봇당 한 PC 에서만 띄운다 — 두 곳에서 띄우면 바퀴 명령을</text>
+<text x="5340.0" y="8093.8" font-size="11.0" fill="#111111" text-anchor="middle">둘이 낸다</text>
+<rect x="5140.0" y="8213.0" width="400.0" height="118.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="5340.0" y="8232.1" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것</text>
+<text x="5340.0" y="8246.7" font-size="11.0" fill="#111111" text-anchor="middle">의도한 바퀴 속도 — 안전 감시가 정지 중에 회전분만 빌려 쓴다</text>
+<text x="5340.0" y="8261.3" font-size="11.0" fill="#111111" text-anchor="middle">최종 바퀴 명령을 그대로 읽으면 자기가 낸 것을 되먹으므로 앞단 값을</text>
+<text x="5340.0" y="8276.0" font-size="11.0" fill="#111111" text-anchor="middle">읽는다</text>
+<text x="5340.0" y="8290.6" font-size="11.0" fill="#111111" text-anchor="middle">평소 바퀴 명령은 그대로 로봇으로 나간다 (정지 중에는 안전 감시가</text>
+<text x="5340.0" y="8305.2" font-size="11.0" fill="#111111" text-anchor="middle">덮어쓴다)</text>
+<text x="5340.0" y="8319.9" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 로봇 위치 — 관제가 화면에 쓴다</text>
 <rect x="258.0" y="456.0" width="400.0" height="104.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
 <text x="458.0" y="475.4" font-size="11.0" fill="#111111" text-anchor="middle">바꿀 수 있는 값</text>
 <text x="458.0" y="490.0" font-size="11.0" fill="#111111" text-anchor="middle">검출 확신도 하한 0.5  ·  색 지문 닮은 정도 기준 0.6</text>
@@ -165,6 +183,13 @@
 <text x="688.0" y="4895.3" font-size="11.0" fill="#111111" text-anchor="middle">받는 쪽이 도착으로 인정하는 1.5 m 는 소비자가 따로 건다</text>
 <text x="688.0" y="4909.9" font-size="11.0" fill="#111111" text-anchor="middle">거리 픽셀을 모으는 마커 안쪽 비율 0.4  ·  믿을 수 있는 값 판정 15 cm</text>
 <text x="688.0" y="4924.5" font-size="11.0" fill="#111111" text-anchor="middle">초점거리 보정 계수 · 로봇별 시차 보정 계수  ·  자세 내보내기 켬</text>
+<rect x="628.0" y="7433.0" width="400.0" height="104.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="828.0" y="7452.4" font-size="11.0" fill="#111111" text-anchor="middle">처음 위치를 받아야 시작한다</text>
+<text x="828.0" y="7467.0" font-size="11.0" fill="#111111" text-anchor="middle">화면(RViz)에서 손으로 찍지 않는다 — 셔틀 노드가 자기 도크 좌표로 넣어</text>
+<text x="828.0" y="7481.6" font-size="11.0" fill="#111111" text-anchor="middle">준다</text>
+<text x="828.0" y="7496.3" font-size="11.0" fill="#111111" text-anchor="middle">손으로 찍으면 두 로봇의 기준점이 물리적으로 다른 점이 되어</text>
+<text x="828.0" y="7510.9" font-size="11.0" fill="#111111" text-anchor="middle">구역 경계 · 정해진 자리 · 통합 상태가 전부 어긋난다 (1대로 시험하면 안</text>
+<text x="828.0" y="7525.5" font-size="11.0" fill="#111111" text-anchor="middle">드러난다)</text>
 <rect x="2744.0" y="1823.0" width="400.0" height="104.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
 <text x="2944.0" y="1842.4" font-size="11.0" fill="#111111" text-anchor="middle">1초 타이머 — 등록표를 통째로 다시 내보낸다</text>
 <text x="2944.0" y="1857.0" font-size="11.0" fill="#111111" text-anchor="middle">/webcam1/worker_descriptor · WorkerDescriptor · RELIABLE</text>
@@ -193,6 +218,20 @@
 <text x="2574.0" y="5915.3" font-size="11.0" fill="#111111" text-anchor="middle">감시 주기 1초  ·  로봇이 다시 물어보는 주기 2초 (로봇 쪽에서 정한다)</text>
 <text x="2574.0" y="5929.9" font-size="11.0" fill="#111111" text-anchor="middle">구역 이름은 아레나 설정 파일의 목록과 반드시 같아야 한다</text>
 <text x="2574.0" y="5944.5" font-size="11.0" fill="#111111" text-anchor="middle">되살리는 신호(하트비트) 규칙은 두지 않는다 — 계약에 없다</text>
+<rect x="2884.0" y="7999.0" width="400.0" height="104.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="3084.0" y="8018.4" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것 (TurtleBot4 기본 토픽)</text>
+<text x="3084.0" y="8033.0" font-size="11.0" fill="#111111" text-anchor="middle">oakd/rgb/image_raw/compressed ·</text>
+<text x="3084.0" y="8047.6" font-size="11.0" fill="#111111" text-anchor="middle">oakd/stereo/image_raw/compressedDepth</text>
+<text x="3084.0" y="8062.3" font-size="11.0" fill="#111111" text-anchor="middle">oakd/rgb/camera_info · scan · battery_state · 바퀴가 돈 양</text>
+<text x="3084.0" y="8076.9" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 위치는 로봇이 내지 않는다 — 제어 PC 의 위치 추정이 낸다</text>
+<text x="3084.0" y="8091.5" font-size="11.0" fill="#111111" text-anchor="middle">도킹됐는지 여부 — 토픽이 아니라 물어보면 답한다</text>
+<rect x="2884.0" y="8816.0" width="400.0" height="104.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="3084.0" y="8835.4" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것 (TurtleBot4 기본 토픽)</text>
+<text x="3084.0" y="8850.0" font-size="11.0" fill="#111111" text-anchor="middle">oakd/rgb/image_raw/compressed ·</text>
+<text x="3084.0" y="8864.6" font-size="11.0" fill="#111111" text-anchor="middle">oakd/stereo/image_raw/compressedDepth</text>
+<text x="3084.0" y="8879.3" font-size="11.0" fill="#111111" text-anchor="middle">oakd/rgb/camera_info · scan · battery_state · 바퀴가 돈 양</text>
+<text x="3084.0" y="8893.9" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 위치는 로봇이 내지 않는다 — 제어 PC 의 위치 추정이 낸다</text>
+<text x="3084.0" y="8908.5" font-size="11.0" fill="#111111" text-anchor="middle">도킹됐는지 여부 — 토픽이 아니라 물어보면 답한다</text>
 <rect x="4770.0" y="456.0" width="400.0" height="104.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
 <text x="4970.0" y="475.4" font-size="11.0" fill="#111111" text-anchor="middle">바꿀 수 있는 값</text>
 <text x="4970.0" y="490.0" font-size="11.0" fill="#111111" text-anchor="middle">검출 확신도 하한 0.5  ·  색 지문 닮은 정도 기준 0.6</text>
@@ -214,18 +253,25 @@
 <text x="5200.0" y="4895.3" font-size="11.0" fill="#111111" text-anchor="middle">받는 쪽이 도착으로 인정하는 1.5 m 는 소비자가 따로 건다</text>
 <text x="5200.0" y="4909.9" font-size="11.0" fill="#111111" text-anchor="middle">거리 픽셀을 모으는 마커 안쪽 비율 0.4  ·  믿을 수 있는 값 판정 15 cm</text>
 <text x="5200.0" y="4924.5" font-size="11.0" fill="#111111" text-anchor="middle">초점거리 보정 계수 · 로봇별 시차 보정 계수  ·  자세 내보내기 켬</text>
+<rect x="5140.0" y="7433.0" width="400.0" height="104.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="5340.0" y="7452.4" font-size="11.0" fill="#111111" text-anchor="middle">처음 위치를 받아야 시작한다</text>
+<text x="5340.0" y="7467.0" font-size="11.0" fill="#111111" text-anchor="middle">화면(RViz)에서 손으로 찍지 않는다 — 셔틀 노드가 자기 도크 좌표로 넣어</text>
+<text x="5340.0" y="7481.6" font-size="11.0" fill="#111111" text-anchor="middle">준다</text>
+<text x="5340.0" y="7496.3" font-size="11.0" fill="#111111" text-anchor="middle">손으로 찍으면 두 로봇의 기준점이 물리적으로 다른 점이 되어</text>
+<text x="5340.0" y="7510.9" font-size="11.0" fill="#111111" text-anchor="middle">구역 경계 · 정해진 자리 · 통합 상태가 전부 어긋난다 (1대로 시험하면 안</text>
+<text x="5340.0" y="7525.5" font-size="11.0" fill="#111111" text-anchor="middle">드러난다)</text>
 <rect x="40.0" y="330.0" width="1576.0" height="24.0" fill="#2C6E9B" stroke="#2C6E9B" stroke-width="1"/>
 <text x="48.0" y="346.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>PC4 · AMR 제어 PC  (/robot3)　PC-R3</text>
 <rect x="2296.0" y="3806.0" width="1576.0" height="24.0" fill="#B03A2E" stroke="#B03A2E" stroke-width="1"/>
 <text x="2304.0" y="3822.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>PC3 · 관제 PC　PC-F</text>
 <rect x="4552.0" y="330.0" width="1576.0" height="24.0" fill="#2C6E9B" stroke="#2C6E9B" stroke-width="1"/>
 <text x="4560.0" y="346.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>PC5 · AMR 제어 PC  (/robot8)　PC-R8</text>
-<rect x="628.0" y="7335.0" width="400.0" height="89.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
-<text x="828.0" y="7354.2" font-size="11.0" fill="#111111" text-anchor="middle">무엇을 하나</text>
-<text x="828.0" y="7368.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 목표 지점을 주면 경로를 만들고 바퀴 속도를 계속 내보낸다</text>
-<text x="828.0" y="7383.5" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전 · 정해진 방향으로 전진 · 도크 붙이기 같은 동작도 대신 해</text>
-<text x="828.0" y="7398.1" font-size="11.0" fill="#111111" text-anchor="middle">준다</text>
-<text x="828.0" y="7412.7" font-size="11.0" fill="#111111" text-anchor="middle">자기 위치 추정도 여기서 돈다 — 지도와 라이다를 맞춰 위치를 낸다</text>
+<rect x="628.0" y="7874.0" width="400.0" height="89.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="828.0" y="7893.2" font-size="11.0" fill="#111111" text-anchor="middle">무엇을 하나</text>
+<text x="828.0" y="7907.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 목표 지점을 주면 경로를 만들고 바퀴 속도를 계속 내보낸다</text>
+<text x="828.0" y="7922.5" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전 · 정해진 방향으로 전진 · 도크 붙이기 같은 동작도 대신 해</text>
+<text x="828.0" y="7937.1" font-size="11.0" fill="#111111" text-anchor="middle">준다</text>
+<text x="828.0" y="7951.7" font-size="11.0" fill="#111111" text-anchor="middle">자기 위치 추정도 여기서 돈다 — 지도와 라이다를 맞춰 위치를 낸다</text>
 <rect x="2514.0" y="2571.0" width="400.0" height="89.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
 <text x="2714.0" y="2590.2" font-size="11.0" fill="#111111" text-anchor="middle">실행 구조</text>
 <text x="2714.0" y="2604.8" font-size="11.0" fill="#111111" text-anchor="middle">스레드 셋이 각각 돈다 — 카메라 읽기 / 검출 / 화면 발행</text>
@@ -238,32 +284,20 @@
 <text x="2574.0" y="3980.5" font-size="11.0" fill="#111111" text-anchor="middle">통합 상태 내보내는 주기 1초  ·  대기 명단이 모이기를 기다리는 시간</text>
 <text x="2574.0" y="3995.1" font-size="11.0" fill="#111111" text-anchor="middle">배정 조건 — 등록된 작업자이고 배터리가 기준 이상일 것</text>
 <text x="2574.0" y="4009.7" font-size="11.0" fill="#111111" text-anchor="middle">기록은 파일 데이터베이스 한 개 — 작업자 표 · 미션 표 · 사건 표</text>
-<rect x="2884.0" y="7999.0" width="400.0" height="89.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="3084.0" y="8018.2" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것 (TurtleBot4 기본 토픽)</text>
-<text x="3084.0" y="8032.8" font-size="11.0" fill="#111111" text-anchor="middle">oakd/rgb/image_raw/compressed ·</text>
-<text x="3084.0" y="8047.5" font-size="11.0" fill="#111111" text-anchor="middle">oakd/stereo/image_raw/compressedDepth</text>
-<text x="3084.0" y="8062.1" font-size="11.0" fill="#111111" text-anchor="middle">oakd/rgb/camera_info · scan · battery_state · amcl_pose</text>
-<text x="3084.0" y="8076.7" font-size="11.0" fill="#111111" text-anchor="middle">도킹됐는지 여부 — 토픽이 아니라 물어보면 답한다</text>
-<rect x="2884.0" y="8801.0" width="400.0" height="89.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="3084.0" y="8820.2" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것 (TurtleBot4 기본 토픽)</text>
-<text x="3084.0" y="8834.8" font-size="11.0" fill="#111111" text-anchor="middle">oakd/rgb/image_raw/compressed ·</text>
-<text x="3084.0" y="8849.5" font-size="11.0" fill="#111111" text-anchor="middle">oakd/stereo/image_raw/compressedDepth</text>
-<text x="3084.0" y="8864.1" font-size="11.0" fill="#111111" text-anchor="middle">oakd/rgb/camera_info · scan · battery_state · amcl_pose</text>
-<text x="3084.0" y="8878.7" font-size="11.0" fill="#111111" text-anchor="middle">도킹됐는지 여부 — 토픽이 아니라 물어보면 답한다</text>
-<rect x="5140.0" y="7335.0" width="400.0" height="89.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
-<text x="5340.0" y="7354.2" font-size="11.0" fill="#111111" text-anchor="middle">무엇을 하나</text>
-<text x="5340.0" y="7368.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 목표 지점을 주면 경로를 만들고 바퀴 속도를 계속 내보낸다</text>
-<text x="5340.0" y="7383.5" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전 · 정해진 방향으로 전진 · 도크 붙이기 같은 동작도 대신 해</text>
-<text x="5340.0" y="7398.1" font-size="11.0" fill="#111111" text-anchor="middle">준다</text>
-<text x="5340.0" y="7412.7" font-size="11.0" fill="#111111" text-anchor="middle">자기 위치 추정도 여기서 돈다 — 지도와 라이다를 맞춰 위치를 낸다</text>
-<rect x="104.0" y="7908.0" width="1448.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
-<text x="112.0" y="7924.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>safety_watchdog　앞이 막히면 세운다 — 인지·웹캠·통신과 무관하게 돈다</text>
+<rect x="5140.0" y="7874.0" width="400.0" height="89.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="5340.0" y="7893.2" font-size="11.0" fill="#111111" text-anchor="middle">무엇을 하나</text>
+<text x="5340.0" y="7907.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 목표 지점을 주면 경로를 만들고 바퀴 속도를 계속 내보낸다</text>
+<text x="5340.0" y="7922.5" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전 · 정해진 방향으로 전진 · 도크 붙이기 같은 동작도 대신 해</text>
+<text x="5340.0" y="7937.1" font-size="11.0" fill="#111111" text-anchor="middle">준다</text>
+<text x="5340.0" y="7951.7" font-size="11.0" fill="#111111" text-anchor="middle">자기 위치 추정도 여기서 돈다 — 지도와 라이다를 맞춰 위치를 낸다</text>
+<rect x="104.0" y="8491.0" width="1448.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
+<text x="112.0" y="8507.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>safety_watchdog　앞이 막히면 세운다 — 인지·웹캠·통신과 무관하게 돈다</text>
 <rect x="2360.0" y="3894.0" width="1448.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
 <text x="2368.0" y="3910.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>fleet_manager　작업자에게 로봇을 붙이고 미션을 관리한다</text>
 <rect x="2360.0" y="5676.0" width="1448.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
 <text x="2368.0" y="5692.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>zone_semaphore　좁은 목을 한 번에 한 대만 지나가게 한다</text>
-<rect x="4616.0" y="7908.0" width="1448.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
-<text x="4624.0" y="7924.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>safety_watchdog　앞이 막히면 세운다 — 인지·웹캠·통신과 무관하게 돈다</text>
+<rect x="4616.0" y="8491.0" width="1448.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
+<text x="4624.0" y="8507.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>safety_watchdog　앞이 막히면 세운다 — 인지·웹캠·통신과 무관하게 돈다</text>
 <rect x="2436.0" y="2175.0" width="1296.0" height="24.0" fill="#6E5AA0" stroke="#6E5AA0" stroke-width="1"/>
 <text x="2444.0" y="2191.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>PC2 · 웹캠2 PC　PC-W2</text>
 <rect x="488.0" y="6235.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
@@ -271,16 +305,16 @@
 <text x="688.0" y="6268.6" font-size="11.0" fill="#111111" text-anchor="middle">도킹 재시도 횟수  ·  복귀 제한 시간  ·  토큰 재요청 주기</text>
 <text x="688.0" y="6283.3" font-size="11.0" fill="#111111" text-anchor="middle">도크 정면 접근 지점과 대기 자리는 아레나 설정 파일에서 읽는다</text>
 <text x="688.0" y="6297.9" font-size="11.0" fill="#111111" text-anchor="middle">대기 자리는 좁은 목 바깥(중앙 복도, 가장 가까운 도크에서 1.52 m)</text>
-<rect x="628.0" y="7448.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
-<text x="828.0" y="7467.0" font-size="11.0" fill="#111111" text-anchor="middle">기동 순서가 중요하다</text>
-<text x="828.0" y="7481.6" font-size="11.0" fill="#111111" text-anchor="middle">셔틀 노드를 Nav2 보다 먼저 띄운다</text>
-<text x="828.0" y="7496.3" font-size="11.0" fill="#111111" text-anchor="middle">지도 준비가 시작할 때 로봇 위치를 요구하는데, 늦게 주면 준비가 실패하고</text>
-<text x="828.0" y="7510.9" font-size="11.0" fill="#111111" text-anchor="middle">한 번 실패하면 나중에 위치가 생겨도 다시 시도하지 않는다</text>
-<rect x="628.0" y="7772.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
-<text x="828.0" y="7791.0" font-size="11.0" fill="#111111" text-anchor="middle">안 쓰는 것</text>
-<text x="828.0" y="7805.6" font-size="11.0" fill="#111111" text-anchor="middle">뒤로 가기를 쓰지 않는다 — 로봇 앞쪽에만 범퍼와 낭떠러지 감지가 있다</text>
-<text x="828.0" y="7820.3" font-size="11.0" fill="#111111" text-anchor="middle">작은 보정 목표는 주지 않는다 — 허용 오차 안이라 로봇이 안 움직이고 곧장</text>
-<text x="828.0" y="7834.9" font-size="11.0" fill="#111111" text-anchor="middle">성공으로 끝난다</text>
+<rect x="628.0" y="7335.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="828.0" y="7354.0" font-size="11.0" fill="#111111" text-anchor="middle">무엇을 하나</text>
+<text x="828.0" y="7368.6" font-size="11.0" fill="#111111" text-anchor="middle">미리 만들어 둔 지도 파일을 읽고, 라이다가 보는 것과 지도를 맞춰</text>
+<text x="828.0" y="7383.3" font-size="11.0" fill="#111111" text-anchor="middle">로봇이 지도 어디에 있는지 계속 추정한다</text>
+<text x="828.0" y="7397.9" font-size="11.0" fill="#111111" text-anchor="middle">이 값이 없으면 길찾기가 목표를 세울 수 없다</text>
+<rect x="628.0" y="8355.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="828.0" y="8374.0" font-size="11.0" fill="#111111" text-anchor="middle">안 쓰는 것</text>
+<text x="828.0" y="8388.6" font-size="11.0" fill="#111111" text-anchor="middle">뒤로 가기를 쓰지 않는다 — 로봇 앞쪽에만 범퍼와 낭떠러지 감지가 있다</text>
+<text x="828.0" y="8403.3" font-size="11.0" fill="#111111" text-anchor="middle">작은 보정 목표는 주지 않는다 — 허용 오차 안이라 로봇이 안 움직이고 곧장</text>
+<text x="828.0" y="8417.9" font-size="11.0" fill="#111111" text-anchor="middle">성공으로 끝난다</text>
 <rect x="2744.0" y="769.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
 <text x="2944.0" y="788.0" font-size="11.0" fill="#111111" text-anchor="middle">고정한 값</text>
 <text x="2944.0" y="802.6" font-size="11.0" fill="#111111" text-anchor="middle">처리 주기 0.1초 (초당 10회)  ·  등록 확정 1.0초 연속</text>
@@ -316,16 +350,16 @@
 <text x="5200.0" y="6268.6" font-size="11.0" fill="#111111" text-anchor="middle">도킹 재시도 횟수  ·  복귀 제한 시간  ·  토큰 재요청 주기</text>
 <text x="5200.0" y="6283.3" font-size="11.0" fill="#111111" text-anchor="middle">도크 정면 접근 지점과 대기 자리는 아레나 설정 파일에서 읽는다</text>
 <text x="5200.0" y="6297.9" font-size="11.0" fill="#111111" text-anchor="middle">대기 자리는 좁은 목 바깥(중앙 복도, 가장 가까운 도크에서 1.52 m)</text>
-<rect x="5140.0" y="7448.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
-<text x="5340.0" y="7467.0" font-size="11.0" fill="#111111" text-anchor="middle">기동 순서가 중요하다</text>
-<text x="5340.0" y="7481.6" font-size="11.0" fill="#111111" text-anchor="middle">셔틀 노드를 Nav2 보다 먼저 띄운다</text>
-<text x="5340.0" y="7496.3" font-size="11.0" fill="#111111" text-anchor="middle">지도 준비가 시작할 때 로봇 위치를 요구하는데, 늦게 주면 준비가 실패하고</text>
-<text x="5340.0" y="7510.9" font-size="11.0" fill="#111111" text-anchor="middle">한 번 실패하면 나중에 위치가 생겨도 다시 시도하지 않는다</text>
-<rect x="5140.0" y="7772.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
-<text x="5340.0" y="7791.0" font-size="11.0" fill="#111111" text-anchor="middle">안 쓰는 것</text>
-<text x="5340.0" y="7805.6" font-size="11.0" fill="#111111" text-anchor="middle">뒤로 가기를 쓰지 않는다 — 로봇 앞쪽에만 범퍼와 낭떠러지 감지가 있다</text>
-<text x="5340.0" y="7820.3" font-size="11.0" fill="#111111" text-anchor="middle">작은 보정 목표는 주지 않는다 — 허용 오차 안이라 로봇이 안 움직이고 곧장</text>
-<text x="5340.0" y="7834.9" font-size="11.0" fill="#111111" text-anchor="middle">성공으로 끝난다</text>
+<rect x="5140.0" y="7335.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="5340.0" y="7354.0" font-size="11.0" fill="#111111" text-anchor="middle">무엇을 하나</text>
+<text x="5340.0" y="7368.6" font-size="11.0" fill="#111111" text-anchor="middle">미리 만들어 둔 지도 파일을 읽고, 라이다가 보는 것과 지도를 맞춰</text>
+<text x="5340.0" y="7383.3" font-size="11.0" fill="#111111" text-anchor="middle">로봇이 지도 어디에 있는지 계속 추정한다</text>
+<text x="5340.0" y="7397.9" font-size="11.0" fill="#111111" text-anchor="middle">이 값이 없으면 길찾기가 목표를 세울 수 없다</text>
+<rect x="5140.0" y="8355.0" width="400.0" height="74.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="5340.0" y="8374.0" font-size="11.0" fill="#111111" text-anchor="middle">안 쓰는 것</text>
+<text x="5340.0" y="8388.6" font-size="11.0" fill="#111111" text-anchor="middle">뒤로 가기를 쓰지 않는다 — 로봇 앞쪽에만 범퍼와 낭떠러지 감지가 있다</text>
+<text x="5340.0" y="8403.3" font-size="11.0" fill="#111111" text-anchor="middle">작은 보정 목표는 주지 않는다 — 허용 오차 안이라 로봇이 안 움직이고 곧장</text>
+<text x="5340.0" y="8417.9" font-size="11.0" fill="#111111" text-anchor="middle">성공으로 끝난다</text>
 <rect x="244.0" y="418.0" width="1168.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
 <text x="252.0" y="434.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>amr_detection　내 담당 작업자를 알아본다</text>
 <rect x="244.0" y="2136.0" width="1168.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
@@ -344,18 +378,26 @@
 <text x="458.0" y="1320.3" font-size="11.0" fill="#111111" text-anchor="middle">짝 확인 값을 시간 조건으로 갱신한다</text>
 <text x="458.0" y="1335.0" font-size="11.0" fill="#111111" text-anchor="middle">1초 넘게 연속 통과하면 참 · 3초 넘게 연속 실패면 거짓</text>
 <text x="458.0" y="1349.6" font-size="11.0" fill="#111111" text-anchor="middle">한 회차 깜빡임으로 바뀌지 않는다</text>
-<rect x="628.0" y="7546.0" width="400.0" height="60.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="828.0" y="7565.3" font-size="11.0" fill="#111111" text-anchor="middle">받는 것 — 주행 노드들이 준다</text>
-<text x="828.0" y="7580.0" font-size="11.0" fill="#111111" text-anchor="middle">갈 곳 (지도 위 목표 지점과 방향)  ·  도크에 붙이기 · 도크에서 빠져나오기</text>
-<text x="828.0" y="7594.6" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전 · 정해진 방향으로 전진 (허용 오차 없이 상대 이동)</text>
-<rect x="118.0" y="8654.0" width="400.0" height="60.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="318.0" y="8673.3" font-size="11.0" fill="#111111" text-anchor="middle">앞뒤 이동은 전부 0 으로 덮는다</text>
-<text x="318.0" y="8688.0" font-size="11.0" fill="#111111" text-anchor="middle">전진은 장애물 쪽이고 후진은 애초에 쓰지 않는다 (뒤를 보는 감지기가</text>
-<text x="318.0" y="8702.6" font-size="11.0" fill="#111111" text-anchor="middle">없다)</text>
-<rect x="118.0" y="8812.0" width="400.0" height="60.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="318.0" y="8831.3" font-size="11.0" fill="#111111" text-anchor="middle">회전만 0.4 rad/s 상한을 씌워 통과시킨다</text>
-<text x="318.0" y="8846.0" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전이 쓸고 가는 폭은 1.4 cm 뿐이라 안전하고,</text>
-<text x="318.0" y="8860.6" font-size="11.0" fill="#111111" text-anchor="middle">후진을 안 쓰는 이상 이것이 유일한 탈출 수단이다</text>
+<rect x="628.0" y="7561.0" width="400.0" height="60.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="828.0" y="7580.3" font-size="11.0" fill="#111111" text-anchor="middle">받는 것</text>
+<text x="828.0" y="7595.0" font-size="11.0" fill="#111111" text-anchor="middle">라이다 스캔 · 바퀴가 돈 양 (로봇에서)</text>
+<text x="828.0" y="7609.6" font-size="11.0" fill="#111111" text-anchor="middle">처음 위치 (셔틀 노드가 기동할 때 준다)</text>
+<rect x="628.0" y="7645.0" width="400.0" height="60.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="828.0" y="7664.3" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것</text>
+<text x="828.0" y="7679.0" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 로봇 위치 — 길찾기가 쓰고 관제가 화면에 쓴다</text>
+<text x="828.0" y="7693.6" font-size="11.0" fill="#111111" text-anchor="middle">지도 기준 좌표 변환 — 길찾기가 시작할 때 이것을 요구한다</text>
+<rect x="628.0" y="8129.0" width="400.0" height="60.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="828.0" y="8148.3" font-size="11.0" fill="#111111" text-anchor="middle">받는 것 — 주행 노드들이 준다</text>
+<text x="828.0" y="8163.0" font-size="11.0" fill="#111111" text-anchor="middle">갈 곳 (지도 위 목표 지점과 방향)  ·  도크에 붙이기 · 도크에서 빠져나오기</text>
+<text x="828.0" y="8177.6" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전 · 정해진 방향으로 전진 (허용 오차 없이 상대 이동)</text>
+<rect x="118.0" y="9237.0" width="400.0" height="60.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="318.0" y="9256.3" font-size="11.0" fill="#111111" text-anchor="middle">앞뒤 이동은 전부 0 으로 덮는다</text>
+<text x="318.0" y="9271.0" font-size="11.0" fill="#111111" text-anchor="middle">전진은 장애물 쪽이고 후진은 애초에 쓰지 않는다 (뒤를 보는 감지기가</text>
+<text x="318.0" y="9285.6" font-size="11.0" fill="#111111" text-anchor="middle">없다)</text>
+<rect x="118.0" y="9395.0" width="400.0" height="60.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="318.0" y="9414.3" font-size="11.0" fill="#111111" text-anchor="middle">회전만 0.4 rad/s 상한을 씌워 통과시킨다</text>
+<text x="318.0" y="9429.0" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전이 쓸고 가는 폭은 1.4 cm 뿐이라 안전하고,</text>
+<text x="318.0" y="9443.6" font-size="11.0" fill="#111111" text-anchor="middle">후진을 안 쓰는 이상 이것이 유일한 탈출 수단이다</text>
 <rect x="2744.0" y="999.0" width="400.0" height="60.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="2944.0" y="1018.3" font-size="11.0" fill="#111111" text-anchor="middle">검출 모델로 사람을 찾고 추적 번호를 붙인다</text>
 <text x="2944.0" y="1033.0" font-size="11.0" fill="#111111" text-anchor="middle">프레임이 바뀌어도 같은 사람에게 같은 번호가 유지되는 추적을 쓴다</text>
@@ -392,18 +434,26 @@
 <text x="4970.0" y="1320.3" font-size="11.0" fill="#111111" text-anchor="middle">짝 확인 값을 시간 조건으로 갱신한다</text>
 <text x="4970.0" y="1335.0" font-size="11.0" fill="#111111" text-anchor="middle">1초 넘게 연속 통과하면 참 · 3초 넘게 연속 실패면 거짓</text>
 <text x="4970.0" y="1349.6" font-size="11.0" fill="#111111" text-anchor="middle">한 회차 깜빡임으로 바뀌지 않는다</text>
-<rect x="5140.0" y="7546.0" width="400.0" height="60.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="5340.0" y="7565.3" font-size="11.0" fill="#111111" text-anchor="middle">받는 것 — 주행 노드들이 준다</text>
-<text x="5340.0" y="7580.0" font-size="11.0" fill="#111111" text-anchor="middle">갈 곳 (지도 위 목표 지점과 방향)  ·  도크에 붙이기 · 도크에서 빠져나오기</text>
-<text x="5340.0" y="7594.6" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전 · 정해진 방향으로 전진 (허용 오차 없이 상대 이동)</text>
-<rect x="4630.0" y="8654.0" width="400.0" height="60.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="4830.0" y="8673.3" font-size="11.0" fill="#111111" text-anchor="middle">앞뒤 이동은 전부 0 으로 덮는다</text>
-<text x="4830.0" y="8688.0" font-size="11.0" fill="#111111" text-anchor="middle">전진은 장애물 쪽이고 후진은 애초에 쓰지 않는다 (뒤를 보는 감지기가</text>
-<text x="4830.0" y="8702.6" font-size="11.0" fill="#111111" text-anchor="middle">없다)</text>
-<rect x="4630.0" y="8812.0" width="400.0" height="60.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="4830.0" y="8831.3" font-size="11.0" fill="#111111" text-anchor="middle">회전만 0.4 rad/s 상한을 씌워 통과시킨다</text>
-<text x="4830.0" y="8846.0" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전이 쓸고 가는 폭은 1.4 cm 뿐이라 안전하고,</text>
-<text x="4830.0" y="8860.6" font-size="11.0" fill="#111111" text-anchor="middle">후진을 안 쓰는 이상 이것이 유일한 탈출 수단이다</text>
+<rect x="5140.0" y="7561.0" width="400.0" height="60.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="5340.0" y="7580.3" font-size="11.0" fill="#111111" text-anchor="middle">받는 것</text>
+<text x="5340.0" y="7595.0" font-size="11.0" fill="#111111" text-anchor="middle">라이다 스캔 · 바퀴가 돈 양 (로봇에서)</text>
+<text x="5340.0" y="7609.6" font-size="11.0" fill="#111111" text-anchor="middle">처음 위치 (셔틀 노드가 기동할 때 준다)</text>
+<rect x="5140.0" y="7645.0" width="400.0" height="60.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="5340.0" y="7664.3" font-size="11.0" fill="#111111" text-anchor="middle">내보내는 것</text>
+<text x="5340.0" y="7679.0" font-size="11.0" fill="#111111" text-anchor="middle">지도 위 로봇 위치 — 길찾기가 쓰고 관제가 화면에 쓴다</text>
+<text x="5340.0" y="7693.6" font-size="11.0" fill="#111111" text-anchor="middle">지도 기준 좌표 변환 — 길찾기가 시작할 때 이것을 요구한다</text>
+<rect x="5140.0" y="8129.0" width="400.0" height="60.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="5340.0" y="8148.3" font-size="11.0" fill="#111111" text-anchor="middle">받는 것 — 주행 노드들이 준다</text>
+<text x="5340.0" y="8163.0" font-size="11.0" fill="#111111" text-anchor="middle">갈 곳 (지도 위 목표 지점과 방향)  ·  도크에 붙이기 · 도크에서 빠져나오기</text>
+<text x="5340.0" y="8177.6" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전 · 정해진 방향으로 전진 (허용 오차 없이 상대 이동)</text>
+<rect x="4630.0" y="9237.0" width="400.0" height="60.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="4830.0" y="9256.3" font-size="11.0" fill="#111111" text-anchor="middle">앞뒤 이동은 전부 0 으로 덮는다</text>
+<text x="4830.0" y="9271.0" font-size="11.0" fill="#111111" text-anchor="middle">전진은 장애물 쪽이고 후진은 애초에 쓰지 않는다 (뒤를 보는 감지기가</text>
+<text x="4830.0" y="9285.6" font-size="11.0" fill="#111111" text-anchor="middle">없다)</text>
+<rect x="4630.0" y="9395.0" width="400.0" height="60.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="4830.0" y="9414.3" font-size="11.0" fill="#111111" text-anchor="middle">회전만 0.4 rad/s 상한을 씌워 통과시킨다</text>
+<text x="4830.0" y="9429.0" font-size="11.0" fill="#111111" text-anchor="middle">제자리 회전이 쓸고 가는 폭은 1.4 cm 뿐이라 안전하고,</text>
+<text x="4830.0" y="9443.6" font-size="11.0" fill="#111111" text-anchor="middle">후진을 안 쓰는 이상 이것이 유일한 탈출 수단이다</text>
 <polygon points="458.0,869.0 658.0,897.5 458.0,926.0 258.0,897.5" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
 <text x="458.0" y="894.1" font-size="11.0" fill="#111111" text-anchor="middle">내 담당 기준값이 있는가?</text>
 <text x="458.0" y="908.8" font-size="11.0" fill="#111111" text-anchor="middle">관제가 배정을 알려줬고 웹캠1 지문이 왔는가</text>
@@ -484,18 +534,18 @@
 <text x="688.0" y="6933.0" font-size="11.0" fill="#111111" text-anchor="middle">도킹에 성공했는가?</text>
 <polygon points="688.0,6978.0 888.0,7003.0 688.0,7028.0 488.0,7003.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
 <text x="688.0" y="7007.0" font-size="11.0" fill="#111111" text-anchor="middle">재시도 횟수가 남았는가?</text>
-<polygon points="318.0,8230.0 518.0,8255.0 318.0,8280.0 118.0,8255.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="318.0" y="8259.0" font-size="11.0" fill="#111111" text-anchor="middle">30 cm 보다 가까운가?</text>
-<polygon points="318.0,8359.0 518.0,8384.0 318.0,8409.0 118.0,8384.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="318.0" y="8388.0" font-size="11.0" fill="#111111" text-anchor="middle">가까움이 2회 연속인가?</text>
-<polygon points="1058.0,8004.0 1258.0,8029.0 1058.0,8054.0 858.0,8029.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="1058.0" y="8033.0" font-size="11.0" fill="#111111" text-anchor="middle">38 cm 보다 먼가?</text>
-<polygon points="1058.0,8133.0 1258.0,8158.0 1058.0,8183.0 858.0,8158.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="1058.0" y="8162.0" font-size="11.0" fill="#111111" text-anchor="middle">멀어짐이 5회 연속인가?</text>
-<polygon points="318.0,8580.0 518.0,8605.0 318.0,8630.0 118.0,8605.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="318.0" y="8609.0" font-size="11.0" fill="#111111" text-anchor="middle">지금 비상정지 상태인가?</text>
-<polygon points="318.0,8738.0 518.0,8763.0 318.0,8788.0 118.0,8763.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="318.0" y="8767.0" font-size="11.0" fill="#111111" text-anchor="middle">길찾기가 0.5초 안에 낸 회전 명령이 있는가?</text>
+<polygon points="318.0,8813.0 518.0,8838.0 318.0,8863.0 118.0,8838.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="318.0" y="8842.0" font-size="11.0" fill="#111111" text-anchor="middle">30 cm 보다 가까운가?</text>
+<polygon points="318.0,8942.0 518.0,8967.0 318.0,8992.0 118.0,8967.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="318.0" y="8971.0" font-size="11.0" fill="#111111" text-anchor="middle">가까움이 2회 연속인가?</text>
+<polygon points="1058.0,8587.0 1258.0,8612.0 1058.0,8637.0 858.0,8612.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="1058.0" y="8616.0" font-size="11.0" fill="#111111" text-anchor="middle">38 cm 보다 먼가?</text>
+<polygon points="1058.0,8716.0 1258.0,8741.0 1058.0,8766.0 858.0,8741.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="1058.0" y="8745.0" font-size="11.0" fill="#111111" text-anchor="middle">멀어짐이 5회 연속인가?</text>
+<polygon points="318.0,9163.0 518.0,9188.0 318.0,9213.0 118.0,9188.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="318.0" y="9192.0" font-size="11.0" fill="#111111" text-anchor="middle">지금 비상정지 상태인가?</text>
+<polygon points="318.0,9321.0 518.0,9346.0 318.0,9371.0 118.0,9346.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="318.0" y="9350.0" font-size="11.0" fill="#111111" text-anchor="middle">길찾기가 0.5초 안에 낸 회전 명령이 있는가?</text>
 <polygon points="2944.0,925.0 3144.0,950.0 2944.0,975.0 2744.0,950.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
 <text x="2944.0" y="954.0" font-size="11.0" fill="#111111" text-anchor="middle">화면 한 장을 읽었는가?</text>
 <polygon points="2944.0,1332.0 3144.0,1357.0 2944.0,1382.0 2744.0,1357.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
@@ -590,18 +640,18 @@
 <text x="5200.0" y="6933.0" font-size="11.0" fill="#111111" text-anchor="middle">도킹에 성공했는가?</text>
 <polygon points="5200.0,6978.0 5400.0,7003.0 5200.0,7028.0 5000.0,7003.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
 <text x="5200.0" y="7007.0" font-size="11.0" fill="#111111" text-anchor="middle">재시도 횟수가 남았는가?</text>
-<polygon points="4830.0,8230.0 5030.0,8255.0 4830.0,8280.0 4630.0,8255.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="4830.0" y="8259.0" font-size="11.0" fill="#111111" text-anchor="middle">30 cm 보다 가까운가?</text>
-<polygon points="4830.0,8359.0 5030.0,8384.0 4830.0,8409.0 4630.0,8384.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="4830.0" y="8388.0" font-size="11.0" fill="#111111" text-anchor="middle">가까움이 2회 연속인가?</text>
-<polygon points="5570.0,8004.0 5770.0,8029.0 5570.0,8054.0 5370.0,8029.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="5570.0" y="8033.0" font-size="11.0" fill="#111111" text-anchor="middle">38 cm 보다 먼가?</text>
-<polygon points="5570.0,8133.0 5770.0,8158.0 5570.0,8183.0 5370.0,8158.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="5570.0" y="8162.0" font-size="11.0" fill="#111111" text-anchor="middle">멀어짐이 5회 연속인가?</text>
-<polygon points="4830.0,8580.0 5030.0,8605.0 4830.0,8630.0 4630.0,8605.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="4830.0" y="8609.0" font-size="11.0" fill="#111111" text-anchor="middle">지금 비상정지 상태인가?</text>
-<polygon points="4830.0,8738.0 5030.0,8763.0 4830.0,8788.0 4630.0,8763.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
-<text x="4830.0" y="8767.0" font-size="11.0" fill="#111111" text-anchor="middle">길찾기가 0.5초 안에 낸 회전 명령이 있는가?</text>
+<polygon points="4830.0,8813.0 5030.0,8838.0 4830.0,8863.0 4630.0,8838.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="4830.0" y="8842.0" font-size="11.0" fill="#111111" text-anchor="middle">30 cm 보다 가까운가?</text>
+<polygon points="4830.0,8942.0 5030.0,8967.0 4830.0,8992.0 4630.0,8967.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="4830.0" y="8971.0" font-size="11.0" fill="#111111" text-anchor="middle">가까움이 2회 연속인가?</text>
+<polygon points="5570.0,8587.0 5770.0,8612.0 5570.0,8637.0 5370.0,8612.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="5570.0" y="8616.0" font-size="11.0" fill="#111111" text-anchor="middle">38 cm 보다 먼가?</text>
+<polygon points="5570.0,8716.0 5770.0,8741.0 5570.0,8766.0 5370.0,8741.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="5570.0" y="8745.0" font-size="11.0" fill="#111111" text-anchor="middle">멀어짐이 5회 연속인가?</text>
+<polygon points="4830.0,9163.0 5030.0,9188.0 4830.0,9213.0 4630.0,9188.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="4830.0" y="9192.0" font-size="11.0" fill="#111111" text-anchor="middle">지금 비상정지 상태인가?</text>
+<polygon points="4830.0,9321.0 5030.0,9346.0 4830.0,9371.0 4630.0,9346.0" fill="#FFF6E0" stroke="#C88A00" stroke-width="1"/>
+<text x="4830.0" y="9350.0" font-size="11.0" fill="#111111" text-anchor="middle">길찾기가 0.5초 안에 낸 회전 명령이 있는가?</text>
 <rect x="258.0" y="642.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="458.0" y="661.1" font-size="11.0" fill="#111111" text-anchor="middle">컬러 한 장과 거리 한 장을 시각을 맞춰 한 쌍으로 묶는다</text>
 <text x="458.0" y="675.8" font-size="11.0" fill="#111111" text-anchor="middle">시각 차 0.1초 안이면 같은 순간 · 최신 한 쌍만 남긴다</text>
@@ -689,6 +739,9 @@
 <rect x="488.0" y="7190.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="688.0" y="7209.1" font-size="11.0" fill="#111111" text-anchor="middle">성공이든 실패든 도크 토큰을 반드시 돌려준다</text>
 <text x="688.0" y="7223.8" font-size="11.0" fill="#111111" text-anchor="middle">안 돌려주면 그 구역이 영영 잠긴다</text>
+<rect x="628.0" y="7729.0" width="400.0" height="45.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="828.0" y="7748.1" font-size="11.0" fill="#111111" text-anchor="middle">로봇마다 한 벌씩 · 지도 파일은 두 로봇이 같은 것을 쓴다</text>
+<text x="828.0" y="7762.8" font-size="11.0" fill="#111111" text-anchor="middle">기준점이 하나여야 두 로봇의 좌표가 같은 뜻이 된다</text>
 <rect x="2744.0" y="1487.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="2944.0" y="1506.1" font-size="11.0" fill="#111111" text-anchor="middle">추적 번호만 갈아끼우고 작업자 번호는 그대로 둔다</text>
 <text x="2944.0" y="1520.8" font-size="11.0" fill="#111111" text-anchor="middle">한 사람이 끊겼다 다시 들어와 W1·W2 를 모두 차지하는 것을 막는다</text>
@@ -743,18 +796,18 @@
 <rect x="2884.0" y="7281.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="3084.0" y="7300.1" font-size="11.0" fill="#111111" text-anchor="middle">벽시계를 섞지 않는다</text>
 <text x="3084.0" y="7314.8" font-size="11.0" fill="#111111" text-anchor="middle">로봇 · 웹캠 · 관제 기록을 나중에 합쳐야 하기 때문이다</text>
-<rect x="2884.0" y="8112.0" width="400.0" height="45.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="3084.0" y="8131.1" font-size="11.0" fill="#111111" text-anchor="middle">받는 것</text>
-<text x="3084.0" y="8145.8" font-size="11.0" fill="#111111" text-anchor="middle">cmd_vel · TwistStamped — 바퀴 속도 명령</text>
-<rect x="2884.0" y="8181.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="3084.0" y="8200.1" font-size="11.0" fill="#111111" text-anchor="middle">주행 계산은 로봇이 하지 않는다</text>
-<text x="3084.0" y="8214.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 · 위치 추정 · 경로 계획은 전부 제어 PC 에서 돈다</text>
-<rect x="2884.0" y="8914.0" width="400.0" height="45.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="3084.0" y="8933.1" font-size="11.0" fill="#111111" text-anchor="middle">받는 것</text>
-<text x="3084.0" y="8947.8" font-size="11.0" fill="#111111" text-anchor="middle">cmd_vel · TwistStamped — 바퀴 속도 명령</text>
-<rect x="2884.0" y="8983.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="3084.0" y="9002.1" font-size="11.0" fill="#111111" text-anchor="middle">주행 계산은 로봇이 하지 않는다</text>
-<text x="3084.0" y="9016.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 · 위치 추정 · 경로 계획은 전부 제어 PC 에서 돈다</text>
+<rect x="2884.0" y="8127.0" width="400.0" height="45.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="3084.0" y="8146.1" font-size="11.0" fill="#111111" text-anchor="middle">받는 것</text>
+<text x="3084.0" y="8160.8" font-size="11.0" fill="#111111" text-anchor="middle">cmd_vel · TwistStamped — 바퀴 속도 명령</text>
+<rect x="2884.0" y="8196.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="3084.0" y="8215.1" font-size="11.0" fill="#111111" text-anchor="middle">주행 계산은 로봇이 하지 않는다</text>
+<text x="3084.0" y="8229.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 · 위치 추정 · 경로 계획은 전부 제어 PC 에서 돈다</text>
+<rect x="2884.0" y="8944.0" width="400.0" height="45.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="3084.0" y="8963.1" font-size="11.0" fill="#111111" text-anchor="middle">받는 것</text>
+<text x="3084.0" y="8977.8" font-size="11.0" fill="#111111" text-anchor="middle">cmd_vel · TwistStamped — 바퀴 속도 명령</text>
+<rect x="2884.0" y="9013.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="3084.0" y="9032.1" font-size="11.0" fill="#111111" text-anchor="middle">주행 계산은 로봇이 하지 않는다</text>
+<text x="3084.0" y="9046.8" font-size="11.0" fill="#111111" text-anchor="middle">지도 · 위치 추정 · 경로 계획은 전부 제어 PC 에서 돈다</text>
 <rect x="4770.0" y="642.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="4970.0" y="661.1" font-size="11.0" fill="#111111" text-anchor="middle">컬러 한 장과 거리 한 장을 시각을 맞춰 한 쌍으로 묶는다</text>
 <text x="4970.0" y="675.8" font-size="11.0" fill="#111111" text-anchor="middle">시각 차 0.1초 안이면 같은 순간 · 최신 한 쌍만 남긴다</text>
@@ -842,6 +895,9 @@
 <rect x="5000.0" y="7190.0" width="400.0" height="45.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="5200.0" y="7209.1" font-size="11.0" fill="#111111" text-anchor="middle">성공이든 실패든 도크 토큰을 반드시 돌려준다</text>
 <text x="5200.0" y="7223.8" font-size="11.0" fill="#111111" text-anchor="middle">안 돌려주면 그 구역이 영영 잠긴다</text>
+<rect x="5140.0" y="7729.0" width="400.0" height="45.0" fill="#EFEFEF" stroke="#777777" stroke-width="1"/>
+<text x="5340.0" y="7748.1" font-size="11.0" fill="#111111" text-anchor="middle">로봇마다 한 벌씩 · 지도 파일은 두 로봇이 같은 것을 쓴다</text>
+<text x="5340.0" y="7762.8" font-size="11.0" fill="#111111" text-anchor="middle">기준점이 하나여야 두 로봇의 좌표가 같은 뜻이 된다</text>
 <rect x="474.0" y="3437.0" width="708.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
 <text x="482.0" y="3453.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>shuttle_mission　자재를 실어 대기 장소까지 간다</text>
 <rect x="474.0" y="4794.0" width="708.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
@@ -910,12 +966,12 @@
 <text x="688.0" y="3835.0" font-size="11.0" fill="#111111" text-anchor="middle">미션 대기</text>
 <rect x="488.0" y="4960.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
 <text x="688.0" y="4981.0" font-size="11.0" fill="#111111" text-anchor="middle">마커 검출 시작</text>
-<rect x="118.0" y="8117.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
-<text x="318.0" y="8138.0" font-size="11.0" fill="#111111" text-anchor="middle">안전 감시 시작 — 라이다만 본다</text>
-<rect x="858.0" y="7946.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
-<text x="1058.0" y="7967.0" font-size="11.0" fill="#111111" text-anchor="middle">해제 갈래</text>
-<rect x="118.0" y="8522.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
-<text x="318.0" y="8543.0" font-size="11.0" fill="#111111" text-anchor="middle">정지 중 바퀴 명령 — 0.05초마다</text>
+<rect x="118.0" y="8700.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
+<text x="318.0" y="8721.0" font-size="11.0" fill="#111111" text-anchor="middle">안전 감시 시작 — 라이다만 본다</text>
+<rect x="858.0" y="8529.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
+<text x="1058.0" y="8550.0" font-size="11.0" fill="#111111" text-anchor="middle">해제 갈래</text>
+<rect x="118.0" y="9105.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
+<text x="318.0" y="9126.0" font-size="11.0" fill="#111111" text-anchor="middle">정지 중 바퀴 명령 — 0.05초마다</text>
 <rect x="2744.0" y="867.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
 <text x="2944.0" y="888.0" font-size="11.0" fill="#111111" text-anchor="middle">등록 프로그램 시작 — 0.1초마다 한 회차</text>
 <rect x="2514.0" y="2684.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
@@ -942,16 +998,16 @@
 <text x="5200.0" y="3835.0" font-size="11.0" fill="#111111" text-anchor="middle">미션 대기</text>
 <rect x="5000.0" y="4960.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
 <text x="5200.0" y="4981.0" font-size="11.0" fill="#111111" text-anchor="middle">마커 검출 시작</text>
-<rect x="4630.0" y="8117.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
-<text x="4830.0" y="8138.0" font-size="11.0" fill="#111111" text-anchor="middle">안전 감시 시작 — 라이다만 본다</text>
-<rect x="5370.0" y="7946.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
-<text x="5570.0" y="7967.0" font-size="11.0" fill="#111111" text-anchor="middle">해제 갈래</text>
-<rect x="4630.0" y="8522.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
-<text x="4830.0" y="8543.0" font-size="11.0" fill="#111111" text-anchor="middle">정지 중 바퀴 명령 — 0.05초마다</text>
+<rect x="4630.0" y="8700.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
+<text x="4830.0" y="8721.0" font-size="11.0" fill="#111111" text-anchor="middle">안전 감시 시작 — 라이다만 본다</text>
+<rect x="5370.0" y="8529.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
+<text x="5570.0" y="8550.0" font-size="11.0" fill="#111111" text-anchor="middle">해제 갈래</text>
+<rect x="4630.0" y="9105.0" width="400.0" height="34.0" rx="17.0" fill="#E4ECF7" stroke="#3B6CA8" stroke-width="1"/>
+<text x="4830.0" y="9126.0" font-size="11.0" fill="#111111" text-anchor="middle">정지 중 바퀴 명령 — 0.05초마다</text>
 <rect x="2806.0" y="7672.0" width="556.0" height="24.0" fill="#7A5C1E" stroke="#7A5C1E" stroke-width="1"/>
 <text x="2814.0" y="7688.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>터틀봇 · robot3　실물 장비 — 왼쪽 PC4 가 이 로봇을 몬다</text>
-<rect x="2806.0" y="8474.0" width="556.0" height="24.0" fill="#7A5C1E" stroke="#7A5C1E" stroke-width="1"/>
-<text x="2814.0" y="8490.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>터틀봇 · robot8　실물 장비 — 오른쪽 PC5 가 이 로봇을 몬다</text>
+<rect x="2806.0" y="8489.0" width="556.0" height="24.0" fill="#7A5C1E" stroke="#7A5C1E" stroke-width="1"/>
+<text x="2814.0" y="8505.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>터틀봇 · robot8　실물 장비 — 오른쪽 PC5 가 이 로봇을 몬다</text>
 <rect x="258.0" y="1162.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="458.0" y="1181.5" font-size="11.0" fill="#111111" text-anchor="middle">고른 후보의 지문을 최근 열 장 평균내 다시 잰다</text>
 <rect x="258.0" y="1673.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
@@ -1010,18 +1066,18 @@
 <text x="688.0" y="6813.5" font-size="11.0" fill="#111111" text-anchor="middle">좁은 목 토큰을 돌려준다</text>
 <rect x="488.0" y="6849.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="688.0" y="6868.5" font-size="11.0" fill="#111111" text-anchor="middle">도킹을 시작한다 — 도크 간격이 0.84 m 뿐이라 접근 지점을 반드시 거친다</text>
-<rect x="118.0" y="8175.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="318.0" y="8194.5" font-size="11.0" fill="#111111" text-anchor="middle">라이다 한 장이 올 때마다 전방 좌우 35° 안의 가장 가까운 점을 찾는다</text>
-<rect x="118.0" y="8304.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="318.0" y="8323.5" font-size="11.0" fill="#111111" text-anchor="middle">가까움 횟수를 센다 (멀어짐 횟수는 0으로)</text>
-<rect x="118.0" y="8433.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="318.0" y="8452.5" font-size="11.0" fill="#111111" text-anchor="middle">비상정지 참을 알린다 — 모든 로봇 노드가 이때 주행을 멈춘다</text>
-<rect x="858.0" y="8078.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="1058.0" y="8097.5" font-size="11.0" fill="#111111" text-anchor="middle">멀어짐 횟수를 센다</text>
-<rect x="858.0" y="8207.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="1058.0" y="8226.5" font-size="11.0" fill="#111111" text-anchor="middle">비상정지 거짓을 알린다</text>
-<rect x="118.0" y="8896.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="318.0" y="8915.5" font-size="11.0" fill="#111111" text-anchor="middle">바퀴 속도 명령을 초당 20번 덮어쓴다 — Nav2 보다 나중 명령이 이긴다</text>
+<rect x="118.0" y="8758.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="318.0" y="8777.5" font-size="11.0" fill="#111111" text-anchor="middle">라이다 한 장이 올 때마다 전방 좌우 35° 안의 가장 가까운 점을 찾는다</text>
+<rect x="118.0" y="8887.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="318.0" y="8906.5" font-size="11.0" fill="#111111" text-anchor="middle">가까움 횟수를 센다 (멀어짐 횟수는 0으로)</text>
+<rect x="118.0" y="9016.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="318.0" y="9035.5" font-size="11.0" fill="#111111" text-anchor="middle">비상정지 참을 알린다 — 모든 로봇 노드가 이때 주행을 멈춘다</text>
+<rect x="858.0" y="8661.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="1058.0" y="8680.5" font-size="11.0" fill="#111111" text-anchor="middle">멀어짐 횟수를 센다</text>
+<rect x="858.0" y="8790.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="1058.0" y="8809.5" font-size="11.0" fill="#111111" text-anchor="middle">비상정지 거짓을 알린다</text>
+<rect x="118.0" y="9479.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="318.0" y="9498.5" font-size="11.0" fill="#111111" text-anchor="middle">바퀴 속도 명령을 초당 20번 덮어쓴다 — Nav2 보다 나중 명령이 이긴다</text>
 <rect x="2744.0" y="1630.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="2944.0" y="1649.5" font-size="11.0" fill="#111111" text-anchor="middle">새 작업자 번호를 준다 — W1 부터 차례로</text>
 <rect x="2514.0" y="3409.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
@@ -1128,18 +1184,18 @@
 <text x="5200.0" y="6813.5" font-size="11.0" fill="#111111" text-anchor="middle">좁은 목 토큰을 돌려준다</text>
 <rect x="5000.0" y="6849.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
 <text x="5200.0" y="6868.5" font-size="11.0" fill="#111111" text-anchor="middle">도킹을 시작한다 — 도크 간격이 0.84 m 뿐이라 접근 지점을 반드시 거친다</text>
-<rect x="4630.0" y="8175.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="4830.0" y="8194.5" font-size="11.0" fill="#111111" text-anchor="middle">라이다 한 장이 올 때마다 전방 좌우 35° 안의 가장 가까운 점을 찾는다</text>
-<rect x="4630.0" y="8304.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="4830.0" y="8323.5" font-size="11.0" fill="#111111" text-anchor="middle">가까움 횟수를 센다 (멀어짐 횟수는 0으로)</text>
-<rect x="4630.0" y="8433.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="4830.0" y="8452.5" font-size="11.0" fill="#111111" text-anchor="middle">비상정지 참을 알린다 — 모든 로봇 노드가 이때 주행을 멈춘다</text>
-<rect x="5370.0" y="8078.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
-<text x="5570.0" y="8097.5" font-size="11.0" fill="#111111" text-anchor="middle">멀어짐 횟수를 센다</text>
-<rect x="5370.0" y="8207.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="5570.0" y="8226.5" font-size="11.0" fill="#111111" text-anchor="middle">비상정지 거짓을 알린다</text>
-<rect x="4630.0" y="8896.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
-<text x="4830.0" y="8915.5" font-size="11.0" fill="#111111" text-anchor="middle">바퀴 속도 명령을 초당 20번 덮어쓴다 — Nav2 보다 나중 명령이 이긴다</text>
+<rect x="4630.0" y="8758.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="4830.0" y="8777.5" font-size="11.0" fill="#111111" text-anchor="middle">라이다 한 장이 올 때마다 전방 좌우 35° 안의 가장 가까운 점을 찾는다</text>
+<rect x="4630.0" y="8887.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="4830.0" y="8906.5" font-size="11.0" fill="#111111" text-anchor="middle">가까움 횟수를 센다 (멀어짐 횟수는 0으로)</text>
+<rect x="4630.0" y="9016.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="4830.0" y="9035.5" font-size="11.0" fill="#111111" text-anchor="middle">비상정지 참을 알린다 — 모든 로봇 노드가 이때 주행을 멈춘다</text>
+<rect x="5370.0" y="8661.0" width="400.0" height="31.0" fill="#EEF4FD" stroke="#5B87C4" stroke-width="1"/>
+<text x="5570.0" y="8680.5" font-size="11.0" fill="#111111" text-anchor="middle">멀어짐 횟수를 센다</text>
+<rect x="5370.0" y="8790.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="5570.0" y="8809.5" font-size="11.0" fill="#111111" text-anchor="middle">비상정지 거짓을 알린다</text>
+<rect x="4630.0" y="9479.0" width="400.0" height="31.0" fill="#E8F0FE" stroke="#1F5FBF" stroke-width="1"/>
+<text x="4830.0" y="9498.5" font-size="11.0" fill="#111111" text-anchor="middle">바퀴 속도 명령을 초당 20번 덮어쓴다 — Nav2 보다 나중 명령이 이긴다</text>
 <rect x="688.0" y="875.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
 <text x="813.0" y="894.1" font-size="11.0" fill="#111111" text-anchor="middle">확신도 1등을 대상으로 삼는다</text>
 <text x="813.0" y="908.8" font-size="11.0" fill="#111111" text-anchor="middle">혼자 시험할 때의 뜻이 된다</text>
@@ -1167,15 +1223,15 @@
 <rect x="918.0" y="5835.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
 <text x="1043.0" y="5854.1" font-size="11.0" fill="#111111" text-anchor="middle">가까우면 자세로 푼 거리를 쓴다</text>
 <text x="1043.0" y="5868.8" font-size="11.0" fill="#111111" text-anchor="middle">가까울수록 그쪽이 정확하다</text>
-<rect x="1288.0" y="8007.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="1413.0" y="8026.1" font-size="11.0" fill="#111111" text-anchor="middle">30~38 cm 사이면 상태와 횟수를 그대로 둔다</text>
-<text x="1413.0" y="8040.8" font-size="11.0" fill="#111111" text-anchor="middle">8 cm 여유는 라이다 오차의 네 배다</text>
-<rect x="548.0" y="8582.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="673.0" y="8601.1" font-size="11.0" fill="#111111" text-anchor="middle">아무것도 내지 않는다 — 주행은 Nav2 가</text>
-<text x="673.0" y="8615.8" font-size="11.0" fill="#111111" text-anchor="middle">맡는다</text>
-<rect x="548.0" y="8740.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="673.0" y="8759.1" font-size="11.0" fill="#111111" text-anchor="middle">회전도 0 — 멈춘 채로 둔다</text>
-<text x="673.0" y="8773.8" font-size="11.0" fill="#111111" text-anchor="middle">돌릴 근거가 없기 때문이다</text>
+<rect x="1288.0" y="8590.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="1413.0" y="8609.1" font-size="11.0" fill="#111111" text-anchor="middle">30~38 cm 사이면 상태와 횟수를 그대로 둔다</text>
+<text x="1413.0" y="8623.8" font-size="11.0" fill="#111111" text-anchor="middle">8 cm 여유는 라이다 오차의 네 배다</text>
+<rect x="548.0" y="9165.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="673.0" y="9184.1" font-size="11.0" fill="#111111" text-anchor="middle">아무것도 내지 않는다 — 주행은 Nav2 가</text>
+<text x="673.0" y="9198.8" font-size="11.0" fill="#111111" text-anchor="middle">맡는다</text>
+<rect x="548.0" y="9323.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="673.0" y="9342.1" font-size="11.0" fill="#111111" text-anchor="middle">회전도 0 — 멈춘 채로 둔다</text>
+<text x="673.0" y="9356.8" font-size="11.0" fill="#111111" text-anchor="middle">돌릴 근거가 없기 때문이다</text>
 <rect x="3174.0" y="928.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
 <text x="3299.0" y="947.1" font-size="11.0" fill="#111111" text-anchor="middle">이번 회차는 건너뛴다</text>
 <text x="3299.0" y="961.8" font-size="11.0" fill="#111111" text-anchor="middle">0.1초 뒤 다음 화면부터</text>
@@ -1233,25 +1289,29 @@
 <rect x="5430.0" y="5835.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
 <text x="5555.0" y="5854.1" font-size="11.0" fill="#111111" text-anchor="middle">가까우면 자세로 푼 거리를 쓴다</text>
 <text x="5555.0" y="5868.8" font-size="11.0" fill="#111111" text-anchor="middle">가까울수록 그쪽이 정확하다</text>
-<rect x="5800.0" y="8007.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="5925.0" y="8026.1" font-size="11.0" fill="#111111" text-anchor="middle">30~38 cm 사이면 상태와 횟수를 그대로 둔다</text>
-<text x="5925.0" y="8040.8" font-size="11.0" fill="#111111" text-anchor="middle">8 cm 여유는 라이다 오차의 네 배다</text>
-<rect x="5060.0" y="8582.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="5185.0" y="8601.1" font-size="11.0" fill="#111111" text-anchor="middle">아무것도 내지 않는다 — 주행은 Nav2 가</text>
-<text x="5185.0" y="8615.8" font-size="11.0" fill="#111111" text-anchor="middle">맡는다</text>
-<rect x="5060.0" y="8740.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="5185.0" y="8759.1" font-size="11.0" fill="#111111" text-anchor="middle">회전도 0 — 멈춘 채로 둔다</text>
-<text x="5185.0" y="8773.8" font-size="11.0" fill="#111111" text-anchor="middle">돌릴 근거가 없기 때문이다</text>
+<rect x="5800.0" y="8590.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="5925.0" y="8609.1" font-size="11.0" fill="#111111" text-anchor="middle">30~38 cm 사이면 상태와 횟수를 그대로 둔다</text>
+<text x="5925.0" y="8623.8" font-size="11.0" fill="#111111" text-anchor="middle">8 cm 여유는 라이다 오차의 네 배다</text>
+<rect x="5060.0" y="9165.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="5185.0" y="9184.1" font-size="11.0" fill="#111111" text-anchor="middle">아무것도 내지 않는다 — 주행은 Nav2 가</text>
+<text x="5185.0" y="9198.8" font-size="11.0" fill="#111111" text-anchor="middle">맡는다</text>
+<rect x="5060.0" y="9323.0" width="250.0" height="45.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="5185.0" y="9342.1" font-size="11.0" fill="#111111" text-anchor="middle">회전도 0 — 멈춘 채로 둔다</text>
+<text x="5185.0" y="9356.8" font-size="11.0" fill="#111111" text-anchor="middle">돌릴 근거가 없기 때문이다</text>
 <rect x="614.0" y="7297.0" width="428.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
-<text x="622.0" y="7313.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>Nav2  (길찾기 · 도킹)　우리가 만들지 않은 외부 프로그램 — 로봇 제어 PC 에서 같이 뜬다</text>
+<text x="622.0" y="7313.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>위치 추정  (localization)　우리가 만들지 않은 외부 프로그램 — 제어 PC 의 다른 터미널에서 띄운다</text>
+<rect x="614.0" y="7836.0" width="428.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
+<text x="622.0" y="7852.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>Nav2  (길찾기 · 도킹)　우리가 만들지 않은 외부 프로그램 — 로봇 제어 PC 에서 같이 뜬다</text>
 <rect x="2870.0" y="6860.0" width="428.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
 <text x="2878.0" y="6876.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>kpi_logger　채점 원천값을 한 파일에 적는다 (판정하지 않는다)</text>
 <rect x="2870.0" y="7760.0" width="428.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
 <text x="2878.0" y="7776.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>터틀봇 /robot3　TurtleBot4 Standard — 이 그림 바깥의 장비</text>
-<rect x="2870.0" y="8562.0" width="428.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
-<text x="2878.0" y="8578.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>터틀봇 /robot8　TurtleBot4 Standard — 이 그림 바깥의 장비</text>
+<rect x="2870.0" y="8577.0" width="428.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
+<text x="2878.0" y="8593.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>터틀봇 /robot8　TurtleBot4 Standard — 이 그림 바깥의 장비</text>
 <rect x="5126.0" y="7297.0" width="428.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
-<text x="5134.0" y="7313.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>Nav2  (길찾기 · 도킹)　우리가 만들지 않은 외부 프로그램 — 로봇 제어 PC 에서 같이 뜬다</text>
+<text x="5134.0" y="7313.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>위치 추정  (localization)　우리가 만들지 않은 외부 프로그램 — 제어 PC 의 다른 터미널에서 띄운다</text>
+<rect x="5126.0" y="7836.0" width="428.0" height="24.0" fill="#6F7B8A" stroke="#6F7B8A" stroke-width="1"/>
+<text x="5134.0" y="7852.3" font-size="12.0" fill="#FFFFFF" text-anchor="start" font-weight='700'>Nav2  (길찾기 · 도킹)　우리가 만들지 않은 외부 프로그램 — 로봇 제어 PC 에서 같이 뜬다</text>
 <rect x="688.0" y="720.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
 <text x="813.0" y="739.5" font-size="11.0" fill="#111111" text-anchor="middle">이번 쌍은 버린다 — 거리를 잴 수 없다</text>
 <rect x="688.0" y="2891.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
@@ -1274,10 +1334,10 @@
 <text x="1043.0" y="6680.5" font-size="11.0" fill="#111111" text-anchor="middle">그 자리에서 기다렸다 다시 묻는다</text>
 <rect x="918.0" y="6988.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
 <text x="1043.0" y="7007.5" font-size="11.0" fill="#111111" text-anchor="middle">실패로 알린다 — 포기할 때만 낸다</text>
-<rect x="548.0" y="8369.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="673.0" y="8388.5" font-size="11.0" fill="#111111" text-anchor="middle">아직 세우지 않는다</text>
-<rect x="1288.0" y="8143.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="1413.0" y="8162.5" font-size="11.0" fill="#111111" text-anchor="middle">아직 풀지 않는다</text>
+<rect x="548.0" y="8952.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="673.0" y="8971.5" font-size="11.0" fill="#111111" text-anchor="middle">아직 세우지 않는다</text>
+<rect x="1288.0" y="8726.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="1413.0" y="8745.5" font-size="11.0" fill="#111111" text-anchor="middle">아직 풀지 않는다</text>
 <rect x="2944.0" y="2910.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
 <text x="3069.0" y="2929.5" font-size="11.0" fill="#111111" text-anchor="middle">버린다</text>
 <rect x="2804.0" y="4236.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
@@ -1308,10 +1368,10 @@
 <text x="5555.0" y="6680.5" font-size="11.0" fill="#111111" text-anchor="middle">그 자리에서 기다렸다 다시 묻는다</text>
 <rect x="5430.0" y="6988.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
 <text x="5555.0" y="7007.5" font-size="11.0" fill="#111111" text-anchor="middle">실패로 알린다 — 포기할 때만 낸다</text>
-<rect x="5060.0" y="8369.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="5185.0" y="8388.5" font-size="11.0" fill="#111111" text-anchor="middle">아직 세우지 않는다</text>
-<rect x="5800.0" y="8143.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
-<text x="5925.0" y="8162.5" font-size="11.0" fill="#111111" text-anchor="middle">아직 풀지 않는다</text>
+<rect x="5060.0" y="8952.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="5185.0" y="8971.5" font-size="11.0" fill="#111111" text-anchor="middle">아직 세우지 않는다</text>
+<rect x="5800.0" y="8726.0" width="250.0" height="31.0" fill="#FDECEC" stroke="#C0272D" stroke-width="1"/>
+<text x="5925.0" y="8745.5" font-size="11.0" fill="#111111" text-anchor="middle">아직 풀지 않는다</text>
 <text x="40.0" y="134.3" font-size="13.0" fill="#111111" text-anchor="start" font-weight='700'>읽는 법</text>
 <text x="480.0" y="157.1" font-size="11.0" fill="#333333" text-anchor="start">계약된 토픽·서비스</text>
 <text x="320.0" y="157.1" font-size="11.0" fill="#333333" text-anchor="start">갈라진 쪽의 처리</text>
@@ -1331,12 +1391,12 @@
 <rect x="1717.0" y="3928.0" width="16.0" height="16.0" rx="8.0" fill="#7A3E9D" stroke="#7A3E9D" stroke-width="1"/>
 <rect x="1894.0" y="3489.0" width="16.0" height="16.0" rx="8.0" fill="#1F5FBF" stroke="#1F5FBF" stroke-width="1"/>
 <rect x="1994.0" y="5082.0" width="16.0" height="16.0" rx="8.0" fill="#0E7C7B" stroke="#0E7C7B" stroke-width="1"/>
-<rect x="2170.0" y="4666.0" width="16.0" height="16.0" rx="8.0" fill="#55606B" stroke="#55606B" stroke-width="1"/>
+<rect x="2170.0" y="4668.0" width="16.0" height="16.0" rx="8.0" fill="#55606B" stroke="#55606B" stroke-width="1"/>
 <rect x="3923.0" y="3309.0" width="16.0" height="16.0" rx="8.0" fill="#7A3E9D" stroke="#7A3E9D" stroke-width="1"/>
 <rect x="3973.0" y="3928.0" width="16.0" height="16.0" rx="8.0" fill="#7A3E9D" stroke="#7A3E9D" stroke-width="1"/>
 <rect x="4150.0" y="3489.0" width="16.0" height="16.0" rx="8.0" fill="#1F5FBF" stroke="#1F5FBF" stroke-width="1"/>
 <rect x="4250.0" y="5082.0" width="16.0" height="16.0" rx="8.0" fill="#0E7C7B" stroke="#0E7C7B" stroke-width="1"/>
-<rect x="4426.0" y="4933.0" width="16.0" height="16.0" rx="8.0" fill="#55606B" stroke="#55606B" stroke-width="1"/>
+<rect x="4426.0" y="4940.0" width="16.0" height="16.0" rx="8.0" fill="#55606B" stroke="#55606B" stroke-width="1"/>
 <path d="M458.0,560.0 L458.0,584.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <path d="M458.0,618.0 L458.0,642.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <path d="M458.0,687.0 L458.0,711.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
@@ -1514,42 +1574,46 @@
 <path d="M1168.0,6676.5 L1182.0,6676.0 L1182.0,6584.0 L476.0,6584.0 L476.0,6612.0 L488.0,6611.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#m0)"/>
 <path d="M888.0,7003.0 L918.0,7003.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <text x="903.0" y="6999.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M828.0,7424.0 L828.0,7448.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M828.0,7522.0 L828.0,7546.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M828.0,7606.0 L828.0,7630.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M828.0,7748.0 L828.0,7772.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M318.0,8093.0 L318.0,8117.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M318.0,8151.0 L318.0,8175.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M318.0,8206.0 L318.0,8230.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M318.0,8280.0 L318.0,8304.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="318.0" y="8288.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M318.0,8335.0 L318.0,8359.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M318.0,8409.0 L318.0,8433.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="318.0" y="8417.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M518.0,8384.0 L548.0,8384.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="533.0" y="8380.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M798.0,8384.5 L826.0,8384.0 L826.0,8105.0 L92.0,8105.0 L92.0,8134.0 L118.0,8134.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#m0)"/>
-<path d="M1058.0,7980.0 L1058.0,8004.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M1058.0,8054.0 L1058.0,8078.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="1058.0" y="8062.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M1058.0,8109.0 L1058.0,8133.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M1058.0,8183.0 L1058.0,8207.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="1058.0" y="8191.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M1258.0,8029.0 L1288.0,8029.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="1273.0" y="8025.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M1258.0,8158.0 L1288.0,8158.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="1273.0" y="8154.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M318.0,8556.0 L318.0,8580.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M318.0,8630.0 L318.0,8654.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="318.0" y="8638.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M318.0,8714.0 L318.0,8738.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M318.0,8788.0 L318.0,8812.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="318.0" y="8796.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M318.0,8872.0 L318.0,8896.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M518.0,8605.0 L548.0,8604.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="533.0" y="8600.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M518.0,8763.0 L548.0,8762.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="533.0" y="8758.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M828.0,7409.0 L828.0,7433.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M828.0,7537.0 L828.0,7561.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M828.0,7621.0 L828.0,7645.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M828.0,7705.0 L828.0,7729.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M828.0,7963.0 L828.0,7987.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M828.0,8105.0 L828.0,8129.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M828.0,8189.0 L828.0,8213.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M828.0,8331.0 L828.0,8355.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M318.0,8676.0 L318.0,8700.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M318.0,8734.0 L318.0,8758.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M318.0,8789.0 L318.0,8813.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M318.0,8863.0 L318.0,8887.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="318.0" y="8871.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M318.0,8918.0 L318.0,8942.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M318.0,8992.0 L318.0,9016.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="318.0" y="9000.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M518.0,8967.0 L548.0,8967.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="533.0" y="8963.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M798.0,8967.5 L826.0,8967.0 L826.0,8688.0 L92.0,8688.0 L92.0,8717.0 L118.0,8717.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#m0)"/>
+<path d="M1058.0,8563.0 L1058.0,8587.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M1058.0,8637.0 L1058.0,8661.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="1058.0" y="8645.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M1058.0,8692.0 L1058.0,8716.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M1058.0,8766.0 L1058.0,8790.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="1058.0" y="8774.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M1258.0,8612.0 L1288.0,8612.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="1273.0" y="8608.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M1258.0,8741.0 L1288.0,8741.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="1273.0" y="8737.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M318.0,9139.0 L318.0,9163.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M318.0,9213.0 L318.0,9237.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="318.0" y="9221.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M318.0,9297.0 L318.0,9321.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M318.0,9371.0 L318.0,9395.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="318.0" y="9379.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M318.0,9455.0 L318.0,9479.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M518.0,9188.0 L548.0,9187.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="533.0" y="9183.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M518.0,9346.0 L548.0,9345.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="533.0" y="9341.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
 <path d="M2944.0,574.0 L2944.0,598.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <path d="M2944.0,745.0 L2944.0,769.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <path d="M2944.0,843.0 L2944.0,867.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
@@ -1709,11 +1773,11 @@
 <text x="3084.0" y="7265.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">ROS 시각만 쓴다</text>
 <path d="M3084.0,7326.0 L3084.0,7350.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <path d="M3084.0,7975.0 L3084.0,7999.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M3084.0,8088.0 L3084.0,8112.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M3084.0,8157.0 L3084.0,8181.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M3084.0,8777.0 L3084.0,8801.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M3084.0,8890.0 L3084.0,8914.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M3084.0,8959.0 L3084.0,8983.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M3084.0,8103.0 L3084.0,8127.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M3084.0,8172.0 L3084.0,8196.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M3084.0,8792.0 L3084.0,8816.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M3084.0,8920.0 L3084.0,8944.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M3084.0,8989.0 L3084.0,9013.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <path d="M4970.0,560.0 L4970.0,584.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <path d="M4970.0,618.0 L4970.0,642.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <path d="M4970.0,687.0 L4970.0,711.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
@@ -1891,42 +1955,46 @@
 <path d="M5680.0,6676.5 L5694.0,6676.0 L5694.0,6584.0 L4988.0,6584.0 L4988.0,6612.0 L5000.0,6611.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#m0)"/>
 <path d="M5400.0,7003.0 L5430.0,7003.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
 <text x="5415.0" y="6999.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M5340.0,7424.0 L5340.0,7448.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M5340.0,7522.0 L5340.0,7546.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M5340.0,7606.0 L5340.0,7630.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M5340.0,7748.0 L5340.0,7772.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M4830.0,8093.0 L4830.0,8117.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M4830.0,8151.0 L4830.0,8175.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M4830.0,8206.0 L4830.0,8230.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M4830.0,8280.0 L4830.0,8304.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="4830.0" y="8288.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M4830.0,8335.0 L4830.0,8359.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M4830.0,8409.0 L4830.0,8433.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="4830.0" y="8417.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M5030.0,8384.0 L5060.0,8384.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="5045.0" y="8380.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M5310.0,8384.5 L5338.0,8384.0 L5338.0,8105.0 L4604.0,8105.0 L4604.0,8134.0 L4630.0,8134.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#m0)"/>
-<path d="M5570.0,7980.0 L5570.0,8004.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M5570.0,8054.0 L5570.0,8078.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="5570.0" y="8062.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M5570.0,8109.0 L5570.0,8133.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M5570.0,8183.0 L5570.0,8207.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="5570.0" y="8191.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M5770.0,8029.0 L5800.0,8029.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="5785.0" y="8025.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M5770.0,8158.0 L5800.0,8158.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="5785.0" y="8154.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M4830.0,8556.0 L4830.0,8580.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M4830.0,8630.0 L4830.0,8654.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="4830.0" y="8638.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M4830.0,8714.0 L4830.0,8738.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M4830.0,8788.0 L4830.0,8812.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="4830.0" y="8796.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
-<path d="M4830.0,8872.0 L4830.0,8896.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<path d="M5030.0,8605.0 L5060.0,8604.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="5045.0" y="8600.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
-<path d="M5030.0,8763.0 L5060.0,8762.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
-<text x="5045.0" y="8758.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M5340.0,7409.0 L5340.0,7433.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5340.0,7537.0 L5340.0,7561.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5340.0,7621.0 L5340.0,7645.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5340.0,7705.0 L5340.0,7729.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5340.0,7963.0 L5340.0,7987.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5340.0,8105.0 L5340.0,8129.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5340.0,8189.0 L5340.0,8213.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5340.0,8331.0 L5340.0,8355.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M4830.0,8676.0 L4830.0,8700.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M4830.0,8734.0 L4830.0,8758.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M4830.0,8789.0 L4830.0,8813.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M4830.0,8863.0 L4830.0,8887.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="4830.0" y="8871.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M4830.0,8918.0 L4830.0,8942.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M4830.0,8992.0 L4830.0,9016.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="4830.0" y="9000.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M5030.0,8967.0 L5060.0,8967.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="5045.0" y="8963.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M5310.0,8967.5 L5338.0,8967.0 L5338.0,8688.0 L4604.0,8688.0 L4604.0,8717.0 L4630.0,8717.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#m0)"/>
+<path d="M5570.0,8563.0 L5570.0,8587.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5570.0,8637.0 L5570.0,8661.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="5570.0" y="8645.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M5570.0,8692.0 L5570.0,8716.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5570.0,8766.0 L5570.0,8790.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="5570.0" y="8774.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M5770.0,8612.0 L5800.0,8612.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="5785.0" y="8608.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M5770.0,8741.0 L5800.0,8741.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="5785.0" y="8737.2" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M4830.0,9139.0 L4830.0,9163.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M4830.0,9213.0 L4830.0,9237.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="4830.0" y="9221.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M4830.0,9297.0 L4830.0,9321.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M4830.0,9371.0 L4830.0,9395.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="4830.0" y="9379.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">예</text>
+<path d="M4830.0,9455.0 L4830.0,9479.0" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<path d="M5030.0,9188.0 L5060.0,9187.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="5045.0" y="9183.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
+<path d="M5030.0,9346.0 L5060.0,9345.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" marker-end="url(#m0)"/>
+<text x="5045.0" y="9341.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">아니오</text>
 <path d="M2514.0,3274.0 L2484.0,3274.0 L2484.0,3588.0 L2329.0,3588.0 L2329.0,6844.0 L2854.0,6844.0 L2854.0,6986.0 L2884.0,6986.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
 <rect x="2224.2" y="5194.7" width="209.7" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
 <text x="2329.0" y="5207.7" font-size="10" fill="#1F5FBF" text-anchor="middle">/webcam2/target_hint · TargetHint</text>
@@ -2000,8 +2068,8 @@
 <text x="1952.0" y="3849.5" font-size="10" fill="#0E7C7B" text-anchor="middle">/robot3/approach/status · String</text>
 <text x="1952.0" y="3862.5" font-size="10" fill="#0E7C7B" text-anchor="middle">IDLE·SEARCHING·APPROACH·ARRIVED·FOLLOWING·STANDBY·FAILED</text>
 <path d="M488.0,4367.5 L458.0,4368.0 L458.0,4762.0 L2002.0,4762.0 L1994.0,4762.0 L1994.0,5090.0" fill="none" stroke="#0E7C7B" stroke-width="1.8" marker-end="url(#m0)"/>
-<rect x="1895.2" y="4895.4" width="197.5" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
-<text x="1994.0" y="4908.4" font-size="10" fill="#0E7C7B" text-anchor="middle">/robot3/shuttle/status · String</text>
+<rect x="1895.2" y="4897.4" width="197.5" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
+<text x="1994.0" y="4910.4" font-size="10" fill="#0E7C7B" text-anchor="middle">/robot3/shuttle/status · String</text>
 <path d="M488.0,6403.5 L449.0,6404.0 L449.0,6173.0 L2002.0,6173.0 L1994.0,6173.0 L1994.0,5090.0" fill="none" stroke="#0E7C7B" stroke-width="1.8" marker-end="url(#m0)"/>
 <path d="M2002.0,5082.0 L2002.0,4835.0 L2344.0,4835.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#0E7C7B" stroke-width="1.6" marker-end="url(#m0)"/>
 <rect x="1839.5" y="5012.5" width="325.1" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
@@ -2010,65 +2078,79 @@
 <rect x="1935.7" y="5376.3" width="234.7" height="34.0" fill="#ffffff" stroke="#D97706" stroke-width="1" rx="2"/>
 <text x="2053.0" y="5389.3" font-size="10" fill="#D97706" text-anchor="middle">/fleet/zone_token · ZoneToken (서비스)</text>
 <text x="2053.0" y="5402.3" font-size="10" fill="#D97706" text-anchor="middle">좁은 목 P1 · 도크 DOCK</text>
-<path d="M118.0,8448.5 L88.0,8449.0 L88.0,7892.0 L2103.0,7892.0 L2103.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
-<rect x="1990.0" y="6371.2" width="225.9" height="34.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
-<text x="2103.0" y="6384.2" font-size="10" fill="#C0272D" text-anchor="middle">/robot3/safety/estop · Bool</text>
-<text x="2103.0" y="6397.2" font-size="10" fill="#C0272D" text-anchor="middle">참인 동안 모든 로봇 노드가 주행을 멈춘다</text>
-<path d="M118.0,8911.5 L88.0,8911.0 L88.0,7892.0 L2128.0,7892.0 L2128.0,8256.0 L2854.0,8256.0 L2854.0,8134.0 L2884.0,8134.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
-<rect x="2003.5" y="8060.0" width="248.9" height="34.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
-<text x="2128.0" y="8073.0" font-size="10" fill="#C0272D" text-anchor="middle">cmd_vel · TwistStamped</text>
-<text x="2128.0" y="8086.0" font-size="10" fill="#C0272D" text-anchor="middle">정지 중 초당 20번 덮어쓴다 — 앞뒤 0 · 회전만</text>
-<path d="M2884.0,8043.5 L2854.0,8043.0 L2854.0,7744.0 L2178.0,7744.0 L2178.0,4682.0" fill="none" stroke="#55606B" stroke-width="1.8" marker-end="url(#m0)"/>
-<rect x="1985.1" y="6190.0" width="385.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="2178.0" y="6203.0" font-size="10" fill="#55606B" text-anchor="middle">oakd/rgb/image_raw/compressed · oakd/stereo/…/compressedDepth</text>
-<text x="2178.0" y="6216.0" font-size="10" fill="#55606B" text-anchor="middle">oakd/rgb/camera_info</text>
-<path d="M2178.0,4666.0 L2178.0,2112.0 L228.0,2112.0 L228.0,664.0 L258.0,664.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="2087.9" y="3191.3" width="180.2" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="2178.0" y="3204.3" font-size="10" fill="#55606B" text-anchor="middle">컬러·거리를 한 쌍으로 묶어 쓴다</text>
-<path d="M2170.0,4674.0 L2178.0,4674.0 L2178.0,4764.0 L449.0,4764.0 L449.0,5034.0 L488.0,5033.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="2079.7" y="4692.6" width="196.7" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="2178.0" y="4705.6" font-size="10" fill="#55606B" text-anchor="middle">같은 카메라를 아르코 검출도 읽는다</text>
-<path d="M2884.0,8043.5 L2854.0,8043.0 L2854.0,8256.0 L2229.0,8256.0 L2229.0,7892.0 L88.0,7892.0 L88.0,8191.0 L118.0,8190.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="2162.7" y="8153.3" width="132.6" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="2229.0" y="8166.3" font-size="10" fill="#55606B" text-anchor="middle">scan · LaserScan</text>
-<text x="2229.0" y="8179.3" font-size="10" fill="#55606B" text-anchor="middle">전방 좌우 35° 최단거리</text>
-<path d="M2884.0,8043.5 L2854.0,8043.0 L2854.0,7744.0 L2254.0,7744.0 L2254.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="2137.0" y="6026.0" width="234.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="2254.0" y="6039.0" font-size="10" fill="#55606B" text-anchor="middle">battery_state · BatteryState</text>
-<text x="2254.0" y="6052.0" font-size="10" fill="#55606B" text-anchor="middle">amcl_pose · PoseWithCovarianceStamped</text>
-<path d="M488.0,4367.5 L458.0,4368.0 L458.0,4762.0 L82.0,4762.0 L82.0,7281.0 L598.0,7281.0 L598.0,7576.0 L628.0,7576.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="82.0" y="6014.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M258.0,2842.5 L228.0,2842.0 L228.0,3405.0 L73.0,3405.0 L73.0,7281.0 L598.0,7281.0 L598.0,7576.0 L628.0,7576.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="73.0" y="5344.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M488.0,6403.5 L458.0,6404.0 L458.0,7265.0 L64.0,7265.0 L64.0,7281.0 L598.0,7281.0 L598.0,7576.0 L628.0,7576.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="88.0" y="7277.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M628.0,7689.0 L598.0,7689.0 L598.0,7876.0 L55.0,7876.0 L55.0,7892.0 L88.0,7892.0 L88.0,8763.0 L118.0,8763.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="-7.9" y="7875.0" width="174.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="79.2" y="7888.0" font-size="10" fill="#55606B" text-anchor="middle">의도한 바퀴 속도</text>
-<text x="79.2" y="7901.0" font-size="10" fill="#55606B" text-anchor="middle">정지 중에는 회전분만 빌려 쓴다</text>
-<path d="M628.0,7689.0 L598.0,7689.0 L598.0,7876.0 L2153.0,7876.0 L2153.0,7744.0 L2854.0,7744.0 L2854.0,8134.0 L2884.0,8134.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="2014.1" y="7798.6" width="277.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="2153.0" y="7811.6" font-size="10" fill="#55606B" text-anchor="middle">cmd_vel · TwistStamped</text>
-<text x="2153.0" y="7824.6" font-size="10" fill="#55606B" text-anchor="middle">평소 바퀴 명령 — 정지 중에는 안전 감시가 덮어쓴다</text>
-<path d="M258.0,1893.5 L228.0,1894.0 L228.0,2104.0 L82.0,2104.0 L82.0,2120.0 L228.0,2120.0 L228.0,2396.0 L258.0,2396.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="7.0" y="2065.0" width="197.5" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="105.8" y="2078.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/map_point · PointStamped</text>
-<text x="105.8" y="2091.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대상의 지도 좌표</text>
-<path d="M258.0,1407.5 L228.0,1408.0 L228.0,2104.0 L73.0,2104.0 L73.0,2120.0 L228.0,2120.0 L228.0,2470.0 L258.0,2470.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="-4.9" y="2141.0" width="203.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="96.9" y="2154.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/paired · target/worker_id</text>
-<text x="96.9" y="2167.0" font-size="10" fill="#1F5FBF" text-anchor="middle">참일 때만 따라간다</text>
-<path d="M488.0,6112.5 L458.0,6113.0 L458.0,4778.0 L64.0,4778.0 L64.0,4762.0 L458.0,4762.0 L458.0,4081.0 L488.0,4081.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="-45.7" y="4745.0" width="234.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="71.6" y="4758.0" font-size="10" fill="#1F5FBF" text-anchor="middle">aruco/id · aruco/distance · aruco/pose</text>
-<text x="71.6" y="4771.0" font-size="10" fill="#1F5FBF" text-anchor="middle">베이 도착 판정과 정렬</text>
-<path d="M488.0,4716.5 L458.0,4717.0 L458.0,3421.0 L55.0,3421.0 L55.0,3405.0 L228.0,3405.0 L228.0,2324.0 L258.0,2324.5" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="-8.5" y="3388.0" width="142.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="62.8" y="3401.0" font-size="10" fill="#1F5FBF" text-anchor="middle">shuttle/arrived · Bool</text>
-<text x="62.8" y="3414.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대기 장소 도착</text>
-<path d="M118.0,8448.5 L88.0,8449.0 L88.0,7892.0 L82.0,7892.0 L82.0,3405.0 L228.0,3405.0 L228.0,3353.0 L258.0,3352.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
-<rect x="38.4" y="5643.0" width="87.2" height="21.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
-<text x="82.0" y="5656.0" font-size="10" fill="#C0272D" text-anchor="middle">safety/estop</text>
+<path d="M118.0,9031.5 L88.0,9032.0 L88.0,8475.0 L2103.0,8475.0 L2103.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
+<rect x="1990.0" y="6634.3" width="225.9" height="34.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
+<text x="2103.0" y="6647.3" font-size="10" fill="#C0272D" text-anchor="middle">/robot3/safety/estop · Bool</text>
+<text x="2103.0" y="6660.3" font-size="10" fill="#C0272D" text-anchor="middle">참인 동안 모든 로봇 노드가 주행을 멈춘다</text>
+<path d="M118.0,9494.5 L88.0,9494.0 L88.0,8475.0 L2128.0,8475.0 L2128.0,8271.0 L2854.0,8271.0 L2854.0,8149.0 L2884.0,8149.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
+<rect x="2003.5" y="8354.2" width="248.9" height="34.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
+<text x="2128.0" y="8367.2" font-size="10" fill="#C0272D" text-anchor="middle">cmd_vel · TwistStamped</text>
+<text x="2128.0" y="8380.2" font-size="10" fill="#C0272D" text-anchor="middle">정지 중 초당 20번 덮어쓴다 — 앞뒤 0 · 회전만</text>
+<path d="M2884.0,8051.0 L2854.0,8051.0 L2854.0,7744.0 L2178.0,7744.0 L2178.0,4684.0" fill="none" stroke="#55606B" stroke-width="1.8" marker-end="url(#m0)"/>
+<rect x="1985.1" y="6192.2" width="385.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="2178.0" y="6205.2" font-size="10" fill="#55606B" text-anchor="middle">oakd/rgb/image_raw/compressed · oakd/stereo/…/compressedDepth</text>
+<text x="2178.0" y="6218.2" font-size="10" fill="#55606B" text-anchor="middle">oakd/rgb/camera_info</text>
+<path d="M2178.0,4668.0 L2178.0,2112.0 L228.0,2112.0 L228.0,664.0 L258.0,664.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="2087.9" y="3190.9" width="180.2" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="2178.0" y="3203.9" font-size="10" fill="#55606B" text-anchor="middle">컬러·거리를 한 쌍으로 묶어 쓴다</text>
+<path d="M2170.0,4676.0 L2178.0,4676.0 L2178.0,4764.0 L449.0,4764.0 L449.0,5034.0 L488.0,5033.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="2079.7" y="4691.7" width="196.7" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="2178.0" y="4704.7" font-size="10" fill="#55606B" text-anchor="middle">같은 카메라를 아르코 검출도 읽는다</text>
+<path d="M2884.0,8051.0 L2854.0,8051.0 L2854.0,8271.0 L2229.0,8271.0 L2229.0,8475.0 L88.0,8475.0 L88.0,8774.0 L118.0,8773.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="2162.7" y="8431.7" width="132.6" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="2229.0" y="8444.7" font-size="10" fill="#55606B" text-anchor="middle">scan · LaserScan</text>
+<text x="2229.0" y="8457.7" font-size="10" fill="#55606B" text-anchor="middle">전방 좌우 35° 최단거리</text>
+<path d="M2884.0,8051.0 L2854.0,8051.0 L2854.0,7744.0 L2254.0,7744.0 L2254.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="2164.4" y="6371.0" width="179.2" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="2254.0" y="6384.0" font-size="10" fill="#55606B" text-anchor="middle">battery_state · BatteryState</text>
+<text x="2254.0" y="6397.0" font-size="10" fill="#55606B" text-anchor="middle">남은 배터리</text>
+<path d="M488.0,3712.5 L458.0,3713.0 L458.0,4762.0 L82.0,4762.0 L82.0,7281.0 L598.0,7281.0 L598.0,7591.0 L628.0,7591.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="82.0" y="6014.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">처음 위치 — 자기 도크 좌표</text>
+<path d="M628.0,7675.0 L598.0,7675.0 L598.0,7804.0 L73.0,7804.0 L73.0,7820.0 L598.0,7820.0 L598.0,8159.0 L628.0,8159.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="-11.0" y="7803.0" width="216.0" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="97.0" y="7816.0" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치 · 지도 기준 좌표 변환</text>
+<text x="97.0" y="7829.0" font-size="10" fill="#55606B" text-anchor="middle">길찾기가 시작할 때 이것을 요구한다</text>
+<path d="M2884.0,8051.0 L2854.0,8051.0 L2854.0,7744.0 L2178.0,7744.0 L2178.0,7804.0 L598.0,7804.0 L598.0,7591.0 L628.0,7591.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="2098.2" y="7766.5" width="159.5" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="2178.0" y="7779.5" font-size="10" fill="#55606B" text-anchor="middle">라이다 스캔 · 바퀴가 돈 양</text>
+<text x="2178.0" y="7792.5" font-size="10" fill="#55606B" text-anchor="middle">지도와 맞춰 위치를 추정한다</text>
+<path d="M628.0,7675.0 L598.0,7675.0 L598.0,7281.0 L1977.0,7281.0 L1977.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="1835.5" y="6025.7" width="282.9" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="1977.0" y="6038.7" font-size="10" fill="#55606B" text-anchor="middle">/robot3/amcl_pose · PoseWithCovarianceStamped</text>
+<text x="1977.0" y="6051.7" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치</text>
+<path d="M488.0,4367.5 L458.0,4368.0 L458.0,4762.0 L64.0,4762.0 L64.0,7820.0 L598.0,7820.0 L598.0,8159.0 L628.0,8159.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="64.0" y="6286.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M258.0,2842.5 L228.0,2842.0 L228.0,3405.0 L55.0,3405.0 L55.0,7820.0 L598.0,7820.0 L598.0,8159.0 L628.0,8159.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="55.0" y="5600.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M488.0,6403.5 L458.0,6404.0 L458.0,7265.0 L82.0,7265.0 L82.0,7820.0 L598.0,7820.0 L598.0,8159.0 L628.0,8159.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="82.0" y="7541.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M628.0,8272.0 L598.0,8272.0 L598.0,8459.0 L73.0,8459.0 L73.0,8475.0 L88.0,8475.0 L88.0,9346.0 L118.0,9346.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="0.9" y="8467.2" width="174.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="88.0" y="8480.2" font-size="10" fill="#55606B" text-anchor="middle">의도한 바퀴 속도</text>
+<text x="88.0" y="8493.2" font-size="10" fill="#55606B" text-anchor="middle">정지 중에는 회전분만 빌려 쓴다</text>
+<path d="M628.0,8272.0 L598.0,8272.0 L598.0,7820.0 L2153.0,7820.0 L2153.0,8271.0 L2854.0,8271.0 L2854.0,8149.0 L2884.0,8149.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="2014.1" y="8036.2" width="277.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="2153.0" y="8049.2" font-size="10" fill="#55606B" text-anchor="middle">cmd_vel · TwistStamped</text>
+<text x="2153.0" y="8062.2" font-size="10" fill="#55606B" text-anchor="middle">평소 바퀴 명령 — 정지 중에는 안전 감시가 덮어쓴다</text>
+<path d="M258.0,1893.5 L228.0,1894.0 L228.0,2104.0 L64.0,2104.0 L64.0,2120.0 L228.0,2120.0 L228.0,2396.0 L258.0,2396.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="-11.0" y="2065.0" width="197.5" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="87.8" y="2078.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/map_point · PointStamped</text>
+<text x="87.8" y="2091.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대상의 지도 좌표</text>
+<path d="M258.0,1407.5 L228.0,1408.0 L228.0,2104.0 L55.0,2104.0 L55.0,2120.0 L228.0,2120.0 L228.0,2470.0 L258.0,2470.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="-22.9" y="2141.0" width="203.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="78.9" y="2154.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/paired · target/worker_id</text>
+<text x="78.9" y="2167.0" font-size="10" fill="#1F5FBF" text-anchor="middle">참일 때만 따라간다</text>
+<path d="M488.0,6112.5 L458.0,6113.0 L458.0,4778.0 L82.0,4778.0 L82.0,4762.0 L458.0,4762.0 L458.0,4081.0 L488.0,4081.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="-27.7" y="4745.0" width="234.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="89.6" y="4758.0" font-size="10" fill="#1F5FBF" text-anchor="middle">aruco/id · aruco/distance · aruco/pose</text>
+<text x="89.6" y="4771.0" font-size="10" fill="#1F5FBF" text-anchor="middle">베이 도착 판정과 정렬</text>
+<path d="M488.0,4716.5 L458.0,4717.0 L458.0,3421.0 L73.0,3421.0 L73.0,3405.0 L228.0,3405.0 L228.0,2324.0 L258.0,2324.5" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="9.5" y="3388.0" width="142.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="80.8" y="3401.0" font-size="10" fill="#1F5FBF" text-anchor="middle">shuttle/arrived · Bool</text>
+<text x="80.8" y="3414.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대기 장소 도착</text>
+<path d="M118.0,9031.5 L88.0,9032.0 L88.0,8475.0 L64.0,8475.0 L64.0,3405.0 L228.0,3405.0 L228.0,3353.0 L258.0,3352.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
+<rect x="20.4" y="5851.0" width="87.2" height="21.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
+<text x="64.0" y="5864.0" font-size="10" fill="#C0272D" text-anchor="middle">safety/estop</text>
 <path d="M3114.0,4420.5 L3084.0,4420.0 L3084.0,3878.0 L3931.0,3878.0 L3931.0,3325.0" fill="none" stroke="#7A3E9D" stroke-width="1.8" marker-end="url(#m0)"/>
 <rect x="3823.1" y="3593.3" width="215.8" height="21.0" fill="#ffffff" stroke="#7A3E9D" stroke-width="1" rx="2"/>
 <text x="3931.0" y="3606.3" font-size="10" fill="#7A3E9D" text-anchor="middle">/robot8/mission/assigned · Mission</text>
@@ -2111,8 +2193,8 @@
 <text x="4208.0" y="3853.3" font-size="10" fill="#0E7C7B" text-anchor="middle">/robot8/approach/status · String</text>
 <text x="4208.0" y="3866.3" font-size="10" fill="#0E7C7B" text-anchor="middle">IDLE·SEARCHING·APPROACH·ARRIVED·FOLLOWING·STANDBY·FAILED</text>
 <path d="M5000.0,4367.5 L4970.0,4368.0 L4970.0,4762.0 L4258.0,4762.0 L4266.0,4762.0 L4266.0,5090.0" fill="none" stroke="#0E7C7B" stroke-width="1.8" marker-end="url(#m0)"/>
-<rect x="4167.2" y="4861.9" width="197.5" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
-<text x="4266.0" y="4874.9" font-size="10" fill="#0E7C7B" text-anchor="middle">/robot8/shuttle/status · String</text>
+<rect x="4167.2" y="4862.9" width="197.5" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
+<text x="4266.0" y="4875.9" font-size="10" fill="#0E7C7B" text-anchor="middle">/robot8/shuttle/status · String</text>
 <path d="M5000.0,6403.5 L4961.0,6404.0 L4961.0,6173.0 L4258.0,6173.0 L4258.0,5098.0" fill="none" stroke="#0E7C7B" stroke-width="1.8" marker-end="url(#m0)"/>
 <path d="M4250.0,5090.0 L4258.0,5090.0 L4258.0,4835.0 L2344.0,4835.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#0E7C7B" stroke-width="1.6" marker-end="url(#m0)"/>
 <rect x="4095.4" y="5082.3" width="325.1" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
@@ -2121,46 +2203,60 @@
 <rect x="4191.6" y="5345.8" width="234.7" height="34.0" fill="#ffffff" stroke="#D97706" stroke-width="1" rx="2"/>
 <text x="4309.0" y="5358.8" font-size="10" fill="#D97706" text-anchor="middle">/fleet/zone_token · ZoneToken (서비스)</text>
 <text x="4309.0" y="5371.8" font-size="10" fill="#D97706" text-anchor="middle">좁은 목 P1 · 도크 DOCK</text>
-<path d="M4630.0,8448.5 L4600.0,8449.0 L4600.0,7892.0 L4359.0,7892.0 L4359.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
-<rect x="4246.1" y="6346.4" width="225.9" height="34.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
-<text x="4359.0" y="6359.4" font-size="10" fill="#C0272D" text-anchor="middle">/robot8/safety/estop · Bool</text>
-<text x="4359.0" y="6372.4" font-size="10" fill="#C0272D" text-anchor="middle">참인 동안 모든 로봇 노드가 주행을 멈춘다</text>
-<path d="M4630.0,8911.5 L4600.0,8911.0 L4600.0,8957.0 L4384.0,8957.0 L4384.0,8546.0 L2854.0,8546.0 L2854.0,8936.0 L2884.0,8936.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
-<rect x="4259.6" y="8729.9" width="248.9" height="34.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
-<text x="4384.0" y="8742.9" font-size="10" fill="#C0272D" text-anchor="middle">cmd_vel · TwistStamped</text>
-<text x="4384.0" y="8755.9" font-size="10" fill="#C0272D" text-anchor="middle">정지 중 초당 20번 덮어쓴다 — 앞뒤 0 · 회전만</text>
-<path d="M2884.0,8845.5 L2854.0,8845.0 L2854.0,8546.0 L4434.0,8546.0 L4434.0,4949.0" fill="none" stroke="#55606B" stroke-width="1.8" marker-end="url(#m0)"/>
-<rect x="4241.1" y="6729.3" width="385.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="4434.0" y="6742.3" font-size="10" fill="#55606B" text-anchor="middle">oakd/rgb/image_raw/compressed · oakd/stereo/…/compressedDepth</text>
-<text x="4434.0" y="6755.3" font-size="10" fill="#55606B" text-anchor="middle">oakd/rgb/camera_info</text>
-<path d="M4434.0,4933.0 L4434.0,2112.0 L4740.0,2112.0 L4740.0,664.0 L4770.0,664.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="4343.9" y="3191.7" width="180.2" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="4434.0" y="3204.7" font-size="10" fill="#55606B" text-anchor="middle">컬러·거리를 한 쌍으로 묶어 쓴다</text>
-<path d="M4442.0,4941.0 L4434.0,4941.0 L4434.0,4764.0 L4961.0,4764.0 L4961.0,5034.0 L5000.0,5033.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="4335.6" y="4931.0" width="196.7" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="4434.0" y="4944.0" font-size="10" fill="#55606B" text-anchor="middle">같은 카메라를 아르코 검출도 읽는다</text>
-<path d="M2884.0,8845.5 L2854.0,8845.0 L2854.0,8546.0 L4485.0,8546.0 L4485.0,8957.0 L4600.0,8957.0 L4600.0,8191.0 L4630.0,8190.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="4418.7" y="8889.0" width="132.6" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="4485.0" y="8902.0" font-size="10" fill="#55606B" text-anchor="middle">scan · LaserScan</text>
-<text x="4485.0" y="8915.0" font-size="10" fill="#55606B" text-anchor="middle">전방 좌우 35° 최단거리</text>
-<path d="M2884.0,8845.5 L2854.0,8845.0 L2854.0,8546.0 L4510.0,8546.0 L4510.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="4392.9" y="6570.0" width="234.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="4510.0" y="6583.0" font-size="10" fill="#55606B" text-anchor="middle">battery_state · BatteryState</text>
-<text x="4510.0" y="6596.0" font-size="10" fill="#55606B" text-anchor="middle">amcl_pose · PoseWithCovarianceStamped</text>
-<path d="M5000.0,4367.5 L4970.0,4368.0 L4970.0,4762.0 L4585.0,4762.0 L4585.0,7281.0 L5110.0,7281.0 L5110.0,7576.0 L5140.0,7576.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="4585.0" y="6014.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M4770.0,2842.5 L4740.0,2842.0 L4740.0,3405.0 L4576.0,3405.0 L4576.0,7281.0 L5110.0,7281.0 L5110.0,7576.0 L5140.0,7576.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="4576.0" y="5520.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M5000.0,6403.5 L4970.0,6404.0 L4970.0,7265.0 L4567.0,7265.0 L4567.0,7281.0 L5110.0,7281.0 L5110.0,7576.0 L5140.0,7576.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="4591.0" y="7277.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M5140.0,7689.0 L5110.0,7689.0 L5110.0,7876.0 L4594.0,7876.0 L4594.0,7892.0 L4600.0,7892.0 L4600.0,8763.0 L4630.0,8763.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="4512.9" y="7893.2" width="174.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="4600.0" y="7906.2" font-size="10" fill="#55606B" text-anchor="middle">의도한 바퀴 속도</text>
-<text x="4600.0" y="7919.2" font-size="10" fill="#55606B" text-anchor="middle">정지 중에는 회전분만 빌려 쓴다</text>
-<path d="M5140.0,7689.0 L5110.0,7689.0 L5110.0,7876.0 L4409.0,7876.0 L4409.0,8546.0 L2854.0,8546.0 L2854.0,8936.0 L2884.0,8936.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="4270.1" y="8186.9" width="277.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="4409.0" y="8199.9" font-size="10" fill="#55606B" text-anchor="middle">cmd_vel · TwistStamped</text>
-<text x="4409.0" y="8212.9" font-size="10" fill="#55606B" text-anchor="middle">평소 바퀴 명령 — 정지 중에는 안전 감시가 덮어쓴다</text>
+<path d="M4630.0,9031.5 L4600.0,9032.0 L4600.0,8475.0 L4359.0,8475.0 L4359.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
+<rect x="4246.1" y="6634.4" width="225.9" height="34.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
+<text x="4359.0" y="6647.4" font-size="10" fill="#C0272D" text-anchor="middle">/robot8/safety/estop · Bool</text>
+<text x="4359.0" y="6660.4" font-size="10" fill="#C0272D" text-anchor="middle">참인 동안 모든 로봇 노드가 주행을 멈춘다</text>
+<path d="M4630.0,9494.5 L4600.0,9494.0 L4600.0,8475.0 L4384.0,8475.0 L4384.0,9088.0 L2854.0,9088.0 L2854.0,8966.0 L2884.0,8966.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
+<rect x="4259.6" y="8770.4" width="248.9" height="34.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
+<text x="4384.0" y="8783.4" font-size="10" fill="#C0272D" text-anchor="middle">cmd_vel · TwistStamped</text>
+<text x="4384.0" y="8796.4" font-size="10" fill="#C0272D" text-anchor="middle">정지 중 초당 20번 덮어쓴다 — 앞뒤 0 · 회전만</text>
+<path d="M2884.0,8868.0 L2854.0,8868.0 L2854.0,8561.0 L4434.0,8561.0 L4434.0,4956.0" fill="none" stroke="#55606B" stroke-width="1.8" marker-end="url(#m0)"/>
+<rect x="4241.1" y="6800.4" width="385.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4434.0" y="6813.4" font-size="10" fill="#55606B" text-anchor="middle">oakd/rgb/image_raw/compressed · oakd/stereo/…/compressedDepth</text>
+<text x="4434.0" y="6826.4" font-size="10" fill="#55606B" text-anchor="middle">oakd/rgb/camera_info</text>
+<path d="M4434.0,4940.0 L4434.0,2112.0 L4740.0,2112.0 L4740.0,664.0 L4770.0,664.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4343.9" y="3191.4" width="180.2" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4434.0" y="3204.4" font-size="10" fill="#55606B" text-anchor="middle">컬러·거리를 한 쌍으로 묶어 쓴다</text>
+<path d="M4442.0,4948.0 L4434.0,4948.0 L4434.0,4764.0 L4961.0,4764.0 L4961.0,5034.0 L5000.0,5033.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4335.6" y="4933.3" width="196.7" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4434.0" y="4946.3" font-size="10" fill="#55606B" text-anchor="middle">같은 카메라를 아르코 검출도 읽는다</text>
+<path d="M2884.0,8868.0 L2854.0,8868.0 L2854.0,9088.0 L4485.0,9088.0 L4485.0,8475.0 L4600.0,8475.0 L4600.0,8774.0 L4630.0,8773.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4418.7" y="8609.6" width="132.6" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4485.0" y="8622.6" font-size="10" fill="#55606B" text-anchor="middle">scan · LaserScan</text>
+<text x="4485.0" y="8635.6" font-size="10" fill="#55606B" text-anchor="middle">전방 좌우 35° 최단거리</text>
+<path d="M2884.0,8868.0 L2854.0,8868.0 L2854.0,8561.0 L4510.0,8561.0 L4510.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4420.4" y="6474.0" width="179.2" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4510.0" y="6487.0" font-size="10" fill="#55606B" text-anchor="middle">battery_state · BatteryState</text>
+<text x="4510.0" y="6500.0" font-size="10" fill="#55606B" text-anchor="middle">남은 배터리</text>
+<path d="M5000.0,3712.5 L4970.0,3713.0 L4970.0,4762.0 L4567.0,4762.0 L4567.0,7281.0 L5110.0,7281.0 L5110.0,7591.0 L5140.0,7591.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="4567.0" y="6014.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">처음 위치 — 자기 도크 좌표</text>
+<path d="M5140.0,7675.0 L5110.0,7675.0 L5110.0,7804.0 L4594.0,7804.0 L4594.0,7820.0 L5110.0,7820.0 L5110.0,8159.0 L5140.0,8159.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4510.0" y="7803.0" width="216.0" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4618.0" y="7816.0" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치 · 지도 기준 좌표 변환</text>
+<text x="4618.0" y="7829.0" font-size="10" fill="#55606B" text-anchor="middle">길찾기가 시작할 때 이것을 요구한다</text>
+<path d="M2884.0,8868.0 L2854.0,8868.0 L2854.0,8561.0 L4434.0,8561.0 L4434.0,7804.0 L5110.0,7804.0 L5110.0,7591.0 L5140.0,7591.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4354.2" y="8162.8" width="159.5" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4434.0" y="8175.8" font-size="10" fill="#55606B" text-anchor="middle">라이다 스캔 · 바퀴가 돈 양</text>
+<text x="4434.0" y="8188.8" font-size="10" fill="#55606B" text-anchor="middle">지도와 맞춰 위치를 추정한다</text>
+<path d="M5140.0,7675.0 L5110.0,7675.0 L5110.0,7281.0 L4233.0,7281.0 L4233.0,4819.0 L2344.0,4819.0 L2344.0,4125.0 L2374.0,4125.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4091.6" y="6153.9" width="282.9" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4233.0" y="6166.9" font-size="10" fill="#55606B" text-anchor="middle">/robot8/amcl_pose · PoseWithCovarianceStamped</text>
+<text x="4233.0" y="6179.9" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치</text>
+<path d="M5000.0,4367.5 L4970.0,4368.0 L4970.0,4762.0 L4585.0,4762.0 L4585.0,7820.0 L5110.0,7820.0 L5110.0,8159.0 L5140.0,8159.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="4585.0" y="6318.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M4770.0,2842.5 L4740.0,2842.0 L4740.0,3405.0 L4576.0,3405.0 L4576.0,7820.0 L5110.0,7820.0 L5110.0,8159.0 L5140.0,8159.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="4576.0" y="5600.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M5000.0,6403.5 L4970.0,6404.0 L4970.0,7265.0 L4567.0,7265.0 L4567.0,7820.0 L5110.0,7820.0 L5110.0,8159.0 L5140.0,8159.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="4567.0" y="7541.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M5140.0,8272.0 L5110.0,8272.0 L5110.0,8459.0 L4594.0,8459.0 L4594.0,8475.0 L4600.0,8475.0 L4600.0,9346.0 L4630.0,9346.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4512.9" y="8458.2" width="174.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4600.0" y="8471.2" font-size="10" fill="#55606B" text-anchor="middle">의도한 바퀴 속도</text>
+<text x="4600.0" y="8484.2" font-size="10" fill="#55606B" text-anchor="middle">정지 중에는 회전분만 빌려 쓴다</text>
+<path d="M5140.0,8272.0 L5110.0,8272.0 L5110.0,8459.0 L4409.0,8459.0 L4409.0,8561.0 L2854.0,8561.0 L2854.0,8966.0 L2884.0,8966.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4270.1" y="8534.7" width="277.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4409.0" y="8547.7" font-size="10" fill="#55606B" text-anchor="middle">cmd_vel · TwistStamped</text>
+<text x="4409.0" y="8560.7" font-size="10" fill="#55606B" text-anchor="middle">평소 바퀴 명령 — 정지 중에는 안전 감시가 덮어쓴다</text>
 <path d="M4770.0,1893.5 L4740.0,1894.0 L4740.0,2104.0 L4585.0,2104.0 L4585.0,2120.0 L4740.0,2120.0 L4740.0,2396.0 L4770.0,2396.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
 <rect x="4510.0" y="2065.0" width="197.5" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
 <text x="4608.8" y="2078.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/map_point · PointStamped</text>
@@ -2177,7 +2273,7 @@
 <rect x="4530.5" y="3388.0" width="142.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
 <text x="4601.8" y="3401.0" font-size="10" fill="#1F5FBF" text-anchor="middle">shuttle/arrived · Bool</text>
 <text x="4601.8" y="3414.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대기 장소 도착</text>
-<path d="M4630.0,8448.5 L4600.0,8449.0 L4600.0,7892.0 L4585.0,7892.0 L4585.0,3405.0 L4740.0,3405.0 L4740.0,3353.0 L4770.0,3352.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
-<rect x="4541.4" y="5675.0" width="87.2" height="21.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
-<text x="4585.0" y="5688.0" font-size="10" fill="#C0272D" text-anchor="middle">safety/estop</text>
+<path d="M4630.0,9031.5 L4600.0,9032.0 L4600.0,8475.0 L4585.0,8475.0 L4585.0,3405.0 L4740.0,3405.0 L4740.0,3353.0 L4770.0,3352.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
+<rect x="4541.4" y="5851.0" width="87.2" height="21.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
+<text x="4585.0" y="5864.0" font-size="10" fill="#C0272D" text-anchor="middle">safety/estop</text>
 </svg>
