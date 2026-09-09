@@ -68,7 +68,6 @@ class NodeConfig:
     detection_confirm_s: float
     detection_hold_s: float
     lost_confirm_s: float
-    hint_valid_s: float
     show_window: bool
 
 
@@ -186,7 +185,6 @@ class WebcamHint(Node):
         )
         self.detection_hold_s = config.detection_hold_s
         self.lost_confirm_s = config.lost_confirm_s
-        self.hint_valid_s = config.hint_valid_s
         self.show_window = config.show_window
         self._validate(config.camera, config.process_hz, config.image_publish_hz, config.homography_path)
 
@@ -257,7 +255,6 @@ class WebcamHint(Node):
             detection_confirm_s=float(self.declare_parameter('detection_confirm_s', 0.3).value),
             detection_hold_s=float(self.declare_parameter('detection_hold_s', 0.5).value),
             lost_confirm_s=float(self.declare_parameter('lost_confirm_s', 1.0).value),
-            hint_valid_s=float(self.declare_parameter('hint_valid_s', 2.0).value),
             show_window=bool(self.declare_parameter('show_window', False).value),
         )
 
@@ -271,7 +268,8 @@ class WebcamHint(Node):
             raise ValueError('confidence는 0~1 범위여야 합니다.')
         if not 1 <= self.jpeg_quality <= 100:
             raise ValueError('jpeg_quality는 1~100 범위여야 합니다.')
-        if self.detection_confirm_count <= 0 or self.detection_hold_s < 0.0 or self.lost_confirm_s <= 0.0 or self.hint_valid_s <= 0.0:
+        if (self.detection_confirm_count <= 0 or self.detection_hold_s < 0.0
+                or self.lost_confirm_s <= 0.0):
             raise ValueError('탐지 확정 횟수는 1 이상이고 추적 시간 파라미터는 음수일 수 없습니다.')
         if not homography_path:
             raise ValueError('homography_json 경로가 필요합니다.')
