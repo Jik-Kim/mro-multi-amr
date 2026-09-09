@@ -24,7 +24,6 @@ setup(
         'console_scripts': [
             'fleet_manager_node = mro_fleet.nodes.fleet_manager_node:main',
         'zone_semaphore_node = mro_fleet.nodes.zone_semaphore_node:main',
-        'control_ui_node = mro_fleet.nodes.control_ui_node:main',
         ],
     },
 )

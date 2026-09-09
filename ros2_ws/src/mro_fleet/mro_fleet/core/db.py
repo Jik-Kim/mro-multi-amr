@@ -26,13 +26,13 @@ class FleetDB:
         worker_id,
         outfit_class,
         registered_at,
-        robot_ns=None,
     ):
-        """작업자 등록 정보와 배정 로봇을 저장한다."""
+        """작업자 등록 정보를 저장한다."""
         with self._lock, self.con:
             self.con.execute(
-                'INSERT OR REPLACE INTO workers VALUES (?,?,?,?)',
-                (worker_id, outfit_class, robot_ns, registered_at),
+                'INSERT OR REPLACE INTO workers '
+                '(worker_id, outfit_class, registered_at) VALUES (?,?,?)',
+                (worker_id, outfit_class, registered_at),
             )
 
     def create_mission(
@@ -121,15 +121,6 @@ class FleetDB:
                 'VALUES (?,?,?,?,?)',
                 (event_at, robot_ns, kind, str(value), note),
             )
-
-    def robot_for(self, worker_id):
-        """작업자에게 배정된 로봇 네임스페이스를 반환한다."""
-        with self._lock:
-            row = self.con.execute(
-                'SELECT robot_ns FROM workers WHERE worker_id=?',
-                (worker_id,),
-            ).fetchone()
-            return row['robot_ns'] if row else None
 
     def mission(self, mission_id):
         """미션 한 건을 dict로 반환한다."""

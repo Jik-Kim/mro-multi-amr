@@ -1,10 +1,68 @@
 """ROS 네트워크 없이 관제 콜백의 분기 규칙을 검증한다."""
 import asyncio
+import threading
 from types import MethodType, SimpleNamespace
+from unittest.mock import patch
 
 from mro_fleet.nodes.fleet_manager_node import FleetManager
+from mro_fleet.nodes.robot_state_manager import RobotStateManager
 
 from mro_interfaces.msg import Mission
+
+
+def test_robot_state_manager_creates_one_robot_object_per_namespace():
+    """Namespace를 키로 삼아 로봇 객체를 관리한다."""
+    executor = SimpleNamespace(add_node=lambda _node: None)
+    with patch(
+        'mro_fleet.nodes.robot_state_manager.RobotStatus',
+        side_effect=lambda namespace: SimpleNamespace(namespace=namespace),
+    ):
+        manager = RobotStateManager(['/robot3', '/robot8'], executor)
+
+    assert list(manager.robots) == ['/robot3', '/robot8']
+    assert manager.robots['/robot3'].namespace == '/robot3'
+    assert manager.robots['/robot8'].namespace == '/robot8'
+
+
+def test_robot_state_manager_adds_and_removes_one_robot_during_execution():
+    """실행 중 로봇 한 대를 executor에 추가하고 제거한다."""
+    added = []
+    removed = []
+    destroyed = []
+    executor = SimpleNamespace(
+        add_node=lambda node: added.append(node),
+        remove_node=lambda node: removed.append(node),
+    )
+    with patch(
+        'mro_fleet.nodes.robot_state_manager.RobotStatus',
+        side_effect=lambda namespace: SimpleNamespace(
+            namespace=namespace,
+            destroy_node=lambda: destroyed.append(namespace),
+        ),
+    ):
+        manager = RobotStateManager([], executor)
+        assert manager.add_robot('/robot3') is True
+        assert manager.add_robot('/robot3') is False
+        assert manager.remove_robot('/robot3') is True
+        assert manager.remove_robot('/robot3') is False
+
+    assert [robot.namespace for robot in added] == ['/robot3']
+    assert [robot.namespace for robot in removed] == ['/robot3']
+    assert destroyed == ['/robot3']
+
+
+def make_clock(seconds):
+    """고정된 ROS 시각을 반환하는 테스트 대역을 만든다."""
+    nanoseconds = int(seconds * 1_000_000_000)
+    stamp = SimpleNamespace(
+        sec=nanoseconds // 1_000_000_000,
+        nanosec=nanoseconds % 1_000_000_000,
+    )
+    current_time = SimpleNamespace(
+        nanoseconds=nanoseconds,
+        to_msg=lambda: stamp,
+    )
+    return SimpleNamespace(now=lambda: current_time)
 
 
 class FakeDatabase:
@@ -29,6 +87,99 @@ class FakeDatabase:
         self.workers.append(values)
 
 
+class FakeRobot:
+    """로봇 상태 조회용 RobotStatus 대역."""
+
+    def __init__(self, namespace, status):
+        """테스트할 namespace와 상태를 저장한다."""
+        self.namespace = namespace
+        self.status = status
+        self.status_lock = threading.Lock()
+
+    def get_status(self):
+        """현재 상태를 복사해 반환한다."""
+        return self.status.copy()
+
+
+class FakeRobotStateManager:
+    """가용 로봇 조회와 미션 배정을 테스트하는 대역."""
+
+    def __init__(self, robot_states):
+        """로봇별 테스트 상태와 RobotStatus 대역을 만든다."""
+        self.robot_states = robot_states
+        self.robots = {}
+        self.last_received_status = {}
+        for namespace, state in robot_states.items():
+            status = {
+                'battery': state.get('battery', 1.0),
+                'status_received': state.get('status_received', True),
+                'mission': state.get('mission_id', ''),
+                'mission_state': state.get('mission_state'),
+                'shuttle_state': state.get('shuttle_state', 'UNKNOWN'),
+                'estop': state.get('estop', False),
+            }
+            self.robots[namespace] = FakeRobot(namespace, status)
+            self.last_received_status[namespace] = {
+                'approach_state': state.get('approach_state', 'UNKNOWN'),
+                'shuttle_state': state.get('shuttle_state', 'UNKNOWN'),
+                'battery': state.get('battery'),
+                'estop': state.get('estop'),
+                'paired_worker': state.get('paired_worker', ''),
+            }
+
+    def get_available_robots(self):
+        """미션·E-stop이 없고 상태를 받은 로봇을 반환한다."""
+        available = []
+        for robot in self.robots.values():
+            status = robot.get_status()
+            if (
+                status['status_received']
+                and not status['mission']
+                and not status['estop']
+            ):
+                available.append(robot)
+        return available
+
+    def assign_mission(self, namespace, mission_id, worker_id, mission_state):
+        """배정 결과를 로봇 대역과 기존 검증 상태에 반영한다."""
+        self.robots[namespace].status['mission'] = mission_id
+        state = self.robot_states[namespace]
+        state['mission_id'] = mission_id
+        state['mission_state'] = mission_state
+        state['target_worker'] = worker_id
+
+    def get_robot(self, namespace):
+        """namespace에 해당하는 로봇 대역을 반환한다."""
+        return self.robots.get(namespace)
+
+    def update_fleet_status(self, message):
+        """실제 RobotStateManager의 FleetStatus 반영 로직을 사용한다."""
+        return RobotStateManager.update_fleet_status(self, message)
+
+    def update_source_state(self, namespace, source, state):
+        """출처별 상태를 로봇 대역에 반영한다."""
+        changed = RobotStateManager.update_source_state(
+            self, namespace, source, state
+        )
+        if changed:
+            self.robot_states[namespace][f'{source}_state'] = state
+        return changed
+
+    def is_mission_transition_allowed(self, namespace, source, new_state):
+        """실제 RobotStateManager의 미션 전이 규칙을 사용한다."""
+        return RobotStateManager.is_mission_transition_allowed(
+            self, namespace, source, new_state
+        )
+
+    def update_mission_state(self, namespace, mission_state):
+        """로봇 대역의 미션 상태를 변경한다."""
+        self.robots[namespace].status['mission_state'] = mission_state
+
+    def clear_mission(self, namespace):
+        """로봇 대역의 미션 정보를 비운다."""
+        self.robots[namespace].status['mission'] = ''
+
+
 def make_status_manager(mission_state=Mission.FOLLOWING):
     """상태 콜백 검증에 필요한 최소 관제 객체를 만든다."""
     namespace = '/robot3'
@@ -37,34 +188,68 @@ def make_status_manager(mission_state=Mission.FOLLOWING):
             namespace: {
                 'approach_state': 'UNKNOWN',
                 'shuttle_state': 'UNKNOWN',
-                'status_owner': None,
                 'mission_state': mission_state,
                 'mission_id': 'M001',
             }
         },
         db=FakeDatabase(),
-        _now_s=lambda: 30.0,
+        get_clock=lambda: make_clock(30.0),
     )
-    for method_name in (
-        '_set_source_state',
-        '_can_transition_from_status',
-    ):
+    fake.robot_state_manager = FakeRobotStateManager(fake.robot)
+
+    def transition(namespace_arg, state):
+        fake.robot[namespace_arg]['mission_state'] = state
+        fake.robot_state_manager.update_mission_state(namespace_arg, state)
+
+    fake._update_mission_state = transition
+    return fake
+
+
+def test_fleet_status_callback_writes_changed_values_to_database():
+    """수신 콜백이 반환되기 전 변경 이벤트를 DB에 넘긴다."""
+    fake = make_status_manager(mission_state=Mission.WAITING)
+    robot = fake.robot['/robot3']
+    robot.update({
+        'battery': 0.5,
+        'estop': False,
+        'x': 0.0,
+        'y': 0.0,
+        'yaw': 0.0,
+        'pair_state': 'NO_TARGET',
+        'paired_worker': '',
+    })
+    fake.get_logger = lambda: FakeLogger()
+    for method_name in ('_process_robot_state_for_mission',):
         setattr(
             fake,
             method_name,
             MethodType(getattr(FleetManager, method_name), fake),
         )
-    fake._is_return_state = FleetManager._is_return_state
-    fake._shuttle_return_has_priority = (
-        FleetManager._shuttle_return_has_priority
+
+    message = SimpleNamespace(
+        robot_ns='/robot3',
+        shuttle_state='WAITING',
+        approach_state='SEARCHING',
+        battery=0.75,
+        estop=True,
+        x=1.2,
+        y=-0.4,
+        yaw=0.3,
+        pair_state='GATE_FAIL',
+        paired_worker='',
     )
-    fake._composed_state = FleetManager._composed_state
 
-    def transition(namespace_arg, state):
-        fake.robot[namespace_arg]['mission_state'] = state
+    FleetManager._receive_fleet_status(fake, message)
 
-    fake._transition_mission = transition
-    return fake
+    assert fake.db.events == [
+        (30.0, '/robot3', 'STATE', 'WAITING', 'shuttle'),
+        (30.0, '/robot3', 'STATE', 'SEARCHING', 'approach'),
+        (30.0, '/robot3', 'ESTOP', True),
+    ]
+    stored_status = fake.robot_state_manager.get_robot('/robot3').get_status()
+    assert stored_status['battery'] == 0.75
+    assert stored_status['x'] == 1.2
+    assert stored_status['pair_state'] == 'GATE_FAIL'
 
 
 class FakePublisher:
@@ -77,19 +262,6 @@ class FakePublisher:
     def publish(self, message):
         """발행 요청된 메시지를 보관한다."""
         self.messages.append(message)
-
-
-class FakeTimer:
-    """등록 배치 타이머의 취소 여부를 보관하는 테스트 대역."""
-
-    def __init__(self, callback):
-        """호출할 콜백과 초기 상태를 저장한다."""
-        self.callback = callback
-        self.cancelled = False
-
-    def cancel(self):
-        """타이머가 취소됐음을 기록한다."""
-        self.cancelled = True
 
 
 class FakeLogger:
@@ -173,42 +345,29 @@ class FakeManualPairClient:
         return ImmediateFuture(self.result)
 
 
-def make_worker_manager(assigned=None, batteries=None):
-    """작업자 배정 콜백 검증에 필요한 최소 관제 객체를 만든다."""
+def make_worker_manager(batteries=None):
+    """작업자 등록·AMR 배정 검증용 최소 관제 객체를 만든다."""
     robots = ['/robot3', '/robot8']
     database = FakeDatabase()
     logger = FakeLogger()
     fake = SimpleNamespace(
-        robots=robots,
+        robot_namespaces=robots,
         robot={
             namespace: {
                 'battery': (batteries or {}).get(namespace, 1.0),
+                'status_received': True,
+                'mission_id': '',
+                'estop': False,
             }
             for namespace in robots
         },
-        worker_robot=dict(assigned or {}),
-        pending_workers={},
-        worker_assignment_timer=None,
-        worker_assignment_window_s=1.0,
+        registered_workers=set(),
         db=database,
-        _now_s=lambda: 15.0,
+        get_clock=lambda: make_clock(15.0),
         get_logger=lambda: logger,
     )
 
-    def create_timer(_period, callback):
-        return FakeTimer(callback)
-
-    def destroy_timer(_timer):
-        return True
-
-    fake.create_timer = create_timer
-    fake.destroy_timer = destroy_timer
-    for method_name in ('_available_robots', '_flush_pending_workers'):
-        setattr(
-            fake,
-            method_name,
-            MethodType(getattr(FleetManager, method_name), fake),
-        )
+    fake.robot_state_manager = FakeRobotStateManager(fake.robot)
     return fake, database, logger
 
 
@@ -225,78 +384,41 @@ def worker_descriptor(worker_id):
 
 
 def register_workers(worker_ids):
-    """지정 순서로 작업자를 등록하고 최종 배정을 반환한다."""
+    """지정 순서로 작업자를 등록하고 등록 결과를 반환한다."""
     fake, database, _logger = make_worker_manager()
     for worker_id in worker_ids:
-        FleetManager._worker_cb(fake, worker_descriptor(worker_id))
-    if fake.worker_assignment_timer is not None:
-        fake.worker_assignment_timer.callback()
-    return fake.worker_robot, database
+        FleetManager._register_worker(fake, worker_descriptor(worker_id))
+    return fake.registered_workers, database
 
 
-def test_workers_are_assigned_by_id_for_w1_then_w2():
-    """W1, W2 입력이 worker_id 순서대로 배정되는지 확인한다."""
-    assignments, _database = register_workers(['W1', 'W2'])
+def test_worker_registration_does_not_assign_robot():
+    """작업자 등록은 AMR을 미리 배정하지 않고 DB에만 남긴다."""
+    workers, database = register_workers(['W1'])
 
-    assert assignments == {'W1': '/robot3', 'W2': '/robot8'}
-
-
-def test_workers_are_assigned_by_id_for_w2_then_w1():
-    """W2가 먼저 와도 W1이 robot3에 배정되는지 확인한다."""
-    assignments, _database = register_workers(['W2', 'W1'])
-
-    assert assignments == {'W1': '/robot3', 'W2': '/robot8'}
+    assert workers == {'W1'}
+    assert database.workers == [('W1', 'worker_a', 15.0)]
 
 
-def test_worker_assignment_is_independent_of_callback_order():
-    """같은 작업자 집합의 배정 결과가 입력 순서와 무관한지 확인한다."""
-    forward, _database = register_workers(['W1', 'W2'])
-    reverse, _database = register_workers(['W2', 'W1'])
+def test_repeated_worker_descriptor_is_stored_once():
+    """1 Hz로 재발행된 같은 작업자를 중복 저장하지 않는다."""
+    workers, database = register_workers(['W1', 'W1'])
 
-    assert forward == reverse
-
-
-def test_single_worker_is_assigned_after_batch_window():
-    """작업자 한 명도 배치 창이 끝나면 기존 첫 로봇에 배정되는지 확인한다."""
-    assignments, database = register_workers(['W1'])
-
-    assert assignments == {'W1': '/robot3'}
-    assert database.workers == [
-        ('W1', 'worker_a', 15.0, '/robot3')
-    ]
+    assert workers == {'W1'}
+    assert database.workers == [('W1', 'worker_a', 15.0)]
 
 
-def test_existing_worker_is_not_reassigned_by_new_registration():
-    """기존 배정을 유지하면서 새 작업자에게 남은 로봇을 배정하는지 확인한다."""
+def test_request_rejects_when_all_available_robots_have_low_battery():
+    """등록된 작업자 요청이어도 가용 AMR 배터리가 낮으면 거부한다."""
     fake, database, _logger = make_worker_manager(
-        assigned={'W2': '/robot3'}
+        batteries={'/robot3': 0.24, '/robot8': 0.20}
     )
-
-    FleetManager._worker_cb(fake, worker_descriptor('W1'))
-    fake.worker_assignment_timer.callback()
-
-    assert fake.worker_robot == {
-        'W2': '/robot3',
-        'W1': '/robot8',
-    }
-    assert database.workers == [
-        ('W1', 'worker_a', 15.0, '/robot8')
-    ]
-
-
-def test_pending_worker_request_keeps_low_battery_rejection():
-    """배치 대기 중 요청도 먼저 배정한 뒤 기존 FR-06을 적용하는지 확인한다."""
-    fake, database, _logger = make_worker_manager(
-        batteries={'/robot3': 0.24}
-    )
+    fake.registered_workers.add('W1')
     fake.battery_min = 0.25
-    FleetManager._worker_cb(fake, worker_descriptor('W1'))
     request = SimpleNamespace(worker_id='W1', bay='A')
     response = SimpleNamespace(accepted=True, mission_id='', message='')
 
-    result = FleetManager._request_cb(fake, request, response)
+    result = FleetManager._handle_mission_request(fake, request, response)
 
-    assert fake.worker_robot == {'W1': '/robot3'}
     assert result.accepted is False
     assert '배터리 임계 미만' in result.message
     assert database.events == [
@@ -304,22 +426,66 @@ def test_pending_worker_request_keeps_low_battery_rejection():
     ]
 
 
+def test_request_assigns_first_available_robot_and_stores_mission():
+    """자재 요청 시점에 가용 AMR을 골라 인스턴스와 DB에 반영한다."""
+    database = FakeDatabase()
+    database.states = []
+    database.create_mission = lambda *_args: 'M001'
+    database.set_state = lambda *args: database.states.append(args)
+    robot3 = {
+        'battery': 0.9, 'status_received': True,
+        'mission_id': 'M000', 'mission_state': Mission.SHUTTLE,
+        'estop': False, 'target_worker': 'W0',
+        'approach_state': 'UNKNOWN', 'shuttle_state': 'SHUTTLE',
+    }
+    robot8 = {
+        'battery': 0.8, 'status_received': True,
+        'mission_id': '', 'mission_state': None,
+        'estop': False, 'target_worker': '',
+        'approach_state': 'UNKNOWN', 'shuttle_state': 'READY',
+    }
+    fake = SimpleNamespace(
+        robot_namespaces=['/robot3', '/robot8'],
+        registered_workers={'W1'},
+        robot={'/robot3': robot3, '/robot8': robot8},
+        battery_min=0.25,
+        db=database,
+        pub_mission=FakePublisher(),
+        pub_assigned={
+            '/robot3': FakePublisher(), '/robot8': FakePublisher()
+        },
+        get_clock=lambda: make_clock(20.0),
+    )
+    fake.robot_state_manager = FakeRobotStateManager(fake.robot)
+    request = SimpleNamespace(worker_id='W1', bay='B')
+    response = SimpleNamespace(accepted=False, mission_id='', message='')
+
+    result = FleetManager._handle_mission_request(fake, request, response)
+
+    assert result.accepted is True
+    assert robot8['mission_id'] == 'M001'
+    assert robot8['target_worker'] == 'W1'
+    assert database.states == [('M001', Mission.ASSIGNED, 20.0)]
+    assert len(fake.pub_assigned['/robot8'].messages) == 1
+    assert fake.pub_assigned['/robot3'].messages == []
+
+
 def test_return_all_accepts_empty_robot_namespace():
     """RETURN_ALL이 빈 robot_ns여도 두 로봇에 발행되는지 확인한다."""
     fake = SimpleNamespace(
-        robots=['/robot3', '/robot8'],
+        robot_namespaces=['/robot3', '/robot8'],
         robot={'/robot3': {}, '/robot8': {}},
         db=FakeDatabase(),
         pub_finish={
             '/robot3': FakePublisher(),
             '/robot8': FakePublisher(),
         },
-        _now_s=lambda: 10.0,
+        get_clock=lambda: make_clock(10.0),
     )
     request = SimpleNamespace(robot_ns='', command='RETURN_ALL')
     response = SimpleNamespace(ok=False, message='')
 
-    result = FleetManager._operator_cb(fake, request, response)
+    result = FleetManager.return_immediately(fake, request, response)
 
     assert result.ok is True
     assert len(fake.pub_finish['/robot3'].messages) == 1
@@ -345,13 +511,15 @@ def test_manual_pair_is_forwarded_to_selected_robot():
         ),
         destroy_timer=lambda _timer: True,
         manual_pair_client_group=object(),
-        _resolve_manual_pair_wait=FleetManager._resolve_manual_pair_wait,
+        _complete_manual_pair_wait_once=(
+            FleetManager._complete_manual_pair_wait_once
+        ),
     )
     request = SimpleNamespace(robot_ns='/robot3', worker_id='W1')
     response = SimpleNamespace(accepted=False, reason='')
 
     result = asyncio.run(
-        FleetManager._manual_pair_cb(fake, request, response)
+        FleetManager._forward_manual_pair_request(fake, request, response)
     )
 
     assert result.accepted is True
@@ -369,13 +537,15 @@ def test_manual_pair_rejects_unknown_robot_without_forwarding():
         manual_pair_clients={'/robot3': robot3_client},
         manual_pair_timeout_s=0.01,
         get_logger=lambda: FakeLogger(),
-        _resolve_manual_pair_wait=FleetManager._resolve_manual_pair_wait,
+        _complete_manual_pair_wait_once=(
+            FleetManager._complete_manual_pair_wait_once
+        ),
     )
     request = SimpleNamespace(robot_ns='/robot5', worker_id='W1')
     response = SimpleNamespace(accepted=True, reason='')
 
     result = asyncio.run(
-        FleetManager._manual_pair_cb(fake, request, response)
+        FleetManager._forward_manual_pair_request(fake, request, response)
     )
 
     assert result.accepted is False
@@ -395,29 +565,39 @@ def test_manual_pair_timeout_does_not_report_success():
         ),
         destroy_timer=lambda _timer: True,
         manual_pair_client_group=object(),
-        _resolve_manual_pair_wait=FleetManager._resolve_manual_pair_wait,
+        _complete_manual_pair_wait_once=(
+            FleetManager._complete_manual_pair_wait_once
+        ),
     )
     request = SimpleNamespace(robot_ns='/robot3', worker_id='W1')
     response = SimpleNamespace(accepted=True, reason='old')
 
     result = asyncio.run(
-        FleetManager._manual_pair_cb(fake, request, response)
+        FleetManager._forward_manual_pair_request(fake, request, response)
     )
 
     assert result.accepted is False
     assert result.reason == ''
 
 
-def test_low_battery_rejects_mission_and_records_reason():
-    """배터리 25% 미만 요청이 거부되고 사유가 남는지 확인한다."""
+def test_request_rejects_when_robot_status_has_not_arrived():
+    """상태를 한 번도 받지 못한 AMR은 가용 로봇에서 제외한다."""
     fake = SimpleNamespace(
-        worker_robot={'W1': '/robot3'},
-        pending_workers={},
-        robot={'/robot3': {'battery': 0.24}},
+        robot_namespaces=['/robot3'],
+        registered_workers={'W1'},
+        robot={
+            '/robot3': {
+                'battery': 1.0,
+                'status_received': False,
+                'mission_id': '',
+                'estop': False,
+            }
+        },
         battery_min=0.25,
         db=FakeDatabase(),
-        _now_s=lambda: 20.0,
+        get_clock=lambda: make_clock(20.0),
     )
+    fake.robot_state_manager = FakeRobotStateManager(fake.robot)
     request = SimpleNamespace(worker_id='W1', bay='A')
     response = SimpleNamespace(
         accepted=True,
@@ -425,13 +605,10 @@ def test_low_battery_rejects_mission_and_records_reason():
         message='',
     )
 
-    result = FleetManager._request_cb(fake, request, response)
+    result = FleetManager._handle_mission_request(fake, request, response)
 
     assert result.accepted is False
-    assert '배터리 임계 미만' in result.message
-    assert fake.db.events == [
-        (20.0, '/robot3', 'ASSIGN_REFUSED_BATTERY', 0.24)
-    ]
+    assert result.message == '가용 AMR 없음'
 
 
 def test_overdue_timer_records_failure_without_stopping_robot():
@@ -446,11 +623,11 @@ def test_overdue_timer_records_failure_without_stopping_robot():
     fake = SimpleNamespace(
         db=database,
         t_lim_s=120.0,
-        _now_s=lambda: 131.0,
+        get_clock=lambda: make_clock(131.0),
         get_logger=lambda: logger,
     )
 
-    FleetManager._expire_overdue_missions(fake)
+    FleetManager._mark_overdue_missions(fake)
 
     assert database.events == [
         (131.0, '/robot3', 'TLIM_EXCEEDED', 'M001')
@@ -459,7 +636,7 @@ def test_overdue_timer_records_failure_without_stopping_robot():
 
 def test_intervention_records_message_timestamp_and_fields():
     """개입 메시지의 발행 시각과 필드가 DB 이벤트로 전달되는지 확인한다."""
-    fake = SimpleNamespace(db=FakeDatabase(), _now_s=lambda: 99.0)
+    fake = SimpleNamespace(db=FakeDatabase())
     message = SimpleNamespace(
         header=SimpleNamespace(
             stamp=SimpleNamespace(sec=12, nanosec=500_000_000)
@@ -469,7 +646,7 @@ def test_intervention_records_message_timestamp_and_fields():
         note='주행 불가로 작업자가 이동',
     )
 
-    FleetManager._intervention_cb(fake, message)
+    FleetManager._record_intervention_event(fake, message)
 
     assert fake.db.events == [
         (
@@ -484,7 +661,9 @@ def test_intervention_records_message_timestamp_and_fields():
 
 def test_intervention_uses_receive_time_for_invalid_stamp():
     """발행 시각이 0이거나 비정상이면 수신 시각을 사용하는지 확인한다."""
-    fake = SimpleNamespace(db=FakeDatabase(), _now_s=lambda: 99.0)
+    fake = SimpleNamespace(
+        db=FakeDatabase(), get_clock=lambda: make_clock(99.0)
+    )
     invalid_stamps = (
         SimpleNamespace(sec=0, nanosec=0),
         SimpleNamespace(sec=-1, nanosec=0),
@@ -498,7 +677,7 @@ def test_intervention_uses_receive_time_for_invalid_stamp():
             kind='RESTART',
             note='노드 재시작',
         )
-        FleetManager._intervention_cb(fake, message)
+        FleetManager._record_intervention_event(fake, message)
 
     assert fake.db.events == 3 * [
         (99.0, '/robot8', 'INTERVENTION', 'RESTART', '노드 재시작')
@@ -507,7 +686,7 @@ def test_intervention_uses_receive_time_for_invalid_stamp():
 
 def test_safety_policy_is_recorded_without_filtering():
     """SAFETY_POLICY도 DB에는 원래 종류 그대로 기록하는지 확인한다."""
-    fake = SimpleNamespace(db=FakeDatabase(), _now_s=lambda: 99.0)
+    fake = SimpleNamespace(db=FakeDatabase())
     message = SimpleNamespace(
         header=SimpleNamespace(stamp=SimpleNamespace(sec=20, nanosec=0)),
         robot_ns='/robot3',
@@ -515,7 +694,7 @@ def test_safety_policy_is_recorded_without_filtering():
         note='E-STOP 자동 정지',
     )
 
-    FleetManager._intervention_cb(fake, message)
+    FleetManager._record_intervention_event(fake, message)
 
     assert fake.db.events == [
         (
@@ -534,9 +713,10 @@ def test_zone_events_are_recorded_with_contract_fields():
     fake = SimpleNamespace(
         robot={'/robot3': {}, '/robot8': {}},
         db=database,
-        _now_s=lambda: 42.5,
+        get_clock=lambda: make_clock(42.5),
         get_logger=lambda: FakeLogger(),
     )
+    fake.robot_state_manager = FakeRobotStateManager(fake.robot)
     messages = (
         'P1 /robot3 REJECT',
         'P1 /robot3 GRANT',
@@ -545,7 +725,7 @@ def test_zone_events_are_recorded_with_contract_fields():
     )
 
     for data in messages:
-        FleetManager._zone_event_cb(fake, SimpleNamespace(data=data))
+        FleetManager._record_zone_event(fake, SimpleNamespace(data=data))
 
     assert database.events == [
         (42.5, '/robot3', 'ZONE', 'REJECT', 'P1'),
@@ -562,9 +742,10 @@ def test_invalid_zone_events_are_not_recorded():
     fake = SimpleNamespace(
         robot={'/robot3': {}, '/robot8': {}},
         db=database,
-        _now_s=lambda: 42.5,
+        get_clock=lambda: make_clock(42.5),
         get_logger=lambda: logger,
     )
+    fake.robot_state_manager = FakeRobotStateManager(fake.robot)
     invalid_messages = (
         'P1 /robot3',
         'P2 /robot3 GRANT',
@@ -573,7 +754,7 @@ def test_invalid_zone_events_are_not_recorded():
     )
 
     for data in invalid_messages:
-        FleetManager._zone_event_cb(fake, SimpleNamespace(data=data))
+        FleetManager._record_zone_event(fake, SimpleNamespace(data=data))
 
     assert database.events == []
     assert len(logger.warnings) == len(invalid_messages)
@@ -583,19 +764,19 @@ def test_docked_is_not_overwritten_by_periodic_following():
     """DOCKED 뒤 FOLLOWING 재발행이 화면과 미션 완료를 못 덮는지 확인한다."""
     fake = make_status_manager()
 
-    FleetManager._status_cb(
+    FleetManager._process_robot_state_for_mission(
         fake, '/robot3', 'shuttle', SimpleNamespace(data='RETURNING')
     )
-    FleetManager._status_cb(
+    FleetManager._process_robot_state_for_mission(
         fake, '/robot3', 'shuttle', SimpleNamespace(data='DOCKED')
     )
-    FleetManager._status_cb(
+    FleetManager._process_robot_state_for_mission(
         fake, '/robot3', 'approach', SimpleNamespace(data='FOLLOWING')
     )
 
     robot = fake.robot['/robot3']
     assert robot['mission_state'] == Mission.DONE
-    assert FleetManager._composed_state(robot) == 'DOCKED'
+    assert robot['shuttle_state'] == 'DOCKED'
 
 
 def test_repeated_source_state_does_not_duplicate_event():
@@ -603,8 +784,12 @@ def test_repeated_source_state_does_not_duplicate_event():
     fake = make_status_manager(mission_state=Mission.WAITING)
     message = SimpleNamespace(data='FOLLOWING')
 
-    FleetManager._status_cb(fake, '/robot3', 'approach', message)
-    FleetManager._status_cb(fake, '/robot3', 'approach', message)
+    FleetManager._process_robot_state_for_mission(
+        fake, '/robot3', 'approach', message
+    )
+    FleetManager._process_robot_state_for_mission(
+        fake, '/robot3', 'approach', message
+    )
 
     assert fake.db.events == [
         (30.0, '/robot3', 'STATE', 'FOLLOWING', 'approach')
@@ -616,14 +801,13 @@ def test_old_shuttle_state_does_not_regress_following_mission():
     fake = make_status_manager()
     robot = fake.robot['/robot3']
     robot['approach_state'] = 'FOLLOWING'
-    robot['status_owner'] = 'approach'
 
-    FleetManager._status_cb(
+    FleetManager._process_robot_state_for_mission(
         fake, '/robot3', 'shuttle', SimpleNamespace(data='WAITING')
     )
 
     assert robot['mission_state'] == Mission.FOLLOWING
-    assert FleetManager._composed_state(robot) == 'FOLLOWING'
+    assert robot['approach_state'] == 'FOLLOWING'
 
 
 def test_transient_approach_failure_recovers_and_reaches_done():
@@ -639,7 +823,7 @@ def test_transient_approach_failure_recovers_and_reaches_done():
     ]
 
     for source, state in states:
-        FleetManager._status_cb(
+        FleetManager._process_robot_state_for_mission(
             fake,
             '/robot3',
             source,
@@ -648,14 +832,14 @@ def test_transient_approach_failure_recovers_and_reaches_done():
 
     robot = fake.robot['/robot3']
     assert robot['mission_state'] == Mission.DONE
-    assert FleetManager._composed_state(robot) == 'DOCKED'
+    assert robot['shuttle_state'] == 'DOCKED'
 
 
 def test_transient_approach_failure_is_only_recorded_as_event():
     """접근 FAILED가 상태 이벤트만 남기고 미션을 실패시키지 않는지 확인한다."""
     fake = make_status_manager(mission_state=Mission.WAITING)
 
-    FleetManager._status_cb(
+    FleetManager._process_robot_state_for_mission(
         fake,
         '/robot3',
         'approach',
@@ -672,13 +856,13 @@ def test_failed_mission_state_can_receive_later_shuttle_progress():
     """FAILED 뒤 정상 셔틀 상태가 오면 미션 상태 전이가 재개되는지 확인한다."""
     fake = make_status_manager(mission_state=Mission.FAILED)
 
-    FleetManager._status_cb(
+    FleetManager._process_robot_state_for_mission(
         fake,
         '/robot3',
         'shuttle',
         SimpleNamespace(data='SHUTTLE'),
     )
-    FleetManager._status_cb(
+    FleetManager._process_robot_state_for_mission(
         fake,
         '/robot3',
         'shuttle',

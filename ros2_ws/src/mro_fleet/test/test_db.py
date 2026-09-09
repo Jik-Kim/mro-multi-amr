@@ -16,13 +16,16 @@ def test_worker_mission_and_event_are_stored(tmp_path):
     """작업자·미션·이벤트가 지정한 시각으로 저장되는지 확인한다."""
     db = make_db(tmp_path)
     try:
-        db.upsert_worker('W1', 'worker_a', 10.0, '/robot3')
+        db.upsert_worker('W1', 'worker_a', 10.0)
         mission_id = db.create_mission('W1', 'B', 20.0, '/robot3')
         db.set_state(mission_id, 1, 20.0)
         db.event(21.0, '/robot3', 'STATE', 'SHUTTLE')
 
         mission = db.mission(mission_id)
-        assert db.robot_for('W1') == '/robot3'
+        worker = db.con.execute(
+            'SELECT * FROM workers WHERE worker_id=?', ('W1',)
+        ).fetchone()
+        assert worker['outfit_class'] == 'worker_a'
         assert mission['created_at'] == 20.0
         assert mission['state'] == 1
         assert db.recent_events(1)[0]['t'] == 21.0
