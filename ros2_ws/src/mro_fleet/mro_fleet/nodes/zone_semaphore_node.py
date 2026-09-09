@@ -53,6 +53,12 @@ TOKEN_SERVICE = '/fleet/zone_token'
 
 
 class ZoneSemaphore(Node):
+    """P1·DOCK의 보유자, FIFO 대기열, 강제 회수를 관리하는 잠금 서버.
+
+    서비스 콜백 :meth:`cb`은 상태 전이만 원자적으로 처리하고, :meth:`watchdog`이
+    반납하지 못한 보유자를 회수한다. 위치·경로 계산은 로봇 측 노드의 책임이다.
+    """
+
     def __init__(self):
         super().__init__('zone_semaphore')
 

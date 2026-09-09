@@ -44,7 +44,9 @@
 입력  mission/assigned(Mission) · aruco/id(Int32) · aruco/distance(Float32) · aruco/pose(PoseStamped)
       safety/estop(Bool) · TF map→base_link · TF base_link→카메라 광학 프레임
       arena.yaml(베이 waypoint·aruco_id, 대기공간) · robotN.yaml(dock_pose 등)
+
 출력  shuttle/status(String: READY/SHUTTLE/AT_BAY/WAITING/FAILED) · shuttle/arrived(Bool)
+
 협조  /fleet/zone_token 의 P1 토큰 — 베이를 떠나기 전 획득, 대기공간 도착 후 반납 (계약 3절)
       **순서 기반 판정 (방법 B, 9/7 팀 회의).** 경로가 베이 → P1 → 대기공간으로 고정돼 있으므로
       좌표를 매 tick 폴리곤과 대조하지 않는다. 획득 시점(베이)과 반납 시점(대기공간)이 둘 다
@@ -163,6 +165,12 @@ def wrap_pi(a):
 
 
 class ShuttleMission(Node):
+    """S4 배송을 순차 실행하는 노드.
+
+    ``mission_cb``은 배정 1건을 보관할 뿐이며, :meth:`run_mission`이 메인 루프에서
+    도크 초기화·Nav2·ArUco·P1 토큰 순서를 실제로 수행한다.
+    """
+
     def __init__(self):
         super().__init__('shuttle_mission')
         self.ns = self.get_namespace().rstrip('/')

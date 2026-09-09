@@ -67,6 +67,12 @@ class ReturnAbort(Exception):
 
 
 class ReturnDock(Node):
+    """S9~S10 복귀 상태기계.
+
+    종료 토픽 콜백은 ``pending``만 세우고, :meth:`run_return`이 메인 루프에서
+    DOCK→P1 토큰과 접근 지점·도킹 재시도를 순서대로 처리한다.
+    """
+
     def __init__(self):
         super().__init__('return_dock')
         ns = self.get_namespace().rstrip('/')
