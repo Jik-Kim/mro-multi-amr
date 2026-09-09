@@ -184,7 +184,11 @@ class FollowTarget(Node):
         self.gate_warned = 0.0        # 게이트 대기 경고를 마지막으로 낸 시각
         self.follow_est = None        # (x, y) 평활된 표적 추정 위치
         self.follow_t = 0.0
-        self.follow_seen = 0.0        # 마지막으로 표적을 본 시각
+        self.follow_seen = 0.0        # 마지막으로 표적을 '봤다고 치는' 시각 (Lost 단계 판정 기준)
+        # **좌표가 마지막으로 들어온 시각.** follow_seen 과 따로 둔다 — follow_seen 은
+        #   '보이면 봤다고 치기' 로 되살려지므로, 그 값으로 '좌표가 얼마나 안 왔나' 를
+        #   재면 되살릴 때마다 0 으로 돌아가 조건이 영원히 참이 된다 (I-046 을 고치다 겪음).
+        self.coord_seen = 0.0
         self.last_target = None       # 마지막 접근 목표로 쓴 표적 좌표
         self.follow_goal = None       # 마지막으로 목표를 만든 표적 위치
         self.follow_goal_t = 0.0
@@ -726,6 +730,7 @@ class FollowTarget(Node):
         self.follow_goal = self.last_target   # 이 위치에서 움직여야 새 목표를 낸다
         self.follow_goal_t = now
         self.follow_seen = now
+        self.coord_seen = now         # 추종 진입 시점부터 좌표를 기다린다
         self.follow_holding = False
         self.set_state('FOLLOWING',
                        f'표적이 {FOLLOW_REGOAL_M} m 이상 움직이면 '
@@ -760,7 +765,19 @@ class FollowTarget(Node):
         self.follow_update()
         if self.follow_t > self.follow_seen:
             self.follow_seen = self.follow_t
-        if now - self.visible_at < 1.0:
+        if self.follow_t > self.coord_seen:
+            self.coord_seen = self.follow_t
+
+        # **보이는데 좌표만 안 오는 구간을 visible_wait_s 까지만 인정한다 (I-046).**
+        #   `target/visible`(사람이 화면에 있다)과 `target/map_point`(그 사람이 지도 어디인지
+        #   안다)는 다른 신호다. 종전에는 보이기만 하면 무한히 '봤다' 로 쳐서 lost 가 매 주기
+        #   0 으로 되돌아갔고, research_s·standby_s 에 영영 닿지 않았다 — 로봇은 좌표가 없어
+        #   서 있는데 관제에는 FOLLOWING 으로 뜨고 재획득 실패가 0 건으로 남았다 (계약 9절).
+        #   TF 가 끊기면 카메라는 멀쩡하니 정확히 이 조건이 된다 (9/8 실주행에 29 s 기록).
+        #   SEARCHING 은 이미 같은 규칙이다 — 보여도 visible_wait_s 를 넘기면 회전한다.
+        #   짧은 가림(사람이 앞을 스쳐 지나가 좌표가 걸러지는 것)은 3 초 안에 끝나므로
+        #   헛돌지 않고, 그보다 길면 좌표 없이 따라가는 척만 하는 것이라 Lost 로 센다.
+        if now - self.visible_at < 1.0 and now - self.coord_seen <= self.p('visible_wait_s'):
             self.follow_seen = max(self.follow_seen, self.visible_at)
 
         lost = now - self.follow_seen
