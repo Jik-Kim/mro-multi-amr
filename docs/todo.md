@@ -5,18 +5,18 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 106/165 완료** (█████████████░░░░░░░)  ·  기준 09/09
+**전체 109/167 완료** (█████████████░░░░░░░)  ·  기준 09/09
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 6/6 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 17/28 | `██████░░░░` | **3** |
 | mro_webcam [웹캠 — 한세교, 김학민] | 23/31 | `███████░░░` | **4** |
-| mro_navigation [주행 — 박병후, 이시율] | 40/71 | `██████░░░░` | **15** |
+| mro_navigation [주행 — 박병후, 이시율] | 41/71 | `██████░░░░` | **15** |
 | mro_fleet [관제 — 김민준] | 13/18 | `███████░░░` | **2** |
-| mro_bringup [PM 김병직] | 7/11 | `██████░░░░` | **3** |
+| mro_bringup [PM 김병직] | 9/13 | `███████░░░` | **2** |
 
-**마감이 지난 항목 27건**
+**마감이 지난 항목 26건**
 
 - `9/8` mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - `9/8` mro_perception — TS-U05 줄자 대조 — target/distance 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오…
@@ -43,8 +43,7 @@
 - `9/8` mro_fleet — fleet_manager_node.py: WAITING 수신 시 amcl_pose 가 waiting_zone 근처인지 확인, 벗…
 - `9/8` mro_fleet — fleet_manager_node.py: aruco/id·aruco/distance 구독 → ID 4 수신 시 |amcl_pos…
 - `9/8` mro_bringup — v_max 0.3 m/s 와 Nav2 max_vel_x 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘…
-- `9/8` mro_bringup — 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정
-- `9/8` mro_bringup — 중복 파라미터 한 곳으로 — reid_threshold(perception.yaml ↔ robotN.yaml), follow_s…
+- `9/8` mro_bringup — t_lim_s·t_ret_s·dock_retry(arena.yaml ↔ common.yaml) — arena.yaml 하단 4개…
 
 **오늘 마감 21건**
 
@@ -149,7 +148,7 @@
 - [ ] **TS-04·TS-14 재실행 (I-036)** — `clear_dist` 를 0.45 → 0.38 로 낮췄으므로 기존 통과 기록은 무효다. **해제가 너무 일러 estop 재진입이 반복되지 않는지**를 특히 본다 · 마감 9/9
 - [ ] **추종 STANDBY 판정을 SEARCHING 과 맞춘다 (I-046)** — `step_following`(:763~764)이 `target/visible` 만으로 `follow_seen` 을 되돌려, 보이는데 좌표가 없으면 `standby_s` 에 영영 도달하지 않는다. 같은 상황에서 SEARCHING 은 STANDBY 로 간다. **웹캠2 힌트를 추종에서도 쓰는 쪽이 더 나은 해법일 수 있다** — 지금 `self.hint` 는 SEARCHING 의 회전 방향으로만 쓰인다. TS-07 을 막지 않는다 · 마감 9/10
 - [ ] **`test_no_reverse_anywhere_in_source` 조건식 괄호 (PR #56 후속)** — `not 주석 and linear or undock` 이라 `.undock(` 쪽만 주석 검사를 건너뛴다. 오탐만 나므로 후진이 새지는 않으나, 후진 금지(계약 2절)를 지키는 유일한 자동 검사라 정확히 둔다 · 마감 9/10
-- [ ] **추종 재탐지 시간 5개를 `common.yaml` 로 (PR #56 후속)** — `research_s`·`settle_s`·`search_wait_s`·`visible_wait_s`·`search_step_deg`. `lost_s`·`standby_s`(SOT 계약값)도 아직 노드 기본값에만 있어 이 노드의 시간값 7개가 코드에만 있다. 리그 런치가 이미 `common.yaml` 을 넘기므로 통로는 있다 (계약 5절) · 마감 —
+- [x] **추종 재탐지 시간 5개를 `common.yaml` 로 (PR #56 후속)** — `research_s`·`settle_s`·`search_wait_s`·`visible_wait_s`·`search_step_deg`. `lost_s`·`standby_s`(SOT 계약값)도 아직 노드 기본값에만 있어 이 노드의 시간값 7개가 코드에만 있다. 리그 런치가 이미 `common.yaml` 을 넘기므로 통로는 있다 (계약 5절) · 마감 —  **→ 완료 9/9 (PR #58) — 9개를 옮겼다(`lost_s`·`standby_s`·`approach_skip_m`·`hint_valid_s` 포함). 노드 기본값은 대체값으로 남겼고 11/11 값이 PR #56 과 일치한다. 덤으로 죽은 `navigation.yaml` 삭제 — 그 파일에 PR #56 이전 값(`lost_research_s` 8.0·`search_rotate_deg` 30.0)이 남아 있어 「중복 통합」 방향으로 정리했으면 재탐지가 11 s 로 되돌아갔다**
 - [ ] **베이 접근 잔차 규명 (I-044, 상)** — 여유 0.095 m 가 관측 잔차 0.275 m 보다 작다. `d3e0568` 로그로 다음 회차에 가리거나, 못 가리면 `bay_marker_range_m` 을 1.1 m 이상으로. **둘 중 하나를 하고 TS-07 에 들어간다** · 마감 9/9
 - [ ] **`bay_align_min_range_m` 을 0.80 으로 (PR #52 후속)** — 지금 0.45(노드 기본값 0.35)라 자기가 잰 하드 바닥보다 낮다. 잘못된 목표를 거르는 유일한 방어인데 8회차로 배운 것을 못 막는다 · 마감 9/9
 - [ ] **접근·재탐지 파라미터의 단일 출처는 `common.yaml`** (PR #52) — `bay_marker_range_m`·`bay_align_*`·`bay_exit_*`. 노드 기본값은 단독 실행용 대체값 · 마감 —
