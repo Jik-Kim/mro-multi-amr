@@ -10,7 +10,7 @@
                                # 것으로 보고 이론값을 쓴다. TS-U05 줄자 대조로 확정. 근본 해결(로봇이
                                # 맞는 camera_info 를 내보냄)이 되면 1.0 으로 되돌린다
 
-    # --- amr_detection_node (15개 전부 declare_parameter 로 읽는다 · camera_fx_scale 은 위 공용 · README §3 과 1:1) ---
+    # --- amr_detection_node (16개 전부 declare_parameter 로 읽는다 · camera_fx_scale 은 위 공용 · README §3 과 1:1) ---
     detect_conf: 0.5           # 학습 conf 스윕의 F1 최적은 0.4 지만 올려 쓴다.
                                # 미탐은 Lost 후 재탐지 절차가 있고 K-04 로 측정되지만, 오탐은 오추종이고
                                # AC-04 는 0건이 절대 기준이다. 0.4→0.6 에서 오탐 6→2, 재현율은 1 %p 만 하락
@@ -26,6 +26,9 @@
     pair_off_s: 3.0            # 이 시간 연속 실패·미검출이면 paired=False [팀 확정 필요]
     publish_hz: 1.0            # target/paired · target/worker_id 재발행 주기
     jpeg_quality: 80           # target/image/compressed 품질. 웹캠 노드와 같은 값
+    gate_fail_s: 30.0          # 작업자가 보이는데 게이트를 이 시간 넘게 못 넘으면 target/pair_state=GATE_FAIL
+                               # → 관제 UI 에 명시 페어링 버튼 (FR-13, 계약 10.1 의 30 s). 안 보이는 시간은 세지 않는다
+    manual_pair_max_m: 1.0     # 명시 페어링을 받는 최대 거리(m). FR-14 의 1 m — 멀면 좌표 오차가 커서 수동도 소용없다
     show_window: true          # 로컬 미리보기 창. launch 가 이 파일을 넘기므로 모니터 없는 로봇 PC(SSH)는
                                # 여기서 false 로 — 창을 못 만들면 노드가 죽는다
 
