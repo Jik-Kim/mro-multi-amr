@@ -47,6 +47,12 @@ NAV_CMD_TOPIC = 'cmd_vel_smoothed'   # Nav2 의 '의도한 속도' — collision
 
 
 class SafetyWatchdog(Node):
+    """LiDAR만으로 독립 정지를 만드는 온보드 안전 계층.
+
+    ``scan_cb``은 정지 상태를 결정하고, :meth:`tick`은 estop 동안 최종 ``cmd_vel``을
+    20 Hz로 덮어쓴다. 인지·웹캠·관제 노드가 죽어도 이 경로는 남아야 한다.
+    """
+
     def __init__(self):
         super().__init__('safety_watchdog')
         # 거리·각속도는 시험 중에 재빌드 없이 만져야 하는 값이라 파라미터로 둔다 (AGENTS.md).

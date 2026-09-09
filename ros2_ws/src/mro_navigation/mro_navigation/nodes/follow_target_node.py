@@ -101,6 +101,12 @@ TICK_S = 0.05                # 메인 루프 주기
 
 
 class FollowTarget(Node):
+    """S5~S8의 추종 상태기계.
+
+    콜백은 관측·명령 요청만 저장하고, :meth:`step`이 상태 전이와 Nav2 호출을
+    수행한다. 이 분리가 단일 executor에서 콜백과 navigator가 서로 막히는 것을 막는다.
+    """
+
     def __init__(self):
         super().__init__('follow_target')
         self.ns = self.get_namespace().rstrip('/')
