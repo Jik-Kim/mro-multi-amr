@@ -55,20 +55,29 @@ class CameraConfig:
 class NodeConfig:
     """웹캠 힌트 노드의 실행 설정."""
 
-    camera: CameraConfig
-    process_hz: float
-    image_publish_hz: float
-    compressed_topic: str
-    image_frame_id: str
-    jpeg_quality: int
-    model_path: str
-    homography_path: str
-    confidence: float
-    target_classes: list
-    detection_confirm_s: float
-    detection_hold_s: float
-    lost_confirm_s: float
-    show_window: bool
+    # 카메라 입력
+    camera: CameraConfig  # 카메라 장치·해상도·캡처 주기 설정
+
+    # YOLO 검출
+    process_hz: float     # 최신 프레임 YOLO 추론 주기(Hz)
+    model_path: str       # 작업자 검출 YOLO 가중치 파일 경로
+    confidence: float     # YOLO 검출 최소 신뢰도 임계값
+    target_classes: list  # Hint 후보로 허용할 작업자 복장 클래스 목록
+
+    # 트랙 상태 판정
+    detection_confirm_s: float  # 같은 track ID를 확정하는 연속 검출 시간
+    detection_hold_s: float     # 순간 미검출에도 기존 track 상태를 유지하는 시간
+    lost_confirm_s: float       # 미검출 track 상태를 최종 삭제하는 시간
+
+    # map 좌표
+    homography_path: str  # 픽셀 좌표를 map 좌표로 바꾸는 행렬 JSON 경로
+
+    # 압축 영상 출력
+    image_publish_hz: float  # BBox 오버레이 압축 영상 발행 주기(Hz)
+    compressed_topic: str    # 압축 영상 발행 토픽 이름
+    image_frame_id: str      # CompressedImage 헤더 좌표 프레임 이름
+    jpeg_quality: int        # 압축 영상 JPEG 품질(1~100)
+    show_window: bool        # 로컬 OpenCV 검출 화면 표시 여부
 
 
 class LatestFrameCamera:
@@ -199,6 +208,7 @@ class WebcamHint(Node):
 
         # ROS I/O: 등록 작업자를 받고 작업자 map 좌표를 보낸다.
         self.create_subscription(WorkerDescriptor, '/webcam1/worker_descriptor', self._on_worker_descriptor, 10)
+
         self.hint_publisher = self.create_publisher(TargetHint, '/webcam2/target_hint', qos_profile_sensor_data)
         self.image_publisher = self.create_publisher(CompressedImage, config.compressed_topic, qos_profile_sensor_data)
         self.hint_publish_count = 0
