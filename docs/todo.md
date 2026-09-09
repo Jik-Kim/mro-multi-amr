@@ -5,18 +5,18 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 112/170 완료** (█████████████░░░░░░░)  ·  기준 09/09
+**전체 113/171 완료** (█████████████░░░░░░░)  ·  기준 09/09
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 6/6 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 17/28 | `██████░░░░` | **3** |
-| mro_webcam [웹캠 — 한세교, 김학민] | 24/32 | `████████░░` | **4** |
+| mro_webcam [웹캠 — 한세교, 김학민] | 24/33 | `███████░░░` | **4** |
 | mro_navigation [주행 — 박병후, 이시율] | 43/73 | `██████░░░░` | **15** |
 | mro_fleet [관제 — 김민준] | 13/18 | `███████░░░` | **2** |
-| mro_bringup [PM 김병직] | 9/13 | `███████░░░` | **2** |
+| mro_bringup [PM 김병직] | 10/13 | `████████░░` | **1** |
 
-**마감이 지난 항목 26건**
+**마감이 지난 항목 25건**
 
 - `9/8` mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - `9/8` mro_perception — TS-U05 줄자 대조 — target/distance 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오…
@@ -43,7 +43,6 @@
 - `9/8` mro_fleet — fleet_manager_node.py: WAITING 수신 시 amcl_pose 가 waiting_zone 근처인지 확인, 벗…
 - `9/8` mro_fleet — fleet_manager_node.py: aruco/id·aruco/distance 구독 → ID 4 수신 시 |amcl_pos…
 - `9/8` mro_bringup — v_max 0.3 m/s 와 Nav2 max_vel_x 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘…
-- `9/8` mro_bringup — t_lim_s·t_ret_s·dock_retry(arena.yaml ↔ common.yaml) — arena.yaml 하단 4개…
 
 **오늘 마감 21건**
 
@@ -115,6 +114,7 @@
 - [ ] **`/webcam2/image_raw/compressed` 를 오버레이로 통일 (I-042)** — 지금은 오버레이와 원본이 섞여 나가고 받는 쪽이 구분할 수 없다. 원본 대체를 빼고 첫 검출 주기 전에는 발행하지 않는다 (PM 결정 9/8) · 마감 9/9
 - [x] **`hint_valid_s` 죽은 설정 정리 (I-047)** — `webcam_hint_node` 가 선언·검사만 하고 안 쓴다. `webcam.yaml` 주석은 「이 시간 지난 힌트는 쓰지 않는다」고 적혀 있어 만지면 「바꿨는데 안 변한다」가 된다. **지우는 쪽을 권한다** — 유효기간은 받는 쪽이 정하고 `common.yaml` 이 단일 출처가 된다 · 마감 9/10  **→ 완료 9/9 (PM 작업) — 웹캠팀이 판단을 위임해 지웠다. `common.yaml` 하나가 단일 출처**
 - [ ] **`test_subscription` 을 `tools/` 로 (PR #48 후속)** — `setup.py` 콘솔 진입점으로 등록돼 `ros2 run mro_webcam test_subscription` 으로 뜬다. 이름이 단위 시험처럼 읽히는데 진단 도구다. `tools/diag_lag.py` 가 선례 · 마감 9/9
+- [ ] **`webcam_hint` 의 `target_classes` 를 yaml 로 (PR #62 후속)** — `webcam_hint` 의 코드 전용 값 중 경로가 아닌 것은 이것 하나 남았다 (`homography_json`·`model_path` 는 launch 가 주는 경로라 대상이 아니다). **웹캠1(`webcam_register`)쪽 yaml 에는 이미 있다** (`webcam.yaml:10`) — 같은 개념인데 한쪽만 코드에 있다. 기본값 `["worker_a","worker_b"]` 그대로 한 줄 · 마감 9/10
 - [ ] **`mro_webcam` flake8 — 9/9 실측 365건** (등록 시 345건) — 이번 PR 탓은 아니지만 이 정도면 아무도 이 시험을 안 돌리고 있다는 뜻이다. `mro_perception` 도 비슷하다 · 마감 9/10
 - [ ] **웹캠2 캡처 fps 실측** — `webcam.yaml` 의 `webcam_hint.fps: 30.0` 은 장치 사양 가정이고 실측 기록이 없다. 웹캠1(Jieli)은 9/6 에 재서 25 로 확정했다. 두 캠이 같은 모델이면 30 이 아니라 25 다. `v4l2-ctl --list-formats-ext` 로 확인하고 다른 값이면 yaml 을 고친다 — 설계도는 이 파일을 읽어 그리므로 다시 생성만 하면 따라온다. 계약 4절이 '장치 상한 그대로' 라 동작에는 영향이 없다 (캡처 ≥ 발행 10 Hz) · 마감 9/8
 - [x] **새 아레나 호모그래피 (I-002)** — cam2 완료 (PR #9, AMCL 기준점 13개, RMSE 2.8 cm). **cam1 은 하지 않는다 (9/6)** — 웹캠1 은 등록만, map 좌표 없음 · 마감 9/6
