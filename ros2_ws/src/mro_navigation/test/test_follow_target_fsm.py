@@ -465,7 +465,8 @@ def test_no_reverse_anywhere_in_source(ros):
     src = (Path(__file__).resolve().parents[1] / 'mro_navigation' / 'nodes'
            / 'follow_target_node.py').read_text(encoding='utf-8')
     code = [ln for ln in src.splitlines()
-            if not ln.lstrip().startswith('#') and 'linear' in ln or '.undock(' in ln]
+            if not ln.lstrip().startswith('#')
+            and ('linear' in ln or '.undock(' in ln)]
     assert code == [], f'후진 가능성이 있는 줄: {code}'
     node = make_node()
     assert n_calls(node.navigator, 'undock') == 0
@@ -869,4 +870,45 @@ def test_map_yaw_formula_matches_contract(ros):
         z, w = math.sin(rad / 2), math.cos(rad / 2)
         yaw = math.atan2(2.0 * (w * z), 1.0 - 2.0 * (z * z))
         assert yaw == pytest.approx(rad, abs=1e-6)
+    node.destroy_node()
+
+
+def test_visible_without_coordinates_still_reaches_standby(ros):
+    """추종 중 '보이기는 하는데 좌표가 안 오는' 상태로는 `visible_wait_s` 까지만 버틴다 (I-046).
+
+    `target/visible`(화면에 사람이 있다)과 `target/map_point`(그 사람이 지도 어디인지 안다)는
+    다른 신호다. 종전에는 보이기만 하면 무한히 '봤다' 로 쳐서 Lost 시계가 매 주기 0 으로
+    되돌아갔고, FOLLOWING 에서는 `standby_s` 에 영영 닿지 않았다 — 로봇은 좌표가 없어 서
+    있는데 관제에는 계속 FOLLOWING 으로 보이고 재획득 실패는 0 건으로 남는다 (계약 9절).
+    TF 가 끊기면 카메라는 멀쩡하니 정확히 이 상태가 된다 (9/8 실주행에 29 s 기록).
+    """
+    node = make_node()
+    reach_following(node)
+    now = time.time()
+    node.latest = None
+    node.follow_seen = now - 31.0
+    node.coord_seen = now - 31.0                 # 좌표는 31 초째 없다
+    node.visible_at = now                        # 그런데 사람은 계속 보인다
+    node.step()
+
+    assert node.state == 'STANDBY', f'보이기만 해서는 못 버틴다 (지금 {node.state})'
+    node.destroy_node()
+
+
+def test_visible_covers_a_short_coordinate_gap(ros):
+    """반대로, 짧게 좌표가 끊긴 것만으로 상태를 바꾸지는 않는다.
+
+    사람이 앞을 스쳐 지나가 좌표가 걸러지는 시간은 1~2 초다. 그 사이에 회전 탐색으로
+    빠지면 잘 따라가던 것을 스스로 깬다.
+    """
+    node = make_node()
+    reach_following(node)
+    now = time.time()
+    node.latest = None
+    node.follow_seen = now - 2.5
+    node.coord_seen = now - 1.0                  # 좌표가 끊긴 지 1 초 (visible_wait_s 3.0 안)
+    node.visible_at = now
+    node.step()
+
+    assert node.state == 'FOLLOWING', f'1 초 끊긴 것으로 탐색에 들어가면 안 된다 (지금 {node.state})'
     node.destroy_node()
