@@ -1,4 +1,4 @@
-# Interfaces — 계약 v1.17 (2026-09-09)
+# Interfaces — 계약 v1.18 (2026-09-09)
 
 > v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
 > **v1.11 (9/7 저녁): 세마포어 이벤트 토픽 `/fleet/zone_event` 신설** — 대기·획득·반납·강제 회수를 기록해 K-06(교착 자동 해결률)을 센다 (I-030). `mro_interfaces` 는 바꾸지 않고 `std_msgs/String` 을 쓴다.
@@ -9,6 +9,7 @@
 > **v1.15 (9/8): FR-13 관제 내부 전달 경로를 명시.** 기존 `srv/ManualPair` 형식은 바꾸지 않고 `control_ui` 가 `/fleet/manual_pair` 로 `fleet_manager` 에 요청하면, `fleet_manager` 가 선택된 `/robotN/manual_pair` 로 전달한다. 최종 판정과 확정 발행은 계속 `amr_detection` 하나가 맡는다.
 > **v1.16 (9/8, PR #49): `approach/status` 의 접근 두 값에 뜻을 붙인다.** 값 목록은 그대로다. `APPROACH_1` = 중간 목표 · `APPROACH_2` = 최종 목표이며, **기본값에서는 후자가 발행되지 않는다** — 값이 안 보이는 것이 고장이 아님을 적어 두지 않으면 나중에 그것을 찾느라 시간을 쓴다.
 > **v1.17 (9/9, PR #67): `ARRIVED` 도 같은 이유로 발행되지 않는다.** `approach_final` 이 참일 때만 내므로 v1.16 의 `APPROACH_2` 와 **하나의 같은 사실**이다 — 한쪽만 적어두면 다음 사람이 `ARRIVED` 가 안 오는 것을 고장으로 보고 찾는다. **값 목록은 8개 그대로다.** 9/9 실주행에서 확인했다.
+> **v1.18 (9/9, PM 승인): AMR 상태 소유자를 로봇별 `RobotControlNode(namespace)`로 이관.** 각 인스턴스가 셔틀·접근·배터리·위치·E-stop·페어링을 집계해 `/fleet/status`를 1 Hz로 발행한다. `FleetStatus`에 `approach_state`·`shuttle_state`·`pair_state`를 추가했고, `fleet_manager`는 요약 토픽을 받아 미션 전이·DB 기록만 한다.
 >
 > 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더했고, v1.14 는 하나를 갈고 하나의 뜻을 바꿨으며, v1.15 는 기존 서비스 형식의 관제 내부 경로 하나를 명시했다.
 
@@ -25,7 +26,7 @@
 |---|---|---|
 | `msg/WorkerDescriptor` | 웹캠1 등록 결과 (worker_id, outfit_class, color_hist, robot_ns) | 아래 2절 |
 | `msg/Mission` | 미션 상태 (CREATED…FAILED 상수) | 상태 전이는 fleet_manager 가 DB 에 기록 |
-| `msg/FleetStatus` | 로봇별 집계 상태, 1 Hz | BR-T08 ≤ 2 s. `yaw` 는 아래 2절 |
+| `msg/FleetStatus` | `RobotControlNode` 로봇별 집계 상태, 1 Hz | 원본 상태 3종·배터리·pose·미션·페어링·estop. BR-T08 ≤ 2 s |
 | `msg/TargetHint` | 웹캠2 → 대상 map 좌표 | **안전 판단 금지.** 재탐지 회전 방향 결정에만 |
 | `msg/Intervention` | 개입 이벤트 | `SAFETY_POLICY` 는 개입으로 계상하지 않음 (BRD 5.3). **`MANUAL_PAIR` 는 계상한다** (v1.12, 10절) |
 | `srv/RequestMission` | UI → fleet | 접수 ≤ 2 s |
@@ -88,19 +89,19 @@
 | `/webcam2/target_hint` | webcam_hint | follow_target, kpi_logger | TargetHint | E-1. **10 Hz** 발행, 유효 2 s. **BEST_EFFORT** — 구독자도 sensor_data QoS 로 잡아야 받는다 |
 | `/webcam2/image_raw/compressed` | webcam_hint | (뷰어·영상 판독 기록) | CompressedImage | **jpeg 80, 10 Hz** (`image_publish_hz`). raw `Image` 는 발행하지 않는다 — 다른 PC 에서 구독하면 Wi-Fi 를 막는다 (NR-03). 안전 판단 금지, 세션 판정 후 폐기 (R-10). PR #14 |
 | `/fleet/mission` | fleet_manager | kpi_logger, UI | Mission | 상태 전이마다 |
-| `/fleet/status` | fleet_manager | control_ui, kpi_logger | FleetStatus | 1 Hz |
+| `/fleet/status` | 로봇별 RobotControlNode | fleet_manager, control_ui, kpi_logger | FleetStatus | 1 Hz. AMR 상태의 단일 집계 경로 |
 | `/fleet/intervention` | control_ui | kpi_logger, fleet_manager | Intervention | 운영자 버튼 |
 | `/fleet/zone_event` | zone_semaphore | kpi_logger, fleet_manager | String | **v1.11 (I-030).** `"<zone_id> <robot_ns> <REJECT\|GRANT\|RELEASE\|RECLAIM>"`. K-06 원천 — 3절 이벤트 규칙 |
 | `mission/assigned` | fleet_manager | shuttle_mission, **amr_detection** | Mission | **S4 트리거.** 옛 `webcam/detected` 는 쓰지 않는다. **v1.14 — `amr_detection` 도 받는다** (PR #45): 이 로봇이 누구를 맡았는지는 여기서만 안다. `WorkerDescriptor.robot_ns` 로는 알 수 없다 — `fleet_manager` 가 그 칸을 채우지 않는다 |
 | `mission/finish` | fleet_manager | return_dock, **follow_target**, amr_detection | Bool | S9. follow_target 은 **즉시 페어링 해제·추종 중단**(≤ 1 s), return_dock 은 복귀 시작. **amr_detection 은 명시 페어링을 해제한다** (v1.12, 10절) |
-| `shuttle/status` | shuttle_mission, return_dock | fleet_manager, kpi_logger | String | READY / SHUTTLE / AT_BAY / WAITING / RETURNING / DOCK_WAIT / DOCKING / DOCKED / FAILED |
+| `shuttle/status` | shuttle_mission, return_dock | RobotControlNode, kpi_logger | String | READY / SHUTTLE / AT_BAY / WAITING / RETURNING / DOCK_WAIT / DOCKING / DOCKED / FAILED |
 | `shuttle/arrived` | shuttle_mission | follow_target | Bool | 대기공간 도착 (구 `goto_goal/arrived`) |
 | `target/map_point` | amr_detection | follow_target | PointStamped | 거리 품질 게이트를 통과한 검출만. **`paired` 가 아닐 때도 발행된다** — 쓸지 말지는 `target/paired` 로 소비자가 정한다 |
 | `target/visible` | amr_detection | kpi_logger, follow_target | Bool | **v1.14 (PR #45) — 의미가 바뀌었다.** 예전 「작업자 bbox 가 보이나」에서 **「재식별 게이트가 고른 *내 담당* 이 보이나」** 로. K-04 Lost 의 원천이므로 중요하다 — 재획득은 *대상* 재획득이지 아무나 재획득이 아니다. 남의 옷만 보이면 `False` 다. **단, 서술자·미션이 아직 없으면**(S1~S3 전·단독 시험) 확신도 1등을 대상으로 삼으므로 그때는 옛 의미다 |
 | `target/image/compressed` | amr_detection | **없음 (사람이 보는 용도)** | CompressedImage | **v1.14 (PR #45).** 옛 `target/image`(raw `Image`)를 대체한다 — raw 는 구독자가 없는데 대역폭만 먹었다. `jpeg_quality` 80. 오버레이(bbox·거리·sim·paired)가 그려진 모니터링 영상이다. **안전 판단·KPI 에 쓰지 않는다** |
 | `target/distance` | amr_detection | kpi_logger | Float32 | **추종거리 판정의 기준값**(FR-29). 검출 노드가 산출한 대상 거리, m |
-| `target/paired`, `target/worker_id` | amr_detection | follow_target, fleet_manager | Bool, String | 재식별 게이트 통과 여부. **발행자는 amr_detection 하나뿐이다** — 자동이든 명시 페어링이든 (10절) |
-| `target/pair_state` | amr_detection | control_ui, fleet_manager, kpi_logger | String | **v1.12 (FR-13).** `PAIRED` / `GATE_FAIL` / `NO_TARGET`. `GATE_FAIL` 은 **대상은 보이는데 게이트를 못 넘는 상태가 30 s 지속됐을 때만** 낸다 — 10절 |
+| `target/paired`, `target/worker_id` | amr_detection | follow_target, RobotControlNode | Bool, String | 재식별 게이트 통과 여부. **발행자는 amr_detection 하나뿐이다** — 자동이든 명시 페어링이든 (10절) |
+| `target/pair_state` | amr_detection | RobotControlNode, kpi_logger | String | **v1.12 (FR-13).** `PAIRED` / `GATE_FAIL` / `NO_TARGET`. `GATE_FAIL` 은 **대상은 보이는데 게이트를 못 넘는 상태가 30 s 지속됐을 때만** 낸다 — 10절 |
 | `aruco/id`, `aruco/distance` | aruco_detector | shuttle_mission, fleet_manager | Int32, Float32 | `id = -1` 이면 없음. **거리는 depth 원값에 로봇별 시차 편향 보정(역깊이 k, 9/8)**(0.8 m 이상), 그 아래는 solvePnP × 최근 depth/pnp 비 — 초점거리 결함(I-031)과 무관하다 (PR #40). **발행 한계는 `max_distance_m` 2.0 m 이고 6절의 수용 조건 1.5 m 는 소비자가 건다** |
 | `aruco/pose` | aruco_detector | shuttle_mission (베이 정렬) | PoseStamped | **v1.13 비준. 선택 발행** (`publish_pose`, 기본 켬). 마커 중심의 위치·자세, `frame_id` = 카메라 광학 프레임(x 우·y 하·z 앞). `id` 와 같은 프레임에서만 발행. 좌우 치우침 = x, 방위 = atan2(x, z). **회전(yaw)은 정렬에 쓰지 않는다** — 정사각 마커의 두 해 문제로 PM 합성 검증에서 −30° 가 1.0 m 에서 33°, 2.0 m 에서 20° 로 나왔다. 위치는 `pnp × depth/pnp 비` 라 `aruco/distance` 와 몇 cm 다를 수 있다 |
 | `approach/status` | follow_target | fleet_manager, kpi_logger | String | IDLE / SEARCHING / APPROACH_1 / APPROACH_2 / ARRIVED / FOLLOWING / STANDBY / FAILED. **v1.16 — 접근 두 값의 뜻 (PR #49):** `APPROACH_1` = **중간 목표**, `APPROACH_2` = **최종 목표**. 접근은 단계를 세지 않고 남은 거리의 절반씩 좁힌다(`max(follow_standoff_m, gap/2)`) — 회차 수가 정해져 있지 않으므로 이 두 값은 *몇 번째*가 아니라 *어떤 목표*를 뜻한다. **기본값에서는 `APPROACH_2` 가 발행되지 않는다**: 목표가 최종이 되는 조건 `gap ≤ 2×follow_standoff_m`(1.0)과 접근을 쓰는 조건 `gap > approach_skip_m`(1.0)이 겹치지 않는다. 마지막 0.5 m 는 `FOLLOWING` 이 맡고 AC-05 채점 구간도 `FOLLOWING` 뿐이라 기능상 빠지는 것은 없다. **없다고 고장이 아니다.** **같은 이유로 `ARRIVED` 도 발행되지 않는다** (9/9 추가) — `ARRIVED` 는 `approach_final` 이 참일 때만 내므로 위와 **하나의 같은 사실**이다. 나온다 해도 `set_state('ARRIVED')` 직후 같은 주기에서 `enter_follow()` 가 `FOLLOWING` 을 덮어 **토픽에 한 건**만 스친다. **실제로 나오는 값은 IDLE · SEARCHING · APPROACH_1 · FOLLOWING · STANDBY 5개**다 — `FAILED` 는 `follow_target` 이 내지 않는다(estop·finish 로 멈추는 것은 실패가 아니다, I-026). 한쪽만 적어두면 다음 사람이 `ARRIVED` 가 안 오는 것을 고장으로 보고 찾는다. **단 값 목록은 8개 그대로다 — 지금 안 나올 뿐 뺀 것이 아니다.** `approach_skip_m` 한 줄이면 둘 다 되살아난다 (`fleet_manager` 는 이미 8개를 다 받는다) |

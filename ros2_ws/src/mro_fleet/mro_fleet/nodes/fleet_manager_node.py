@@ -6,14 +6,10 @@
 발행: /fleet/mission, 로봇별 mission/assigned·mission/finish,
       /fleet/status
 """
-import math
 import os
 import threading
-from functools import partial
 
 from ament_index_python.packages import get_package_share_directory
-
-from geometry_msgs.msg import PoseWithCovarianceStamped
 
 from mro_fleet.core.db import FleetDB
 from mro_fleet.nodes.MonitorWebApp import MonitorWebApp
@@ -35,8 +31,6 @@ from rclpy.callback_groups import (
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.task import Future
-
-from sensor_msgs.msg import BatteryState
 
 from std_msgs.msg import Bool, String
 
@@ -147,9 +141,6 @@ class FleetManager(Node):
             )
             for namespace in self.robots
         }
-        self.pub_status = self.create_publisher(
-            FleetStatus, '/fleet/status', 10
-        )
         self.manual_pair_clients = {
             namespace: self.create_client(
                 ManualPair,
@@ -176,8 +167,12 @@ class FleetManager(Node):
             self._zone_event_cb,
             10,
         )
-        for namespace in self.robots:
-            self._create_robot_subscriptions(namespace)
+        self.create_subscription(
+            FleetStatus,
+            '/fleet/status',
+            self._fleet_status_cb,
+            10,
+        )
 
         self.create_service(
             RequestMission,
@@ -195,58 +190,7 @@ class FleetManager(Node):
             self._manual_pair_cb,
             callback_group=self.manual_pair_service_group,
         )
-        self.create_timer(1.0, self._publish_status)
         self.create_timer(1.0, self._expire_overdue_missions)
-
-    def _create_robot_subscriptions(self, namespace):
-        self.create_subscription(
-            String,
-            f'{namespace}/approach/status',
-            partial(self._status_cb, namespace, 'approach'),
-            10,
-        )
-        self.create_subscription(
-            String,
-            f'{namespace}/shuttle/status',
-            partial(self._status_cb, namespace, 'shuttle'),
-            10,
-        )
-        self.create_subscription(
-            BatteryState,
-            f'{namespace}/battery_state',
-            partial(self._battery_cb, namespace),
-            10,
-        )
-        self.create_subscription(
-            PoseWithCovarianceStamped,
-            f'{namespace}/amcl_pose',
-            partial(self._pose_cb, namespace),
-            10,
-        )
-        self.create_subscription(
-            Bool,
-            f'{namespace}/safety/estop',
-            partial(self._estop_cb, namespace),
-            10,
-        )
-        self.create_subscription(
-            String,
-            f'{namespace}/target/worker_id',
-            partial(self._target_worker_cb, namespace),
-            10,
-        )
-        self.create_subscription(
-            Bool,
-            f'{namespace}/target/paired',
-            partial(self._paired_cb, namespace),
-            10,
-        )
-        self.create_subscription(
-            String,
-            f'{namespace}/target/pair_state',
-            partial(self._pair_state_cb, namespace),
-            10,
-        )
 
     def _now_s(self):
         return self.get_clock().now().nanoseconds / 1_000_000_000.0
@@ -310,6 +254,39 @@ class FleetManager(Node):
                     self._now_s(), namespace, event_kind, value
                 )
         self.robot[namespace][key] = value
+
+    def _fleet_status_cb(self, message):
+        """RobotControlNode의 요약 상태를 미션 판단과 DB 기록에 반영한다."""
+        namespace = message.robot_ns
+        if namespace not in self.robot:
+            self.get_logger().warn(
+                f'등록되지 않은 FleetStatus 로봇: {namespace!r}'
+            )
+            return
+
+        robot = self.robot[namespace]
+        if message.shuttle_state != robot['shuttle_state']:
+            self._status_cb(
+                namespace, 'shuttle', String(data=message.shuttle_state)
+            )
+        if message.approach_state != robot['approach_state']:
+            self._status_cb(
+                namespace, 'approach', String(data=message.approach_state)
+            )
+
+        self._set_robot_value(namespace, 'battery', message.battery)
+        self._set_robot_value(namespace, 'estop', message.estop)
+        robot['x'] = message.x
+        robot['y'] = message.y
+        robot['yaw'] = message.yaw
+        robot['pair_state'] = message.pair_state
+
+        previous_worker = robot['paired_worker']
+        self._set_robot_value(
+            namespace, 'paired_worker', message.paired_worker
+        )
+        if message.paired_worker and not previous_worker:
+            self._transition_mission(namespace, Mission.PAIRED)
 
     def _status_cb(self, namespace, source, message):
         status = message.data
@@ -468,71 +445,6 @@ class FleetManager(Node):
         message.state = state
         message.note = row['note'] or ''
         self.pub_mission.publish(message)
-
-    def _target_worker_cb(self, namespace, message):
-        self.robot[namespace]['target_worker'] = message.data
-
-    def _pair_state_cb(self, namespace, message):
-        """인지 노드가 확정한 로봇별 페어링 상태를 보관한다."""
-        if message.data not in {'PAIRED', 'GATE_FAIL', 'NO_TARGET'}:
-            self.get_logger().warn(
-                f'{namespace}: 알 수 없는 pair_state {message.data!r}'
-            )
-            return
-        self.robot[namespace]['pair_state'] = message.data
-
-    def _paired_cb(self, namespace, message):
-        if message.data:
-            worker_id = self.robot[namespace]['target_worker']
-            if not worker_id:
-                mission_id = self.robot[namespace]['mission_id']
-                mission = self.db.mission(mission_id)
-                worker_id = mission['worker_id'] if mission else ''
-            self._set_robot_value(
-                namespace, 'paired_worker', worker_id
-            )
-            self._transition_mission(namespace, Mission.PAIRED)
-        else:
-            self._set_robot_value(namespace, 'paired_worker', '')
-
-    def _battery_cb(self, namespace, message):
-        self._set_robot_value(
-            namespace, 'battery', message.percentage
-        )
-
-    def _estop_cb(self, namespace, message):
-        self._set_robot_value(namespace, 'estop', message.data)
-
-    def _pose_cb(self, namespace, message):
-        pose = message.pose.pose
-        self.robot[namespace]['x'] = pose.position.x
-        self.robot[namespace]['y'] = pose.position.y
-        quaternion = pose.orientation
-        self.robot[namespace]['yaw'] = math.atan2(
-            2.0 * (
-                quaternion.w * quaternion.z
-                + quaternion.x * quaternion.y
-            ),
-            1.0 - 2.0 * (
-                quaternion.y * quaternion.y
-                + quaternion.z * quaternion.z
-            ),
-        )
-
-    def _publish_status(self):
-        for namespace, robot in self.robot.items():
-            status = FleetStatus()
-            status.header.stamp = self.get_clock().now().to_msg()
-            status.robot_ns = namespace
-            status.state = self._composed_state(robot)
-            status.battery = float(robot['battery'])
-            status.x = robot['x']
-            status.y = robot['y']
-            status.yaw = robot['yaw']
-            status.mission_id = robot['mission_id']
-            status.paired_worker = robot['paired_worker']
-            status.estop = bool(robot['estop'])
-            self.pub_status.publish(status)
 
     def _expire_overdue_missions(self):
         """T_lim을 넘긴 미도착 미션을 실패 처리하되 운행은 유지한다."""
