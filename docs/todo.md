@@ -5,7 +5,7 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 112/170 완료** (█████████████░░░░░░░)  ·  기준 09/09
+**전체 114/171 완료** (█████████████░░░░░░░)  ·  기준 09/09
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
@@ -14,9 +14,9 @@
 | mro_webcam [웹캠 — 한세교, 김학민] | 24/32 | `████████░░` | **4** |
 | mro_navigation [주행 — 박병후, 이시율] | 43/73 | `██████░░░░` | **15** |
 | mro_fleet [관제 — 김민준] | 13/18 | `███████░░░` | **2** |
-| mro_bringup [PM 김병직] | 9/13 | `███████░░░` | **2** |
+| mro_bringup [PM 김병직] | 11/14 | `████████░░` | **1** |
 
-**마감이 지난 항목 26건**
+**마감이 지난 항목 25건**
 
 - `9/8` mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - `9/8` mro_perception — TS-U05 줄자 대조 — target/distance 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오…
@@ -43,7 +43,6 @@
 - `9/8` mro_fleet — fleet_manager_node.py: WAITING 수신 시 amcl_pose 가 waiting_zone 근처인지 확인, 벗…
 - `9/8` mro_fleet — fleet_manager_node.py: aruco/id·aruco/distance 구독 → ID 4 수신 시 |amcl_pos…
 - `9/8` mro_bringup — v_max 0.3 m/s 와 Nav2 max_vel_x 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘…
-- `9/8` mro_bringup — t_lim_s·t_ret_s·dock_retry(arena.yaml ↔ common.yaml) — arena.yaml 하단 4개…
 
 **오늘 마감 21건**
 
@@ -132,7 +131,7 @@
 - [x] `webcam_hint_node.py`: `detection_confirm_count`(3 프레임) → **초 단위** `detection_confirm_s`(0.3) 로 — 계약 「시간 상수 표기」 규칙(프레임 수 금지, `webcam.yaml` 헤더). `process_hz` 를 바꾸면 의미가 조용히 달라진다 (PR #21 PM 노트) — PR #32 (`detection_confirm_s` 0.3 s, `ceil(초 × process_hz)`) · 마감 9/8
 - [x] `webcam2.py` 는 **호모그래피 검증 도구로 유지** (PR #32: 클릭·수동 픽셀 → map 변환 → Nav2 goal. 프로덕션 launch 는 `webcam_hint_node` 만 띄운다) · `webcam2_subscriber.py` 는 삭제 (PM 결정 9/7, PR #33 질문 답) · 마감 9/8  **→ 완료 (9/9 확인) — `webcam2_subscriber.py` 없음, `webcam2.py` 유지**
 - [x] `webcam_hint_node.py`: 카메라·YOLO 연결, 트랙-작업자 대응, `TargetHint` 발행 (PR #14) · 마감 9/8
-- [ ] `webcam_hint_node.py`: `worker.pt` 교체 후 **TS-U02** — **9/8 통신 구간 부분 통과:** 압축 영상 9.9~10.1 Hz·1.57~1.62 Mbps, pub→sub p95 ≤3.1 ms·max 75.8 ms·중단 0회, 가짜 `TargetHint` 20건→KPI CSV 20건(누락 0%). 남은 것은 실제 Detection→Hint→KPI, 손 흔들기→화면 ≤0.2 s, 힌트 map 좌표 vs held-out 실측 ≤0.3 m (`docs/TS-U02_20260908.md`) · 마감 9/8
+- [ ] `webcam_hint_node.py`: `worker.pt` 교체 후 **TS-U02** — **9/8 통신 구간 부분 통과:** 압축 영상 9.9~10.1 Hz·1.57~1.62 Mbps, pub→sub p95 ≤3.1 ms·max 75.8 ms·중단 0회, 가짜 `TargetHint` 20건→KPI CSV 20건(누락 0%). **9/9 추가 확인:** 가짜 descriptor 대신 실제 웹캠1의 `/webcam1/worker_descriptor`를 웹캠2가 직접 수신해 작업자 클래스를 연결하는 구간 통과. 남은 것은 실제 Detection→Hint→KPI 전체 기록, 손 흔들기→화면 ≤0.2 s, 힌트 map 좌표 vs held-out 실측 ≤0.3 m (`docs/TS-U02_20260908.md`) · 마감 9/8
 - [x] `kpi_logger_node.py`: CSV 초안 · 마감 9/8
 - [x] `tools/kpi_report.py`: 추종거리·IPH·리드타임·성공률·재획득 계산 구현 (PR #8) · 마감 9/10
 - [x] **`kpi_report.py`: 배송 판정(AC-08)·리드타임을 `~/mro_fleet.db` 에서 읽기 (I-023)** (PR #15, PM 합성 DB 대조 일치) · 마감 9/8
@@ -246,10 +245,11 @@
 - [x] robot / webcam_pc / fleet_pc launch, params 골격 · 마감 9/7
 - [x] 설계도 4장 — `docs/diagrams/` (STEP 1·2·3-1·3-2) · 마감 9/8
 - [x] launch 가 `webcam.yaml` 을 넘기도록 연결 — webcam1/webcam2 launch (9/7) · 마감 9/7
+- [x] `webcam2_pc.launch.py`: `show_window` launch 인자 추가, 기본값 `false`·실행 시 `true/false` override 확인 · 마감 9/9
 - [x] webcam1 launch 에서 안 쓰는 `homography_json` 제거 (계약 v1.8, PR #26 노트) · 마감 9/7
 - [x] 계약 v1.11 — 세마포어 이벤트 토픽 `/fleet/zone_event`·DB kind ZONE·K-06 산출 규칙 (I-030 PM 결정) · 마감 9/7
 - [x] robot.launch 가 `perception.yaml` 을 넘기도록 연결 — 9/7, `aruco_detector` 가 PR #30 부터 파라미터를 읽어서 앞당김 (amr_detection·aruco 두 노드에만, robotN.yaml 뒤) · 마감 9/8
-- [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8 — **주행·인지·관제는 완료 (9/9).** `common.yaml` 51개·`perception.yaml` 27개·`fleet.yaml` 4개가 전부 소비되고, `follow_target` 의 코드 전용 값 9개도 `common.yaml` 로 옮겼다(PR #56 값 그대로). 남은 것 둘: ① `v_max` — 읽는 노드가 없다(아래 Nav2 항목과 같은 건) ② **웹캠 16개** `webcam2.py` 11 · `webcam_hint_node.py` 5 가 아직 코드에만 있다 [웹캠 한세교·김학민]. `db_path`·`out_dir`·`arena_yaml`·`map_yaml_path` 는 런치가 주는 경로라 yaml 대상이 아니다
+- [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8 — **주행·인지·관제는 완료 (9/9).** `common.yaml` 51개·`perception.yaml` 27개·`fleet.yaml` 4개가 전부 소비되고, `follow_target` 의 코드 전용 값 9개도 `common.yaml` 로 옮겼다(PR #56 값 그대로). **웹캠2 운용 노드의 `width`·`height`·`buffer_size`·`confidence`는 PR #62로 `webcam.yaml`에 이관 완료.** 남은 것 둘: ① `v_max` — 읽는 노드가 없다(아래 Nav2 항목과 같은 건) ② 수동 시험 도구 `webcam2.py` 의 코드 전용 값 11개 [웹캠 한세교·김학민]. `db_path`·`out_dir`·`arena_yaml`·`map_yaml_path` 는 런치가 주는 경로라 yaml 대상이 아니다
 - [x] ~~`reid_threshold`(perception.yaml ↔ robotN.yaml)~~ 해결 9/8 — robotN.yaml 에서 빼고 perception.yaml 단독 (계약 5절)
 - [x] ~~`navigation.yaml` ↔ robotN.yaml~~ **해결 9/9 — 파일을 지웠다.** 어떤 launch 도 안 넘기는 죽은 파일이었는데, `lost_research_s` 8.0·`search_rotate_deg` 30.0 이 남아 있었다. 이건 **PR #56 이전 값**이라 (코드는 `research_s` 2.0·`search_step_deg` 20.0) 이름만 다른 같은 개념이었다. **합치는 방향으로 정리했다면 재탐지가 3.5 s → 11 s 로 되돌아갔다** · 마감 9/8
 - [x] ~~`t_lim_s`·`t_ret_s`·`dock_retry`(arena.yaml ↔ common.yaml)~~ **해결 9/9.** arena.yaml 하단 4개는 어떤 코드도 안 읽어(이 파일에서 읽히는 것은 `bays`·`waiting_zone`·`dock_zone` 뿐) 삭제했다. `t_lim_s` 는 **PM 결정으로 common 통일** — 로봇(`shuttle_mission`)과 관제(`fleet_manager`)가 같은 값을 봐야 미션 실패 시점이 안 어긋나므로 fleet.yaml 에서 빼고 `fleet_pc.launch.py` 가 common.yaml 을 함께 넘기게 했다. 양쪽 120.0 확인 · 마감 9/8
