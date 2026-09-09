@@ -6,15 +6,18 @@
 발행: /fleet/mission, 로봇별 mission/assigned·mission/finish,
       /fleet/status
 """
-from functools import partial
 import math
 import os
+import threading
+from functools import partial
 
 from ament_index_python.packages import get_package_share_directory
 
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
 from mro_fleet.core.db import FleetDB
+from mro_fleet.nodes.MonitorWebApp import MonitorWebApp
+from mro_fleet.nodes.robot_control_node import DEFAULT_ROBOTS, RobotControlNode
 
 from mro_interfaces.msg import (
     FleetStatus,
@@ -29,6 +32,7 @@ from rclpy.callback_groups import (
     MutuallyExclusiveCallbackGroup,
     ReentrantCallbackGroup,
 )
+from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
 from rclpy.task import Future
 
@@ -36,11 +40,6 @@ from sensor_msgs.msg import BatteryState
 
 from std_msgs.msg import Bool, String
 
-
-# 명단의 단일 출처는 mro_bringup/params/fleet.yaml 의 robot_namespaces 다 (fleet_pc.launch.py 가 넘긴다).
-#   여기 값은 런치 없이 노드만 띄웠을 때의 대체값일 뿐이다 — 로봇을 추가·교체할 때 고칠 곳이 아니다.
-#   아래 로직은 전부 이 목록을 순회하므로 대수를 가정하지 않는다.
-DEFAULT_ROBOTS = ['/robot3', '/robot8']
 
 SHUTTLE_MISSION_STATES = {
     'SHUTTLE': Mission.SHUTTLE,
@@ -774,18 +773,44 @@ class FleetManager(Node):
 
 
 def main():
-    """fleet_manager 노드를 실행한다."""
+    """fleet_manager와 관제 웹·로봇 통신 파트를 함께 실행한다."""
     rclpy.init()
-    node = FleetManager()
+    fleet_manager = FleetManager()
+    robot_controls = [
+        RobotControlNode(namespace) for namespace in DEFAULT_ROBOTS
+    ]
+    share = get_package_share_directory('mro_fleet')
+    monitor = MonitorWebApp(robot_controls, os.path.join(share, 'templates'))
+    executor = MultiThreadedExecutor(num_threads=4)
+    executor.add_node(fleet_manager)
+    for robot_control in robot_controls:
+        executor.add_node(robot_control)
+
+    def spin_ros_nodes():
+        """웹 서버와 동시에 fleet·UI ROS 콜백을 처리한다."""
+        try:
+            executor.spin()
+        except (KeyboardInterrupt, ExternalShutdownException):
+            pass
+
+    executor_thread = threading.Thread(target=spin_ros_nodes, daemon=True)
+    executor_thread.start()
     try:
-        rclpy.spin(node)
+        monitor.run()
     except KeyboardInterrupt:
         pass
     finally:
-        node.db.close()
-        node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
+        executor_thread.join(timeout=2.0)
+        for robot_control in robot_controls:
+            executor.remove_node(robot_control)
+        executor.remove_node(fleet_manager)
+        executor.shutdown()
+        fleet_manager.db.close()
+        for robot_control in robot_controls:
+            robot_control.destroy_node()
+        fleet_manager.destroy_node()
 
 
 if __name__ == '__main__':

@@ -237,7 +237,7 @@
 - [ ] **FR-13 대시보드 실제 조작 확인 (PR #47·#51)** — 브라우저에서 ① `GATE_FAIL` 발행 시 버튼이 뜨는가 ② 누르면 `인지 서비스 응답 없음` 이 뜨는가(인지 서버 미구현이라 이게 정답) ③ **그때 `MANUAL_PAIR` 개입 이벤트가 발행되지 않는가** — 실패한 시도를 개입으로 세면 AC-13 IPH 가 부풀어 실제보다 나빠 보인다 · 마감 9/9
 - [ ] **FR-35 는 `loc_check_marker.xy` 실측 뒤에 켠다** — `[0.0, 0.0]` 인 채로 읽으면 측위가 정상인데도 `localization_suspect` 로 기록된다. 그리고 **`aruco/distance`(카메라 기준)와 `|amcl_pose − xy|`(base_link 기준)의 6 cm 오프셋을 빼고 비교**한다 (TF 실측, `tolerance_m` 0.10 의 60 %) · 마감 9/9
 - [x] **`control_ui`: 명시 페어링 폴백 버튼 (FR-13, 계약 10절)** — `target/pair_state = GATE_FAIL` 이면 버튼 표시, 운영자가 로봇·작업자 선택 → `fleet_manager` 가 `/robotN/manual_pair` 호출, 응답의 `reason` 을 화면에 그대로 보여준다. 성공 시 `/fleet/intervention` 에 **`kind = MANUAL_PAIR`** 발행 — IPH 에 들어간다(10.7) · 마감 9/9  **→ 완료 9/8 (PR #47) — `/fleet/manual_pair` 중계까지**
-- [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8
+- [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8  **→ 9/9 웹 `MonitorWebApp.py`와 ROS `robot_control_node.py`로 분리. `fleet_manager_node.main()`이 `DEFAULT_ROBOTS` 명단대로 `RobotControlNode(namespace)`를 하나씩 생성하고, 각 인스턴스가 `{ns}/approach/status`·`{ns}/battery_state`를 분리 구독. HTTP·맵은 웹 클래스가 담당**
 - [x] `control_ui`: 작업자별/전체 종료 버튼, `fleet_manager` RETURN_ALL · 마감 9/8
 - [x] `fleet_manager_node.py`: yaw 계산, 미션 상태 전이 구독 (`shuttle/status` → Mission state) (PR #7) · 마감 9/8
 - [x] `fleet_manager_node.py`: 배터리 25 % 미만 미션 거부·사유 기록 (FR-06) (PR #7) · 마감 9/8

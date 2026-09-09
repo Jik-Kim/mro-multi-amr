@@ -18,10 +18,11 @@ except ModuleNotFoundError:
     flask_stub.send_file = lambda *_args, **_kwargs: None
     sys.modules['flask'] = flask_stub
 
-from mro_fleet.nodes import control_ui_node
-from mro_fleet.nodes.control_ui_node import ControlUI
-from mro_fleet.nodes.control_ui_node import load_dock_landmarks
-from mro_fleet.nodes.control_ui_node import load_map_config
+from mro_fleet.nodes import robot_control_node
+from mro_fleet.nodes.MonitorWebApp import MonitorWebApp
+from mro_fleet.nodes.MonitorWebApp import load_dock_landmarks
+from mro_fleet.nodes.MonitorWebApp import load_map_config
+from mro_fleet.nodes.robot_control_node import RobotControlNode
 
 
 TEMPLATE_PATH = os.path.join(
@@ -39,6 +40,23 @@ def test_dashboard_keeps_existing_control_endpoints():
     assert "postForm('/manual_pair'" in html
     assert "command:'RETURN'" in html
     assert "command:'RETURN_ALL'" in html
+
+
+def test_monitor_web_app_registers_dashboard_routes():
+    """웹 파트가 기존 관제 URL을 기능별 메서드에 연결하는지 확인한다."""
+    control = SimpleNamespace(
+        namespace='/robot3',
+        map_yaml_path='',
+        arena_yaml_path='',
+        get_logger=lambda: SimpleNamespace(warn=lambda _message: None),
+    )
+    monitor = MonitorWebApp([control], os.path.dirname(TEMPLATE_PATH))
+
+    routes = {rule.rule for rule in monitor.app.url_map.iter_rules()}
+    assert routes.issuperset({
+        '/', '/request', '/command', '/intervention', '/manual_pair',
+        '/status', '/map/metadata', '/map/image',
+    })
 
 
 class FakeLogger:
@@ -75,11 +93,12 @@ def make_clock():
 def test_pair_state_is_kept_per_robot_when_status_updates():
     """pair_state와 FleetStatus가 같은 로봇 상태에 합쳐지는지 확인한다."""
     fake = SimpleNamespace(
+        namespace='/robot3',
         status={},
         status_lock=threading.Lock(),
         get_logger=lambda: FakeLogger(),
     )
-    ControlUI._pair_state_cb(
+    RobotControlNode._pair_state_cb(
         fake, '/robot3', SimpleNamespace(data='GATE_FAIL')
     )
     status_message = SimpleNamespace(
@@ -94,10 +113,74 @@ def test_pair_state_is_kept_per_robot_when_status_updates():
         estop=False,
     )
 
-    ControlUI._status_cb(fake, status_message)
+    RobotControlNode._status_cb(fake, status_message)
 
     assert fake.status['/robot3']['pair_state'] == 'GATE_FAIL'
     assert fake.status['/robot3']['state'] == 'SEARCHING'
+
+
+def test_approach_status_is_kept_per_robot_when_fleet_status_updates():
+    """approach/status가 FleetStatus 갱신 후에도 유지되는지 확인한다."""
+    fake = SimpleNamespace(
+        namespace='/robot3',
+        status={},
+        status_lock=threading.Lock(),
+        get_logger=lambda: FakeLogger(),
+    )
+    RobotControlNode._receive_robot_status(
+        fake, '/robot3', SimpleNamespace(data='APPROACH1')
+    )
+    status_message = SimpleNamespace(
+        robot_ns='/robot3',
+        state='ACTIVE',
+        battery=0.8,
+        x=1.0,
+        y=2.0,
+        yaw=0.1,
+        mission_id='M001',
+        paired_worker='W1',
+        estop=False,
+    )
+
+    RobotControlNode._status_cb(fake, status_message)
+
+    assert fake.status['/robot3']['approach_state'] == 'APPROACH_1'
+
+
+def test_invalid_approach_status_is_ignored():
+    """계약에 없는 로봇 상태는 저장하지 않고 경고를 남긴다."""
+    logger = FakeLogger()
+    fake = SimpleNamespace(
+        status={},
+        status_lock=threading.Lock(),
+        get_logger=lambda: logger,
+    )
+
+    RobotControlNode._receive_robot_status(
+        fake, '/robot8', SimpleNamespace(data='UNKNOWN')
+    )
+
+    assert fake.status == {}
+    assert len(logger.warnings) == 1
+
+
+def test_battery_status_is_stored_by_instance_namespace():
+    """배터리 잔량이 인스턴스의 로봇 namespace에 저장된다."""
+    fake = SimpleNamespace(
+        namespace='/robot3',
+        status={},
+        status_lock=threading.Lock(),
+    )
+
+    with patch.object(
+        robot_control_node.time, 'monotonic', return_value=10.0
+    ):
+        RobotControlNode._receive_battery_status(
+            fake, SimpleNamespace(percentage=0.73)
+        )
+
+    assert fake.status['/robot3']['battery'] == 0.73
+    assert fake.status['/robot3']['_received_monotonic'] == 10.0
 
 
 def test_pair_states_of_two_robots_do_not_mix():
@@ -108,10 +191,10 @@ def test_pair_states_of_two_robots_do_not_mix():
         get_logger=lambda: FakeLogger(),
     )
 
-    ControlUI._pair_state_cb(
+    RobotControlNode._pair_state_cb(
         fake, '/robot3', SimpleNamespace(data='GATE_FAIL')
     )
-    ControlUI._pair_state_cb(
+    RobotControlNode._pair_state_cb(
         fake, '/robot8', SimpleNamespace(data='PAIRED')
     )
 
@@ -119,9 +202,11 @@ def test_pair_states_of_two_robots_do_not_mix():
     assert fake.status['/robot8']['pair_state'] == 'PAIRED'
 
 
-def test_fleet_status_fields_of_two_robots_do_not_mix():
-    """두 FleetStatus의 카드용 값이 로봇 네임스페이스별로 분리되는지 확인한다."""
-    fake = SimpleNamespace(status={}, status_lock=threading.Lock())
+def test_robot_control_ignores_other_robot_fleet_status():
+    """로봇별 통신 노드가 다른 로봇의 FleetStatus를 무시한다."""
+    fake = SimpleNamespace(
+        namespace='/robot3', status={}, status_lock=threading.Lock()
+    )
     robot3 = SimpleNamespace(
         robot_ns='/robot3', state='SHUTTLE', battery=0.31,
         x=1.0, y=2.0, yaw=0.1, mission_id='M003',
@@ -134,21 +219,17 @@ def test_fleet_status_fields_of_two_robots_do_not_mix():
     )
 
     with patch.object(
-        control_ui_node.time, 'monotonic', side_effect=[10.0, 11.0]
+        robot_control_node.time, 'monotonic', return_value=10.0
     ):
-        ControlUI._status_cb(fake, robot3)
-        ControlUI._status_cb(fake, robot8)
+        RobotControlNode._status_cb(fake, robot3)
+        RobotControlNode._status_cb(fake, robot8)
 
     assert fake.status['/robot3']['state'] == 'SHUTTLE'
     assert fake.status['/robot3']['battery'] == 0.31
     assert fake.status['/robot3']['worker'] == 'W1'
     assert fake.status['/robot3']['mission'] == 'M003'
     assert fake.status['/robot3']['estop'] is False
-    assert fake.status['/robot8']['state'] == 'FOLLOWING'
-    assert fake.status['/robot8']['battery'] == 0.88
-    assert fake.status['/robot8']['worker'] == 'W2'
-    assert fake.status['/robot8']['mission'] == 'M008'
-    assert fake.status['/robot8']['estop'] is True
+    assert '/robot8' not in fake.status
 
 
 def test_status_snapshot_reports_age_and_stale_per_robot():
@@ -162,8 +243,10 @@ def test_status_snapshot_reports_age_and_stale_per_robot():
         status_stale_s=2.5,
     )
 
-    with patch.object(control_ui_node.time, 'monotonic', return_value=100.0):
-        snapshot = ControlUI._status_snapshot(fake)
+    with patch.object(
+        robot_control_node.time, 'monotonic', return_value=100.0
+    ):
+        snapshot = RobotControlNode._status_snapshot(fake)
 
     assert snapshot['/robot3']['age_s'] == 2.0
     assert snapshot['/robot3']['stale'] is False
@@ -219,6 +302,7 @@ def test_accepted_manual_pair_records_one_intervention():
     """인지 노드가 승인한 명시 페어링만 개입으로 한 번 기록하는지 확인한다."""
     publisher = FakePublisher()
     fake = SimpleNamespace(
+        namespace='/robot3',
         cli_manual_pair=object(),
         manual_pair_timeout_s=3.0,
         pub_int=publisher,
@@ -229,9 +313,7 @@ def test_accepted_manual_pair_records_one_intervention():
         ),
     )
 
-    accepted, message = ControlUI._request_manual_pair(
-        fake, '/robot3', 'W1'
-    )
+    accepted, message = RobotControlNode._request_manual_pair(fake, 'W1')
 
     assert accepted is True
     assert message == '명시 페어링 완료'
@@ -246,6 +328,7 @@ def test_rejected_manual_pair_does_not_record_intervention():
     """인지 노드가 거절한 요청은 IPH 개입으로 기록하지 않는지 확인한다."""
     publisher = FakePublisher()
     fake = SimpleNamespace(
+        namespace='/robot8',
         cli_manual_pair=object(),
         manual_pair_timeout_s=3.0,
         pub_int=publisher,
@@ -256,9 +339,7 @@ def test_rejected_manual_pair_does_not_record_intervention():
         ),
     )
 
-    accepted, message = ControlUI._request_manual_pair(
-        fake, '/robot8', 'W2'
-    )
+    accepted, message = RobotControlNode._request_manual_pair(fake, 'W2')
 
     assert accepted is False
     assert message == 'NO_TARGET'
@@ -269,6 +350,7 @@ def test_missing_manual_pair_response_does_not_report_success():
     """서비스 응답이 없을 때 성공 또는 개입으로 처리하지 않는지 확인한다."""
     publisher = FakePublisher()
     fake = SimpleNamespace(
+        namespace='/robot3',
         cli_manual_pair=object(),
         manual_pair_timeout_s=3.0,
         pub_int=publisher,
@@ -276,9 +358,7 @@ def test_missing_manual_pair_response_does_not_report_success():
         _call=lambda _client, _request, timeout_sec: None,
     )
 
-    accepted, message = ControlUI._request_manual_pair(
-        fake, '/robot3', 'W1'
-    )
+    accepted, message = RobotControlNode._request_manual_pair(fake, 'W1')
 
     assert accepted is False
     assert '응답 없음' in message
