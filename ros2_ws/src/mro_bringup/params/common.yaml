@@ -112,9 +112,9 @@
     lost_s: 1.0               # 미검출 이 시간이면 Lost (SOT '.. Lost 1.0 s') — 계약값
     standby_s: 30.0           # Lost 가 이만큼 지속되면 STANDBY (SOT 'Standby 30 s') — 계약값
     approach_skip_m: 1.0      # 페어링 시 이 거리 안이면 접근 없이 바로 추종
-    hint_valid_s: 2.0         # 계약 4절 '힌트 유효 2 s'. 발행 측(webcam_hint)의 같은 값은
-                              #   mro_webcam/config/webcam.yaml 에 있다 — 웹캠 PC 와 로봇 PC 는
-                              #   서로 다른 launch 라 한 파일로 합칠 수 없다. **두 값은 같아야 한다**
+    hint_valid_s: 2.0         # 계약 4절 '힌트 유효 2 s'. **유효기간은 받는 쪽만 판단한다** —
+                              #   webcam_hint 는 힌트를 10 Hz 로 계속 낼 뿐이다. 그래서 이 값의
+                              #   단일 출처는 여기 하나다 (I-047. 발행 측에도 있던 죽은 사본은 지웠다)
     # 재탐지 시간. 놓친 뒤 첫 회전까지 = research_s + search_wait_s (= 3.5 s).
     #   **lost_s 는 더해지지 않는다** — 같은 시계(마지막으로 본 뒤 지난 시간) 안의 앞 단계다.
     #   lost_s 에 주행을 멈추고, research_s 에 탐색으로 넘어간다.
