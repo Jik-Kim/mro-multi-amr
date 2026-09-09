@@ -10,7 +10,8 @@
     있어도 목표를 내지 않는다. 옛 토픽을 구독하던 시절 S5 가 시작되지 않던 결함의 대칭
   · `target/paired` 게이트 — 거짓이면 움직이지 않고, 추종 중 거짓이 되면 즉시 멈추는가
     (오추종 0건이 절대 기준이다)
-  · Lost 3단 — `lost_s` 정지 · 8 초 회전 탐색 · `standby_s` STANDBY. 재등장 시 게이트 재통과
+  · Lost 3단 — `lost_s` 정지 · `research_s` 회전 탐색 · `standby_s` STANDBY. 재등장 시 게이트 재통과
+  · 재탐지 방향 — 힌트 > 마지막으로 본 쪽 > 기본 30°. 천장 카메라가 없어도 아무 쪽으로 돌지 않는다
   · `mission/finish` 는 `FAILED` 가 아니라 `IDLE` 로 끝나는가 (정상 종료 — I-026)
   · `safety/estop` 중 목표를 취소하고 상태를 유지하는가 (실패가 아니다)
   · 최소 이격(`min_separation_m`) 침범 시 정지하는가 (AC-05 하한)
@@ -51,6 +52,11 @@ BASE = {
     'standby_s': 30.0,
     'approach_skip_m': 1.0,
     'hint_valid_s': 2.0,
+    'research_s': 2.0,
+    'settle_s': 1.0,
+    'search_wait_s': 1.5,
+    'visible_wait_s': 3.0,
+    'search_step_deg': 20.0,
 }
 NEAR = (0.4, 0.0)      # 로봇 앞 0.4 m — approach_skip_m 안이라 바로 추종
 FAR = (3.0, 0.0)       # 1 m 밖 — 2단계 접근
@@ -95,7 +101,7 @@ def make_node(**params):
     node.turns = []
     pub = node.pub_status.publish
     node.pub_status.publish = lambda m: (node.status_log.append(m.data), pub(m))
-    node.rotate_in_place = lambda deg: node.turns.append(round(deg, 1))
+    node.rotate_in_place = lambda deg, stop_on_sight=False: node.turns.append(round(deg, 1))
     node.map_yaw = lambda: 0.0                       # +x 를 보고 있다
     node.set_parameters([Parameter(k, value=v) for k, v in {**BASE, **params}.items()])
     node.status_log.clear()
@@ -250,7 +256,10 @@ def test_lost_short_holds_position_without_changing_state(ros):
     """
     node = make_node()
     reach_following(node)
-    lost_for(node, 2.0)
+    # `lost_s` 와 `research_s` 사이를 값에서 끌어온다 — 9/9 에 research_s 를 8 → 2 로
+    #   내리면서 이 시험이 넣어 둔 2.0 이 경계 밖으로 나갔다. 값이 또 바뀌어도 안 깨지게 한다
+    hold_window = (node.p('lost_s') + node.p('research_s')) / 2
+    lost_for(node, hold_window)
     node.step()
 
     assert node.state == 'FOLLOWING'
@@ -403,7 +412,7 @@ def test_search_rotation_uses_hint_direction(ros):
     node.worker_id = 'worker_a'
 
     node.hint = None
-    assert node.search_rotate_deg() == 30.0
+    assert node.search_rotate_deg() == node.p('search_step_deg')
 
     node.hint = (0.0, -2.0, time.time(), 'worker_a')
     assert node.search_rotate_deg() < -80
@@ -600,6 +609,243 @@ def test_stall_distance_reaches_following(ros):
     node.step()
 
     assert node.state == 'FOLLOWING', '한 회차 뒤에는 추종으로 넘어가야 한다'
+    node.destroy_node()
+
+
+def test_first_rotation_within_5s_of_losing_target(ros):
+    """놓친 뒤 첫 회전까지 5 초 안이어야 한다 (9/9 실주행 — 종전 11 초는 너무 느렸다).
+
+    합은 `research_s`(2.0) + `search_wait_s`(1.5) = **3.5 초**다.
+    **`lost_s` 는 더해지지 않는다** — 같은 시계 안의 앞 단계다. 마지막으로 본 뒤 1 초에
+    주행을 멈추고, 2 초에 탐색으로 넘어간다. 각 값의 바닥 근거는 노드 주석에 적었다.
+    """
+    node = make_node()
+    total = node.p('research_s') + node.p('search_wait_s')
+
+    assert total <= 5.0, f'놓친 뒤 첫 회전까지 {total} s — 5 초를 넘는다'
+    assert node.p('lost_s') == 1.0, 'lost_s 는 SOT 계약값이라 바꾸지 않는다'
+    assert node.p('research_s') >= 2.0, '2 초 미만이면 사람이 앞을 지나가는 것만으로 돌아버린다'
+    assert node.p('search_wait_s') >= node.p('settle_s'), \
+        'settle 이 끝나기 전에 회전하면 틀린 좌표로 목표를 낸다'
+    node.destroy_node()
+
+
+def test_rotation_turns_toward_last_seen_side(ros):
+    """천장 카메라 힌트가 없어도 **마지막으로 본 쪽**으로 돈다.
+
+    종전에는 힌트가 없으면 무조건 +30°(반시계) 였다. 작업자가 오른쪽으로 빠졌으면 왼쪽으로
+    열한 번(330°) 돌아야 다시 만났다 — 최악 38 초다. 놓치기 직전 위치는 우리가 들고 있다.
+    """
+    node = make_node()
+    node.hint = None
+
+    node.follow_est, node.follow_goal = (1.0, -1.0), None    # 로봇 앞 오른쪽
+    assert node.search_rotate_deg() < 0, '오른쪽에서 놓쳤으면 시계 방향(음수)으로 돈다'
+
+    node.search_dir = None                                   # 방향 잠금을 풀고 다시 정하게
+    node.follow_est, node.follow_goal = (1.0, 1.0), None     # 로봇 앞 왼쪽
+    assert node.search_rotate_deg() > 0, '왼쪽에서 놓쳤으면 반시계(양수)로 돈다'
+    node.destroy_node()
+
+
+def test_rotation_extrapolates_exit_direction(ros):
+    """마지막 이동분을 외삽해 **빠져나간 쪽**을 가리킨다.
+
+    작업자가 오른쪽으로 걸어 나갔다면 마지막으로 본 자리보다 더 오른쪽에 있다. 마지막
+    목표 위치와 마지막 추정 위치가 둘 다 있으면 그 차이만큼 한 번 더 밀어서 본다.
+    """
+    node = make_node()
+    node.hint = None
+
+    node.follow_goal, node.follow_est = (1.0, 0.0), (1.0, -0.3)   # 오른쪽으로 이동 중
+    with_drift = node.last_seen_bearing()
+    node.follow_goal = None
+    without_drift = node.last_seen_bearing()
+
+    assert with_drift < without_drift < 0, \
+        f'외삽이 더 오른쪽을 가리켜야 한다 (외삽 {with_drift:.0f}° vs 그냥 {without_drift:.0f}°)'
+    node.destroy_node()
+
+
+def test_hint_wins_over_last_seen(ros):
+    """천장 카메라 힌트가 있으면 그것이 마지막으로 본 쪽을 이긴다 (계약 4절 우선순위)."""
+    node = make_node()
+    node.worker_id = 'worker_a'
+    node.follow_est, node.follow_goal = (1.0, -1.0), None      # 마지막으로 본 쪽 = 오른쪽
+    node.hint = (0.0, 2.0, time.time(), 'worker_a')            # 힌트 = 왼쪽
+
+    assert node.search_rotate_deg() > 30, '힌트가 있으면 힌트 방향이다'
+    node.destroy_node()
+
+
+def test_standby_reached_while_searching(ros):
+    """탐색 중에도 `standby_s` 를 넘기면 STANDBY 로 간다.
+
+    종전에는 STANDBY 판정이 FOLLOWING 에만 있었다. 추종은 `research_s` 에 무조건 SEARCHING
+    으로 빠져나오므로 그 값이 **닿을 수 없었다** — 관제는 사람이 필요하다는 것을 영원히 모르고,
+    재획득 실패가 한 건도 집계되지 않았다 (계약 3절·9절).
+    """
+    node = make_node()
+    start(node)
+    assert node.state == 'SEARCHING'
+
+    node.follow_seen = time.time() - 31.0        # 31 초 동안 못 찾았다
+    node.step()
+
+    assert node.state == 'STANDBY', '탐색을 오래 해도 못 찾으면 사람을 불러야 한다'
+    assert 'FAILED' not in node.status_log, 'STANDBY 는 오류가 아니다'
+    node.destroy_node()
+
+
+def test_long_follow_then_loss_does_not_jump_to_standby(ros):
+    """30 초 넘게 잘 따라간 뒤 놓쳐도 곧바로 STANDBY 가 되지 않는다.
+
+    기준을 '사이클 시작 시각' 으로 잡으면 오래 따라간 것이 벌이 된다. 기준은 **마지막으로
+    본 시각**이어야 한다.
+    """
+    node = make_node()
+    reach_following(node)
+    node.worker_started = time.time() - 120.0    # 2 분 전에 시작한 사이클
+    lost_for(node, 3.0)                          # 방금 3 초 놓쳤을 뿐이다
+    node.step()
+
+    assert node.state == 'SEARCHING', node.state
+    node.step()
+    assert node.state == 'SEARCHING', '3 초 놓친 것으로 STANDBY 가 되면 안 된다'
+    node.destroy_node()
+
+
+def test_search_keeps_the_same_direction(ros):
+    """한 번 정한 회전 방향을 끝까지 지킨다 (9/9 실주행 — +30° 뒤 −30° 로 되돌아왔다).
+
+    `last_seen_bearing()` 은 '지금 보는 방향 기준' 이라, 그쪽으로 돌고 나면 목표 지점이
+    0° 근처가 되고 조금 지나치면 부호가 뒤집힌다. 매 회차 다시 계산하면 좌우로 왕복해
+    한 바퀴를 못 덮는다.
+    """
+    node = make_node()
+    node.hint = None
+    node.follow_est, node.follow_goal = (1.0, -1.0), None    # 오른쪽에서 놓쳤다
+
+    first = node.search_rotate_deg()
+    assert first < 0, '첫 회차는 마지막으로 본 쪽(시계)이다'
+
+    # 돌고 나서 마지막으로 본 지점이 반대쪽으로 넘어가도 방향은 그대로여야 한다
+    node.follow_est = (1.0, 0.6)
+    for i in range(5):
+        deg = node.search_rotate_deg()
+        assert deg < 0, f'{i + 2}회차에 방향이 뒤집혔다 ({deg:+.0f}°)'
+    node.destroy_node()
+
+
+def test_search_step_is_smaller_than_camera_fov(ros):
+    """정지점 간격이 카메라 수평 시야보다 작아야 사이로 작업자가 빠지지 않는다.
+
+    robot3 실측 시야 38.5° (camera_info fx 566.7 × 1.7778 = 1007.4, 704 px 정사각 crop).
+    가장자리는 bbox 가 잘리고 depth 가 흔들려 실효 시야가 더 좁으므로 여유를 크게 둔다.
+    """
+    node = make_node()
+    fov_deg = 38.5
+    step = node.p('search_step_deg')
+
+    assert step < fov_deg, f'간격 {step}° 가 시야 {fov_deg}° 보다 크면 못 보는 구간이 생긴다'
+    assert fov_deg - step >= 15.0, f'겹침 {fov_deg - step:.1f}° — 가장자리 검출이 약해 부족하다'
+    node.destroy_node()
+
+
+def test_full_circle_tries_from_step(ros):
+    """한 바퀴 횟수를 간격에서 계산한다 — 못 박으면 간격을 바꿀 때 어긋난다."""
+    node = make_node()
+    tries = node.max_search_tries()
+    covered = tries * node.p('search_step_deg')
+
+    assert covered >= 360.0, f'{tries}회 × {node.p("search_step_deg")}° = {covered}° — 한 바퀴가 안 된다'
+    node.destroy_node()
+
+
+def test_rotation_stops_when_target_appears(ros):
+    """도는 중에 작업자가 보이면 그 자리에서 멈춘다.
+
+    정지점 사이의 애매한 자리에 서 있으면 돌기 전에도 돌고 나서도 안 보인다. 도는 동안
+    콜백은 계속 돌아가므로 시야를 스쳐 지나가는 순간을 잡을 수 있다 (9/9 실주행).
+    """
+    node = make_node()
+    node.setup_cmd_vel = lambda: None            # Nav2 Spin 경로로 태운다
+    node.navigator.nav_ticks = 20                # 여러 주기 도는 회전으로 만든다
+    node.visible_at = time.time() + 1.0          # 회전 중에 작업자가 보인다
+
+    # make_node 가 rotate_in_place 를 대역으로 갈아뒀으므로 실제 메서드를 직접 부른다
+    type(node).rotate_in_place(node, 20.0, stop_on_sight=True)
+
+    assert 'cancel' in node.navigator.calls, '보이면 회전을 끊어야 한다'
+    node.destroy_node()
+
+
+def test_standby_to_searching_does_not_oscillate(ros):
+    """STANDBY 에서 나온 직후 다시 STANDBY 로 돌아가지 않는다 (9/9 실주행 회귀).
+
+    작업자가 다시 보여 재획득을 시작했는데 `follow_seen` 이 30 초 전 값으로 남아 있으면,
+    SEARCHING 의 STANDBY 판정이 즉시 다시 STANDBY 로 돌려보낸다. 그 왕복이 초당 수백 번
+    돌아 `approach/status` 574,501 건이 관제·기록기로 쏟아졌다.
+    """
+    node = make_node()
+    reach_following(node)
+    lost_for(node, 31.0)
+    node.step()
+    assert node.state == 'STANDBY'
+
+    see(node)                      # 작업자가 다시 보인다 (게이트는 통과 상태)
+    node.step()
+    assert node.state == 'SEARCHING', '재등장하면 다시 찾기 시작한다'
+
+    for _ in range(20):            # 스무 주기를 돌려도 STANDBY 로 안 돌아가야 한다
+        node.step()
+    assert node.state != 'STANDBY', '재획득 직후 STANDBY 로 되돌아가면 진동한다'
+    node.destroy_node()
+
+
+def test_status_published_only_on_change(ros):
+    """같은 상태를 다시 넣는 호출은 발행하지 않는다 — 진동이 네트워크 폭주가 되지 않게.
+
+    유지 발행은 1 초 타이머가 따로 하므로 관제·기록기가 값을 놓치지 않는다.
+    """
+    node = make_node()
+    sent = []
+    node.pub_status.publish = lambda m: sent.append(m.data)
+
+    node.set_state('SEARCHING', '처음')
+    node.set_state('SEARCHING', '같은 상태 · 다른 이유')
+    node.set_state('SEARCHING', '또 같은 상태')
+    assert sent == ['SEARCHING'], f'전이 한 번에 한 건이어야 한다 (실제 {sent})'
+
+    node.set_state('FOLLOWING', '바뀜')
+    assert sent == ['SEARCHING', 'FOLLOWING']
+    node.destroy_node()
+
+
+def test_reacquire_resets_the_standby_clock(ros):
+    """재획득 시작이 `standby_s` 시계를 지금으로 되돌린다.
+
+    되돌리는 자리는 '다시 찾기 시작한 순간' 하나뿐이다 — `rearm()`(회전마다 불린다)에
+    넣으면 회전을 반복하는 동안 30 초가 영원히 안 차서 STANDBY 에 도달하지 못한다.
+    """
+    node = make_node()
+    node.follow_seen = time.time() - 100.0
+    node.begin_reacquire('시험')
+
+    assert node.state == 'SEARCHING'
+    assert time.time() - node.follow_seen < 1.0, '시계가 지금으로 돌아와야 한다'
+    assert node.search_tries == 0
+    node.destroy_node()
+
+
+def test_rotation_does_not_reset_the_standby_clock(ros):
+    """회전(rearm)은 시계를 되돌리지 않는다 — 그래야 30 초에 STANDBY 로 갈 수 있다."""
+    node = make_node()
+    node.follow_seen = time.time() - 100.0
+    before = node.follow_seen
+    node.rearm()
+
+    assert node.follow_seen == before, 'rearm 이 시계를 건드리면 STANDBY 에 못 간다'
     node.destroy_node()
 
 
