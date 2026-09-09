@@ -165,6 +165,19 @@ def draw(d, A, G, BOX):
                    loff=(0, 0),
                    pts=[(vx, bout), (bx0, bout), (bx0, ty + th / 2)], entry=(0, .5))
 
+    def inner(ka, kb, lab):
+        """같은 노드 안에서 갈래끼리 넘기는 것 — ROS 토픽이 아니라 프로그램 안의 값이다."""
+        ax, ay, aw, ah = bx(ka); tx0, ty, tw, th = bx(kb)
+        right = tx0 > ax
+        vx = (tx0 - 26) if right else (tx0 + tw + 26)
+        d.edge(fr(ka), fr(kb), lab, color=LINE, dashed=True, w=1.4, lx=0.5, loff=(0, 0),
+               pts=[(vx, ay + ah / 2), (vx, ty + th / 2)],
+               exit=(1, .5) if right else (0, .5), entry=(0, .5) if right else (1, .5))
+
+    # ── 노드 안에서 갈래끼리 넘기는 것 ────────────────────────────────────
+    inner('whint:drawn', 'whint:drawn_in', '검출 결과를 그린 화면 한 장\n최신 것만 보관한다')
+    inner('whint:table', 'whint:table_in', '작업자 번호 ↔ 복장 표')
+
     # ── 가운데 열 안에서 ─────────────────────────────────────────────────
     near('whint:hint', 'kpi:in', '/webcam2/target_hint · TargetHint\n10 Hz · BEST_EFFORT · 유효 2초')
     near('cui:svc_out', 'fm:svc_in', '/fleet/request_mission · 서비스\n자재 요청', SVC, True)
@@ -239,6 +252,14 @@ def draw(d, A, G, BOX):
              '의도한 바퀴 속도\n정지 중에는 회전분만 빌려 쓴다', SENS)
         hlink(nav + ':vel_out', t + ':in',
               'cmd_vel · TwistStamped\n평소 바퀴 명령 — 정지 중에는 안전 감시가 덮어쓴다', 20, SENS, gapx=g)
+
+        # ── 노드 안에서 갈래끼리 넘기는 것 ────────────────────────────────
+        inner(k('amr_detection', 'wd_in'), k('amr_detection', 'gate_in'),
+              '짝짓기 기준값 — 기준 복장과 기준 지문')
+        inner(k('amr_detection', 'finish_in'), k('amr_detection', 'gate_in'),
+              '기준값을 비운다')
+        inner(k('follow_target', 'estop_out'), k('follow_target', 'resume'),
+              '멈췄던 자리에서 이어서')
 
         # ── 같은 PC 안 ────────────────────────────────────────────────────
         near(k('amr_detection', 'map'), k('follow_target', 'map_in'),
