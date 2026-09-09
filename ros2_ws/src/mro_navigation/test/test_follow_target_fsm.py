@@ -465,7 +465,8 @@ def test_no_reverse_anywhere_in_source(ros):
     src = (Path(__file__).resolve().parents[1] / 'mro_navigation' / 'nodes'
            / 'follow_target_node.py').read_text(encoding='utf-8')
     code = [ln for ln in src.splitlines()
-            if not ln.lstrip().startswith('#') and 'linear' in ln or '.undock(' in ln]
+            if not ln.lstrip().startswith('#')
+            and ('linear' in ln or '.undock(' in ln)]
     assert code == [], f'후진 가능성이 있는 줄: {code}'
     node = make_node()
     assert n_calls(node.navigator, 'undock') == 0
