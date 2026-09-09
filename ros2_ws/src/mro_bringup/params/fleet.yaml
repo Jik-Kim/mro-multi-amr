@@ -17,5 +17,6 @@
 /fleet_manager:
   ros__parameters:
     battery_min: 0.25              # 이보다 낮으면 배정 거부 (ASSIGN_REFUSED_BATTERY)
-    t_lim_s: 120.0                 # 미션 제한시간. 넘기면 TLIM_EXCEEDED
+    # t_lim_s 는 여기 두지 않는다 (9/9) — 로봇(shuttle_mission)과 관제(fleet_manager)가 **같은 값**을
+    #   봐야 미션 실패 시점이 어긋나지 않는다. 단일 출처는 common.yaml 이고 이 런치가 함께 넘긴다.
     worker_assignment_window_s: 1.0  # 동시 등록으로 볼 시간창 — 이 안에 온 작업자를 worker_id 순으로 한꺼번에 배정

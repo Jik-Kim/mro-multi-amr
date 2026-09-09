@@ -12,7 +12,9 @@
     min_separation_m: 0.3
     v_max: 0.3
     bay_dwell_s: 5.0
-    t_lim_s: 120.0
+    t_lim_s: 120.0            # 미션 제한시간. **로봇과 관제의 공유 계약값** — fleet_pc.launch.py 도
+                              #   이 파일을 넘겨 fleet_manager 가 같은 값을 본다 (9/9 단일화).
+                              #   갈라지면 로봇은 계속 가는데 관제만 TLIM_EXCEEDED 를 찍는다
     t_ret_s: 180.0
     dock_retry: 2
     # ── shuttle_mission (PR #36, 주행 요청으로 PM 이관 9/7)

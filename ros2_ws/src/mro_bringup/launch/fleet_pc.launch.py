@@ -23,12 +23,16 @@ import yaml
 
 
 def _launch_setup(context, *args, **kwargs):
-    fleet_yaml = os.path.join(
-        get_package_share_directory('mro_bringup'), 'params', 'fleet.yaml')
+    params_dir = os.path.join(get_package_share_directory('mro_bringup'), 'params')
+    # common.yaml 은 로봇 파라미터가 대부분이지만 **로봇과 관제가 같아야 하는 계약값**(t_lim_s)도 들었다.
+    #   관제가 자기 사본을 갖고 있으면 한쪽만 고쳤을 때 미션 실패 시점이 어긋난다 — 그래서 여기서도 넘긴다.
+    #   관제 노드가 선언하지 않은 키는 그냥 무시되고, fleet.yaml 이 뒤에 와서 관제 전용 값이 이긴다.
+    common_yaml = os.path.join(params_dir, 'common.yaml')
+    fleet_yaml = os.path.join(params_dir, 'fleet.yaml')
 
     # 인자를 안 주면(기본) fleet.yaml 의 robot_namespaces 를 그대로 쓴다. 빈 덮어쓰기를 항상 얹으면
     #   yaml 값이 죽어 명단이 두 곳에 생긴다 — 그래서 값이 있을 때만 덮어쓴다.
-    params = [fleet_yaml]
+    params = [common_yaml, fleet_yaml]
     robots = LaunchConfiguration('robots').perform(context).strip()
     if robots:
         namespaces = yaml.safe_load(robots)
@@ -38,7 +42,7 @@ def _launch_setup(context, *args, **kwargs):
         if not namespaces:
             raise RuntimeError('robots 인자가 빈 목록이다 — 관제가 로봇을 하나도 잡지 않는다. '
                                '인자를 빼면 fleet.yaml 의 명단을 쓴다')
-        params = [fleet_yaml, {'robot_namespaces': [str(n) for n in namespaces]}]
+        params = [common_yaml, fleet_yaml, {'robot_namespaces': [str(n) for n in namespaces]}]
 
     def n(pkg, exe, name, extra=()):
         return Node(package=pkg, executable=exe, name=name, output='screen',
