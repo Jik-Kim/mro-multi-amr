@@ -5,11 +5,15 @@ import threading
 import time
 
 from ament_index_python.packages import get_package_share_directory
+
 from geometry_msgs.msg import PoseWithCovarianceStamped
-from mro_interfaces.msg import FleetStatus, Intervention, Mission
-from mro_interfaces.srv import ManualPair, OperatorCommand, RequestMission
+
+from mro_interfaces.msg import FleetStatus, Mission
+
 from rclpy.node import Node
+
 from sensor_msgs.msg import BatteryState
+
 from std_msgs.msg import Bool, String
 
 
@@ -29,10 +33,6 @@ APPROACH_STATE_ALIASES = {
 }
 
 FLEET_STATUS_TOPIC = '/fleet/status'
-INTERVENTION_TOPIC = '/fleet/intervention'
-REQUEST_MISSION_SERVICE = '/fleet/request_mission'
-OPERATOR_COMMAND_SERVICE = '/fleet/operator_command'
-MANUAL_PAIR_SERVICE = '/fleet/manual_pair'
 
 
 def _bringup_path(*parts):
@@ -44,8 +44,8 @@ def _bringup_path(*parts):
     return os.path.join(share, *parts)
 
 
-class RobotControlNode(Node):
-    """하나의 namespace에 속한 AMR 상태와 관제 명령을 담당한다."""
+class RobotStatus(Node):
+    """하나의 namespace에 속한 AMR 상태 통신을 담당한다."""
 
     def __init__(self, namespace):
         """담당할 로봇 namespace로 노드와 통신을 구성한다."""
@@ -56,7 +56,7 @@ class RobotControlNode(Node):
         self.namespace = namespace
         self._load_parameters()
         self.status_lock = threading.Lock()
-        self.status = {namespace: self._initial_status()}
+        self.status = self._initial_status()
         self._create_ros_interfaces()
 
     @staticmethod
@@ -72,22 +72,21 @@ class RobotControlNode(Node):
             'y': 0.0,
             'yaw': 0.0,
             'mission': '',
+            'mission_state': None,
+            'target_worker': '',
             'worker': '',
             'estop': False,
+            'status_received': False,
         }
 
     def _load_parameters(self):
         """로봇 통신과 관제 화면에 필요한 실행 값을 읽는다."""
-        self.declare_parameter('manual_pair_timeout_s', 3.0)
         self.declare_parameter('status_stale_s', 2.5)
         self.declare_parameter(
             'map_yaml_path', _bringup_path('maps', 'auto_map.yaml')
         )
         self.declare_parameter(
             'arena_yaml_path', _bringup_path('params', 'arena.yaml')
-        )
-        self.manual_pair_timeout_s = float(
-            self.get_parameter('manual_pair_timeout_s').value
         )
         self.status_stale_s = float(
             self.get_parameter('status_stale_s').value
@@ -101,41 +100,74 @@ class RobotControlNode(Node):
 
     def _create_ros_interfaces(self):
         """담당 AMR 상태 토픽과 관제 요청 인터페이스를 만든다."""
-        subscriptions = (
-            (String, 'approach/status', self._receive_approach_status),
-            (String, 'shuttle/status', self._receive_shuttle_status),
-            (BatteryState, 'battery_state', self._receive_battery_status),
-            (PoseWithCovarianceStamped, 'amcl_pose', self._receive_pose),
-            (Bool, 'safety/estop', self._receive_estop),
-            (Bool, 'target/paired', self._receive_paired),
-            (String, 'target/worker_id', self._receive_worker_id),
-            (String, 'target/pair_state', self._receive_pair_state),
-            (Mission, 'mission/assigned', self._receive_mission),
+        self.create_subscription(
+            String,
+            f'{self.namespace}/approach/status',
+            self._receive_approach_status,
+            10,
         )
-        for message_type, topic, callback in subscriptions:
-            self.create_subscription(
-                message_type, f'{self.namespace}/{topic}', callback, 10
-            )
-        self.pub_status = self.create_publisher(
+        self.create_subscription(
+            String,
+            f'{self.namespace}/shuttle/status',
+            self._receive_shuttle_status,
+            10,
+        )
+        self.create_subscription(
+            BatteryState,
+            f'{self.namespace}/battery_state',
+            self._receive_battery_status,
+            10,
+        )
+        self.create_subscription(
+            PoseWithCovarianceStamped,
+            f'{self.namespace}/amcl_pose',
+            self._receive_pose,
+            10,
+        )
+        self.create_subscription(
+            Bool,
+            f'{self.namespace}/safety/estop',
+            self._receive_estop,
+            10,
+        )
+        self.create_subscription(
+            Bool,
+            f'{self.namespace}/target/paired',
+            self._receive_paired,
+            10,
+        )
+        self.create_subscription(
+            String,
+            f'{self.namespace}/target/worker_id',
+            self._receive_worker_id,
+            10,
+        )
+        self.create_subscription(
+            String,
+            f'{self.namespace}/target/pair_state',
+            self._receive_pair_state,
+            10,
+        )
+        self.create_subscription(
+            Mission,
+            f'{self.namespace}/mission/assigned',
+            self._receive_mission,
+            10,
+        )
+        self.fleet_status_publisher = self.create_publisher(
             FleetStatus, FLEET_STATUS_TOPIC, 10
-        )
-        self.pub_int = self.create_publisher(
-            Intervention, INTERVENTION_TOPIC, 10
-        )
-        self.cli_req = self.create_client(
-            RequestMission, REQUEST_MISSION_SERVICE
-        )
-        self.cli_op = self.create_client(
-            OperatorCommand, OPERATOR_COMMAND_SERVICE
-        )
-        self.cli_manual_pair = self.create_client(
-            ManualPair, MANUAL_PAIR_SERVICE
         )
         self.create_timer(1.0, self._publish_status)
 
-    def _touch(self, status):
+    def _record_status_received_time(self):
         """마지막 AMR 상태 수신 시각을 갱신한다."""
-        status['_received_monotonic'] = time.monotonic()
+        self.status['_received_monotonic'] = time.monotonic()
+        self.status['status_received'] = True
+
+    def get_status(self):
+        """담당 로봇의 현재 상태를 복사해 반환한다."""
+        with self.status_lock:
+            return self.status.copy()
 
     @staticmethod
     def _return_has_priority(status):
@@ -154,11 +186,10 @@ class RobotControlNode(Node):
             )
             return
         with self.status_lock:
-            status = self.status[self.namespace]
-            status['approach_state'] = state
-            if state != 'IDLE' and not self._return_has_priority(status):
-                status['state'] = state
-            self._touch(status)
+            self.status['approach_state'] = state
+            if state != 'IDLE' and not self._return_has_priority(self.status):
+                self.status['state'] = state
+            self._record_status_received_time()
 
     def _receive_shuttle_status(self, message):
         """셔틀·복귀 상태를 검사해 담당 AMR 상태에 저장한다."""
@@ -169,15 +200,17 @@ class RobotControlNode(Node):
             )
             return
         with self.status_lock:
-            status = self.status[self.namespace]
-            status['shuttle_state'] = message.data
-            if message.data != 'READY' or status['approach_state'] == 'IDLE':
-                status['state'] = message.data
-            self._touch(status)
+            self.status['shuttle_state'] = message.data
+            if (
+                message.data != 'READY'
+                or self.status['approach_state'] == 'IDLE'
+            ):
+                self.status['state'] = message.data
+            self._record_status_received_time()
 
     def _receive_battery_status(self, message):
         """담당 AMR의 배터리 잔량을 저장한다."""
-        self._set_status_value('battery', message.percentage)
+        self._update_status_value('battery', message.percentage)
 
     def _receive_pose(self, message):
         """담당 AMR의 map 위치와 yaw를 저장한다."""
@@ -194,22 +227,23 @@ class RobotControlNode(Node):
             ),
         )
         with self.status_lock:
-            status = self.status[self.namespace]
-            status.update(x=pose.position.x, y=pose.position.y, yaw=yaw)
-            self._touch(status)
+            self.status['x'] = pose.position.x
+            self.status['y'] = pose.position.y
+            self.status['yaw'] = yaw
+            self._record_status_received_time()
 
     def _receive_estop(self, message):
         """담당 AMR의 안전 정지 여부를 저장한다."""
-        self._set_status_value('estop', message.data)
+        self._update_status_value('estop', message.data)
 
     def _receive_worker_id(self, message):
         """담당 AMR이 인식한 작업자 ID를 저장한다."""
-        self._set_status_value('worker', message.data)
+        self._update_status_value('worker', message.data)
 
     def _receive_paired(self, message):
         """페어링이 해제되면 작업자 ID를 비운다."""
         if not message.data:
-            self._set_status_value('worker', '')
+            self._update_status_value('worker', '')
 
     def _receive_pair_state(self, message):
         """인지 노드의 페어링 판정 상태를 저장한다."""
@@ -219,23 +253,22 @@ class RobotControlNode(Node):
                 f'{message.data!r}'
             )
             return
-        self._set_status_value('pair_state', message.data)
+        self._update_status_value('pair_state', message.data)
 
     def _receive_mission(self, message):
         """담당 AMR에 배정된 미션 ID를 저장한다."""
-        self._set_status_value('mission', message.mission_id)
+        self._update_status_value('mission', message.mission_id)
 
-    def _set_status_value(self, key, value):
+    def _update_status_value(self, key, value):
         """담당 AMR의 단일 상태 값과 수신 시각을 갱신한다."""
         with self.status_lock:
-            status = self.status[self.namespace]
-            status[key] = value
-            self._touch(status)
+            self.status[key] = value
+            self._record_status_received_time()
 
     def _publish_status(self):
         """담당 AMR의 최신 상태를 FleetStatus로 1 Hz 발행한다."""
         with self.status_lock:
-            status = self.status[self.namespace].copy()
+            status = self.status.copy()
         message = FleetStatus()
         message.header.stamp = self.get_clock().now().to_msg()
         message.robot_ns = self.namespace
@@ -250,70 +283,4 @@ class RobotControlNode(Node):
         message.mission_id = status['mission']
         message.paired_worker = status['worker']
         message.estop = bool(status['estop'])
-        self.pub_status.publish(message)
-
-    def _status_snapshot(self):
-        """웹 UI에 담당 AMR의 최신 상태와 수신 경과 시간을 넘긴다."""
-        now = time.monotonic()
-        with self.status_lock:
-            copied = self.status[self.namespace].copy()
-        received = copied.pop('_received_monotonic', None)
-        if received is None:
-            copied['age_s'] = None
-            copied['stale'] = True
-        else:
-            age_s = max(0.0, now - received)
-            copied['age_s'] = round(age_s, 3)
-            copied['stale'] = age_s > self.status_stale_s
-        return {self.namespace: copied}
-
-    def _call(self, client, service_request, timeout_sec=2.0):
-        """Flask 스레드에서 ROS 서비스 결과를 유한 시간만 기다린다."""
-        if not client.wait_for_service(timeout_sec=1.0):
-            return None
-        future = client.call_async(service_request)
-        completed = threading.Event()
-        future.add_done_callback(lambda _: completed.set())
-        if not completed.wait(timeout_sec) or future.exception():
-            return None
-        return future.result()
-
-    def _request_mission(self, worker_id, bay):
-        """자재 요청을 fleet_manager에 전달한다."""
-        service_request = RequestMission.Request()
-        service_request.worker_id = worker_id
-        service_request.bay = bay
-        return self._call(self.cli_req, service_request)
-
-    def _request_command(self, command):
-        """작업 종료·복귀 명령을 fleet_manager에 전달한다."""
-        service_request = OperatorCommand.Request()
-        service_request.robot_ns = self.namespace
-        service_request.command = command
-        return self._call(self.cli_op, service_request)
-
-    def _publish_intervention(self, kind, note=''):
-        """운영자 개입을 ROS 시각과 함께 발행한다."""
-        message = Intervention()
-        message.header.stamp = self.get_clock().now().to_msg()
-        message.robot_ns = self.namespace
-        message.kind = kind
-        message.note = note
-        self.pub_int.publish(message)
-
-    def _request_manual_pair(self, worker_id):
-        """명시 페어링을 요청하고 성공한 개입만 기록한다."""
-        service_request = ManualPair.Request()
-        service_request.robot_ns = self.namespace
-        service_request.worker_id = worker_id
-        response = self._call(
-            self.cli_manual_pair,
-            service_request,
-            timeout_sec=self.manual_pair_timeout_s,
-        )
-        if response is None:
-            return False, 'fleet_manager 또는 인지 서비스 응답 없음'
-        if not response.accepted:
-            return False, response.reason or '인지 서비스 응답 없음'
-        self._publish_intervention('MANUAL_PAIR', worker_id)
-        return True, '명시 페어링 완료'
+        self.fleet_status_publisher.publish(message)

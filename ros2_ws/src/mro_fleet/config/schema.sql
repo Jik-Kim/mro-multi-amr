@@ -2,7 +2,6 @@
 CREATE TABLE IF NOT EXISTS workers (
   worker_id     TEXT PRIMARY KEY,      -- W1, W2
   outfit_class  TEXT NOT NULL,         -- worker_a | worker_b
-  robot_ns      TEXT,                  -- 배정 AMR
   registered_at REAL NOT NULL          -- ROS 시각(s)
 );
 CREATE TABLE IF NOT EXISTS missions (

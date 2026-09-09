@@ -1,4 +1,4 @@
-# Interfaces — 계약 v1.18 (2026-09-09)
+# Interfaces — 계약 v1.19 (2026-09-10)
 
 > v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
 > **v1.11 (9/7 저녁): 세마포어 이벤트 토픽 `/fleet/zone_event` 신설** — 대기·획득·반납·강제 회수를 기록해 K-06(교착 자동 해결률)을 센다 (I-030). `mro_interfaces` 는 바꾸지 않고 `std_msgs/String` 을 쓴다.
@@ -10,6 +10,7 @@
 > **v1.16 (9/8, PR #49): `approach/status` 의 접근 두 값에 뜻을 붙인다.** 값 목록은 그대로다. `APPROACH_1` = 중간 목표 · `APPROACH_2` = 최종 목표이며, **기본값에서는 후자가 발행되지 않는다** — 값이 안 보이는 것이 고장이 아님을 적어 두지 않으면 나중에 그것을 찾느라 시간을 쓴다.
 > **v1.17 (9/9, PR #67): `ARRIVED` 도 같은 이유로 발행되지 않는다.** `approach_final` 이 참일 때만 내므로 v1.16 의 `APPROACH_2` 와 **하나의 같은 사실**이다 — 한쪽만 적어두면 다음 사람이 `ARRIVED` 가 안 오는 것을 고장으로 보고 찾는다. **값 목록은 8개 그대로다.** 9/9 실주행에서 확인했다.
 > **v1.18 (9/9, PM 승인): AMR 상태 소유자를 로봇별 `RobotControlNode(namespace)`로 이관.** 각 인스턴스가 셔틀·접근·배터리·위치·E-stop·페어링을 집계해 `/fleet/status`를 1 Hz로 발행한다. `FleetStatus`에 `approach_state`·`shuttle_state`·`pair_state`를 추가했고, `fleet_manager`는 요약 토픽을 받아 미션 전이·DB 기록만 한다.
+> **v1.19 (9/10): 작업자 등록과 AMR 배정 시점을 분리.** `WorkerDescriptor` 수신 시에는 작업자만 DB에 등록하고, UI의 `RequestMission` 요청 시 `FleetStatus`를 받은 로봇 중 미션·E-stop이 없고 배터리 기준을 충족한 AMR을 배정한다. 배정 결과의 단일 저장 위치는 `missions.robot_ns`이다. 이 변경은 BRD v3.5 S1·S2의 등록 직후 고정 배정과 다르므로 차기 BRD·SDD에서 동기화해야 한다.
 >
 > 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더했고, v1.14 는 하나를 갈고 하나의 뜻을 바꿨으며, v1.15 는 기존 서비스 형식의 관제 내부 경로 하나를 명시했다.
 
@@ -85,14 +86,14 @@
 
 | 토픽 | 송신 | 수신 | 타입 | 비고 |
 |---|---|---|---|---|
-| `/webcam1/worker_descriptor` | webcam_register | fleet_manager, amr_detection, webcam_hint | WorkerDescriptor | S1 등록 ≤ 10 s |
+| `/webcam1/worker_descriptor` | webcam_register | fleet_manager, amr_detection, webcam_hint | WorkerDescriptor | S1 등록 ≤ 10 s. `robot_ns` 는 현재 빈 값이며 AMR 배정은 `RequestMission` 수락 시 확정 |
 | `/webcam2/target_hint` | webcam_hint | follow_target, kpi_logger | TargetHint | E-1. **10 Hz** 발행, 유효 2 s. **BEST_EFFORT** — 구독자도 sensor_data QoS 로 잡아야 받는다 |
 | `/webcam2/image_raw/compressed` | webcam_hint | (뷰어·영상 판독 기록) | CompressedImage | **jpeg 80, 10 Hz** (`image_publish_hz`). raw `Image` 는 발행하지 않는다 — 다른 PC 에서 구독하면 Wi-Fi 를 막는다 (NR-03). 안전 판단 금지, 세션 판정 후 폐기 (R-10). PR #14 |
 | `/fleet/mission` | fleet_manager | kpi_logger, UI | Mission | 상태 전이마다 |
 | `/fleet/status` | 로봇별 RobotControlNode | fleet_manager, control_ui, kpi_logger | FleetStatus | 1 Hz. AMR 상태의 단일 집계 경로 |
 | `/fleet/intervention` | control_ui | kpi_logger, fleet_manager | Intervention | 운영자 버튼 |
 | `/fleet/zone_event` | zone_semaphore | kpi_logger, fleet_manager | String | **v1.11 (I-030).** `"<zone_id> <robot_ns> <REJECT\|GRANT\|RELEASE\|RECLAIM>"`. K-06 원천 — 3절 이벤트 규칙 |
-| `mission/assigned` | fleet_manager | shuttle_mission, **amr_detection** | Mission | **S4 트리거.** 옛 `webcam/detected` 는 쓰지 않는다. **v1.14 — `amr_detection` 도 받는다** (PR #45): 이 로봇이 누구를 맡았는지는 여기서만 안다. `WorkerDescriptor.robot_ns` 로는 알 수 없다 — `fleet_manager` 가 그 칸을 채우지 않는다 |
+| `mission/assigned` | fleet_manager | shuttle_mission, **amr_detection**, RobotControlNode | Mission | **S4 트리거.** `RequestMission` 시점에 가용 AMR을 선택하고 `worker_id`·`robot_ns`·`bay`를 확정한다. `amr_detection`은 `worker_id`로 미리 받은 외형 서술자를 선택한다 |
 | `mission/finish` | fleet_manager | return_dock, **follow_target**, amr_detection | Bool | S9. follow_target 은 **즉시 페어링 해제·추종 중단**(≤ 1 s), return_dock 은 복귀 시작. **amr_detection 은 명시 페어링을 해제한다** (v1.12, 10절) |
 | `shuttle/status` | shuttle_mission, return_dock | RobotControlNode, kpi_logger | String | READY / SHUTTLE / AT_BAY / WAITING / RETURNING / DOCK_WAIT / DOCKING / DOCKED / FAILED |
 | `shuttle/arrived` | shuttle_mission | follow_target | Bool | 대기공간 도착 (구 `goto_goal/arrived`) |
@@ -123,7 +124,7 @@
 | `arena.yaml` | 베이 waypoint·ArUco ID, 대기공간, `dock_zone`(pose·approach·holding), `passages`, `semaphore_zones` 폴리곤, `homography_marks`, `loc_check_marker`. **데이터 yaml 이라 ROS 파라미터가 아니다** — 런치가 경로만 넘기고 노드가 직접 읽는다. `9/9` 읽히지 않던 `bay_dwell_s`·`t_lim_s`·`t_ret_s`·`dock_retry` 삭제 (단일 출처는 `common.yaml`) | 박병후·이시율 |
 | `common.yaml` `9/8 신설` | 전 로봇 공통값 — `follow_standoff_m` 0.5, `min_separation_m` 0.3, `v_max` 0.3, `bay_dwell_s` 5, **`t_lim_s` 120(로봇·관제 공유 계약값 — `fleet_pc.launch.py` 도 이 파일을 넘긴다)**, `t_ret_s` 180, `dock_retry` 2, 셔틀·베이정렬 상수, `9/9` **추종 9개** (`lost_s`·`standby_s`·`approach_skip_m`·`hint_valid_s`·재탐지 넷·`search_step_deg`). `hint_valid_s` 는 **여기 하나뿐이다** — 유효기간은 받는 쪽만 판단한다 (I-047) | 박병후·이시율 |
 | `robot3.yaml` / `robot8.yaml` | **로봇마다 다른 값만** — `robot_ns`, `dock_pose`, `depth_k`. 로봇 추가 = 이 파일 하나 복사 | 박병후·이시율 |
-| `fleet.yaml` `9/8 신설` | **관제 전용 값만** — `robot_namespaces`(로봇 명단의 단일 출처), `battery_min`, `worker_assignment_window_s`. `t_lim_s` 는 `9/9` 여기서 빼고 `common.yaml` 로 통일했다 — 로봇과 관제가 갈라지면 로봇은 계속 가는데 관제만 `TLIM_EXCEEDED` 를 찍는다 | 김민준 |
+| `fleet.yaml` `9/8 신설` | **관제 전용 값만** — `robot_namespaces`(로봇 명단의 단일 출처), `battery_min`. `t_lim_s` 는 `9/9` 여기서 빼고 `common.yaml` 로 통일했다 — 로봇과 관제가 갈라지면 로봇은 계속 가는데 관제만 `TLIM_EXCEEDED` 를 찍는다 | 김민준 |
 | `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m`, `reid_threshold`(단일 출처) | 정정인·민범진 |
 | ~~`mro_navigation/config/navigation.yaml`~~ | **삭제됨 9/9** — 어떤 launch 도 안 넘기는 죽은 파일이었고, PR #56 이전 값이 남아 있어 되살리면 재탐지가 느려진다. 값은 `common.yaml` 이 갖는다 | — |
 | `mro_webcam/config/WebCam1/homography_cam1.json` | **쓰지 않는다 (9/6 결정)** — 웹캠1 은 작업자 출발(등록)만 인식하고 map 좌표를 내지 않는다. 파일은 Kn1_mini 잔재이며 `webcam_register` 가 좌표를 쓰면 안 된다 | 한세교·김학민 |

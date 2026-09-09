@@ -78,56 +78,53 @@ def load_dock_landmarks(yaml_path):
 class MonitorWebApp:
     """관제 화면과 HTTP API를 제공하는 웹 파트.
 
-    ROS 통신은 직접 처리하지 않고 ``RobotControlNode``에 요청한다.
+    로봇 상태는 ``RobotStateManager``에서 읽고 Fleet 요청은
+    ``FleetClient``로 전달한다.
     """
 
-    def __init__(self, robot_controls, template_folder):
+    def __init__(self, robot_state_manager, fleet_client, template_folder):
         """로봇별 통신 노드와 Flask 템플릿 경로를 받는다."""
-        self.robot_controls = {
-            control.namespace: control for control in robot_controls
-        }
-        self.primary_control = next(iter(self.robot_controls.values()))
+        self.robot_state_manager = robot_state_manager
+        self.fleet_client = fleet_client
+        primary_control = next(iter(robot_state_manager.robots.values()))
         self.map_config = None
         self.map_error = ''
         self.dock_landmarks = []
-        self._load_map_resources()
+        self._load_map_resources(primary_control)
         self.app = Flask(__name__, template_folder=template_folder)
         self._register_routes()
 
-    def _load_map_resources(self):
+    def _load_map_resources(self, primary_control):
         """대시보드에 표시할 맵과 도크 기준점을 읽는다."""
         try:
             self.map_config = load_map_config(
-                self.primary_control.map_yaml_path
+                primary_control.map_yaml_path
             )
         except (
             KeyError, OSError, TypeError, ValueError, yaml.YAMLError
         ) as error:
             self.map_error = str(error)
-            self.primary_control.get_logger().warn(
+            primary_control.get_logger().warn(
                 f'웹 맵을 불러오지 못함: {error}'
             )
         try:
             self.dock_landmarks = load_dock_landmarks(
-                self.primary_control.arena_yaml_path
+                primary_control.arena_yaml_path
             )
         except (
             KeyError, OSError, TypeError, ValueError, yaml.YAMLError
         ) as error:
-            self.primary_control.get_logger().warn(
+            primary_control.get_logger().warn(
                 f'도크 기준 좌표를 불러오지 못함: {error}'
             )
 
     def _robot_status_snapshot(self):
         """로봇별 통신 노드의 상태를 하나의 화면 응답으로 합친다."""
-        snapshot = {}
-        for control in self.robot_controls.values():
-            snapshot.update(control._status_snapshot())
-        return snapshot
+        return self.robot_state_manager.get_all_robot_status()
 
     def _control_for(self, namespace):
         """요청 대상 로봇을 담당하는 ROS 통신 노드를 반환한다."""
-        return self.robot_controls.get(namespace)
+        return self.robot_state_manager.get_robot(namespace)
 
     def _register_routes(self):
         """브라우저 URL을 화면 기능별 메서드와 연결한다."""
@@ -160,7 +157,9 @@ class MonitorWebApp:
 
     def request_mission(self):
         """화면의 자재 요청을 ROS 서비스로 전달한다."""
-        response = self.primary_control._request_mission(
+        if not self.robot_state_manager.robots:
+            return jsonify(ok=False, mission_id='', message='등록된 로봇 없음')
+        response = self.fleet_client.request_mission(
             request.form['worker_id'], request.form['bay']
         )
         return jsonify(
@@ -172,11 +171,11 @@ class MonitorWebApp:
     def request_command(self):
         """화면의 작업 종료·복귀 명령을 ROS 서비스로 전달한다."""
         namespace = request.form['robot_ns']
+        command = request.form['command']
         control = self._control_for(namespace)
-        response = (
-            control._request_command(request.form['command'])
-            if control else None
-        )
+        if command != 'RETURN_ALL' and control is None:
+            return jsonify(ok=False, message='알 수 없는 로봇'), 404
+        response = self.fleet_client.return_immediately(namespace, command)
         return jsonify(
             ok=bool(response and response.ok),
             message=(response.message if response else '응답 없음'),
@@ -188,8 +187,8 @@ class MonitorWebApp:
         control = self._control_for(namespace)
         if control is None:
             return jsonify(ok=False, message='알 수 없는 로봇'), 404
-        control._publish_intervention(
-            request.form['kind'], request.form.get('note', '')
+        self.fleet_client.publish_intervention(
+            namespace, request.form['kind'], request.form.get('note', '')
         )
         return jsonify(ok=True)
 
@@ -199,8 +198,8 @@ class MonitorWebApp:
         control = self._control_for(namespace)
         if control is None:
             return jsonify(ok=False, message='알 수 없는 로봇'), 404
-        accepted, reason = control._request_manual_pair(
-            request.form.get('worker_id', '')
+        accepted, reason = self.fleet_client.request_manual_pair(
+            namespace, request.form.get('worker_id', '')
         )
         return jsonify(ok=accepted, message=reason)
 
