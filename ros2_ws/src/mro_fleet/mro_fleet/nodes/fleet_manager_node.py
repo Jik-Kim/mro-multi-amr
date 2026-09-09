@@ -1,10 +1,9 @@
-"""미션 생성·배정, 상태 집계, DB 기록, 종료 명령을 담당한다.
+"""미션 생성·배정, DB 기록, 종료 명령을 담당한다.
 
 서비스: /fleet/request_mission, /fleet/operator_command, /fleet/manual_pair
 구독: /webcam1/worker_descriptor, /fleet/intervention, /fleet/zone_event,
-      로봇별 상태·배터리·pose·estop·페어링 상태
-발행: /fleet/mission, 로봇별 mission/assigned·mission/finish,
       /fleet/status
+발행: /fleet/mission, 로봇별 mission/assigned·mission/finish,
 """
 import os
 import threading
