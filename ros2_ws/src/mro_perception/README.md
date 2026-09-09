@@ -70,6 +70,7 @@ ros2 run rqt_image_view rqt_image_view /robot3/target/image/compressed   # 오�
 | `tf_wait_s` | 0.0 | `to_map` 이 TF 를 기다리는 시간 | **항상 0.** 1.0 은 9/8 렉 재현용 (7절) |
 | `gate_fail_s` | 30.0 | 보이는데 게이트 미달이 이 시간 이어지면 `pair_state=GATE_FAIL` (FR-13) | 계약 10.1 의 30 s. 시연 때만 5 |
 | `manual_pair_max_m` | 1.0 | 명시 페어링을 받는 최대 거리 (FR-14) | — |
+| `target_stale_s` | 1.0 | 마지막으로 본 후보·거리를 "지금" 으로 치는 시간 | **렉으로 프레임이 늦으면 2~3.** 안 늘리면 폴백이 닫힌다 (I-045) |
 
 실행 중 바꾸기: `ros2 param set /robot3/amr_detection detect_conf 0.6` (다음 프레임부터는 안 먹는 값도 있다 — `sync_slop_s`·`show_window` 는 재시작).
 
