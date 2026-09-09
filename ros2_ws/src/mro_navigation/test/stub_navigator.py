@@ -63,6 +63,18 @@ class StubNavigator(Node):
         """도킹. 실물과 같이 is_docked 를 직접 바꾸지 않는다."""
         self.calls.append('dock')
 
+    def dock_send_goal(self):
+        self.dock()
+
+    def isDockComplete(self):
+        return True
+
+    def undock_send_goal(self):
+        self.undock()
+
+    def isUndockComplete(self):
+        return True
+
     def undock(self):
         """언독. **복귀·추종은 부르지 않아야 한다** (계약 2절 후진 금지) — 기록만 남긴다."""
         self.calls.append('undock')

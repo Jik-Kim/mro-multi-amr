@@ -107,11 +107,12 @@ def _setup(context, *_args, **_kwargs):
     else:
         actions.append(LogInfo(msg='[리그] 세마포어 꺼짐 — 셔틀이 단독 모드가 되어 판정 5(토큰 시점)를 못 한다'))
 
-    # 안전 감시 — 셔틀보다 먼저 떠 있어야 한다. estop 은 전이 시점에만 발행되기 때문이다.
-    #   파라미터가 없는 노드라 params 파일을 넘기지 않는다.
+    # 실행 중인 주행 노드 전부의 정지 확인이 있어야 SAFE_ROTATE를 허용한다.
     if use_wd:
         actions.append(Node(package='mro_navigation', executable='safety_watchdog_node',
                             name='safety_watchdog', namespace=ns, output='screen',
+                            parameters=[os.path.join(get_package_share_directory('mro_bringup'), 'params', 'common.yaml'),
+                                {'safety_participants': LaunchConfiguration('safety_participants').perform(context).split(',')}],
                             remappings=[('/tf', 'tf'), ('/tf_static', 'tf_static')]))
 
     # 실물 검출기와 주입은 같이 못 쓴다 — 같은 토픽에 둘이 발행하면 셔틀이 어느 값을 봤는지 모른다
@@ -165,5 +166,7 @@ def generate_launch_description():
                               description='true 면 aruco_detector_node 를 띄우고 주입을 끈다 (3단계)'),
         DeclareLaunchArgument('semaphore', default_value='true'),
         DeclareLaunchArgument('watchdog', default_value='true'),
+        DeclareLaunchArgument('safety_participants', default_value='shuttle_mission',
+            description='함께 실행하는 주행 노드 이름을 쉼표로 구분'),
         OpaqueFunction(function=_setup),
     ])

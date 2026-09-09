@@ -901,6 +901,8 @@
 
 ### I-049
 
+> **9/9 구현 후속:** 워치독 직접 회전·단일 속도 출력·액션 정지 확인·동일 worker_id의 새 관측으로 재개하는 수정안을 구현했다. 초기 시험값 0.25 rad/s · 최대 5 s · odom 누적 75°. 조기 clear면 즉시 정지한다. **실물 검증 전이므로 이슈는 열림 유지.** 토픽 계약 변경안과 실행 전제는 [ESTOP 복구](estop_recovery.md).
+
 **estop 이 걸리면 아무도 로봇을 회전시킬 수 없다 — 탈출 경로가 실제로는 없다**
 
 `mro_navigation` (`safety_watchdog_node.py` · `follow_target_node.py` · `return_dock_node.py`) · 심각도 **상** · 담당 주행 박병후·이시율 · 등록 2026-09-09 (이시율, 실주행)

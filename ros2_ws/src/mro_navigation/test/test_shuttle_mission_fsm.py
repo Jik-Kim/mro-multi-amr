@@ -122,6 +122,18 @@ class StubNavigator(Node):
         """도킹. 실물과 같이 is_docked 를 직접 바꾸지 않는다 (구독 콜백만 바꾼다)."""
         self.calls.append('dock')
 
+    def dock_send_goal(self):
+        self.dock()
+
+    def isDockComplete(self):
+        return True
+
+    def undock_send_goal(self):
+        self.undock()
+
+    def isUndockComplete(self):
+        return True
+
     def undock(self):
         """언독. 실물과 같이 is_docked 를 직접 바꾸지 않는다 (구독 콜백만 바꾼다)."""
         self.calls.append('undock')
@@ -830,6 +842,11 @@ def test_init_pose_docks_again_when_robot_left_the_dock(ros, monkeypatch):
         return real_spin(target, timeout_sec=timeout_sec)
 
     monkeypatch.setattr(rclpy, 'spin_once', spin_once)
+    def dock_complete():
+        node.navigator.deliver_dock_status(True)
+        return True
+
+    node.navigator.isDockComplete = dock_complete
     node.init_pose()
     assert 'dock' in node.navigator.calls                       # 먼저 도킹하고
     assert ('initpose', 0.019, -0.795) in node.navigator.calls  # 그 다음 초기자세

@@ -40,10 +40,23 @@
     stop_dist: 0.30           # 전방 부채꼴 안 이 거리보다 가까우면 estop. BRD 3.2 최소 이격 하한
     clear_dist: 0.38          # 해제 거리. 0.45 는 P1 반폭 0.395 보다 커서 통로 안에서는 어느 방향으로
                               #   돌아도 해제가 안 됐다 (I-036). 히스테리시스 8 cm = RPLIDAR A1 오차의 4배
-    estop_yaw_rate_max: 0.4   # estop 중 통과시킬 각속도 상한 [rad/s]. **병진은 전부 0** — 전진은 장애물
-                              #   쪽이라 막고 후진은 애초에 안 쓴다 (계약 2절). 제자리 회전이 쓸고 가는
-                              #   폭은 footprint 내접 0.175 / 외접 0.189 라 1.4 cm 뿐이고 유일한 탈출 수단이다
-    nav_cmd_valid_s: 0.5      # Nav2 명령(cmd_vel_smoothed) 신선도. 넘으면 회전도 0 — 돌릴 근거가 없다
+    # I-049 초기 실주행값. 해제 5프레임이면 조기 종료, 시간·실측 각도 중 먼저 닿으면 정지.
+    safe_rotate_rate: 0.25
+    safe_rotate_timeout_s: 5.0
+    safe_rotate_max_angle_deg: 75.0
+    scan_valid_s: 1.0         # 수신 공백이 이만큼이면 '스캔 없음' 으로 정지. 9/10 실주행에서 WiFi/DDS 공백이
+                              #   1.46·1.05·0.73 s 로 세 번 있었다 (정상 간격 134 ms). 0.5 는 셋 다 estop 을
+                              #   걸어 셔틀이 목표를 취소·재전송했다. 1.0 이면 0.3 m/s 로 최대 0.30 m 를 스캔
+                              #   없이 가는데, 그 뒤에 Nav2 collision_monitor 와 Create3 범퍼가 있다
+    odom_valid_s: 0.5
+    # 정지 판정 초기 시험값 — odom 노이즈와 제동 지연을 실물에서 검증
+    stopped_linear_mps: 0.01
+    stopped_angular_rps: 0.02
+    stopped_hold_s: 0.3
+    pause_timeout_s: 2.0
+    rotation_clearance_m: 0.21  # footprint 외접 0.189 m + 여유. LiDAR 기준 실물 검증 필요
+    nav_cmd_valid_s: 0.5
+    motion_cmd_topic: cmd_vel_search
     nav2_poll_s: 5.0          # bt_navigator 가 active 가 될 때까지 폴링 간격
     nav2_poll_max: 3          # 이 횟수 안에 active 가 아니면 T_lim 을 태우지 않고 곧장 포기 (I-035, PR #44). 기본값에서 약 10 s
     dock_status_wait_s: 5.0   # dock_status 를 기다리는 상한. 예전에는 무한 대기라 T_lim 조차 안 돌아 FAILED 도 안 나왔다 (가이드 D-2)

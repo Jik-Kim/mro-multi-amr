@@ -325,22 +325,62 @@ def test_finish_returns_to_idle_not_failed(ros):
     node.destroy_node()
 
 
-def test_estop_holds_state_and_resumes(ros):
-    """비상정지(estop) 중에는 목표를 취소하고 상태를 유지한다. 해제되면 이어간다 (실패가 아니다)."""
+def test_estop_holds_identity_and_requires_fresh_same_worker(ros):
+    from geometry_msgs.msg import PointStamped
+    from std_msgs.msg import String
     node = make_node()
+    node.worker_cb(String(data='worker_a'))
     reach_following(node)
     before = node.state
-
+    old_stamp = node.get_clock().now().to_msg()
     node.estop_cb(_bool(True))
+    node.worker_cb(String(data=''))
     node.step()
     node.step()
     assert node.state == before
-    assert node.estop_cancelled is True, 'goal 취소는 진입 시 한 번만'
-
+    assert node.worker_id == 'worker_a'
+    assert node.estop_cancelled
     node.estop_cb(_bool(False))
-    see(node)
     node.step()
+    assert node.state == 'SEARCHING'
+    assert node.follow_est is None and node.follow_goal is None
+
+    point = PointStamped()
+    point.header.frame_id = 'map'
+    point.point.x = 0.8
+    node.worker_cb(String(data='worker_b'))
+    node.paired_cb(_bool(True))
+    point.header.stamp = node.get_clock().now().to_msg()
+    node.point_cb(point)
+    assert not node.gate_ok() and node.latest is None
+    assert node.worker_id == 'worker_a'
+
+    node.worker_cb(String(data='worker_a'))
+    node.paired_cb(_bool(True))
+    point.header.stamp = old_stamp
+    node.point_cb(point)
+    assert node.latest is None, '이전 좌표 재사용 금지'
+    for _ in range(2):
+        point.header.stamp = node.get_clock().now().to_msg()
+        node.point_cb(point)
+        assert node.latest is not None
+        node.accept_after = 0
+        node.recent_t = 0  # 실제 좌표 콜백을 유지하면서 일관성 검사 간격만 생략
+        node.step()
     assert node.state == 'FOLLOWING'
+    assert node.worker_id == 'worker_a'
+    assert node.last_target == (0.8, 0.0)
+    point.point.x = 1.2
+    point.header.stamp = node.get_clock().now().to_msg()
+    node.point_cb(point)
+    node.follow_goal_t = 0
+    node.step()
+    assert node.follow_est == (1.2, 0.0)
+    assert node.navigator.goals()[-1][1] == 0.7
+    node.estop_cb(_bool(True))
+    node.worker_cb(String(data='worker_b'))
+    node.step()
+    assert node.worker_id == 'worker_a', '반복 ESTOP에도 담당 유지'
     node.destroy_node()
 
 
@@ -911,4 +951,36 @@ def test_visible_covers_a_short_coordinate_gap(ros):
     node.step()
 
     assert node.state == 'FOLLOWING', f'1 초 끊긴 것으로 탐색에 들어가면 안 된다 (지금 {node.state})'
+    node.destroy_node()
+
+
+def test_estop_cancels_once_but_waits_for_terminal_result(ros):
+    node = make_node()
+    reach_following(node)
+    before = n_calls(node.navigator, 'cancel')
+    node.estop_cb(_bool(True))
+    node.navigator.isTaskComplete = lambda: False
+    for _ in range(3):
+        node.step()
+    assert n_calls(node.navigator, 'cancel') == before + 1
+    assert not node.motion_pause.ready
+    node.navigator.isTaskComplete = lambda: True
+    node.step()
+    assert node.motion_pause.ready
+    node.destroy_node()
+
+
+def test_only_explicit_finish_releases_recovery_identity(ros):
+    from std_msgs.msg import String
+    node = make_node()
+    node.worker_cb(String(data='worker_a'))
+    reach_following(node)
+    node.estop_cb(_bool(True))
+    node.worker_cb(String(data=''))
+    node.step()
+    assert node.worker_id == 'worker_a'
+    node.finish_cb(_bool(True))
+    node.step()
+    assert node.worker_id == '' and node.recovery_worker_id is None
+    assert node.state == 'IDLE'
     node.destroy_node()

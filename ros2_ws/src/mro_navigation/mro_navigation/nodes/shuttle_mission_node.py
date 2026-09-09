@@ -81,6 +81,8 @@ TODO([주행]): ① 파라미터 7개와 arena_yaml 경로는 PM 이 robotN.yaml
 """
 from collections import deque
 from dataclasses import dataclass
+from mro_navigation.nodes.motion_pause import MotionPause
+
 import math
 import os
 from statistics import median
@@ -286,6 +288,7 @@ class ShuttleMission(Node):
         self.aruco_poses = deque(maxlen=30)
         self.cam_tf = None       # (프레임 이름, base_link←카메라 변환) — 고정이라 한 번만 찾는다
         self.estop = False
+        self.motion_pause = MotionPause(self, 'shuttle_mission', MissionAbort)
         self.last_status = None
         self.token_held = False
 
@@ -479,17 +482,9 @@ class ShuttleMission(Node):
         tolerance = self.positive_parameter('arrival_xy_tolerance_m')
         self.positive_parameter('tf_pose_timeout_s')
         self.positive_parameter('tf_max_age_s')
-        if self.estop:
-            self.get_logger().warn(f'estop 중 — 해제까지 {label} 보류')
-            self.wait(lambda: not self.estop)        # 계약 4절: estop 동안 주행 명령 금지
         gx, gy = pose.pose.position.x, pose.pose.position.y
-        self.get_logger().info(f'{label} → ({gx:.2f}, {gy:.2f}) 이동 시작')
-        if not self.navigator.goToPose(pose):
-            raise MissionAbort(f'{label} 목표 거부됨')
-        self.wait(self.navigator.isTaskComplete)
-        result = self.navigator.getResult().name
-        if result != 'SUCCEEDED':
-            raise MissionAbort(f'{label} 이동 실패: {result}')
+        self.motion_pause.navigate(pose, label)
+        self.motion_pause.idle()
         completed = self.now()
         # SUCCEEDED 직전 캐시가 아닌 완료 이후 관측으로 검증한다. 목표 전송 시각으로
         # 조회하면 출발 위치를 읽게 되므로 쓰지 않는다. TF는 물리적 실측과 구분해 표시한다.
@@ -573,7 +568,8 @@ class ShuttleMission(Node):
             self.init_pose()
             self.wait_nav2()
             self.get_logger().info('언독')
-            self.navigator.undock()
+            if not self.motion_pause.dock_once(undock=True):
+                raise MissionAbort('언독 실패 또는 안전 중단 — 자동 반복하지 않는다')
             self.set_status('SHUTTLE')
 
             self.goto(self.pose_of(*bay['waypoint']), f'베이 {m.bay}')
@@ -688,7 +684,8 @@ class ShuttleMission(Node):
                 '로봇 전원·네임스페이스·디스커버리를 확인할 것')
         if not docked:
             self.get_logger().info('초기자세 설정을 위해 도킹')
-            self.navigator.dock()
+            if not self.motion_pause.dock_once():
+                raise MissionAbort('초기 도킹 실패 또는 안전 중단')
         self.send_initial_pose(v)
 
     def wait_nav2(self):
@@ -972,12 +969,22 @@ class ShuttleMission(Node):
 
     def run_behavior(self, start, label):
         """상대 이동 1건. goto() 와 같은 폴링 규약을 쓰되 좌표 검증은 마커가 대신한다."""
-        if self.estop:
-            self.get_logger().warn(f'estop 중 — 해제까지 {label} 보류')
-            self.wait(lambda: not self.estop)      # 계약 4절: estop 동안 주행 명령 금지
+        self.motion_pause.wait_clear()
+        self.motion_pause.ready = False
+        self.motion_pause.active = True
+        self.motion_pause.kind = 'navigation'
         if not start():
+            self.motion_pause.complete()
             raise MissionAbort(f'{label} 거부됨')
-        self.wait(self.navigator.isTaskComplete)
+        while True:
+            rclpy.spin_once(self, timeout_sec=TICK_S)
+            if self.estop:
+                self.motion_pause.cancel()
+                self.motion_pause.wait_clear()
+                raise MissionAbort(f'{label} 안전 중단 — 상대 이동은 자동 반복하지 않는다')
+            if self.wait(self.navigator.isTaskComplete, timeout=TICK_S):
+                break
+        self.motion_pause.complete()
         result = self.navigator.getResult().name
         if result != 'SUCCEEDED':
             raise MissionAbort(f'{label} 실패: {result}')
@@ -1175,6 +1182,7 @@ def main():
             node.get_logger().error(f'기동 초기화 실패 — 미션 경로에서 다시 시도한다: {e}')
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=TICK_S)
+            node.motion_pause.idle()
             if node.pending is not None and node.mission is None:
                 m, node.pending = node.pending, None
                 node.run_mission(m)      # 콜백 밖에서만 navigator 를 부른다
