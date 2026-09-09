@@ -15,16 +15,16 @@ Kn1_mini QUICKSTART 의 검증된 규칙을 그대로 가져왔다. 바뀐 것�
 echo $ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT
 ```
 
-기대값은 **PC 역할에 따라 다르다.** `ROS_DISCOVERY_SERVER` 는 세미콜론 위치가 서버 ID 다 (4번째 칸 = ID 3 = robot3, 5번째 칸 = 두 번째 로봇).
-> **9/8 robot4 → robot8 교체.** 아래 대안 ② 표의 서버 ID·IP 는 robot4 기준 값이다 — robot8 의 onboard 서버 ID 와 IP 를 확인해 채울 것 `[주행 확인 필요]`.
+기대값은 **PC 역할에 따라 다르다.** `ROS_DISCOVERY_SERVER` 는 세미콜론 위치가 서버 ID 다 (4번째 칸 = ID 3 = robot3, **9번째 칸 = ID 8 = robot8**).
+> **9/8 robot4 → robot8 교체.** robot8 의 onboard 서버는 **ID `8` · IP `192.168.108.108`** (9/9 주행 확인). 옛 robot4 는 ID 4 로 적혀 있었으나 그것은 「로봇 번호 = ID」 규칙으로 미리 채운 값이었고 IP 도 끝내 비어 있었다 — robot8 값은 RPi 에서 직접 읽었다.
 > 지금 쓰는 구성(PC-F 단일 서버, 9/5 확정)에서는 PC 가 로봇 onboard 서버를 보지 않으므로 당장 막히지는 않는다.
 
 | PC | `ROS_DOMAIN_ID` | `ROS_DISCOVERY_SERVER` | `ROS_SUPER_CLIENT` |
 |---|---|---|---|
 | **offboard 단일 서버 채택 시 (1순위)** | `3` | **모든 PC 동일:** `;192.168.108.41:11811` | nav2 터미널만 `False`, 웹캠 PC 는 `False` |
 | *(대안 ② 2서버 동시 접속 시)* robot3 제어 PC | `3` | `;;;192.168.108.103:11811;` | `True` (nav2 터미널만 `False`) |
-| *(대안 ②)* robot8 제어 PC | `3` | `;;;;<robot8 IP>:11811;` `[IP 확인 필요]` | `True` (nav2 터미널만 `False`) |
-| *(대안 ②)* 웹캠 PC ×2 · 관제 PC | `3` | `;;;192.168.108.103:11811;<robot8 IP>:11811;` | 웹캠 `False`, 관제 `True` |
+| *(대안 ②)* robot8 제어 PC | `3` | `;;;;;;;;192.168.108.108:11811;` | `True` (nav2 터미널만 `False`) |
+| *(대안 ②)* 웹캠 PC ×2 · 관제 PC | `3` | `;;;192.168.108.103:11811;;;;;192.168.108.108:11811;` | 웹캠 `False`, 관제 `True` |
 
 값이 다르면 `source /etc/turtlebot4_discovery/setup.bash`. 이 파일은 PC 마다 한 번 위 표대로 맞춘다 (`turtlebot4_setup` 의 discovery 설정 스크립트에 서버 ID·IP 를 넣거나 파일을 직접 편집).
 `ROS_SUPER_CLIENT` 는 setup.bash 가 대화형 터미널에서만 `True` 로 주므로, launch 를 스크립트로 띄우면 `False` 가 된다 — nav2 외 노드는 `True` 가 필요하니 주의.
@@ -55,7 +55,7 @@ export ROS_DISCOVERY_SERVER=";192.168.108.41:11811"
 | 항목 | 값 |
 |---|---|
 | Enabled | **True 그대로** (False 면 멀티캐스트로 바뀐다) |
-| Onboard Server - Port / Server ID | 11811 / **3 그대로** (두 번째 로봇은 그 로봇의 ID — robot8 값 `[주행 확인 필요]`) |
+| Onboard Server - Port / Server ID | 11811 / **3 그대로** (robot8 은 **8**) |
 | **Offboard Server - IP** | **`192.168.108.41`** ← 이것만 채운다. 비어 있으면 offboard 미사용 |
 | Offboard Server - Port / Server ID | 11811 / **1 그대로** |
 
@@ -75,7 +75,7 @@ Save → 재부팅. **되돌리기:** Offboard IP 를 비우고 Save 하면 원�
 |---|---|
 | `ROS_DOMAIN_ID` | **3** (모든 PC·로봇 공통) |
 | 로봇 네임스페이스 | **`/robot3`**, **`/robot8`** (robot4 하드웨어 이슈로 9/8 교체) |
-| Discovery Server | **PC-F `192.168.108.41:11811`, ID 1** (offboard 단일 서버, 9/5 확정). 로봇 onboard 서버(ID 3·4)는 남아 있으나 PC 는 보지 않는다 |
+| Discovery Server | **PC-F `192.168.108.41:11811`, ID 1** (offboard 단일 서버, 9/5 확정). 로봇 onboard 서버(ID 3·8)는 남아 있으나 PC 는 보지 않는다 |
 | nav2 launch 터미널 | `ROS_SUPER_CLIENT=False` |
 
 두 로봇이 같은 도메인·같은 Discovery Server 를 쓰므로 네임스페이스로만 구분된다. 노드는 상대 토픽 이름을 쓰고 launch 가 `namespace:=` 를 붙인다.

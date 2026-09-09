@@ -7,7 +7,7 @@
 100 ms 안에 끝나야 한다. 학습 PC 에서 잰 값은 배포 PC 와 무관하므로 **돌릴 PC 에서 직접 잰다.**
 
   PC-W1  webcam_register   model.track   PC-R3  amr_detection  model.predict
-  PC-W2  webcam_hint       model.track   PC-R4  amr_detection  model.predict
+  PC-W2  webcam_hint       model.track   PC-R8  amr_detection  model.predict
 
 왜 이렇게 재는가
   - **벽시계로 호출 전체를 감싼다.** ultralytics 의 `results.speed` 는 전처리·추론·후처리만 세고

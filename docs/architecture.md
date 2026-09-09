@@ -2,13 +2,13 @@
 
 ## 배치 (PC 5대 + 로봇 2대, PC-F 단일 offboard Discovery Server 경유)
 
-PC-W1(웹캠1) · PC-W2(웹캠2) · PC-F(관제) · PC-R3 · PC-R4. 웹캠 PC 분리는 9/5 결정.
-디스커버리는 PC-F `192.168.108.41:11811` (서버 ID 1) 한 곳만 쓴다. 로봇 온보드 서버(ID 3·4)는
+PC-W1(웹캠1) · PC-W2(웹캠2) · PC-F(관제) · PC-R3 · PC-R8. 웹캠 PC 분리는 9/5 결정.
+디스커버리는 PC-F `192.168.108.41:11811` (서버 ID 1) 한 곳만 쓴다. 로봇 온보드 서버(ID 3·8)는
 남겨두되 PC 의 `ROS_DISCOVERY_SERVER` 에 넣지 않는다 — 절차는 `docs/setup.md`, 그림은
 `docs/diagrams/step1_deployment.svg`.
 
 ```text
-[PC-W1] webcam_register(웹캠1) ─ /webcam1/worker_descriptor ─▶ [PC-F] fleet_manager ─ /robotN/mission/assigned ─▶ [PC-R3 / PC-R4]
+[PC-W1] webcam_register(웹캠1) ─ /webcam1/worker_descriptor ─▶ [PC-F] fleet_manager ─ /robotN/mission/assigned ─▶ [PC-R3 / PC-R8]
 [PC-W2] webcam_hint(웹캠2)     ─ /webcam2/target_hint ─────────────────────────────────────────────────────▶ follow_target
                                         [PC-F] kpi_logger ◀─ 상태·미션·개입 토픽
                                         [PC-F] zone_semaphore ◀─ /fleet/zone_token ─ shuttle_mission, return_dock
