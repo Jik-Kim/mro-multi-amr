@@ -79,13 +79,15 @@ class MonitorWebApp:
     """관제 화면과 HTTP API를 제공하는 웹 파트.
 
     로봇 상태는 ``RobotStateManager``에서 읽고 Fleet 요청은
-    ``FleetClient``로 전달한다.
+    ``FleetUICommands``로 전달한다.
     """
 
-    def __init__(self, robot_state_manager, fleet_client, template_folder):
+    def __init__(
+        self, robot_state_manager, fleet_ui_commands, template_folder
+    ):
         """로봇별 통신 노드와 Flask 템플릿 경로를 받는다."""
         self.robot_state_manager = robot_state_manager
-        self.fleet_client = fleet_client
+        self.fleet_ui_commands = fleet_ui_commands
         primary_control = next(iter(robot_state_manager.robots.values()))
         self.map_config = None
         self.map_error = ''
@@ -159,7 +161,7 @@ class MonitorWebApp:
         """화면의 자재 요청을 ROS 서비스로 전달한다."""
         if not self.robot_state_manager.robots:
             return jsonify(ok=False, mission_id='', message='등록된 로봇 없음')
-        response = self.fleet_client.request_mission(
+        response = self.fleet_ui_commands.request_mission(
             request.form['worker_id'], request.form['bay']
         )
         return jsonify(
@@ -175,7 +177,9 @@ class MonitorWebApp:
         control = self._control_for(namespace)
         if command != 'RETURN_ALL' and control is None:
             return jsonify(ok=False, message='알 수 없는 로봇'), 404
-        response = self.fleet_client.return_immediately(namespace, command)
+        response = self.fleet_ui_commands.return_immediately(
+            namespace, command
+        )
         return jsonify(
             ok=bool(response and response.ok),
             message=(response.message if response else '응답 없음'),
@@ -187,7 +191,7 @@ class MonitorWebApp:
         control = self._control_for(namespace)
         if control is None:
             return jsonify(ok=False, message='알 수 없는 로봇'), 404
-        self.fleet_client.publish_intervention(
+        self.fleet_ui_commands.publish_intervention(
             namespace, request.form['kind'], request.form.get('note', '')
         )
         return jsonify(ok=True)
@@ -198,7 +202,7 @@ class MonitorWebApp:
         control = self._control_for(namespace)
         if control is None:
             return jsonify(ok=False, message='알 수 없는 로봇'), 404
-        accepted, reason = self.fleet_client.request_manual_pair(
+        accepted, reason = self.fleet_ui_commands.request_manual_pair(
             namespace, request.form.get('worker_id', '')
         )
         return jsonify(ok=accepted, message=reason)

@@ -22,7 +22,7 @@ from mro_fleet.nodes import robot_control_node
 from mro_fleet.nodes.MonitorWebApp import (
     MonitorWebApp, load_dock_landmarks, load_map_config,
 )
-from mro_fleet.nodes.fleet_client import FleetClient
+from mro_fleet.nodes.fleet_client import FleetUICommands
 from mro_fleet.nodes.robot_control_node import RobotStatus
 from mro_fleet.nodes.robot_state_manager import RobotStateManager
 
@@ -277,10 +277,10 @@ def test_accepted_manual_pair_records_one_intervention():
         ),
     )
     fake.publish_intervention = lambda namespace, kind, note='': (
-        FleetClient.publish_intervention(fake, namespace, kind, note)
+        FleetUICommands.publish_intervention(fake, namespace, kind, note)
     )
 
-    accepted, message = FleetClient.request_manual_pair(
+    accepted, message = FleetUICommands.request_manual_pair(
         fake, '/robot3', 'W1'
     )
 
@@ -307,7 +307,7 @@ def test_rejected_manual_pair_does_not_record_intervention():
         ),
     )
 
-    accepted, message = FleetClient.request_manual_pair(
+    accepted, message = FleetUICommands.request_manual_pair(
         fake, '/robot8', 'W2'
     )
 
@@ -327,7 +327,7 @@ def test_missing_manual_pair_response_does_not_report_success():
         _call_service=lambda _client, _request, timeout_sec: None,
     )
 
-    accepted, message = FleetClient.request_manual_pair(
+    accepted, message = FleetUICommands.request_manual_pair(
         fake, '/robot3', 'W1'
     )
 
