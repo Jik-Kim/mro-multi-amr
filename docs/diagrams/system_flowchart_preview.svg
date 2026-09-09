@@ -2036,17 +2036,25 @@
 <rect x="2224.2" y="5242.7" width="209.7" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
 <text x="2329.0" y="5255.7" font-size="10" fill="#1F5FBF" text-anchor="middle">/webcam2/target_hint · TargetHint</text>
 <text x="2329.0" y="5268.7" font-size="10" fill="#1F5FBF" text-anchor="middle">10 Hz · BEST_EFFORT · 유효 2초</text>
-<path d="M2744.0,5364.5 L2714.0,5365.0 L2714.0,4875.0 L2320.0,4875.0 L2320.0,4859.0 L2344.0,4859.0 L2344.0,4565.0 L2374.0,4565.0" fill="none" stroke="#D97706" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#m3)"/>
-<rect x="2230.3" y="4897.0" width="194.8" height="34.0" fill="#ffffff" stroke="#D97706" stroke-width="1" rx="2"/>
-<text x="2327.7" y="4910.0" font-size="10" fill="#D97706" text-anchor="middle">/fleet/request_mission · 서비스</text>
-<text x="2327.7" y="4923.0" font-size="10" fill="#D97706" text-anchor="middle">자재 요청</text>
-<path d="M2744.0,5433.5 L2714.0,5434.0 L2714.0,4875.0 L2311.0,4875.0 L2311.0,4859.0 L3084.0,4859.0 L3084.0,4565.0 L3114.0,4565.0" fill="none" stroke="#D97706" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#m3)"/>
-<rect x="2156.8" y="4821.0" width="323.4" height="34.0" fill="#ffffff" stroke="#D97706" stroke-width="1" rx="2"/>
-<text x="2318.5" y="4834.0" font-size="10" fill="#D97706" text-anchor="middle">/fleet/operator_command · /fleet/manual_pair · 서비스</text>
-<text x="2318.5" y="4847.0" font-size="10" fill="#D97706" text-anchor="middle">작업 종료 · 짝 지정</text>
+<path d="M2374.0,4356.5 L2344.0,4356.0 L2344.0,4859.0 L2320.0,4859.0 L2320.0,4875.0 L2714.0,4875.0 L2714.0,5222.0 L2744.0,5221.5" fill="none" stroke="#0E7C7B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="2198.4" y="4867.0" width="291.7" height="34.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
+<text x="2344.2" y="4880.0" font-size="10" fill="#0E7C7B" text-anchor="middle">/fleet/status · FleetStatus</text>
+<text x="2344.2" y="4893.0" font-size="10" fill="#0E7C7B" text-anchor="middle">초당 1번 · 상태 · 배터리 · 위치 · 미션 · 짝 · 비상정지</text>
+<path d="M2374.0,4356.5 L2344.0,4356.0 L2344.0,4859.0 L2311.0,4859.0 L2311.0,6884.0 L2854.0,6884.0 L2854.0,7026.0 L2884.0,7026.0" fill="none" stroke="#0E7C7B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="2224.4" y="5888.0" width="173.1" height="34.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
+<text x="2311.0" y="5901.0" font-size="10" fill="#0E7C7B" text-anchor="middle">/fleet/status · FleetStatus</text>
+<text x="2311.0" y="5914.0" font-size="10" fill="#0E7C7B" text-anchor="middle">채점 원천값으로 그대로 적는다</text>
+<path d="M2744.0,5364.5 L2714.0,5365.0 L2714.0,4875.0 L2338.0,4875.0 L2338.0,4859.0 L2344.0,4859.0 L2344.0,4565.0 L2374.0,4565.0" fill="none" stroke="#D97706" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#m3)"/>
+<rect x="2246.6" y="4940.3" width="194.8" height="34.0" fill="#ffffff" stroke="#D97706" stroke-width="1" rx="2"/>
+<text x="2344.0" y="4953.3" font-size="10" fill="#D97706" text-anchor="middle">/fleet/request_mission · 서비스</text>
+<text x="2344.0" y="4966.3" font-size="10" fill="#D97706" text-anchor="middle">자재 요청</text>
+<path d="M2744.0,5433.5 L2714.0,5434.0 L2714.0,4875.0 L2329.0,4875.0 L2329.0,4859.0 L3084.0,4859.0 L3084.0,4565.0 L3114.0,4565.0" fill="none" stroke="#D97706" stroke-width="1.6" stroke-dasharray="6 4" marker-end="url(#m3)"/>
+<rect x="2174.8" y="4791.0" width="323.4" height="34.0" fill="#ffffff" stroke="#D97706" stroke-width="1" rx="2"/>
+<text x="2336.5" y="4804.0" font-size="10" fill="#D97706" text-anchor="middle">/fleet/operator_command · /fleet/manual_pair · 서비스</text>
+<text x="2336.5" y="4817.0" font-size="10" fill="#D97706" text-anchor="middle">작업 종료 · 짝 지정</text>
 <path d="M2374.0,6532.5 L2344.0,6533.0 L2344.0,5700.0 L2126.0,5700.0 L2126.0,5885.0" fill="none" stroke="#0E7C7B" stroke-width="1.8" marker-end="url(#m0)"/>
-<rect x="2042.5" y="5785.2" width="167.0" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
-<text x="2126.0" y="5798.2" font-size="10" fill="#0E7C7B" text-anchor="middle">/fleet/zone_event · String</text>
+<rect x="2042.5" y="5828.0" width="167.0" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
+<text x="2126.0" y="5841.0" font-size="10" fill="#0E7C7B" text-anchor="middle">/fleet/zone_event · String</text>
 <path d="M2126.0,5869.0 L2126.0,4867.0 L2344.0,4867.0 L2344.0,4165.0 L2374.0,4165.5" fill="none" stroke="#0E7C7B" stroke-width="1.6" marker-end="url(#m0)"/>
 <rect x="2046.2" y="5386.6" width="159.5" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
 <text x="2126.0" y="5399.6" font-size="10" fill="#0E7C7B" text-anchor="middle">교착 사건으로 기록에 남긴다</text>
@@ -2105,8 +2113,8 @@
 <text x="1952.0" y="3877.0" font-size="10" fill="#0E7C7B" text-anchor="middle">/robot3/approach/status · String</text>
 <text x="1952.0" y="3890.0" font-size="10" fill="#0E7C7B" text-anchor="middle">IDLE·SEARCHING·APPROACH·ARRIVED·FOLLOWING·STANDBY·FAILED</text>
 <path d="M488.0,4480.5 L458.0,4481.0 L458.0,4875.0 L2002.0,4875.0 L1994.0,4875.0 L1994.0,5198.0" fill="none" stroke="#0E7C7B" stroke-width="1.8" marker-end="url(#m0)"/>
-<rect x="1895.2" y="5000.5" width="197.5" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
-<text x="1994.0" y="5013.5" font-size="10" fill="#0E7C7B" text-anchor="middle">/robot3/shuttle/status · String</text>
+<rect x="1895.2" y="5006.5" width="197.5" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
+<text x="1994.0" y="5019.5" font-size="10" fill="#0E7C7B" text-anchor="middle">/robot3/shuttle/status · String</text>
 <path d="M488.0,6574.5 L449.0,6575.0 L449.0,6344.0 L2002.0,6344.0 L2002.0,5206.0" fill="none" stroke="#0E7C7B" stroke-width="1.8" marker-end="url(#m0)"/>
 <path d="M2002.0,5190.0 L2002.0,4875.0 L2344.0,4875.0 L2344.0,4165.0 L2374.0,4165.5" fill="none" stroke="#0E7C7B" stroke-width="1.6" marker-end="url(#m0)"/>
 <rect x="1839.5" y="5186.4" width="325.1" height="21.0" fill="#ffffff" stroke="#0E7C7B" stroke-width="1" rx="2"/>
@@ -2131,8 +2139,8 @@
 <rect x="2087.9" y="3238.9" width="180.2" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="2178.0" y="3251.9" font-size="10" fill="#55606B" text-anchor="middle">컬러·거리를 한 쌍으로 묶어 쓴다</text>
 <path d="M2170.0,4740.0 L2178.0,4740.0 L2178.0,4877.0 L449.0,4877.0 L449.0,5205.0 L488.0,5204.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="2079.7" y="4758.8" width="196.7" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="2178.0" y="4771.8" font-size="10" fill="#55606B" text-anchor="middle">같은 카메라를 아르코 검출도 읽는다</text>
+<rect x="2079.7" y="4729.8" width="196.7" height="21.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="2178.0" y="4742.8" font-size="10" fill="#55606B" text-anchor="middle">같은 카메라를 아르코 검출도 읽는다</text>
 <path d="M2884.0,8072.0 L2854.0,8072.0 L2854.0,8292.0 L2229.0,8292.0 L2229.0,8730.0 L88.0,8730.0 L88.0,9029.0 L118.0,9028.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
 <rect x="2162.7" y="8651.5" width="132.6" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="2229.0" y="8664.5" font-size="10" fill="#55606B" text-anchor="middle">scan · LaserScan</text>
@@ -2141,12 +2149,12 @@
 <rect x="2164.4" y="6411.0" width="179.2" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="2254.0" y="6424.0" font-size="10" fill="#55606B" text-anchor="middle">battery_state · BatteryState</text>
 <text x="2254.0" y="6437.0" font-size="10" fill="#55606B" text-anchor="middle">남은 배터리</text>
-<path d="M488.0,3825.5 L458.0,3826.0 L458.0,4875.0 L82.0,4875.0 L82.0,7536.0 L598.0,7536.0 L598.0,7846.0 L628.0,7846.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="82.0" y="6207.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">처음 위치 — 자기 도크 좌표</text>
-<path d="M628.0,7930.0 L598.0,7930.0 L598.0,8059.0 L73.0,8059.0 L73.0,8075.0 L598.0,8075.0 L598.0,8414.0 L628.0,8414.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="-11.0" y="8058.0" width="216.0" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="97.0" y="8071.0" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치 · 지도 기준 좌표 변환</text>
-<text x="97.0" y="8084.0" font-size="10" fill="#55606B" text-anchor="middle">길찾기가 시작할 때 이것을 요구한다</text>
+<path d="M488.0,3825.5 L458.0,3826.0 L458.0,4875.0 L64.0,4875.0 L64.0,7536.0 L598.0,7536.0 L598.0,7846.0 L628.0,7846.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="64.0" y="6207.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">처음 위치 — 자기 도크 좌표</text>
+<path d="M628.0,7930.0 L598.0,7930.0 L598.0,8059.0 L55.0,8059.0 L55.0,8075.0 L598.0,8075.0 L598.0,8414.0 L628.0,8414.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="-29.0" y="8058.0" width="216.0" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="79.0" y="8071.0" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치 · 지도 기준 좌표 변환</text>
+<text x="79.0" y="8084.0" font-size="10" fill="#55606B" text-anchor="middle">길찾기가 시작할 때 이것을 요구한다</text>
 <path d="M2884.0,8072.0 L2854.0,8072.0 L2854.0,7765.0 L2178.0,7765.0 L2178.0,8059.0 L598.0,8059.0 L598.0,7846.0 L628.0,7846.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
 <rect x="2098.2" y="7899.5" width="159.5" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="2178.0" y="7912.5" font-size="10" fill="#55606B" text-anchor="middle">라이다 스캔 · 바퀴가 돈 양</text>
@@ -2155,16 +2163,16 @@
 <rect x="1835.5" y="6081.7" width="282.9" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="1977.0" y="6094.7" font-size="10" fill="#55606B" text-anchor="middle">/robot3/amcl_pose · PoseWithCovarianceStamped</text>
 <text x="1977.0" y="6107.7" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치</text>
-<path d="M488.0,4480.5 L458.0,4481.0 L458.0,4875.0 L64.0,4875.0 L64.0,8075.0 L598.0,8075.0 L598.0,8414.0 L628.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="64.0" y="6463.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M258.0,2842.5 L228.0,2842.0 L228.0,3460.0 L55.0,3460.0 L55.0,8075.0 L598.0,8075.0 L598.0,8414.0 L628.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="55.0" y="5767.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M488.0,6574.5 L458.0,6575.0 L458.0,7520.0 L82.0,7520.0 L82.0,8075.0 L598.0,8075.0 L598.0,8414.0 L628.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="82.0" y="7796.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M628.0,8527.0 L598.0,8527.0 L598.0,8714.0 L73.0,8714.0 L73.0,8730.0 L88.0,8730.0 L88.0,9601.0 L118.0,9601.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="0.9" y="8722.2" width="174.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="88.0" y="8735.2" font-size="10" fill="#55606B" text-anchor="middle">의도한 바퀴 속도</text>
-<text x="88.0" y="8748.2" font-size="10" fill="#55606B" text-anchor="middle">정지 중에는 회전분만 빌려 쓴다</text>
+<path d="M488.0,4480.5 L458.0,4481.0 L458.0,4875.0 L82.0,4875.0 L82.0,8075.0 L598.0,8075.0 L598.0,8414.0 L628.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="82.0" y="6463.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M258.0,2842.5 L228.0,2842.0 L228.0,3460.0 L73.0,3460.0 L73.0,8075.0 L598.0,8075.0 L598.0,8414.0 L628.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="73.0" y="5767.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M488.0,6574.5 L458.0,6575.0 L458.0,7520.0 L64.0,7520.0 L64.0,8075.0 L598.0,8075.0 L598.0,8414.0 L628.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="64.0" y="7796.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M628.0,8527.0 L598.0,8527.0 L598.0,8714.0 L55.0,8714.0 L55.0,8730.0 L88.0,8730.0 L88.0,9601.0 L118.0,9601.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="-7.9" y="8713.0" width="174.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="79.2" y="8726.0" font-size="10" fill="#55606B" text-anchor="middle">의도한 바퀴 속도</text>
+<text x="79.2" y="8739.0" font-size="10" fill="#55606B" text-anchor="middle">정지 중에는 회전분만 빌려 쓴다</text>
 <path d="M628.0,8527.0 L598.0,8527.0 L598.0,8075.0 L2153.0,8075.0 L2153.0,8292.0 L2854.0,8292.0 L2854.0,8170.0 L2884.0,8170.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
 <rect x="2014.1" y="8163.2" width="277.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="2153.0" y="8176.2" font-size="10" fill="#55606B" text-anchor="middle">cmd_vel · TwistStamped</text>
@@ -2175,25 +2183,25 @@
 <text x="684.0" y="1270.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">기준값을 비운다</text>
 <path d="M258.0,3414.5 L684.0,3415.0 L684.0,2787.0 L658.0,2787.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#m0)"/>
 <text x="684.0" y="3026.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">멈췄던 자리에서 이어서</text>
-<path d="M258.0,1893.5 L228.0,1894.0 L228.0,2104.0 L64.0,2104.0 L64.0,2120.0 L228.0,2120.0 L228.0,2396.0 L258.0,2396.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="-11.0" y="2065.0" width="197.5" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="87.8" y="2078.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/map_point · PointStamped</text>
-<text x="87.8" y="2091.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대상의 지도 좌표</text>
-<path d="M258.0,1407.5 L228.0,1408.0 L228.0,2104.0 L55.0,2104.0 L55.0,2120.0 L228.0,2120.0 L228.0,2470.0 L258.0,2470.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="-22.9" y="2141.0" width="203.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="78.9" y="2154.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/paired · target/worker_id</text>
-<text x="78.9" y="2167.0" font-size="10" fill="#1F5FBF" text-anchor="middle">참일 때만 따라간다</text>
-<path d="M488.0,6283.5 L458.0,6284.0 L458.0,4891.0 L82.0,4891.0 L82.0,4875.0 L458.0,4875.0 L458.0,4194.0 L488.0,4194.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="-27.7" y="4858.0" width="234.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="89.6" y="4871.0" font-size="10" fill="#1F5FBF" text-anchor="middle">aruco/id · aruco/distance · aruco/pose</text>
-<text x="89.6" y="4884.0" font-size="10" fill="#1F5FBF" text-anchor="middle">베이 도착 판정과 정렬</text>
-<path d="M488.0,4829.5 L458.0,4830.0 L458.0,3476.0 L73.0,3476.0 L73.0,3460.0 L228.0,3460.0 L228.0,2324.0 L258.0,2324.5" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="9.5" y="3443.0" width="142.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="80.8" y="3456.0" font-size="10" fill="#1F5FBF" text-anchor="middle">shuttle/arrived · Bool</text>
-<text x="80.8" y="3469.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대기 장소 도착</text>
-<path d="M118.0,9286.5 L88.0,9287.0 L88.0,8730.0 L64.0,8730.0 L64.0,3460.0 L228.0,3460.0 L228.0,3353.0 L258.0,3352.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
-<rect x="20.4" y="6050.0" width="87.2" height="21.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
-<text x="64.0" y="6063.0" font-size="10" fill="#C0272D" text-anchor="middle">safety/estop</text>
+<path d="M258.0,1893.5 L228.0,1894.0 L228.0,2104.0 L82.0,2104.0 L82.0,2120.0 L228.0,2120.0 L228.0,2396.0 L258.0,2396.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="7.0" y="2065.0" width="197.5" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="105.8" y="2078.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/map_point · PointStamped</text>
+<text x="105.8" y="2091.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대상의 지도 좌표</text>
+<path d="M258.0,1407.5 L228.0,1408.0 L228.0,2104.0 L73.0,2104.0 L73.0,2120.0 L228.0,2120.0 L228.0,2470.0 L258.0,2470.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="-4.9" y="2141.0" width="203.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="96.9" y="2154.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/paired · target/worker_id</text>
+<text x="96.9" y="2167.0" font-size="10" fill="#1F5FBF" text-anchor="middle">참일 때만 따라간다</text>
+<path d="M488.0,6283.5 L458.0,6284.0 L458.0,4891.0 L64.0,4891.0 L64.0,4875.0 L458.0,4875.0 L458.0,4194.0 L488.0,4194.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="-45.7" y="4858.0" width="234.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="71.6" y="4871.0" font-size="10" fill="#1F5FBF" text-anchor="middle">aruco/id · aruco/distance · aruco/pose</text>
+<text x="71.6" y="4884.0" font-size="10" fill="#1F5FBF" text-anchor="middle">베이 도착 판정과 정렬</text>
+<path d="M488.0,4829.5 L458.0,4830.0 L458.0,3476.0 L55.0,3476.0 L55.0,3460.0 L228.0,3460.0 L228.0,2324.0 L258.0,2324.5" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="-8.5" y="3443.0" width="142.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="62.8" y="3456.0" font-size="10" fill="#1F5FBF" text-anchor="middle">shuttle/arrived · Bool</text>
+<text x="62.8" y="3469.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대기 장소 도착</text>
+<path d="M118.0,9286.5 L88.0,9287.0 L88.0,8730.0 L82.0,8730.0 L82.0,3460.0 L228.0,3460.0 L228.0,3353.0 L258.0,3352.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
+<rect x="38.4" y="6050.0" width="87.2" height="21.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
+<text x="82.0" y="6063.0" font-size="10" fill="#C0272D" text-anchor="middle">safety/estop</text>
 <path d="M3114.0,4460.5 L3084.0,4460.0 L3084.0,3918.0 L3931.0,3918.0 L3931.0,3373.0" fill="none" stroke="#7A3E9D" stroke-width="1.8" marker-end="url(#m0)"/>
 <rect x="3823.1" y="3641.4" width="215.8" height="21.0" fill="#ffffff" stroke="#7A3E9D" stroke-width="1" rx="2"/>
 <text x="3931.0" y="3654.4" font-size="10" fill="#7A3E9D" text-anchor="middle">/robot8/mission/assigned · Mission</text>
@@ -2272,12 +2280,12 @@
 <rect x="4420.4" y="6610.0" width="179.2" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="4510.0" y="6623.0" font-size="10" fill="#55606B" text-anchor="middle">battery_state · BatteryState</text>
 <text x="4510.0" y="6636.0" font-size="10" fill="#55606B" text-anchor="middle">남은 배터리</text>
-<path d="M5000.0,3825.5 L4970.0,3826.0 L4970.0,4875.0 L4567.0,4875.0 L4567.0,7536.0 L5110.0,7536.0 L5110.0,7846.0 L5140.0,7846.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="4567.0" y="6207.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">처음 위치 — 자기 도크 좌표</text>
-<path d="M5140.0,7930.0 L5110.0,7930.0 L5110.0,8059.0 L4594.0,8059.0 L4594.0,8075.0 L5110.0,8075.0 L5110.0,8414.0 L5140.0,8414.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="4510.0" y="8058.0" width="216.0" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="4618.0" y="8071.0" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치 · 지도 기준 좌표 변환</text>
-<text x="4618.0" y="8084.0" font-size="10" fill="#55606B" text-anchor="middle">길찾기가 시작할 때 이것을 요구한다</text>
+<path d="M5000.0,3825.5 L4970.0,3826.0 L4970.0,4875.0 L4585.0,4875.0 L4585.0,7536.0 L5110.0,7536.0 L5110.0,7846.0 L5140.0,7846.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="4585.0" y="6207.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">처음 위치 — 자기 도크 좌표</text>
+<path d="M5140.0,7930.0 L5110.0,7930.0 L5110.0,8059.0 L4576.0,8059.0 L4576.0,8075.0 L5110.0,8075.0 L5110.0,8414.0 L5140.0,8414.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4492.0" y="8058.0" width="216.0" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4600.0" y="8071.0" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치 · 지도 기준 좌표 변환</text>
+<text x="4600.0" y="8084.0" font-size="10" fill="#55606B" text-anchor="middle">길찾기가 시작할 때 이것을 요구한다</text>
 <path d="M2884.0,8889.0 L2854.0,8889.0 L2854.0,8582.0 L4434.0,8582.0 L4434.0,8059.0 L5110.0,8059.0 L5110.0,7846.0 L5140.0,7846.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
 <rect x="4354.2" y="8305.8" width="159.5" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="4434.0" y="8318.8" font-size="10" fill="#55606B" text-anchor="middle">라이다 스캔 · 바퀴가 돈 양</text>
@@ -2286,16 +2294,16 @@
 <rect x="4091.6" y="6033.9" width="282.9" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="4233.0" y="6046.9" font-size="10" fill="#55606B" text-anchor="middle">/robot8/amcl_pose · PoseWithCovarianceStamped</text>
 <text x="4233.0" y="6059.9" font-size="10" fill="#55606B" text-anchor="middle">지도 위 로봇 위치</text>
-<path d="M5000.0,4480.5 L4970.0,4481.0 L4970.0,4875.0 L4585.0,4875.0 L4585.0,8075.0 L5110.0,8075.0 L5110.0,8414.0 L5140.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="4585.0" y="6463.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M4770.0,2842.5 L4740.0,2842.0 L4740.0,3460.0 L4576.0,3460.0 L4576.0,8075.0 L5110.0,8075.0 L5110.0,8414.0 L5140.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="4576.0" y="5767.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M5000.0,6574.5 L4970.0,6575.0 L4970.0,7520.0 L4567.0,7520.0 L4567.0,8075.0 L5110.0,8075.0 L5110.0,8414.0 L5140.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
-<text x="4567.0" y="7796.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
-<path d="M5140.0,8527.0 L5110.0,8527.0 L5110.0,8714.0 L4594.0,8714.0 L4594.0,8730.0 L4600.0,8730.0 L4600.0,9601.0 L4630.0,9601.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
-<rect x="4512.9" y="8731.2" width="174.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
-<text x="4600.0" y="8744.2" font-size="10" fill="#55606B" text-anchor="middle">의도한 바퀴 속도</text>
-<text x="4600.0" y="8757.2" font-size="10" fill="#55606B" text-anchor="middle">정지 중에는 회전분만 빌려 쓴다</text>
+<path d="M5000.0,4480.5 L4970.0,4481.0 L4970.0,4875.0 L4567.0,4875.0 L4567.0,8075.0 L5110.0,8075.0 L5110.0,8414.0 L5140.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="4567.0" y="6463.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M4770.0,2842.5 L4740.0,2842.0 L4740.0,3460.0 L4594.0,3460.0 L4594.0,8075.0 L5110.0,8075.0 L5110.0,8414.0 L5140.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="4594.0" y="5767.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M5000.0,6574.5 L4970.0,6575.0 L4970.0,7520.0 L4585.0,7520.0 L4585.0,8075.0 L5110.0,8075.0 L5110.0,8414.0 L5140.0,8414.0" fill="none" stroke="#4A4A4A" stroke-width="1.6" marker-end="url(#m0)"/>
+<text x="4585.0" y="7796.0" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">갈 곳과 도킹을 맡긴다</text>
+<path d="M5140.0,8527.0 L5110.0,8527.0 L5110.0,8714.0 L4576.0,8714.0 L4576.0,8730.0 L4600.0,8730.0 L4600.0,9601.0 L4630.0,9601.0" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
+<rect x="4512.9" y="8713.2" width="174.1" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
+<text x="4600.0" y="8726.2" font-size="10" fill="#55606B" text-anchor="middle">의도한 바퀴 속도</text>
+<text x="4600.0" y="8739.2" font-size="10" fill="#55606B" text-anchor="middle">정지 중에는 회전분만 빌려 쓴다</text>
 <path d="M5140.0,8527.0 L5110.0,8527.0 L5110.0,8714.0 L4409.0,8714.0 L4409.0,8582.0 L2854.0,8582.0 L2854.0,8987.0 L2884.0,8987.5" fill="none" stroke="#55606B" stroke-width="1.6" marker-end="url(#m0)"/>
 <rect x="4270.1" y="8631.1" width="277.7" height="34.0" fill="#ffffff" stroke="#55606B" stroke-width="1" rx="2"/>
 <text x="4409.0" y="8644.1" font-size="10" fill="#55606B" text-anchor="middle">cmd_vel · TwistStamped</text>
@@ -2306,23 +2314,23 @@
 <text x="5196.0" y="1270.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">기준값을 비운다</text>
 <path d="M4770.0,3414.5 L5196.0,3415.0 L5196.0,2787.0 L5170.0,2787.5" fill="none" stroke="#4A4A4A" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#m0)"/>
 <text x="5196.0" y="3026.8" font-size="10" fill="#4A4A4A" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="3">멈췄던 자리에서 이어서</text>
-<path d="M4770.0,1893.5 L4740.0,1894.0 L4740.0,2104.0 L4585.0,2104.0 L4585.0,2120.0 L4740.0,2120.0 L4740.0,2396.0 L4770.0,2396.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="4510.0" y="2065.0" width="197.5" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="4608.8" y="2078.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/map_point · PointStamped</text>
-<text x="4608.8" y="2091.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대상의 지도 좌표</text>
-<path d="M4770.0,1407.5 L4740.0,1408.0 L4740.0,2104.0 L4576.0,2104.0 L4576.0,2120.0 L4740.0,2120.0 L4740.0,2470.0 L4770.0,2470.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="4498.1" y="2141.0" width="203.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="4599.9" y="2154.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/paired · target/worker_id</text>
-<text x="4599.9" y="2167.0" font-size="10" fill="#1F5FBF" text-anchor="middle">참일 때만 따라간다</text>
-<path d="M5000.0,6283.5 L4970.0,6284.0 L4970.0,4891.0 L4567.0,4891.0 L4567.0,4875.0 L4970.0,4875.0 L4970.0,4194.0 L5000.0,4194.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="4457.3" y="4858.0" width="234.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="4574.6" y="4871.0" font-size="10" fill="#1F5FBF" text-anchor="middle">aruco/id · aruco/distance · aruco/pose</text>
-<text x="4574.6" y="4884.0" font-size="10" fill="#1F5FBF" text-anchor="middle">베이 도착 판정과 정렬</text>
-<path d="M5000.0,4829.5 L4970.0,4830.0 L4970.0,3476.0 L4594.0,3476.0 L4594.0,3460.0 L4740.0,3460.0 L4740.0,2324.0 L4770.0,2324.5" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
-<rect x="4530.5" y="3443.0" width="142.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
-<text x="4601.8" y="3456.0" font-size="10" fill="#1F5FBF" text-anchor="middle">shuttle/arrived · Bool</text>
-<text x="4601.8" y="3469.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대기 장소 도착</text>
-<path d="M4630.0,9286.5 L4600.0,9287.0 L4600.0,8730.0 L4585.0,8730.0 L4585.0,3460.0 L4740.0,3460.0 L4740.0,3353.0 L4770.0,3352.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
-<rect x="4541.4" y="7090.1" width="87.2" height="21.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
-<text x="4585.0" y="7103.1" font-size="10" fill="#C0272D" text-anchor="middle">safety/estop</text>
+<path d="M4770.0,1893.5 L4740.0,1894.0 L4740.0,2104.0 L4567.0,2104.0 L4567.0,2120.0 L4740.0,2120.0 L4740.0,2396.0 L4770.0,2396.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="4492.0" y="2065.0" width="197.5" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="4590.8" y="2078.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/map_point · PointStamped</text>
+<text x="4590.8" y="2091.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대상의 지도 좌표</text>
+<path d="M4770.0,1407.5 L4740.0,1408.0 L4740.0,2104.0 L4594.0,2104.0 L4594.0,2120.0 L4740.0,2120.0 L4740.0,2470.0 L4770.0,2470.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="4516.1" y="2141.0" width="203.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="4617.9" y="2154.0" font-size="10" fill="#1F5FBF" text-anchor="middle">target/paired · target/worker_id</text>
+<text x="4617.9" y="2167.0" font-size="10" fill="#1F5FBF" text-anchor="middle">참일 때만 따라간다</text>
+<path d="M5000.0,6283.5 L4970.0,6284.0 L4970.0,4891.0 L4585.0,4891.0 L4585.0,4875.0 L4970.0,4875.0 L4970.0,4194.0 L5000.0,4194.0" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="4475.3" y="4858.0" width="234.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="4592.6" y="4871.0" font-size="10" fill="#1F5FBF" text-anchor="middle">aruco/id · aruco/distance · aruco/pose</text>
+<text x="4592.6" y="4884.0" font-size="10" fill="#1F5FBF" text-anchor="middle">베이 도착 판정과 정렬</text>
+<path d="M5000.0,4829.5 L4970.0,4830.0 L4970.0,3476.0 L4576.0,3476.0 L4576.0,3460.0 L4740.0,3460.0 L4740.0,2324.0 L4770.0,2324.5" fill="none" stroke="#1F5FBF" stroke-width="1.6" marker-end="url(#m1)"/>
+<rect x="4512.5" y="3443.0" width="142.6" height="34.0" fill="#ffffff" stroke="#1F5FBF" stroke-width="1" rx="2"/>
+<text x="4583.8" y="3456.0" font-size="10" fill="#1F5FBF" text-anchor="middle">shuttle/arrived · Bool</text>
+<text x="4583.8" y="3469.0" font-size="10" fill="#1F5FBF" text-anchor="middle">대기 장소 도착</text>
+<path d="M4630.0,9286.5 L4600.0,9287.0 L4600.0,8730.0 L4567.0,8730.0 L4567.0,3460.0 L4740.0,3460.0 L4740.0,3353.0 L4770.0,3352.5" fill="none" stroke="#C0272D" stroke-width="1.6" marker-end="url(#m2)"/>
+<rect x="4523.4" y="7090.1" width="87.2" height="21.0" fill="#ffffff" stroke="#C0272D" stroke-width="1" rx="2"/>
+<text x="4567.0" y="7103.1" font-size="10" fill="#C0272D" text-anchor="middle">safety/estop</text>
 </svg>

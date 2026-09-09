@@ -180,6 +180,11 @@ def draw(d, A, G, BOX):
 
     # ── 가운데 열 안에서 ─────────────────────────────────────────────────
     near('whint:hint', 'kpi:in', '/webcam2/target_hint · TargetHint\n10 Hz · BEST_EFFORT · 유효 2초')
+    # 관제가 1초마다 내는 통합 상태 — 화면과 기록이 같은 값을 본다 (FR-26)
+    near('fm:status', 'cui:status_in',
+         '/fleet/status · FleetStatus\n초당 1번 · 상태 · 배터리 · 위치 · 미션 · 짝 · 비상정지', STAT)
+    near('fm:status', 'kpi:in',
+         '/fleet/status · FleetStatus\n채점 원천값으로 그대로 적는다', STAT)
     near('cui:svc_out', 'fm:svc_in', '/fleet/request_mission · 서비스\n자재 요청', SVC, True)
     near('cui:svc_out2', 'fm:svc2_in', '/fleet/operator_command · /fleet/manual_pair · 서비스\n'
                                        '작업 종료 · 짝 지정', SVC, True)
