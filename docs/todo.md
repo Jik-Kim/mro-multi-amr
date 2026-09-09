@@ -67,7 +67,7 @@
 
 **오늘 마감 16건**
 
-- mro_interfaces — 계약 v1.18 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤) — 신규 토픽 safety/state(STOPPING/…
+- mro_interfaces — 계약 v1.20 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤) — 신규 토픽 safety/state(STOPPING/…
 - mro_interfaces — docs/setup.md:92 의 nav2 런치 줄 (I-049 후속) — turtlebot4_navigation/nav2.la…
 - mro_perception — robot8 camera_info 재수신 → tools/aruco_offline_check.py 상수 갱신 (I-031) — K…
 - mro_perception — FR-13 실기 확인 (인지↔관제 합동) — 인형이 보이는 상태로 GATE_FAIL 30 s → 관제 버튼 → 수락까지 한 번에…
@@ -89,7 +89,7 @@
 <!-- STATS:END -->
 
 ## mro_interfaces [PM 김병직]
-- [ ] **계약 v1.18 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤)** — 신규 토픽 `safety/state`(`STOPPING/SAFE_ROTATE/CLEAR/STUCK`)·`safety/paused/<주행 노드>` 를 4절에 넣고, **`cmd_vel` 행의 발행자를 「safety_watchdog 단독」으로** 고친다 (v1.13 이 「safety_watchdog, Nav2, follow_target」로 적어 두었다). `approach/status` 8개 값은 안 건드린다. **PR 을 보고 쓴다** — 미리 쓰면 구현과 어긋난다 · 마감 9/10
+- [ ] **계약 v1.20 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤)** — 신규 토픽 `safety/state`(`STOPPING/SAFE_ROTATE/CLEAR/STUCK`)·`safety/paused/<주행 노드>` 를 4절에 넣고, **`cmd_vel` 행의 발행자를 「safety_watchdog 단독」으로** 고친다 (v1.13 이 「safety_watchdog, Nav2, follow_target」로 적어 두었다). `approach/status` 8개 값은 안 건드린다. **PR 을 보고 쓴다** — 미리 쓰면 구현과 어긋난다 · 마감 9/10
 - [ ] **`docs/setup.md:92` 의 nav2 런치 줄 (I-049 후속)** — `turtlebot4_navigation/nav2.launch.py` → `safety_nav2.launch.py`. 주행 PR 에 포함해 달라고 요청했으나 빠지면 머지 때 PM 이 고친다 · 마감 9/10
 - [x] **계약 v1.17** — `ARRIVED` 도 발행되지 않는다(`APPROACH_2` 와 하나의 같은 사실). **값 목록은 8개 그대로**임을 못박아 관측 사실이 계약 축소로 읽히지 않게 했다 (PR #67 후속) · 마감 9/9
 - [x] **계약 v1.13** — `aruco/pose` 비준(회전은 정렬에 쓰지 않는다) · ArUco 발행 한계 2.0 / 수용 조건 1.5 분리 · `cmd_vel` 에 `follow_target` 추가와 estop 전진만 차단 (I-036) · 마감 9/8

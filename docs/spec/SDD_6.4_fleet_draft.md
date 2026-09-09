@@ -77,6 +77,8 @@
 
 ## 6.4.4 작업자 배정 (FR-03)
 
+> **[낡음 — 9/10 PR #73 으로 뒤집혔다]** 아래 절차는 `WorkerDescriptor` 를 받는 순간 배정하던 옛 구조다. 지금은 **등록과 배정이 분리**되어, 수신 시에는 작업자만 등록하고 **`RequestMission` 을 수락할 때** 미션·E-stop 이 없고 배터리 기준을 넘는 AMR 을 배정한다 (계약 v1.19). `worker_assignment_window_s` 파라미터도 코드·`fleet.yaml` 에서 사라졌다. **이 절을 보고 구현하지 말 것.** 이 문서는 PR #70 에서 당시 코드를 역추출한 초안이고, 다시 쓰는 것은 관제 몫이다.
+
 1. `/webcam1/worker_descriptor` 수신. 이미 배정된 `worker_id` 면 무시한다.
 2. 배정 가능한 로봇이 없으면 경고만 남기고 끝낸다.
 3. **1 초 배치 창**(`worker_assignment_window_s`)에 모았다가 한 번에 확정한다.
