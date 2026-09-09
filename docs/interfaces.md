@@ -119,10 +119,11 @@
 | 파일 | 담는 것 | 담당 |
 |---|---|---|
 | `arena.yaml` | 베이 waypoint·ArUco ID, 대기공간, `dock_zone`(pose·approach·holding), `passages`, `semaphore_zones` 폴리곤, `homography_marks`, `t_lim_s`·`t_ret_s`·`dock_retry` | 박병후·이시율 |
-| `common.yaml` `9/8 신설` | 전 로봇 공통값 — `follow_standoff_m` 0.5, `min_separation_m` 0.3, `v_max` 0.3, `bay_dwell_s` 5, `t_lim_s` 120, `t_ret_s` 180, `dock_retry` 2, 셔틀 상수 | 박병후·이시율 |
+| `common.yaml` `9/8 신설` | 전 로봇 공통값 — `follow_standoff_m` 0.5, `min_separation_m` 0.3, `v_max` 0.3, `bay_dwell_s` 5, `t_lim_s` 120, `t_ret_s` 180, `dock_retry` 2, 셔틀·베이정렬 상수, `9/9` **추종 9개** (`lost_s`·`standby_s`·`approach_skip_m`·`hint_valid_s`·재탐지 넷·`search_step_deg`) | 박병후·이시율 |
 | `robot3.yaml` / `robot8.yaml` | **로봇마다 다른 값만** — `robot_ns`, `dock_pose`, `depth_k`. 로봇 추가 = 이 파일 하나 복사 | 박병후·이시율 |
 | `fleet.yaml` `9/8 신설` | 관제 — `robot_namespaces`(로봇 명단의 단일 출처), `battery_min`, `t_lim_s`, `worker_assignment_window_s` | 김민준 |
-| `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m` | 정정인·민범진 |
+| `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m`, `reid_threshold`(단일 출처) | 정정인·민범진 |
+| ~~`mro_navigation/config/navigation.yaml`~~ | **삭제됨 9/9** — 어떤 launch 도 안 넘기는 죽은 파일이었고, PR #56 이전 값이 남아 있어 되살리면 재탐지가 느려진다. 값은 `common.yaml` 이 갖는다 | — |
 | `mro_webcam/config/WebCam1/homography_cam1.json` | **쓰지 않는다 (9/6 결정)** — 웹캠1 은 작업자 출발(등록)만 인식하고 map 좌표를 내지 않는다. 파일은 Kn1_mini 잔재이며 `webcam_register` 가 좌표를 쓰면 안 된다 | 한세교·김학민 |
 | `mro_webcam/config/WebCam2/homography_cam2.json` | 웹캠2 호모그래피 행렬·대응점·재투영 오차. 기준점 원본은 같은 폴더 `marker_coordinates.json` (로봇 AMCL 로 실측, PR #9 — RMSE 2.8 cm) | 한세교·김학민 |
 | `mro_webcam/config/webcam.yaml` | `process_hz` 10, `capture_fps` **장치 상한**(웹캠1 = 25), `on_time_s` 0.3, `off_time_s` 0.5, `register_s` 1.0, `hint_valid_s` 2.0, 웹캠2 `image_publish_hz` 10 · `jpeg_quality` 80 · `buffer_size` 5(캡처 스레드가 큐를 계속 비우므로 1 이 아니어도 지연이 쌓이지 않는다) | 한세교·김학민 |

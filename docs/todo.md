@@ -247,6 +247,8 @@
 - [x] webcam1 launch 에서 안 쓰는 `homography_json` 제거 (계약 v1.8, PR #26 노트) · 마감 9/7
 - [x] 계약 v1.11 — 세마포어 이벤트 토픽 `/fleet/zone_event`·DB kind ZONE·K-06 산출 규칙 (I-030 PM 결정) · 마감 9/7
 - [x] robot.launch 가 `perception.yaml` 을 넘기도록 연결 — 9/7, `aruco_detector` 가 PR #30 부터 파라미터를 읽어서 앞당김 (amr_detection·aruco 두 노드에만, robotN.yaml 뒤) · 마감 9/8
-- [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8
-- [ ] 중복 파라미터 한 곳으로 — `reid_threshold`(perception.yaml ↔ robotN.yaml), `follow_standoff_m`·`t_lim_s`(navigation.yaml ↔ robotN.yaml), `t_lim_s`·`t_ret_s`·`dock_retry`(arena.yaml ↔ robotN.yaml). 지금은 노드가 안 읽어 무해하지만 값 확정 때 한쪽만 고치는 사고가 난다 · 마감 9/8
+- [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8 — **주행·인지·관제는 완료 (9/9).** `common.yaml` 51개·`perception.yaml` 27개·`fleet.yaml` 4개가 전부 소비되고, `follow_target` 의 코드 전용 값 9개도 `common.yaml` 로 옮겼다(PR #56 값 그대로). 남은 것 둘: ① `v_max` — 읽는 노드가 없다(아래 Nav2 항목과 같은 건) ② **웹캠 16개** `webcam2.py` 11 · `webcam_hint_node.py` 5 가 아직 코드에만 있다 [웹캠 한세교·김학민]. `db_path`·`out_dir`·`arena_yaml`·`map_yaml_path` 는 런치가 주는 경로라 yaml 대상이 아니다
+- [x] ~~`reid_threshold`(perception.yaml ↔ robotN.yaml)~~ 해결 9/8 — robotN.yaml 에서 빼고 perception.yaml 단독 (계약 5절)
+- [x] ~~`navigation.yaml` ↔ robotN.yaml~~ **해결 9/9 — 파일을 지웠다.** 어떤 launch 도 안 넘기는 죽은 파일이었는데, `lost_research_s` 8.0·`search_rotate_deg` 30.0 이 남아 있었다. 이건 **PR #56 이전 값**이라 (코드는 `research_s` 2.0·`search_step_deg` 20.0) 이름만 다른 같은 개념이었다. **합치는 방향으로 정리했다면 재탐지가 3.5 s → 11 s 로 되돌아갔다** · 마감 9/8
+- [ ] `t_lim_s`·`t_ret_s`·`dock_retry`(arena.yaml ↔ common.yaml) — arena.yaml 하단 4개는 어떤 코드도 안 읽는다 (`shuttle_mission` 은 arena 에서 `bays`·`waiting_zone` 만 읽는다). 지우면 끝난다. `t_lim_s` 는 common(로봇)·fleet(관제) 양쪽에 있는데 **소비자가 달라 같은 값이어야 하는지 먼저 정할 것** · 마감 9/8
 - [ ] SDD 부록 A rqt_graph 캡처 첨부 · 마감 9/10
