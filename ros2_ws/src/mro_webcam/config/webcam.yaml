@@ -32,8 +32,12 @@ webcam_register:            # 웹캠1 (PC-W1) — 작업자 등록 S1
 webcam_hint:                # 웹캠2 (PC-W2) — 재탐지 힌트 E-1. 한세교 담당, 값 확정 필요
   ros__parameters:
     camera_index: 2         # PC-W2 외장 카메라: /dev/video2
+    width: 640              # 캡처 해상도 너비
+    height: 480             # 캡처 해상도 높이
     fps: 30.0               # 카메라 캡처 주기
+    buffer_size: 5          # 캡처 버퍼 크기
     process_hz: 10.0        # YOLO 처리 주기(0.1 s, 0.3 s 동안 약 3회)
+    confidence: 0.5         # YOLO 검출 최소 신뢰도
     image_publish_hz: 10.0  # YOLO process_hz와 독립적인 압축 영상 발행 주기
     compressed_topic: "/webcam2/image_raw/compressed"
     image_frame_id: "webcam2_optical_frame"
