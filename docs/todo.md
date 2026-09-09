@@ -5,18 +5,18 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 106/165 완료** (█████████████░░░░░░░)  ·  기준 09/09
+**전체 111/168 완료** (█████████████░░░░░░░)  ·  기준 09/09
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 6/6 | `██████████` | — |
 | mro_perception [인지 — 정정인, 민범진] | 17/28 | `██████░░░░` | **3** |
 | mro_webcam [웹캠 — 한세교, 김학민] | 23/31 | `███████░░░` | **4** |
-| mro_navigation [주행 — 박병후, 이시율] | 40/71 | `██████░░░░` | **15** |
+| mro_navigation [주행 — 박병후, 이시율] | 43/72 | `██████░░░░` | **15** |
 | mro_fleet [관제 — 김민준] | 13/18 | `███████░░░` | **2** |
-| mro_bringup [PM 김병직] | 7/11 | `██████░░░░` | **3** |
+| mro_bringup [PM 김병직] | 9/13 | `███████░░░` | **2** |
 
-**마감이 지난 항목 27건**
+**마감이 지난 항목 26건**
 
 - `9/8` mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - `9/8` mro_perception — TS-U05 줄자 대조 — target/distance 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오…
@@ -43,8 +43,7 @@
 - `9/8` mro_fleet — fleet_manager_node.py: WAITING 수신 시 amcl_pose 가 waiting_zone 근처인지 확인, 벗…
 - `9/8` mro_fleet — fleet_manager_node.py: aruco/id·aruco/distance 구독 → ID 4 수신 시 |amcl_pos…
 - `9/8` mro_bringup — v_max 0.3 m/s 와 Nav2 max_vel_x 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘…
-- `9/8` mro_bringup — 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정
-- `9/8` mro_bringup — 중복 파라미터 한 곳으로 — reid_threshold(perception.yaml ↔ robotN.yaml), follow_s…
+- `9/8` mro_bringup — t_lim_s·t_ret_s·dock_retry(arena.yaml ↔ common.yaml) — arena.yaml 하단 4개…
 
 **오늘 마감 21건**
 
@@ -148,8 +147,9 @@
 ## mro_navigation [주행 — 박병후, 이시율]
 - [ ] **TS-04·TS-14 재실행 (I-036)** — `clear_dist` 를 0.45 → 0.38 로 낮췄으므로 기존 통과 기록은 무효다. **해제가 너무 일러 estop 재진입이 반복되지 않는지**를 특히 본다 · 마감 9/9
 - [x] **추종 STANDBY 판정을 SEARCHING 과 맞춘다 (I-046)** — `step_following`(:763~764)이 `target/visible` 만으로 `follow_seen` 을 되돌려, 보이는데 좌표가 없으면 `standby_s` 에 영영 도달하지 않는다. 같은 상황에서 SEARCHING 은 STANDBY 로 간다. **웹캠2 힌트를 추종에서도 쓰는 쪽이 더 나은 해법일 수 있다** — 지금 `self.hint` 는 SEARCHING 의 회전 방향으로만 쓰인다. TS-07 을 막지 않는다 · 마감 9/10  **→ 완료 (PR #59) — 좌표 전용 시계 `coord_seen` 을 따로 두고 `visible` 로 버티는 것을 `visible_wait_s`(3 s)까지만 인정한다. `follow_seen` 에 직접 한도를 걸면 되살릴 때 재는 값이 0 으로 돌아가 조건이 영원히 참이 되므로 안 된다. SEARCHING 과 규칙이 같아졌다. **웹캠2 힌트를 추종에도 쓰는 것은 별건으로 남긴다** — 그것은 재획득을 빠르게 하는 일이고, `standby_s` 에 닿게 하는 것과는 다른 문제다**
+- [ ] **짧은 가림으로 탐색에 빠지지 않는지 실주행 확인 (I-046 · PR #59 후속)** — `visible_wait_s` 3 s 한도를 새로 걸었으므로, 사람이 로봇 앞을 스쳐 지나갈 때 `FOLLOWING` 을 유지하는지 다음 회차에서 본다. 단위 시험으로만 확인된 변경이다 · 마감 9/10
 - [x] **`test_no_reverse_anywhere_in_source` 조건식 괄호 (PR #56 후속)** — `not 주석 and linear or undock` 이라 `.undock(` 쪽만 주석 검사를 건너뛴다. 오탐만 나므로 후진이 새지는 않으나, 후진 금지(계약 2절)를 지키는 유일한 자동 검사라 정확히 둔다 · 마감 9/10  **→ 완료 (PR #59) — 괄호 한 쌍으로 두 조건에 주석 검사가 같이 걸린다**
-- [ ] **추종 재탐지 시간 5개를 `common.yaml` 로 (PR #56 후속)** — `research_s`·`settle_s`·`search_wait_s`·`visible_wait_s`·`search_step_deg`. `lost_s`·`standby_s`(SOT 계약값)도 아직 노드 기본값에만 있어 이 노드의 시간값 7개가 코드에만 있다. 리그 런치가 이미 `common.yaml` 을 넘기므로 통로는 있다 (계약 5절) · 마감 —  **→ `refactor/params-single-source` 브랜치가 진행 중이다 (9/9 확인). 겹치지 않게 PR #59 에서는 이 항목을 건드리지 않았다**
+- [x] **추종 재탐지 시간 5개를 `common.yaml` 로 (PR #56 후속)** — `research_s`·`settle_s`·`search_wait_s`·`visible_wait_s`·`search_step_deg`. `lost_s`·`standby_s`(SOT 계약값)도 아직 노드 기본값에만 있어 이 노드의 시간값 7개가 코드에만 있다. 리그 런치가 이미 `common.yaml` 을 넘기므로 통로는 있다 (계약 5절) · 마감 —  **→ 완료 9/9 (PR #58) — 9개를 옮겼다(`lost_s`·`standby_s`·`approach_skip_m`·`hint_valid_s` 포함). 노드 기본값은 대체값으로 남겼고 11/11 값이 PR #56 과 일치한다. 덤으로 죽은 `navigation.yaml` 삭제 — 그 파일에 PR #56 이전 값(`lost_research_s` 8.0·`search_rotate_deg` 30.0)이 남아 있어 「중복 통합」 방향으로 정리했으면 재탐지가 11 s 로 되돌아갔다**
 - [ ] **베이 접근 잔차 규명 (I-044, 상)** — 여유 0.095 m 가 관측 잔차 0.275 m 보다 작다. `d3e0568` 로그로 다음 회차에 가리거나, 못 가리면 `bay_marker_range_m` 을 1.1 m 이상으로. **둘 중 하나를 하고 TS-07 에 들어간다** · 마감 9/9
 - [ ] **`bay_align_min_range_m` 을 0.80 으로 (PR #52 후속)** — 지금 0.45(노드 기본값 0.35)라 자기가 잰 하드 바닥보다 낮다. 잘못된 목표를 거르는 유일한 방어인데 8회차로 배운 것을 못 막는다 · 마감 9/9
 - [ ] **접근·재탐지 파라미터의 단일 출처는 `common.yaml`** (PR #52) — `bay_marker_range_m`·`bay_align_*`·`bay_exit_*`. 노드 기본값은 단독 실행용 대체값 · 마감 —
@@ -247,6 +247,8 @@
 - [x] webcam1 launch 에서 안 쓰는 `homography_json` 제거 (계약 v1.8, PR #26 노트) · 마감 9/7
 - [x] 계약 v1.11 — 세마포어 이벤트 토픽 `/fleet/zone_event`·DB kind ZONE·K-06 산출 규칙 (I-030 PM 결정) · 마감 9/7
 - [x] robot.launch 가 `perception.yaml` 을 넘기도록 연결 — 9/7, `aruco_detector` 가 PR #30 부터 파라미터를 읽어서 앞당김 (amr_detection·aruco 두 노드에만, robotN.yaml 뒤) · 마감 9/8
-- [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8
-- [ ] 중복 파라미터 한 곳으로 — `reid_threshold`(perception.yaml ↔ robotN.yaml), `follow_standoff_m`·`t_lim_s`(navigation.yaml ↔ robotN.yaml), `t_lim_s`·`t_ret_s`·`dock_retry`(arena.yaml ↔ robotN.yaml). 지금은 노드가 안 읽어 무해하지만 값 확정 때 한쪽만 고치는 사고가 난다 · 마감 9/8
+- [ ] 노드들이 params 를 실제로 읽도록 전환한 뒤 값 확정 · 마감 9/8 — **주행·인지·관제는 완료 (9/9).** `common.yaml` 51개·`perception.yaml` 27개·`fleet.yaml` 4개가 전부 소비되고, `follow_target` 의 코드 전용 값 9개도 `common.yaml` 로 옮겼다(PR #56 값 그대로). 남은 것 둘: ① `v_max` — 읽는 노드가 없다(아래 Nav2 항목과 같은 건) ② **웹캠 16개** `webcam2.py` 11 · `webcam_hint_node.py` 5 가 아직 코드에만 있다 [웹캠 한세교·김학민]. `db_path`·`out_dir`·`arena_yaml`·`map_yaml_path` 는 런치가 주는 경로라 yaml 대상이 아니다
+- [x] ~~`reid_threshold`(perception.yaml ↔ robotN.yaml)~~ 해결 9/8 — robotN.yaml 에서 빼고 perception.yaml 단독 (계약 5절)
+- [x] ~~`navigation.yaml` ↔ robotN.yaml~~ **해결 9/9 — 파일을 지웠다.** 어떤 launch 도 안 넘기는 죽은 파일이었는데, `lost_research_s` 8.0·`search_rotate_deg` 30.0 이 남아 있었다. 이건 **PR #56 이전 값**이라 (코드는 `research_s` 2.0·`search_step_deg` 20.0) 이름만 다른 같은 개념이었다. **합치는 방향으로 정리했다면 재탐지가 3.5 s → 11 s 로 되돌아갔다** · 마감 9/8
+- [ ] `t_lim_s`·`t_ret_s`·`dock_retry`(arena.yaml ↔ common.yaml) — arena.yaml 하단 4개는 어떤 코드도 안 읽는다 (`shuttle_mission` 은 arena 에서 `bays`·`waiting_zone` 만 읽는다). 지우면 끝난다. `t_lim_s` 는 common(로봇)·fleet(관제) 양쪽에 있는데 **소비자가 달라 같은 값이어야 하는지 먼저 정할 것** · 마감 9/8
 - [ ] SDD 부록 A rqt_graph 캡처 첨부 · 마감 9/10

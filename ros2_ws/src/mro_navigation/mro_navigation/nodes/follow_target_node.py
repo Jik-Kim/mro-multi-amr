@@ -114,25 +114,16 @@ class FollowTarget(Node):
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        # ---- 파라미터. 단일 출처는 mro_bringup/params/robotN.yaml (계약 5절) ----
-        self.declare_parameter('follow_standoff_m', 0.5)    # robotN.yaml — 추종 중 유지할 거리
-        self.declare_parameter('min_separation_m', 0.3)     # robotN.yaml — 이보다 가까워지면 정지 (AC-05 하한)
+        # ---- 파라미터. **값의 단일 출처는 mro_bringup/params/common.yaml 이다** (계약 5절).
+        #   아래 기본값은 params 가 안 넘어왔을 때의 대체값일 뿐이고, 코드가 값을 소유하지 않는다.
+        #   재탐지 시간 넷(research_s·settle_s·search_wait_s·visible_wait_s)을 왜 그 값으로 잡았는지는
+        #   common.yaml 의 '재탐지 시간' 주석에 적어 두었다 — 만질 때 그쪽을 먼저 읽을 것. 9/9 PR #56
+        self.declare_parameter('follow_standoff_m', 0.5)    # 추종 중 유지할 거리
+        self.declare_parameter('min_separation_m', 0.3)     # 이보다 가까워지면 정지 (AC-05 하한)
         self.declare_parameter('lost_s', 1.0)               # 미검출 이 시간이면 Lost (SOT '.. Lost 1.0 s')
         self.declare_parameter('standby_s', 30.0)           # Lost 가 이만큼 지속되면 STANDBY (SOT 'Standby 30 s')
         self.declare_parameter('approach_skip_m', 1.0)      # 페어링 시 이 거리 안이면 접근 없이 바로 추종
         self.declare_parameter('hint_valid_s', 2.0)         # 계약 4절 '힌트 유효 2 s'
-
-        # ---- 재탐지 시간. 놓친 뒤 첫 회전까지 = research_s + search_wait_s ----
-        #   **lost_s 는 더해지지 않는다** — 같은 시계(마지막으로 본 뒤 지난 시간) 안의
-        #   앞 단계다. lost_s 에 주행을 멈추고, research_s 에 탐색으로 넘어간다.
-        #   9/9 실주행에서 종전 값(8.0 + 3.0 = 11 s)이 너무 느렸다. 아래로 3.5 s 다.
-        #   더 줄이려면 각 값의 바닥을 알아야 한다:
-        #     research_s     사람이 앞을 지나가는 시간이 1~2 s 다. 이보다 짧으면 **잠깐 가린 것만으로
-        #                    로봇이 등을 돌린다** — 작업자가 바로 앞에 있는데 돌아서는 것이 가장 나쁘다
-        #     settle_s       30° 회전이 0.5 s 이고 그 뒤 AMCL 방위가 수렴할 시간. 이보다 짧으면
-        #                    틀린 좌표로 목표를 낸다
-        #     search_wait_s  settle_s + 검출 몇 프레임. 인지가 초당 5~8 장이라 1.5 s 면 8~12 장이다
-        #   빨리 도는 것이 안전해진 이유는 **방향을 알게 됐기 때문**이다 (search_rotate_deg).
         self.declare_parameter('research_s', 2.0)           # 이 시간 안 보이면 회전 탐색으로
         self.declare_parameter('settle_s', 1.0)             # 이동·회전 뒤 이 시간 지난 좌표만 신뢰
         self.declare_parameter('search_wait_s', 1.5)        # 회전 후 이만큼 기다려도 못 찾으면 또 회전
