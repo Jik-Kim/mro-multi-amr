@@ -28,11 +28,14 @@ def key(nd, k):
 # ── 배치 : 가운데 한 줄에 관제·웹캠·터틀봇, 좌우에 로봇 제어 PC ─────────────
 #    PC 마다 노드를 한 줄로 세우면 모든 노드가 PC 양쪽 테두리에 닿는다 →
 #    PC 를 건너는 화살표가 옆으로 곧장 이어진다. 가운데 것들은 두 로봇 PC 와 대칭이다.
-RN = [N.AMRDET, N.ARUCO, N.FOLLOW, N.SHUTTLE, N.WATCHDOG, N.RETURN]
+RN = [N.AMRDET, N.ARUCO, N.FOLLOW, N.SHUTTLE, N.WATCHDOG, N.RETURN, N.NAV2]
 def rpc(rp, x, y0, title, sub, barc):
     K = {n['name']: key(n, f'{rp}_{n["name"]}') for n in RN}
+    # Nav2 는 우리가 만든 노드가 아니지만 이 PC 에서 같이 도니 같은 테두리 안에 둔다.
+    # 주행 세 노드가 목표를 주고 안전 감시가 회전분을 빌려 쓰므로 그 사이에 놓는다.
     order = [K['amr_detection'], K['follow_target'], K['shuttle_mission'],
-             K['aruco_detector'], K['return_dock'], K['safety_watchdog']]
+             K['aruco_detector'], K['return_dock'], K['Nav2  (길찾기 · 도킹)'],
+             K['safety_watchdog']]
     return render.draw_pc(d, rp, title, sub, order, x, y0, 1, barc, cols=[order])
 
 y = TOP

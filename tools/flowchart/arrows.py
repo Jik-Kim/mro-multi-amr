@@ -2,7 +2,7 @@
 """PC 를 건너는 계약 화살표. 출처는 docs/interfaces.md 4절.
    노드 옆구리 → 열 사이 세로 통로 → 행 사이 가로 통로 → 상대 노드 옆구리.
    통로는 전부 빈 자리라 어떤 상자도 지나지 않는다."""
-from engine import TOPIC, CMD, STAT, SENS, SVC, SAFE
+from engine import TOPIC, CMD, STAT, SENS, SVC, SAFE, LINE
 
 def draw(d, A, G, BOX):
     """BOX = 상자 id → (x, y, w, h). 'noderef:앵커' 로 상자에 직접 꽂는다."""
@@ -167,8 +167,9 @@ def draw(d, A, G, BOX):
 
     # ── 가운데 열 안에서 ─────────────────────────────────────────────────
     near('whint:hint', 'kpi:in', '/webcam2/target_hint · TargetHint\n10 Hz · BEST_EFFORT · 유효 2초')
-    near('cui:svc_out', 'fm:svc_in', '/fleet/request_mission · /fleet/operator_command\n'
-                                     '/fleet/manual_pair · 서비스', SVC, True)
+    near('cui:svc_out', 'fm:svc_in', '/fleet/request_mission · 서비스\n자재 요청', SVC, True)
+    near('cui:svc_out2', 'fm:svc2_in', '/fleet/operator_command · /fleet/manual_pair · 서비스\n'
+                                       '작업 종료 · 짝 지정', SVC, True)
     bundle(['zone:evt'], ['fm:in', 'kpi:in'],
            '/fleet/zone_event · String',
            ['교착 사건으로 기록에 남긴다', '교착이 스스로 풀린 비율의 원천'], 5, STAT,
@@ -220,6 +221,16 @@ def draw(d, A, G, BOX):
               'scan · LaserScan\n전방 좌우 35° 최단거리', 23, SENS, gapx=g)
         hlink(t + ':out', 'fm:in',
               'battery_state · BatteryState\namcl_pose · PoseWithCovarianceStamped', 24, SENS, gapx=g)
+
+        # ── Nav2 — 주행 세 노드가 목표를 주고, 안전 감시가 회전분을 빌려 쓴다 ──
+        nav = f'{rp}_Nav2  (길찾기 · 도킹)'
+        for src in ('shuttle_mission', 'follow_target', 'return_dock'):
+            near(k(src, 'status' if src != 'return_dock' else 'status'), nav + ':goal_in',
+                 '갈 곳과 도킹을 맡긴다\n(ROS 토픽이 아니라 이 프로그램에 거는 요청이다)', LINE)
+        near(nav + ':vel_out', k('safety_watchdog', 'nav_in'),
+             '의도한 바퀴 속도\n정지 중에는 회전분만 빌려 쓴다', SENS)
+        hlink(nav + ':vel_out', t + ':in',
+              'cmd_vel · TwistStamped\n평소 바퀴 명령 — 정지 중에는 안전 감시가 덮어쓴다', 20, SENS, gapx=g)
 
         # ── 같은 PC 안 ────────────────────────────────────────────────────
         near(k('amr_detection', 'map'), k('follow_target', 'map_in'),
