@@ -98,7 +98,7 @@ BRD v3.2 부록 B 참조. 본 문서 추가: **PC-R3/PC-R8**(로봇 제어 PC), 
 
 | ID | 요구사항 | 상태·근거 |
 |---|---|---|
-| NR-01 `9/5 확정` | `ROS_DOMAIN_ID=3` 통일. **Discovery Server 는 PC-F `192.168.108.41` 한 대 (offboard, ID 1).** 로봇 2대는 `turtlebot4-setup` 에서 Offboard IP 를 PC-F 로 설정(onboard 서버 3/4 는 유지하되 PC 는 보지 않음). 모든 PC 는 `ROS_DISCOVERY_SERVER=";192.168.108.41:11811"`. 웹캠 PC 는 `ROS_SUPER_CLIENT=False` | **[검증됨] 9/5 — robot3·robot8 토픽을 PC-F 와 PC 4대 전부에서 확인. 통신 구성 완료** |
+| NR-01 `9/5 확정` | `ROS_DOMAIN_ID=3` 통일. **Discovery Server 는 PC-F `192.168.108.41` 한 대 (offboard, ID 1).** 로봇 2대는 `turtlebot4-setup` 에서 Offboard IP 를 PC-F 로 설정(onboard 서버 3/8 은 유지하되 PC 는 보지 않음). 모든 PC 는 `ROS_DISCOVERY_SERVER=";192.168.108.41:11811"`. 웹캠 PC 는 `ROS_SUPER_CLIENT=False` | **[검증됨] 9/5 — robot3·robot8 토픽을 PC-F 와 PC 4대 전부에서 확인. 통신 구성 완료** |
 | **NR-07** `9/5 종결` | **통신 구성은 프로젝트의 단일 실패 지점이다** — 실패하면 웹캠도 관제도 로봇과 통신하지 못해 S1 등록·S3 요청·힌트·FleetStatus 가 모두 죽는다. 검토한 네 안 중 **① offboard 단일 Discovery Server(PC-F, ID 1)** 로 9/5 에 확정·검증했다(NR-01). ② 2서버 동시 접속 · ③ 멀티캐스트 · ④ 로봇 1대 축소는 폐기. 되돌리는 절차는 `docs/setup.md` | **[검증됨] 9/5** |
 | **NR-08** `신규` | **offboard 구성 시 지켜야 할 것.** ① **PC-F 의 IP 를 고정한다** — DHCP 로 바뀌면 전부 한 번에 끊긴다. 9/7 확인: PC-F 는 학원 지원 노트북이라 재부팅해도 `.41` 유지(학원 확답), 공유기 예약 불필요. ② **PC-F 의 서버를 먼저 띄우고 로봇을 켠다** — 부팅 순서가 중요하다. ③ PC-F 가 **단일 실패 지점**이 되므로 시연 중 그 PC 에서 다른 작업을 하지 않는다. ④ **변경 전 원래 설정을 기록**하고, 로봇이 다른 조와 공용이면 **되돌리는 절차까지** 준비한다 | [팀 목표] |
 | NR-02 | nav2 launch 터미널은 `ROS_SUPER_CLIENT=False`, 그 외 노드·CLI 는 `True` | [검증됨] lifecycle 멈춤 해소 |
@@ -278,7 +278,7 @@ BRD v3.2 부록 B 참조. 본 문서 추가: **PC-R3/PC-R8**(로봇 제어 PC), 
                    [robot3 TurtleBot4]                  [robot8 TurtleBot4]
                     RPi4 / Jazzy                         RPi4 / Jazzy
                     create3 · depthai(OAK-D) · rplidar    (동일)
-                    onboard Discovery ID 3 (유지, 미사용)  onboard ID 4 (유지, 미사용)
+                    onboard Discovery ID 3 (유지, 미사용)  onboard ID 8 (유지, 미사용)
                     Offboard IP → 192.168.108.41          Offboard IP → 192.168.108.41
 ```
 
