@@ -106,11 +106,16 @@ def make_robot_control_fake(namespace='/robot3'):
         get_logger=lambda: FakeLogger(),
     )
     fake.status = RobotStatus._initial_status()
+    fake.source_times = {}
+    fake.source_publishers = {}
     fake._record_status_received_time = lambda: (
         RobotStatus._record_status_received_time(fake)
     )
-    fake._update_status_value = lambda key, value: (
-        RobotStatus._update_status_value(fake, key, value)
+    fake._record_source = lambda source: (
+        RobotStatus._record_source(fake, source)
+    )
+    fake._update_status_value = lambda key, value, source: (
+        RobotStatus._update_status_value(fake, key, value, source)
     )
     fake._return_has_priority = RobotStatus._return_has_priority
     fake.get_status = lambda: RobotStatus.get_status(fake)
@@ -334,6 +339,103 @@ def test_missing_manual_pair_response_does_not_report_success():
     assert accepted is False
     assert '응답 없음' in message
     assert publisher.messages == []
+
+
+def test_dead_pose_source_is_stale_while_battery_keeps_arriving():
+    """배터리만 살아 있어도 발행자가 사라진 위치는 낡은 것으로 본다 (I-055)."""
+    fake = make_robot_control_fake('/robot8')
+    fake.status_overtime_sec = 5.0
+    # robot8 의 Nav2 가 내려간 상황 — amcl_pose 발행자가 0 이 된다.
+    fake.source_times = {'pose': 0.0, 'battery': 99.5}
+    fake.source_publishers = {'pose': 0, 'battery': 1}
+    fake.status.update(_received_monotonic=99.5)
+
+    with patch(
+        'mro_fleet.nodes.robot_state_manager.time.monotonic',
+        return_value=100.0,
+    ):
+        manager = SimpleNamespace(robots={'/robot8': fake})
+        snapshot = RobotStateManager.get_all_robot_status(manager)
+
+    status = snapshot['/robot8']
+    assert status['stale'] is False          # 전체는 신선해 보인다
+    assert status['sources']['battery']['stale'] is False
+    assert status['sources']['pose']['stale'] is True
+    assert status['sources']['pose']['age_s'] == 100.0
+    assert '_source_monotonic' not in status
+    assert '_source_publishers' not in status
+
+
+def test_quiet_but_live_source_stays_trusted():
+    """바뀔 때만 발행하는 소스는 오래돼도 살아 있으면 믿는다 (I-055).
+
+    `safety/estop` 은 estop 이 걸리거나 풀릴 때만 내고 `amcl_pose` 는 로봇이
+    서면 멈춘다. 나이로 재면 멀쩡한 로봇이 계속 「확인 불가」가 된다.
+    """
+    fake = make_robot_control_fake('/robot3')
+    fake.status_overtime_sec = 5.0
+    fake.source_times = {'estop': 0.0, 'pose': 0.0}
+    fake.source_publishers = {'estop': 1, 'pose': 1}
+    fake.status.update(_received_monotonic=0.0)
+
+    with patch(
+        'mro_fleet.nodes.robot_state_manager.time.monotonic',
+        return_value=600.0,
+    ):
+        manager = SimpleNamespace(robots={'/robot3': fake})
+        snapshot = RobotStateManager.get_all_robot_status(manager)
+
+    sources = snapshot['/robot3']['sources']
+    assert sources['estop']['stale'] is False
+    assert sources['estop']['age_s'] == 600.0
+    assert sources['pose']['stale'] is False
+
+
+def test_never_received_source_reports_no_age():
+    """한 번도 안 온 소스는 「0초 전」이 아니라 나이 없음으로 나온다 (I-055)."""
+    fake = make_robot_control_fake('/robot3')
+    fake.status_overtime_sec = 5.0
+    fake.source_publishers = {'estop': 1}
+    fake.status.update(_received_monotonic=100.0)
+
+    with patch(
+        'mro_fleet.nodes.robot_state_manager.time.monotonic',
+        return_value=100.0,
+    ):
+        manager = SimpleNamespace(robots={'/robot3': fake})
+        snapshot = RobotStateManager.get_all_robot_status(manager)
+
+    estop = snapshot['/robot3']['sources']['estop']
+    assert estop['age_s'] is None
+    assert estop['stale'] is True
+
+
+def test_each_callback_stamps_its_own_source():
+    """콜백마다 자기 소스의 수신 시각만 남긴다 (I-055)."""
+    fake = make_robot_control_fake()
+
+    RobotStatus._receive_estop(fake, SimpleNamespace(data=True))
+
+    assert set(fake.source_times) == {'estop'}
+
+    RobotStatus._receive_shuttle_status(
+        fake, SimpleNamespace(data='RETURNING')
+    )
+
+    assert set(fake.source_times) == {'estop', 'shuttle'}
+
+
+def test_dashboard_gates_values_on_source_freshness():
+    """화면이 죽은 소스의 값을 현재값으로 그리지 않는다 (I-055)."""
+    with open(TEMPLATE_PATH, encoding='utf-8') as template_file:
+        html = template_file.read()
+
+    # 소스가 죽으면 null 로 떨어뜨려 기존 「확인 불가」·「—」 표시를 타게 한다.
+    assert 'estop:estopKnown?Boolean(data.estop):null' in html
+    assert 'x:poseKnown&&Number.isFinite(x)?x:null' in html
+    assert 'batteryKnown&&Number.isFinite(battery)' in html
+    # E-STOP 요약은 모르는 것이 하나라도 있으면 「정상」이라고 말하지 않는다.
+    assert 'allKnown?' in html
 
 
 def test_dashboard_shows_duplicate_monitor_banner():
