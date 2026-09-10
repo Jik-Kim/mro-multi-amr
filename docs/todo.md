@@ -5,7 +5,7 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 124/194 완료** (█████████████░░░░░░░)  ·  기준 09/10
+**전체 126/196 완료** (█████████████░░░░░░░)  ·  기준 09/10
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | mro_perception [인지 — 정정인, 민범진] | 22/28 | `████████░░` | **5** |
 | mro_webcam [웹캠 — 한세교, 김학민] | 24/34 | `███████░░░` | **6** |
 | mro_navigation [주행 — 박병후, 이시율] | 46/88 | `█████░░░░░` | **25** |
-| mro_fleet [관제 — 김민준] | 15/22 | `███████░░░` | **4** |
+| mro_fleet [관제 — 김민준] | 17/24 | `███████░░░` | **4** |
 | mro_bringup [PM 김병직] | 10/13 | `████████░░` | **1** |
 
 **마감이 지난 항목 41건**
@@ -275,6 +275,8 @@
 
 ### 완료
 
+- [x] **관제 DB 단독 CRUD 점검 도구** — `db_down.py`에서 `workers`·`missions`·`events`별 생성·조회·수정·삭제를 제공하고, 인자 없이 `~/mro_fleet.db` 전체 테이블을 터미널 표로 출력. 임시 DB CRUD 실행과 삭제 후 빈 테이블 확인 · 마감 9/10
+- [x] **관제 정상 시나리오 단일 로봇 실환경 연동** — 작업자 등록 토픽 발행 → UI 자재 요청 → `mission/assigned` 수신 → 대기 위치 도착 → UI 「작업 종료 → 복귀」 → 실제 도킹 완료까지 확인. DB·KPI 값 대조와 2대 동시 운용은 별도 검증으로 남김 · 마감 9/10
 - [x] **상세 화면 탭 선택 유지 (I-056)** — `/status` 1초 폴링은 `refreshRobotDetail()`로 내용만 갱신하고 `openRobotDetail()`의 기본 정보 탭 초기화 흐름을 다시 타지 않도록 분리. 회귀 테스트 포함 45건 통과 · 마감 9/10
 - [x] **`control_ui`: 명시 페어링 폴백 버튼 (FR-13, 계약 10절)** — `target/pair_state = GATE_FAIL` 이면 버튼 표시, 운영자가 로봇·작업자 선택 → `fleet_manager` 가 `/robotN/manual_pair` 호출, 응답의 `reason` 을 화면에 그대로 보여준다. 성공 시 `/fleet/intervention` 에 **`kind = MANUAL_PAIR`** 발행 — IPH 에 들어간다(10.7) · 마감 9/9  **→ 완료 9/8 (PR #47) — `/fleet/manual_pair` 중계까지**
 - [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8  **→ 9/9 로봇별 `RobotStatus(namespace)`가 AMR 원본 상태를 전담하고 `/fleet/status`를 1 Hz 발행. `fleet_manager` 는 이 요약을 받아 미션 전이·DB만 담당한다(계약 v1.18, PM 승인). HTTP·맵은 `monitor_web_app.py`가 담당**
