@@ -5,25 +5,24 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 127/201 완료** (█████████████░░░░░░░)  ·  기준 09/10
+**전체 131/201 완료** (█████████████░░░░░░░)  ·  기준 09/10
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 7/9 | `████████░░` | — |
 | mro_perception [인지 — 정정인, 민범진] | 23/28 | `████████░░` | **4** |
-| mro_webcam [웹캠 — 한세교, 김학민] | 24/34 | `███████░░░` | **6** |
+| mro_webcam [웹캠 — 한세교, 김학민] | 28/34 | `████████░░` | **5** |
 | mro_navigation [주행 — 박병후, 이시율] | 46/92 | `█████░░░░░` | **25** |
 | mro_fleet [관제 — 김민준] | 17/25 | `███████░░░` | **4** |
 | mro_bringup [PM 김병직] | 10/13 | `████████░░` | **1** |
 
-**마감이 지난 항목 40건**
+**마감이 지난 항목 39건**
 
 - `9/9` mro_perception — mro_perception flake8 정리 — main 55건 → PR #40 으로 80건 → 9/9 실측 156건(99자 기…
 - `9/8` mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - `9/8` mro_perception — TS-U05 줄자 대조 — target/distance 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오…
 - `9/9` mro_perception — 시험 절차 — 대기공간 로봇이 서향이므로 S5 페어링 때 RC카를 로봇 정면(서쪽)으로 돌아 들어오게 조종 (FR-14 정면 1…
 - `9/9` mro_webcam — /webcam2/image_raw/compressed 를 오버레이로 통일 (I-042) — 지금은 오버레이와 원본이 섞여 나가고…
-- `9/9` mro_webcam — test_subscription 을 tools/ 로 (PR #48 후속) — setup.py 콘솔 진입점으로 등록돼 ros2 r…
 - `9/8` mro_webcam — 웹캠2 캡처 fps 실측 — webcam.yaml 의 webcam_hint.fps: 30.0 은 장치 사양 가정이고 실측 기록이…
 - `9/8` mro_webcam — 웹캠2 호모그래피 재검증 (I-002 · TS-U02) — 재캘리 완료(PR #32: LiDAR 중심 AMCL 13점, RMSE…
 - `9/8` mro_webcam — webcam_hint_node.py: YOLO 타이머 재진입 차단 (I-027) — 개별 MutuallyExclusiveCall…
@@ -59,13 +58,11 @@
 - `9/8` mro_fleet — fleet_manager_node.py: aruco/id·aruco/distance 구독 → ID 4 수신 시 |amcl_pos…
 - `9/8` mro_bringup — v_max 0.3 m/s 와 Nav2 max_vel_x 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘…
 
-**오늘 마감 18건**
+**오늘 마감 16건**
 
 - mro_interfaces — 계약 v1.22 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤) — 신규 토픽 safety/state(STOPPING/…
 - mro_interfaces — docs/setup.md:92 의 nav2 런치 줄 (I-049 후속) — turtlebot4_navigation/nav2.la…
 - mro_perception — FR-13 실기 확인 (인지↔관제 합동) — 인형이 보이는 상태로 GATE_FAIL 30 s → 관제 버튼 → 수락까지 한 번에…
-- mro_webcam — webcam_hint 의 target_classes 를 yaml 로 (PR #62 후속) — webcam_hint 의 코드 전용…
-- mro_webcam — webcam.yaml 의 show_window 줄 삭제 (PR #65 후속) — launch 가 yaml 뒤에 딕셔너리로 넘겨 …
 - mro_webcam — mro_webcam flake8 — 9/9 실측 365건 (등록 시 345건) — 이번 PR 탓은 아니지만 이 정도면 아무도 이…
 - mro_navigation — T_lim 120 s 실측 확정 (BRD Q-14) — 오늘 오전 중 — 새 축소 아레나 동선에서 요청 접수 → 대기공간(Z-0…
 - mro_navigation — 웹캠2 힌트 발행이 48 s 끊긴 사유 (I-050 곁가지) — follow_0909_1609 에서 10 Hz 로 오다 48.0…
@@ -132,9 +129,9 @@
 ## mro_webcam [웹캠 — 한세교, 김학민]
 - [ ] **`/webcam2/image_raw/compressed` 를 오버레이로 통일 (I-042)** — 지금은 오버레이와 원본이 섞여 나가고 받는 쪽이 구분할 수 없다. 원본 대체를 빼고 첫 검출 주기 전에는 발행하지 않는다 (PM 결정 9/8) · 마감 9/9
 - [x] **`hint_valid_s` 죽은 설정 정리 (I-047)** — `webcam_hint_node` 가 선언·검사만 하고 안 쓴다. `webcam.yaml` 주석은 「이 시간 지난 힌트는 쓰지 않는다」고 적혀 있어 만지면 「바꿨는데 안 변한다」가 된다. **지우는 쪽을 권한다** — 유효기간은 받는 쪽이 정하고 `common.yaml` 이 단일 출처가 된다 · 마감 9/10  **→ 완료 9/9 (PM 작업) — 웹캠팀이 판단을 위임해 지웠다. `common.yaml` 하나가 단일 출처**
-- [ ] **`test_subscription` 을 `tools/` 로 (PR #48 후속)** — `setup.py` 콘솔 진입점으로 등록돼 `ros2 run mro_webcam test_subscription` 으로 뜬다. 이름이 단위 시험처럼 읽히는데 진단 도구다. `tools/diag_lag.py` 가 선례 · 마감 9/9
-- [ ] **`webcam_hint` 의 `target_classes` 를 yaml 로 (PR #62 후속)** — `webcam_hint` 의 코드 전용 값 중 경로가 아닌 것은 이것 하나 남았다 (`homography_json`·`model_path` 는 launch 가 주는 경로라 대상이 아니다). **웹캠1(`webcam_register`)쪽 yaml 에는 이미 있다** (`webcam.yaml:10`) — 같은 개념인데 한쪽만 코드에 있다. 기본값 `["worker_a","worker_b"]` 그대로 한 줄 · 마감 9/10
-- [ ] **`webcam.yaml` 의 `show_window` 줄 삭제 (PR #65 후속)** — launch 가 yaml 뒤에 딕셔너리로 넘겨 **항상 덮으므로 그 줄은 이제 아무 일도 안 한다.** 값이 같아 지금은 무해하지만 시연하려고 `true` 로 고치면 안 바뀐다. `show_window` 는 「어떻게 접속해 띄우느냐」에 달린 값이라 launch 인자가 제 자리다 — yaml 이 갖지 않기로 한다 (오늘 셋째 사례: I-045·I-047 과 같은 유형) · 마감 9/10
+- [x] ~~**`test_subscription` 을 `tools/` 로 (PR #48 후속)**~~ · 마감 9/9  **→ 완료 9/10** — `tools/diag_webcam2_image.py` 로 옮기고 `setup.py` 콘솔 진입점을 지웠다. 이름도 하는 일(웹캠2 압축 영상 진단)에 맞췄다 — `tools/diag_lag.py` 선례. `docs/setup.md` 실행 안내도 같이 고쳤다
+- [x] ~~**`webcam_hint` 의 `target_classes` 를 yaml 로 (PR #62 후속)**~~ · 마감 9/10  **→ 완료 9/10** — `webcam.yaml` 의 `webcam_hint` 에 기본값 그대로 넣었다. 이제 같은 개념이 두 노드 모두 yaml 에 있다
+- [x] ~~**`webcam.yaml` 의 `show_window` 줄 삭제 (PR #65 후속)**~~ · 마감 9/10  **→ 완료 9/10** — `webcam_hint` 쪽 한 줄만 지웠다. **`webcam_register`(30행)는 남긴다** — `webcam1_pc.launch.py` 는 `show_window` 를 넘기지 않아 그 줄이 실제로 쓰이고 있다 (덮이는 것은 웹캠2 뿐이다)
 - [ ] **`mro_webcam` flake8 — 9/9 실측 365건** (등록 시 345건) — 이번 PR 탓은 아니지만 이 정도면 아무도 이 시험을 안 돌리고 있다는 뜻이다. `mro_perception` 도 비슷하다 · 마감 9/10
 - [ ] **웹캠2 캡처 fps 실측** — `webcam.yaml` 의 `webcam_hint.fps: 30.0` 은 장치 사양 가정이고 실측 기록이 없다. 웹캠1(Jieli)은 9/6 에 재서 25 로 확정했다. 두 캠이 같은 모델이면 30 이 아니라 25 다. `v4l2-ctl --list-formats-ext` 로 확인하고 다른 값이면 yaml 을 고친다 — 설계도는 이 파일을 읽어 그리므로 다시 생성만 하면 따라온다. 계약 4절이 '장치 상한 그대로' 라 동작에는 영향이 없다 (캡처 ≥ 발행 10 Hz) · 마감 9/8
 - [x] **새 아레나 호모그래피 (I-002)** — cam2 완료 (PR #9, AMCL 기준점 13개, RMSE 2.8 cm). **cam1 은 하지 않는다 (9/6)** — 웹캠1 은 등록만, map 좌표 없음 · 마감 9/6
@@ -143,7 +140,7 @@
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [x] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) — PR #26 실기동: 등록 0.90 s · W1/W2 별개 · 재등록 15/15 (체류 시간은 Q-26 todo 별도) · 마감 9/8
 - [x] `webcam_register_node.py`: `mean_hist()` 스케일 정정 — 평균 뒤 **L2 정규화**로 바꿨다(`hsv_hist` 가 `cv2.normalize` 기본값 NORM_L2 라 L2=1 이다). 종전에는 합을 128 로 맞춰 발행 `color_hist` 의 L2 가 **31.6** 이었다. 유사도는 Bhattacharyya 척도 불변이라 영향 없음을 실측 확인(차이 5e-09) — 오늘 낸 측정값은 그대로 유효하다 (PR #26 PM 노트) · 마감 9/8
-- [ ] `webcam_hint_node.py`: `DEFAULT_MODEL_PATH` 를 `mro_perception/models/worker.pt` 로, `mro_webcam/models/best.pt` 사본 삭제 (단일 출처, PR #26 노트) · 마감 9/8  **→ 절반 (9/9 확인): `DEFAULT_MODEL_PATH` 는 `mro_perception/models/worker.pt` 로 됐으나 `mro_webcam/models/best.pt` 사본이 아직 남아 있다**
+- [x] ~~`webcam_hint_node.py`: `DEFAULT_MODEL_PATH` 를 `mro_perception/models/worker.pt` 로, `mro_webcam/models/best.pt` 사본 삭제 (단일 출처, PR #26 노트)~~ · 마감 9/8  **→ 완료 9/10** — 남아 있던 사본 6.2 MB 를 지웠다. `setup.py` 의 `models/*.pt` 설치 항목도 같이 지웠다 — 설치할 파일이 없어져 죽은 설정이 된다
 - [x] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26, PR #20) · 마감 9/8
 - [x] `webcam_register_node.py`: `webcam.yaml` 파라미터화 — `webcam_index`·`conf` (PR #26) (9/7 내장 카메라가 잡히고 conf 를 못 낮춰 두 번 막힘, PR #20 노트). yaml 의 `model_path: ""` 는 launch 가 덮으므로 그대로 두되 주석 정정 · 마감 9/8
 - [x] **웹캠1 출입구 체류 시간 실측 (Q-26 해소)** — 실측 결과 문제 없다. 등록 없는 상태에서 시작해 **첫 통과에 두 명 다 등록**(0.90 / 0.91 s). 체류 구간 **18.99 · 16.30 s** 로 필요한 **1.3 s** 의 10배 이상 여유. 재등록 3/3(sim 0.71·0.75·0.77) · 마감 9/8
