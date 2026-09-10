@@ -44,9 +44,13 @@ def _setup(context):
     #   합의·PM 승인값(arena.yaml nav2_inflation_radius)인데 저장소에서 Nav2 로 넘길 통로가 없어
     #   미적용이었다 — 이 런치가 그 통로다. 0.79 m 통로에서 양쪽 0.25 를 빼도 lethal 이 아니라
     #   비용일 뿐이라 통과는 되고, 가운데를 선호하게 된다
-    for costmap in ('local_costmap', 'global_costmap'):
+    #   **로컬만 따로 낮춰 볼 수 있다** (`local_inflation:=0.10`, 9/10 16:14 복귀 회차 — 작업공간 서쪽
+    #   0.8 m 출입구 모서리에서 DWB 가 vx 0 으로 2 분 헤맴). 기본은 글로벌과 같은 0.25 — 시험용이지
+    #   확정값이 아니다. 내접 반지름 0.186 아래로 내리면 Nav2 가 경고를 내고 벽에 붙을 수 있다
+    local_inflation = float(LaunchConfiguration('local_inflation').perform(context) or INFLATION_RADIUS_M)
+    for costmap, radius in (('local_costmap', local_inflation), ('global_costmap', INFLATION_RADIUS_M)):
         layer = config[costmap][costmap]['ros__parameters']['inflation_layer']
-        layer['inflation_radius'] = INFLATION_RADIUS_M
+        layer['inflation_radius'] = radius
         layer['cost_scaling_factor'] = COST_SCALING
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as stream:
         yaml.safe_dump(config, stream)
@@ -70,4 +74,6 @@ def generate_launch_description():
         DeclareLaunchArgument('namespace', default_value='/robot3'),
         DeclareLaunchArgument('params_file', default_value=os.path.join(package, 'config', 'nav2.yaml')),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
+        DeclareLaunchArgument('local_inflation', default_value=str(INFLATION_RADIUS_M),
+                              description='local_costmap 만의 inflation_radius [m]. 글로벌은 INFLATION_RADIUS_M 고정'),
         OpaqueFunction(function=_setup)])
