@@ -23,6 +23,10 @@
   기다린 뒤 로봇 B 의 T3 를 시작한다. 그리고 **T2(bag) 과 T4(rviz) 는 양쪽 T8 이 다 뜬 뒤에 켠다** —
   둘 다 `scan`·`tf`·`odom` 을 로봇에서 **구독자마다 따로** 끌어오는데, 기동 구간엔 필요가 없다.
   5절 판정은 관제 미션부터 시작하므로 **bag 을 늦게 켜도 잃는 기록이 없다.**
+- **T8 앞에 `map→odom` 을 확인한다 (하드 게이트 · 9/10 추가).** T6 의 `초기자세 … 전송` 로그만으로는
+  부족하다 — 9/10 21:08 로봇3 은 셔틀 노드 로그가 **0건**이었고 AMCL 이 890 초 내내 초기자세를 못
+  받았다. TF 가 실제로 생긴 것을 보고 T8 을 띄운다 (T6 절 참조). **확인 못 하면 T8 을 띄우지 않는다** —
+  초기자세 없이 뜬 Nav2 는 ③에서 멈추고 **매니저가 재시도하지 않는다** (I-035).
 - `teleop_twist_keyboard` 창은 주행 중 절대 열어 두지 않는다 (키 하나가 로봇을 움직인다).
 - 미션 시작·종료 토픽은 **관제만** 낸다. 로봇 PC 에서 `mission/assigned` 를 수동 발행하지 않는다.
 
@@ -153,12 +157,23 @@ cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 run mro_navigation shu
 ```
 `초기자세 … 전송` 확인. T3 에 `AMCL cannot publish` 가 계속되거나 `dock_status 15 s` 경고면 이 창만 재시작 (첫 발행이 디스커버리 매칭 전에 나가 유실된 것).
 
+**그리고 T8 로 넘어가기 전에 `map→odom` 이 실제로 생겼는지 본다 (하드 게이트).** 로그는 '보냈다' 만
+말하지 '도착했다' 를 말하지 않는다.
+
+```bash
+cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 run tf2_ros tf2_echo map odom --ros-args -r __ns:=/ROBOT -r /tf:=tf -r /tf_static:=tf_static
+```
+
+변환이 찍히면 Ctrl-C 로 닫고 T7·T8 로 간다. 안 찍히면 **T8 을 띄우지 않는다** — 이 창을 다시 띄우고
+`ros2 topic echo /ROBOT/amcl_pose --once` 로 AMCL 이 받았는지 확인한다. 초기자세 없이 뜬 Nav2 는
+`global_costmap` 활성화에서 멈추고 **매니저가 재시도하지 않는다** (I-035 · 6-2절).
+
 ### T7 · 복귀 노드 — 유지 (**finish 전에 떠 있는지 확인** — 9/10 16:14 에 6번 놓쳤다)
 ```bash
 cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 run mro_navigation return_dock_node --ros-args -r __ns:=/ROBOT -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/common.yaml --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/ROBOT.yaml
 ```
 
-### T8 · Nav2 — 유지 (`Managed nodes are active` 까지 기다림)
+### T8 · Nav2 — 유지 · **T6 의 `map→odom` 확인 뒤에** (`Managed nodes are active` 까지 기다림)
 ```bash
 cd ~/mro-multi-amr && source tools/shuttle_env.sh nav2 && ros2 launch mro_navigation safety_nav2.launch.py namespace:=/ROBOT dwb_sim_time:=1.0
 ```
@@ -219,8 +234,8 @@ T11  CLEAR 유지. 막히면 STOPPING → SAFE_ROTATE → CLEAR
 | 관제 UI 에 로봇이 없음 | 로봇 토픽이 관제에 안 닿음 | 로봇 PC `ros2 topic hz /ROBOT/approach/status` (T9) → 관제 창 `ROS_SUPER_CLIENT` → 관제 2대 여부 |
 | T6 뒤에도 `AMCL cannot publish` | 초기자세 첫 발행 유실 (디스커버리 느림) | T6 재시작 |
 | T8 이 `bond` 타임아웃으로 안 뜸 | 디스커버리 과부하 (talker·bag 재생·다른 로봇 스택) | 불필요한 노드 내리고 T8 재시작 |
-| **로봇 2대 중 두 번째 T8 이 안 뜸** (순서 무관·핑 200 ms) | 디스커버리 명단 배포 폭주 — 아래 6-1 | 0절의 2대 기동 순서 → 그래도 안 되면 6-1 |
-| 그때 `Timed out waiting for transform from base_link to map` 이 뜨고 활성화가 3번(`planner_server`)에서 멈춤 | I-035 — `global_costmap` 이 `map→base_link` 를 못 받았고, 매니저는 **재시도하지 않는다** | **T8 을 재시작하지 말고** RESUME — 아래 6-2 |
+| 2대 운용 중 T8 이 안 뜨고 핑이 튐 | 디스커버리 명단 배포 폭주 — 아래 6-1 | 0절의 2대 기동 순서 → 그래도 안 되면 6-1 |
+| `Timed out waiting for transform from base_link to map` 으로 활성화가 3번(`planner_server`)에서 멈춤 | 둘 중 하나다 — 초기자세가 **애초에 안 갔거나**, 갔는데 Nav2 가 TF 보다 먼저 활성화됐거나 | **먼저 `amcl_pose` 로 어느 쪽인지 가른다** — 아래 6-2 |
 | 로봇이 스캔 없이 멈춤 (`STUCK: 유효한 LiDAR 스캔 없음`) | 로봇↔PC 링크 끊김 (13:46) | `ros2 topic hz /ROBOT/scan` → RPi `sudo systemctl restart turtlebot4.service` |
 | 리그를 띄우자 로봇이 도크에서 빠짐 | Create3 가 cmd_vel 수신에 반응 (14:34·14:55) | 워치독이 도킹 중 발행 금지 — 재발 시 `ros2 topic info -v /ROBOT/cmd_vel` 로 다른 발행자 확인 |
 | 작업자를 봐도 SEARCHING 만 반복 | 재식별 sim < 0.34 (`unpaired`) | 인형을 웹캠1 앞에 정지 2~3 s 로 재등록, 또는 manual_pair |
@@ -242,8 +257,17 @@ T11~T13 echo 3. **2대면 30벌**이고, 시스템 전체 참가자는 약 75벌
 
 Nav2 는 `turtlebot4_navigation/nav2.launch.py` 가 `use_composition` 을 `'False'` 로
 하드코딩해서 **프로세스가 11개**다. 두 번째 Nav2 를 켜는 순간이 *명단이 제일 클 때* 와
-*참가자 11개가 한꺼번에 들어올 때* 가 겹치는 지점이다. **순서와 무관하게 항상 두 번째가
-실패하는 것**이 이것으로 설명된다.
+*참가자 11개가 한꺼번에 들어올 때* 가 겹치는 지점이다.
+
+**다만 이것이 T8 실패의 유일한 원인은 아니다.** 9/10 밤 회차(`20:53`·`21:08`) 를 보면
+20:53 은 **먼저 띄운** 로봇8 이 bond 실패했고(그때 로봇3 Nav2 는 아직 안 떠 있었다),
+21:08 로봇3 은 **초기자세가 아예 안 가서** 실패했다 (셔틀 노드 로그 0건 · AMCL 890 초 내내
+미수신). '항상 두 번째가 실패한다' 는 성립하지 않는다 — **부하는 실패를 쉽게 만들 뿐이고,
+그날 실패의 직접 원인은 따로 있을 수 있다. 6-2 로 먼저 가른다.**
+
+그리고 그 회차는 **절차대로 돈 것이 아니었다** — 관제가 두 벌(I-054 위반) · rviz 가 로봇당
+3개(T4 는 1개) · `talker` · 유령 등록이 함께 떠 있었다. 부하가 병목인지 판단하려면 **먼저
+절차대로 한 번 돌려야 한다.**
 
 ### 조치 — 노드만 띄우는 터미널을 일반 클라이언트로
 
@@ -292,30 +316,43 @@ T8 의 활성화 순서는 `navigation_launch.py:43` 에 있다 — ① `control
   `route_server`(④) 에는 map 관련 메시지가 없고, TB4 `nav2.yaml` 에 설정 자체가 없다.
   **줄 수로 세지 말고 메시지 본문으로 판정한다.**
 
-### 왜 2대일 때만 나오나
+### 먼저 가른다 — 원인이 둘이고 조치가 다르다
 
-I-035 는 초기자세를 안 보내서 생긴 문제였고 9/8 에 고쳤다 (`shuttle_mission_node` 가 기동 시 전송).
-**보내는 것은 이제 맞다. 2대에서 문제가 되는 것은 그게 제때 도착하느냐다.**
-
-디스커버리 서버를 쓰면 **같은 PC 안의 두 프로세스도 서로를 찾으려면 PC-F 를 거친다** (멀티캐스트
-탐색이 꺼진다). 데이터는 그다음에 로컬로 흐르지만 **짝을 맺는 것 자체가 무선 왕복**이다. 그래서
-T6→AMCL(`initialpose`) 이나 AMCL→`planner_server`(`map→odom` TF) 중 하나만 늦어도 ③에서 멈춘다.
-**서버가 제일 바쁜 때가 정확히 두 번째 Nav2 를 켜는 순간**이라 2대에서만 드러난다.
-
-그리고 I-035 가 적어둔 대로 **매니저는 나중에 TF 가 생겨도 재시도하지 않는다** — 잠깐 늦은 것이
-영구 실패가 된다. "느리게 켜짐" 이 아니라 "안 켜짐" 으로 보이는 이유다.
-
-### 조치
-
-AMCL 이 살아 있는지 먼저 본다. 값이 나오면 `map→odom` 은 있는 것이다.
+**RESUME 을 먼저 치지 않는다.** 초기자세가 애초에 안 갔으면 RESUME 은 아무것도 못 고친다.
 
 ```bash
 cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 topic echo /ROBOT/amcl_pose --once
 ```
 
-그다음 활성화를 다시 건다 (`command: 2` = RESUME). **I-035 에 실측 확인 기록이 있는 명령이다** —
+| `amcl_pose` | 무슨 일이 있었나 | 조치 |
+|---|---|---|
+| **안 나옴** (멈춰 있음) | **초기자세가 아예 안 갔다** — T6 이 안 떴거나 즉사했다 | **A. T6 부터** |
+| 나옴 | 갔고 AMCL 도 받았다. Nav2 가 TF 보다 **먼저** 활성화된 것뿐이다 | **B. RESUME** |
+
+### A. 초기자세가 안 간 경우
+
+9/10 21:08 로봇3 이 이 경우였다 — **셔틀 노드 로그 0건 · AMCL 890 초 내내 미수신.** 늦게 온 것이
+아니라 **한 번도 안 왔다.** 이건 디스커버리 부하와 무관하며, 부하를 아무리 줄여도 안 고쳐진다.
+
+T6 을 띄우고 `초기자세 … 전송` 을 눈으로 확인한다. 그다음 **`map→odom` 이 실제로 생겼는지 본다:**
+
+```bash
+cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 run tf2_ros tf2_echo map odom --ros-args -r __ns:=/ROBOT -r /tf:=tf -r /tf_static:=tf_static
+```
+
+변환이 찍히면 그때 T8 을 띄운다. **이 확인이 0절의 하드 게이트다** — I-035 의 PM 결정 ⓒ 가
+요구한 것이다. 확인 없이 T8 을 띄우면 ③에서 멈추고, **매니저는 나중에 TF 가 생겨도 재시도하지
+않으므로** 잠깐의 어긋남이 영구 실패가 된다.
+
+### B. Nav2 가 TF 보다 먼저 활성화된 경우
+
+이쪽은 타이밍이다. 디스커버리 서버를 쓰면 **같은 PC 안의 두 프로세스도 서로를 찾으려면 PC-F 를
+거친다** (멀티캐스트 탐색이 꺼진다). 데이터는 그다음에 로컬로 흐르지만 **짝을 맺는 것 자체가 무선
+왕복**이라, 서버가 막히면 AMCL→`planner_server` 매칭이 늦어진다. 6-1 이 겨냥하는 것이 이쪽이다.
+
+활성화를 다시 건다 (`command: 2` = RESUME). **I-035 에 9/7 실측 확인 기록이 있는 명령이다** —
 `global_costmap`·`planner_server`·`behavior_server`·`bt_navigator`·`velocity_smoother`·
-`waypoint_follower` 가 모두 `active [3]` 이 되는 것을 9/7 에 확인했다.
+`waypoint_follower` 가 모두 `active [3]` 이 되는 것을 확인했다.
 
 ```bash
 cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 service call /ROBOT/lifecycle_manager_navigation/manage_nodes nav2_msgs/srv/ManageLifecycleNodes "{command: 2}"
@@ -327,6 +364,6 @@ cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 service call /ROBOT/li
 cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 service call /ROBOT/bt_navigator/get_state lifecycle_msgs/srv/GetState
 ```
 
-**T8 을 껐다 켜면 안 되는 이유** — 재시작은 참가자 11개를 내렸다가 다시 올리는 것이라
-**디스커버리 폭풍을 한 번 더 만든다.** 이미 서버가 막혀서 생긴 증상인데 부하를 더 준다.
-RESUME 은 떠 있는 노드의 상태만 전이시키므로 디스커버리가 다시 일어나지 않는다.
+**T8 을 껐다 켜지 않는 이유** — 재시작은 참가자 11개를 내렸다가 다시 올리는 것이라 **디스커버리
+폭풍을 한 번 더 만든다.** RESUME 은 떠 있는 노드의 상태만 전이시키므로 디스커버리가 다시 일어나지
+않는다. 다만 **A 인 경우엔 RESUME 이 소용없다** — 위 표로 먼저 가르는 이유다.
