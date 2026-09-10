@@ -11,6 +11,9 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 from mro_interfaces.msg import FleetStatus, Mission
 
 from rclpy.node import Node
+from rclpy.qos import (
+    DurabilityPolicy, HistoryPolicy, QoSProfile, ReliabilityPolicy,
+)
 
 from sensor_msgs.msg import BatteryState
 
@@ -118,11 +121,20 @@ class RobotStatus(Node):
             self._receive_battery_status,
             10,
         )
+        # amcl 은 amcl_pose 를 TRANSIENT_LOCAL(depth 1) 로, 그것도 **필터가
+        #   갱신될 때만** 즉 로봇이 움직일 때만 내보낸다. 기본 QoS(VOLATILE)로
+        #   구독하면 매칭은 되지만 latch 된 마지막 값을 못 받아, 서 있는 로봇은
+        #   관제가 켜져 있는 내내 초기값 0,0 으로 남는다 (맵 원점에 그려진다).
         self.create_subscription(
             PoseWithCovarianceStamped,
             f'{self.namespace}/amcl_pose',
             self._receive_pose,
-            10,
+            QoSProfile(
+                depth=1,
+                history=HistoryPolicy.KEEP_LAST,
+                reliability=ReliabilityPolicy.RELIABLE,
+                durability=DurabilityPolicy.TRANSIENT_LOCAL,
+            ),
         )
         self.create_subscription(
             Bool,
