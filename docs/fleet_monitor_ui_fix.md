@@ -63,6 +63,68 @@
 
 ---
 
+## 수정 위치
+
+전부 `ros2_ws/src/mro_fleet/templates/index.html` 한 파일이다. 줄이 압축돼 있어
+(18줄 하나가 1,800자를 넘는다) 줄 번호보다 아래 조각으로 검색하는 편이 빠르다.
+
+| 줄 | 대상 | 바뀐 것 |
+|---|---|---|
+| 18 | `.robot-marker` | `width:0;height:34px` 추가 |
+| 18 | `.marker-icon` | `flex:none` 추가 |
+| 18 | `.robot-marker.estop::after` | `flex:none` 추가 |
+| 18 | `.dock-reference` | `width:22px;height:0` 추가 |
+| 18 | `.dock-arrow` | `flex:none` 추가 |
+| 50 | `uiState` | `activeTab:'basic'` 추가 |
+| 113 | `openRobotDetail()` 앞 | 로봇이 바뀔 때만 basic 으로 초기화 |
+| 113 | `openRobotDetail()` 끝 | `selectTab('basic')` → `selectTab(uiState.activeTab)` |
+| 115 | `selectTab()` | 고른 탭을 `uiState.activeTab` 에 기록 |
+
+### 1번 — 마커 앵커 (18줄, `<style>` 안)
+
+```diff
+-.robot-marker{position:absolute;z-index:3;transform:translate(-50%,-50%);display:flex;flex-direction:column;...
++.robot-marker{position:absolute;z-index:3;transform:translate(-50%,-50%);width:0;height:34px;display:flex;flex-direction:column;...
+
+-.marker-icon{width:34px;height:34px;display:grid;...
++.marker-icon{flex:none;width:34px;height:34px;display:grid;...
+
+-.robot-marker.estop::after{content:"안전 정지";padding:3px 7px;...
++.robot-marker.estop::after{content:"안전 정지";flex:none;padding:3px 7px;...
+
+-.dock-reference{position:absolute;z-index:2;transform:translate(-50%,-50%);display:flex;align-items:center;...
++.dock-reference{position:absolute;z-index:2;transform:translate(-50%,-50%);width:22px;height:0;display:flex;align-items:center;...
+
+-.dock-arrow{width:22px;height:22px;display:grid;...
++.dock-arrow{flex:none;width:22px;height:22px;display:grid;...
+```
+
+### 2번 — 탭 상태 (50 · 113 · 115줄, `<script>` 안)
+
+```diff
+ // 50줄
+-const uiState={selectedRobot:null,detailOpen:false,robots:{...
++const uiState={selectedRobot:null,detailOpen:false,activeTab:'basic',robots:{...
+
+ // 113줄 — openRobotDetail() 앞부분
+ function openRobotDetail(id){const r=uiState.robots[id];
++if(!uiState.detailOpen||uiState.selectedRobot!==id)uiState.activeTab='basic';
+ uiState.selectedRobot=id;uiState.detailOpen=true;...
+
+ // 113줄 — openRobotDetail() 끝
+-...setAttribute('aria-hidden','false');selectTab('basic')}
++...setAttribute('aria-hidden','false');selectTab(uiState.activeTab)}
+
+ // 115줄
+-function selectTab(name){document.querySelectorAll('.tab-button')...
++function selectTab(name){uiState.activeTab=name;document.querySelectorAll('.tab-button')...
+```
+
+커밋이 버그별로 나뉘어 있으니 `git show 022e12c`(마커) · `git show 330de7c`(탭) 로
+각각 따로 볼 수 있다.
+
+---
+
 ## 검증
 
 | 항목 | 방법 | 결과 |
@@ -97,7 +159,13 @@ HTML 만 고칠 때는 리빌드 없이 브라우저 새로고침으로 반영�
 
 - **도크 라벨 겹침.** 라벨이 원 바깥으로 나가면서 도크가 가까우면(robot3·robot8 은 약 8 cm) 글자가
   겹쳐 보인다. 좌표는 정확하다. 라벨을 아래로 내리거나 도크는 툴팁만 남기는 선택지가 있다.
-- **pose 미수신과 원점을 구분하지 못한다.** `robot_control_node` 는 `x`/`y`/`yaw` 를 `0.0` 으로 초기화하고
-  `{ns}/amcl_pose` 콜백에서만 갱신한다. 측위가 안 뜬 로봇은 `0,0` 을 보내고 UI 는 이를 맵 원점에
-  그대로 찍는다. 9/10 실행에서 robot3 는 Nav2 미기동, robot8 은 주행 스택만 뜨고 amcl 이 없어
-  두 마커가 원점에 겹쳐 있었다. pose 유효 플래그를 실어 `위치 미상` 으로 표시하는 편이 맞다.
+- **pose 미수신과 원점을 구분하지 못한다 → `docs/issues.md` 의 I-053.** `robot_control_node` 는
+  `x`/`y`/`yaw` 를 `0.0` 으로 초기화하고 `{ns}/amcl_pose` 콜백에서만 갱신한다. 측위가 안 뜬 로봇은
+  `0,0` 을 보내고 UI 는 이를 맵 원점에 그대로 찍는다. 9/10 실행에서 robot3 는 Nav2 미기동,
+  robot8 은 주행 스택만 뜨고 amcl 이 없어 두 마커가 원점에 겹쳐 있었다.
+
+  **표시보다 배정이 먼저 걸린다.** PM 이 PR #78 검토 중 등록한 I-053 이 같은 초기값 문제의 더 큰
+  영향을 짚는다 — `battery` 0.0 도 그대로 발행되어 `fleet_manager_node.py:381` 의 배정 게이트
+  (`battery >= battery_min` 0.25)에 걸린다. `/battery_state` 가 아직 안 온 멀쩡한 로봇이 방전으로
+  취급되어 배정에서 빠지고, 화면에는 배터리 0 % 로 보여 원인을 오인하게 된다.
+  조치는 I-053 에서 따라간다.
