@@ -39,6 +39,13 @@ class SafetyController:
         self.hit = self.clear = 0
         self.epoch = 0
         self.obstacle = False
+        # **STUCK 에서 조건이 바뀌면 한 번 더.** 9/10 12:25 robot8: 벽 0.20 m 에서 회전 여유(0.21)
+        #   1 cm 부족으로 STUCK, 16 s 뒤 여유가 0.25 로 회복됐는데도 재시도하지 않아 T_lim 까지
+        #   서 있었다. PM 의 '자동 재시도 없음' 은 같은 조건에서 빙빙 도는 것을 막자는 뜻이라,
+        #   360° 여유가 5 프레임 이상 회복됐을 때 한 번(상한 RETRY_MAX)은 다른 얘기다
+        self.room = 0                  # 360° 최소가 sweep_clear_m 이상인 연속 프레임 수
+        self.retries = 0               # 이번 estop 에서 재시도한 횟수
+        self.left = self.right = 0.0
         # **도크에 물려 있는 동안은 전방 판정을 하지 않는다.**
         #   Create3 는 도크에 코를 박고 들어간다 — 도킹 상태에서 전방 ±35° 안에 있는 것은
         #   도크와 그 뒤 벽이고, stop_dist 0.30 m 안에 반드시 들어온다. 그것을 장애물로
@@ -78,8 +85,11 @@ class SafetyController:
             return
         self.hit = self.hit + 1 if front < self.stop else 0
         self.clear = self.clear + 1 if front > self.clear_dist else 0
+        self.room = self.room + 1 if (sweep is not None and sweep >= self.sweep_clear_m) else 0
+        self.left, self.right = left, right
         if self.state == 'CLEAR' and self.hit >= 2:
             self.obstacle = True
+            self.retries = 0
             self.direction = 1.0 if left >= right else -1.0
             self.transition('STOPPING', now, '전방 장애물')
 
@@ -136,7 +146,17 @@ class SafetyController:
             self.transition('STUCK', now, '해제 제동 중 장애물 또는 정지 ACK 소실')
             return 0.0
         if self.state == 'STUCK':
-            return 0.0
+            # 여유가 회복됐고(5 프레임) 액션이 멈춰 있고 실제로 정지해 있으면 탈출 회전을 다시 허용한다.
+            #   스캔 없음·ACK 소실로 온 STUCK(obstacle=False)은 대상이 아니다
+            if (self.obstacle and self.retries < RETRY_MAX and self.room >= 5
+                    and paused and self.stopped(now)):
+                self.retries += 1
+                self.rotated = 0.0
+                self.direction = 1.0 if self.left >= self.right else -1.0   # 지금 더 비어 있는 쪽으로
+                self.transition('SAFE_ROTATE', now,
+                                f'회전 여유 회복 — 탈출 회전 재시도 {self.retries}/{RETRY_MAX}')
+            else:
+                return 0.0
         if not paused:
             if self.state == 'SAFE_ROTATE' or now - self.since >= self.pause_s:
                 self.transition('STUCK', now, '주행 액션 정지 확인 실패')
@@ -170,6 +190,9 @@ class SafetyController:
 # 구역을 판정하려면 빔의 이만큼은 유효해야 한다. 실측 유효율이 74~81 % 라 절반이면 여유가 있고,
 #   그 아래는 센서가 가려졌거나 고장난 것이라 '모름' 으로 두는 것이 맞다
 MIN_VALID_FRACTION = 0.5
+
+# STUCK 에서 여유가 회복됐을 때 탈출 회전을 다시 허용하는 상한 (한 estop 당). 끝없이 빙빙 도는 것을 막는다
+RETRY_MAX = 2
 
 
 def scan_sectors(scan):

@@ -251,3 +251,59 @@ def test_angle_limit_covers_a_wall_at_stop_dist():
     c = SafetyController()
     need = math.acos(0.30 / c.clear_dist) + math.radians(35)
     assert need < c.max_angle
+
+
+def _stuck_for_lack_of_room():
+    """벽 0.25 m 앞, 360° 최소 0.15 → 회전 여유 부족으로 STUCK 인 상태를 만든다."""
+    c = SafetyController()
+    clear(c, -0.5)
+    for _ in range(2):
+        c.scan(-0.3, 0.25, 0.15, 0.80, 0.15)         # 왼쪽은 비어 있고 오른쪽·360° 가 좁다
+    c.odometry(-0.3, 0, 0, 0)
+    assert c.tick(-0.3, True) == 0
+    assert c.state == 'STUCK' and '여유' in c.reason
+    return c
+
+
+def test_stuck_retries_rotation_when_room_recovers():
+    """STUCK 뒤 360° 여유가 회복되면 탈출 회전을 다시 허용한다 (9/10 12:25 robot8 사례).
+
+    벽 0.20 m 에서 여유 1 cm 부족으로 STUCK, 16 s 뒤 0.25 로 회복됐는데도 재시도가 없어
+    T_lim 까지 서 있었다. 여유 5 프레임 + 정지 확인 + ACK 면 한 번 더 돈다.
+    """
+    c = _stuck_for_lack_of_room()
+    for i in range(6):                              # 여유 회복: 360° 최소 0.25 ≥ 0.21
+        t = i * 0.2
+        c.scan(t, 0.25, 0.25, 0.80, 0.25)
+        c.odometry(t, 0, 0, 0)
+        out = c.tick(t, True)
+    assert c.state == 'SAFE_ROTATE', c.reason
+    assert out == 0.25 and c.direction == 1.0, '비어 있는 왼쪽으로 돌아야 한다'
+
+
+def test_stuck_retry_is_bounded():
+    """재시도는 한 estop 당 RETRY_MAX 번 — 끝없이 빙빙 돌지 않는다 (PM 조건)."""
+    from mro_navigation.core.safety import RETRY_MAX
+    c = _stuck_for_lack_of_room()
+    t = 0.0
+    for n in range(RETRY_MAX + 1):
+        for i in range(6):                          # 여유 회복 → 재시도
+            t += 0.2; c.scan(t, 0.25, 0.25, 0.80, 0.25); c.odometry(t, 0, 0, 0); c.tick(t, True)
+        if n < RETRY_MAX:
+            assert c.state == 'SAFE_ROTATE', (n, c.reason)
+            t += 0.2; c.scan(t, 0.25, 0.15, 0.80, 0.15); c.odometry(t, 0, 0, 0); c.tick(t, True)   # 다시 막힘
+            assert c.state == 'STUCK'
+        else:
+            assert c.state == 'STUCK', '상한을 넘으면 더 돌지 않는다'
+    assert c.retries == RETRY_MAX
+
+
+def test_stuck_from_missing_scan_never_retries():
+    """스캔 없음으로 온 STUCK 은 장애물 사건이 아니라 재시도 대상이 아니다."""
+    c = SafetyController()
+    clear(c, -0.5)
+    assert c.tick(2.0, True) == 0 and c.state == 'STUCK'   # 스캔이 1.5 s 넘게 없음
+    for i in range(6):
+        t = 2.0 + i * 0.2
+        c.scan(t, 1.0, 1.0, 1.0, 1.0); c.odometry(t, 0, 0, 0); c.tick(t, True)
+    assert c.state != 'SAFE_ROTATE'
