@@ -984,3 +984,23 @@ def test_only_explicit_finish_releases_recovery_identity(ros):
     assert node.worker_id == '' and node.recovery_worker_id is None
     assert node.state == 'IDLE'
     node.destroy_node()
+
+
+def test_estop_without_worker_id_does_not_kill_the_fsm(ros):
+    """관제 없이(worker_id '') 돌릴 때 estop 한 번으로 FSM 이 영구 정지하면 안 된다.
+
+    종전에는 estop 진입에서 `recovery_worker_id = ''` 를 잠갔고, 그 뒤 `step()` 이
+    `recovery_worker_id == ''` 에서 영원히 return 했다 — 해제돼도 코마였다.
+    """
+    node = make_node()
+    reach_following(node)
+    assert node.worker_id == ''
+    node.estop_cb(_bool(True))
+    node.step()
+    assert node.recovery_worker_id is None, "빈 ID 를 잠그면 안 된다"
+    node.estop_cb(_bool(False))
+    node.step()                                   # safety_resume → 재획득
+    assert node.state == 'SEARCHING', node.state
+    see(node); node.step(); see(node); node.step()
+    assert node.state in ('FOLLOWING', 'APPROACH_1'), f'해제 뒤 paired 게이트만으로 재획득해야 한다: {node.state}'
+    node.destroy_node()

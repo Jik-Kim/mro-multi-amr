@@ -289,7 +289,10 @@ class FollowTarget(Node):
         if self.estop and not was:
             self.estop_cancel_requested = False
             self.estop_cancelled = False
-            if self.state != 'IDLE' and self.recovery_worker_id is None:
+            # **담당 ID 가 있을 때만 잠근다.** 관제 없이 시험하면 `target/worker_id` 가 '' 인데,
+            #   '' 를 잠그면 gate_ok 가 영원히 거짓이고 step() 이 영원히 return 해 FSM 이 죽는다
+            #   (9/10 실주행 코드 검토). ID 가 없으면 예전처럼 paired 게이트만으로 재획득한다
+            if self.state != 'IDLE' and self.recovery_worker_id is None and self.worker_id:
                 self.recovery_worker_id = self.worker_id
             self.recovery_stamp_ns = None
             self.latest = None
@@ -408,8 +411,7 @@ class FollowTarget(Node):
             self.estop_cancelled = False
             self.motion_pause.ready = False
             if self.state != 'IDLE':
-                if not self.recovery_worker_id:
-                    return self.set_state('STANDBY', '기존 담당 ID 없음 — 자동 대상 선택 없이 정지')
+                # 담당 ID 가 없으면(관제 미기동) identity 검사 없이 paired 게이트로만 재획득한다
                 # 과거 위치는 탐색 방위에만 사용하고 새 goal에는 절대 재사용하지 않는다.
                 if self.follow_est is not None:
                     self.recovery_search_point = self.follow_est
@@ -421,8 +423,6 @@ class FollowTarget(Node):
         if self.start_req:
             return self.begin_cycle()
 
-        if self.recovery_worker_id == '':
-            return
         if self.state == 'SEARCHING':
             self.step_searching()
         elif self.state in ('APPROACH_1', 'APPROACH_2'):
@@ -924,6 +924,13 @@ class FollowTarget(Node):
         now = time.time()
         seen = (self.latest is not None) or (now - self.visible_at < 1.0)
         if not seen:
+            # 침묵하면 '코마' 로 보인다 (9/10 실주행 — 검출기가 작업자를 못 잡는데 아무 로그가 없어
+            #   FSM 이 죽은 줄 알았다). 무엇이 빠졌는지 말해야 현장에서 검출기 문제인지 우리 문제인지 가른다
+            self.get_logger().info(
+                f'STANDBY 대기 중 — target/visible {now - self.visible_at:.0f} s 째 거짓 · '
+                f'좌표 없음 · 게이트 {"열림" if self.gate_ok() else "닫힘"}. '
+                f'검출기가 작업자를 보고 있는지 확인 (ros2 topic echo target/visible)',
+                throttle_duration_sec=10.0)
             return
         if not self.gate_ok():
             self.get_logger().info('작업자 재등장 — target/paired 대기 중',
