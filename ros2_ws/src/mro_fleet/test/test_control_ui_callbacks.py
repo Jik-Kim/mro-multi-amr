@@ -22,7 +22,7 @@ from mro_fleet.nodes import robot_control_node
 from mro_fleet.nodes.MonitorWebApp import (
     MonitorWebApp, load_dock_landmarks, load_map_config,
 )
-from mro_fleet.nodes.fleet_client import FleetClient
+from mro_fleet.nodes.fleet_client import FleetUICommands
 from mro_fleet.nodes.robot_control_node import RobotStatus
 from mro_fleet.nodes.robot_state_manager import RobotStateManager
 
@@ -190,8 +190,8 @@ def test_pair_states_are_owned_by_separate_instances():
 def test_status_snapshot_contains_only_instance_robot():
     """웹에는 해당 RobotStatus가 소유한 로봇만 노출한다."""
     fake = make_robot_control_fake('/robot3')
-    fake.status_stale_s = 2.5
-    fake.status.update(state='SHUTTLE', _received_monotonic=98.0)
+    fake.status_overtime_sec = 5.0
+    fake.status.update(state='SHUTTLE', _received_monotonic=96.0)
 
     with patch(
         'mro_fleet.nodes.robot_state_manager.time.monotonic',
@@ -201,7 +201,7 @@ def test_status_snapshot_contains_only_instance_robot():
         snapshot = RobotStateManager.get_all_robot_status(manager)
 
     assert list(snapshot) == ['/robot3']
-    assert snapshot['/robot3']['age_s'] == 2.0
+    assert snapshot['/robot3']['age_s'] == 4.0
     assert snapshot['/robot3']['stale'] is False
     assert '_received_monotonic' not in snapshot['/robot3']
 
@@ -277,10 +277,10 @@ def test_accepted_manual_pair_records_one_intervention():
         ),
     )
     fake.publish_intervention = lambda namespace, kind, note='': (
-        FleetClient.publish_intervention(fake, namespace, kind, note)
+        FleetUICommands.publish_intervention(fake, namespace, kind, note)
     )
 
-    accepted, message = FleetClient.request_manual_pair(
+    accepted, message = FleetUICommands.request_manual_pair(
         fake, '/robot3', 'W1'
     )
 
@@ -307,7 +307,7 @@ def test_rejected_manual_pair_does_not_record_intervention():
         ),
     )
 
-    accepted, message = FleetClient.request_manual_pair(
+    accepted, message = FleetUICommands.request_manual_pair(
         fake, '/robot8', 'W2'
     )
 
@@ -327,7 +327,7 @@ def test_missing_manual_pair_response_does_not_report_success():
         _call_service=lambda _client, _request, timeout_sec: None,
     )
 
-    accepted, message = FleetClient.request_manual_pair(
+    accepted, message = FleetUICommands.request_manual_pair(
         fake, '/robot3', 'W1'
     )
 

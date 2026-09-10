@@ -12,7 +12,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from mro_fleet.core.db import FleetDB
 from mro_fleet.nodes.MonitorWebApp import MonitorWebApp
-from mro_fleet.nodes.fleet_client import FleetClient
+from mro_fleet.nodes.fleet_client import FleetUICommands
 from mro_fleet.nodes.robot_control_node import DEFAULT_ROBOTS
 from mro_fleet.nodes.robot_state_manager import RobotStateManager
 
@@ -540,13 +540,13 @@ def main():
     robot_state_manager = RobotStateManager(
         fleet_manager.robot_namespaces, executor
     )
-    fleet_client = FleetClient()
-    executor.add_node(fleet_client)
+    fleet_ui_commands = FleetUICommands()
+    executor.add_node(fleet_ui_commands)
     fleet_manager.robot_state_manager = robot_state_manager
     package_share_directory = get_package_share_directory('mro_fleet')
     template_directory = os.path.join(package_share_directory, 'templates')
     monitor = MonitorWebApp(
-        robot_state_manager, fleet_client, template_directory
+        robot_state_manager, fleet_ui_commands, template_directory
     )
     executor.add_node(fleet_manager)
 
@@ -570,11 +570,11 @@ def main():
         for namespace in list(robot_state_manager.robots):
             robot_state_manager.remove_robot(namespace)
         executor.remove_node(fleet_manager)
-        executor.remove_node(fleet_client)
+        executor.remove_node(fleet_ui_commands)
         executor.shutdown()
         fleet_manager.db.close()
         fleet_manager.destroy_node()
-        fleet_client.destroy_node()
+        fleet_ui_commands.destroy_node()
 
 
 if __name__ == '__main__':

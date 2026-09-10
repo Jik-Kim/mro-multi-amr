@@ -13,6 +13,7 @@
 /**:
   ros__parameters:
     robot_namespaces: [/robot3, /robot8]   # robot4 → robot8 교체 (하드웨어 이슈, 9/8)
+    status_stale_s: 5.0          # AMR 원본 상태가 이 시간 넘게 끊기면 UI에서 수신 지연 표시
 
 /fleet_manager:
   ros__parameters:

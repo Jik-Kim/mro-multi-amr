@@ -81,21 +81,21 @@ class RobotStatus(Node):
 
     def _load_parameters(self):
         """로봇 통신과 관제 화면에 필요한 실행 값을 읽는다."""
-        self.declare_parameter('status_stale_s', 2.5)
+        self.declare_parameter('status_stale_s', 5.0)
         self.declare_parameter(
             'map_yaml_path', _bringup_path('maps', 'auto_map.yaml')
         )
         self.declare_parameter(
             'arena_yaml_path', _bringup_path('params', 'arena.yaml')
         )
-        self.status_stale_s = float(
+        self.status_overtime_sec = float(
             self.get_parameter('status_stale_s').value
         )
         self.map_yaml_path = str(self.get_parameter('map_yaml_path').value)
         self.arena_yaml_path = str(
             self.get_parameter('arena_yaml_path').value
         )
-        if self.status_stale_s <= 0.0:
+        if self.status_overtime_sec <= 0.0:
             raise ValueError('status_stale_s must be positive')
 
     def _create_ros_interfaces(self):

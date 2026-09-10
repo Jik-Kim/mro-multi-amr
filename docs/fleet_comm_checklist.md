@@ -1,6 +1,7 @@
 # 관제 ROS 2 통신 점검표
 
 `/{ns}`는 `/robot3` 또는 `/robot8`이다. 코드·테스트와 실제 ROS 2 통신 검증을 구분한다.
+UI는 AMR 원본 상태가 5초 넘게 갱신되지 않으면 해당 로봇을 수신 지연으로 표시한다.
 
 ## 현재 역할
 
@@ -8,7 +9,7 @@
 |---|---|
 | `RobotStatus` | 로봇 한 대의 상태 구독·보관, `/fleet/status` 1 Hz 발행 |
 | `RobotStateManager` | 로봇 객체·상태 변경·가용성·미션 상태 관리 |
-| `FleetClient` | UI의 Fleet 서비스 요청과 개입 이벤트 발행 |
+| `FleetUICommands` | UI의 Fleet 서비스 요청과 개입 이벤트 발행 |
 | `FleetManager` | 미션 처리, DB 기록, Fleet 서비스·토픽 처리 |
 | `MonitorWebApp` | 상태 화면과 HTTP 요청 처리 |
 
@@ -18,7 +19,7 @@
 |---|---|---|---|---|---|---|
 | `/webcam1/worker_descriptor` | `webcam_register` | `FleetManager`, `amr_detection`, `webcam_hint` | 작업자 등록·DB 저장 | `FleetManager._register_worker` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
 | `/fleet/status` | 로봇별 `RobotStatus` | `FleetManager`, `KpiLogger` | AMR 상태 1 Hz 전달 | `RobotStatus._publish_status`, `RobotStateManager.update_fleet_status`, `FleetManager._receive_fleet_status` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
-| `/fleet/intervention` | `FleetClient` | `FleetManager`, `KpiLogger` | 운영자 개입 DB·CSV 기록 | `FleetClient.publish_intervention`, `FleetManager._record_intervention_event` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
+| `/fleet/intervention` | `FleetUICommands` | `FleetManager`, `KpiLogger` | 운영자 개입 DB·CSV 기록 | `FleetUICommands.publish_intervention`, `FleetManager._record_intervention_event` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
 | `/fleet/zone_event` | `zone_semaphore` | `FleetManager`, `KpiLogger` | P1·DOCK 이벤트 기록 | `FleetManager._record_zone_event` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
 | `/fleet/mission` | `FleetManager` | `KpiLogger` | 미션 생성·전이 전달 | `FleetManager._publish_mission_update` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
 | `/{ns}/mission/assigned` | `FleetManager` | `shuttle_mission`, `amr_detection`, `RobotStatus` | 작업자·베이·미션 전달 | `pub_assigned`, `RobotStatus._receive_mission` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
@@ -37,9 +38,9 @@
 
 | 서비스 | 요청자 | 서버 | 기능 | 처리 함수 | 구현 | 작업 상황 |
 |---|---|---|---|---|---|---|
-| `/fleet/request_mission` | `FleetClient` | `FleetManager` | 가용 AMR 선택·미션 생성 | `FleetClient.request_mission`, `FleetManager._handle_mission_request` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
-| `/fleet/operator_command` | `FleetClient` | `FleetManager` | `RETURN`·`RETURN_ALL` 즉시 복귀 | `FleetClient.return_immediately`, `FleetManager.return_immediately` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
-| `/fleet/manual_pair` | `FleetClient` | `FleetManager` | 선택 로봇의 `/manual_pair`로 중계 | `FleetClient.request_manual_pair`, `FleetManager._forward_manual_pair_request` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
+| `/fleet/request_mission` | `FleetUICommands` | `FleetManager` | 가용 AMR 선택·미션 생성 | `FleetUICommands.request_mission`, `FleetManager._handle_mission_request` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
+| `/fleet/operator_command` | `FleetUICommands` | `FleetManager` | `RETURN`·`RETURN_ALL` 즉시 복귀 | `FleetUICommands.return_immediately`, `FleetManager.return_immediately` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
+| `/fleet/manual_pair` | `FleetUICommands` | `FleetManager` | 선택 로봇의 `/manual_pair`로 중계 | `FleetUICommands.request_manual_pair`, `FleetManager._forward_manual_pair_request` | 구현 | 코드·테스트 [x] / 실통신 [ ] |
 
 ## 점검 기준
 
