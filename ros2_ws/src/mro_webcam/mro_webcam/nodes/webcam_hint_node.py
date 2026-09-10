@@ -321,10 +321,14 @@ class WebcamHint(Node):
 
     # YOLO bbox가 그려진 최신 프레임을 JPEG로 압축해 독립 주기로 발행한다.
     def _publish_compressed_image(self):
+        # **오버레이만 내보낸다 (I-042, PM 결정 9/8).** 종전에는 preview_frame 이 없으면
+        #   원본으로 떨어졌는데, 그러면 받는 쪽이 지금 보는 것이 오버레이인지 원본인지
+        #   구분할 방법이 없다. 계약 4절이 이 토픽의 용도를 「뷰어·영상 판독 기록」으로
+        #   적어 둔 이상 무엇을 보고 있는지가 일정해야 한다. 첫 검출 주기 전에는
+        #   아무것도 내보내지 않는다 — 이 토픽은 안전 판단에 쓰지 않으므로(NF-07)
+        #   초반 몇 프레임이 비는 것보다 섞여 나가는 편이 나쁘다
         with self.preview_lock:
             frame = None if self.preview_frame is None else self.preview_frame.copy()
-        if frame is None:
-            frame, _ = self.camera.latest(-1)
         if frame is None:
             return
 
