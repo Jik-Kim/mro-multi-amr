@@ -44,22 +44,29 @@ def test_clear_fifth_frame_stops_early():
     assert c.state == 'CLEAR'
 
 
-def test_five_seconds_is_limit_not_required_duration():
+def test_angle_limit_stops_rotation_before_time_limit():
+    """0.25 rad/s 로 돌면 90° 가 7 s 보다 먼저 온다 — 각도 한도가 실제로 일하는 값이다 (PM 9/9).
+
+    종전 75° / 5 s 는 5 s 에 71.6° 라 시간이 항상 먼저 걸려 각도 상한이 죽은 값이었고,
+    71.6° 로는 정면 벽 0.30 m(72.9° 필요)도 못 풀었다.
+    """
     c = rotating()
-    for i in range(1, 51):
+    stopped_at = None
+    for i in range(1, 80):
         now = 0.1 + i / 10
         c.scan(now, 0.25, 0.25, 1, 1)
         c.odometry(now, 0.25 * (now - 0.1))
-        value = c.tick(now, True)
-        assert value == (0.25 if i < 50 else 0)
+        if c.tick(now, True) == 0 and stopped_at is None:
+            stopped_at = now - 0.1
     assert c.state == 'STUCK'
-    assert c.rotated < math.radians(75)
+    assert stopped_at is not None and stopped_at < c.rotate_s, '시간이 아니라 각도가 멈춰야 한다'
+    assert c.rotated >= c.max_angle - math.radians(3)
 
 
 def test_actual_angle_limit_even_when_faster_than_command():
     c = rotating()
     c.scan(0.2, 0.25, 0.25, 1, 1)
-    c.odometry(0.2, math.radians(76))
+    c.odometry(0.2, math.radians(91))     # 한도 90° 를 한 번에 넘어선 odom
     assert c.tick(0.2, True) == 0
     assert c.state == 'STUCK'
 
@@ -229,3 +236,18 @@ def test_front_is_unknown_when_most_beams_are_missing():
         ranges[i] = 1.0
     front, sweep, _, _ = scan_sectors(_scan(ranges))
     assert front is None and sweep is None
+
+
+def test_angle_limit_binds_before_time_limit():
+    """각도 한도가 시간 한도보다 먼저 걸린다 — 아니면 각도 상한은 죽은 값이다 (PM 9/9)."""
+    c = SafetyController()
+    assert c.yaw * c.rotate_s > c.max_angle
+    with pytest.raises(ValueError):
+        SafetyController(rotate_s=5.0, max_angle_deg=90.0)     # 0.25 × 5 = 71.6° < 90°
+
+
+def test_angle_limit_covers_a_wall_at_stop_dist():
+    """정면 벽 0.30 m 는 72.9° 를 돌아야 풀린다 — 한도 90° 안에 든다."""
+    c = SafetyController()
+    need = math.acos(0.30 / c.clear_dist) + math.radians(35)
+    assert need < c.max_angle

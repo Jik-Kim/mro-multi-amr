@@ -6,7 +6,7 @@
 
 ESTOP → 외부 속도 차단·병진 0 → 모든 주행 액션 종료와 odom 정지 확인 → watchdog SAFE_ROTATE → clear 조건 충족 시 각속도 0 → odom 정지 확인 후 ESTOP 해제. 한도 도달 시에는 정지 대기한다.
 
-- 초기 시험값: `safe_rotate_rate=0.25 rad/s`, `safe_rotate_timeout_s=5.0`, `safe_rotate_max_angle_deg=75.0`. 설정은 `mro_bringup/params/common.yaml`.
+- 초기 시험값: `safe_rotate_rate=0.25 rad/s`, `safe_rotate_timeout_s=7.0`, `safe_rotate_max_angle_deg=90.0` (PM 9/9 — 각도가 먼저 걸리게). 설정은 `mro_bringup/params/common.yaml`.
 - 전방 ±35°가 `0.38 m 초과`인 스캔 5개 연속이면 조기 해제한다. 5초를 채우지 않는다.
 - 시간·odom 누적 절대 회전각 중 먼저 한도에 도달하면 STUCK. 센서 결측, 회전 영역 여유 부족, 정지 확인 소실도 정지한다. 자동 회전 재시도는 없다. 이후 장애물이 제거되어 clear 조건을 충족하면 해제할 수 있다.
 - 최초 기동 시 장애물이 있으면 자동으로 회전하지 않는다.
@@ -56,7 +56,7 @@ ros2 launch mro_bringup robot.launch.py namespace:=/robot3
 1. `ros2 topic info /robot3/cmd_vel -v`로 최종 발행자가 watchdog **1개**인지 확인한다.
 2. 추종 중 실제 worker_id가 비어 있지 않은지 확인한다. 게이트만 수동 주입하고 ID가 없으면 ESTOP 뒤 자동 재선택하지 않는다.
 3. bag에 scan, odom, safety/estop, safety/state, safety/paused/*, cmd_vel*, target/worker_id, target/paired, target/map_point, approach/status를 기록한다.
-4. 탈출 성공의 조기 정지, 막힌 경우 5초/75° 한도 정지, 같은 작업자의 최신 goal 재전송을 확인한다. 속도는 그대로 두고 bag 근거로 한도 조정한다.
+4. 탈출 성공의 조기 정지, 막힌 경우 90°(≈6.3 s) 한도 정지, 같은 작업자의 최신 goal 재전송을 확인한다. 속도는 그대로 두고 bag 근거로 한도 조정한다.
 5. 회전 한도는 20 Hz 제어·odom 관측 기준이다. 실제 제동 지연과 각도 오차까지 하드 한도로 보장한 것은 아니다.
 
 ## 정지 판정 보완 (2026-09-09)

@@ -120,3 +120,16 @@ def test_silent_participant_is_forgotten(node):
     node.paused['follow_target'] = (node.pause_epoch, time.monotonic() - PAUSE_FORGET_S - 1)
     assert node.all_paused(time.monotonic()) is True
     assert 'follow_target' not in node.paused
+
+
+def test_reverse_is_clamped_not_dropped(node):
+    """후진 명령은 병진만 0 으로 깎고 각속도는 살린다 (계약 2절, PM 9/9 조건 1)."""
+    import time
+    node.control.state = 'CLEAR'
+    node.clear_at = time.monotonic() - 1.0
+    msg = command(node, 0.3)
+    msg.twist.linear.x = -0.2
+    node.command_cb('navigation', msg)
+    assert node.sent, 'BackUp 을 통째로 버리면 뒤이은 회전 복구가 끊긴다'
+    assert node.sent[-1].twist.linear.x == 0.0
+    assert node.sent[-1].twist.angular.z == 0.3

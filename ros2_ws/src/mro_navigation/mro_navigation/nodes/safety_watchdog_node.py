@@ -31,8 +31,8 @@ class SafetyWatchdog(Node):
         if not self.get_namespace().strip('/'):
             raise RuntimeError('safety_watchdog: 로봇 네임스페이스가 필요하다')
         defaults = {'stop_dist': 0.30, 'clear_dist': 0.38,
-                    'safe_rotate_rate': 0.25, 'safe_rotate_timeout_s': 5.0,
-                    'safe_rotate_max_angle_deg': 75.0, 'odom_valid_s': 0.5,
+                    'safe_rotate_rate': 0.25, 'safe_rotate_timeout_s': 7.0,
+                    'safe_rotate_max_angle_deg': 90.0, 'odom_valid_s': 0.5,
                     'stopped_linear_mps': 0.01, 'stopped_angular_rps': 0.02,
                     'stopped_hold_s': 0.3, 'scan_valid_s': 0.5, 'pause_timeout_s': 2.0,
                     'rotation_clearance_m': 0.21, 'nav_cmd_valid_s': 0.5,
@@ -150,8 +150,15 @@ class SafetyWatchdog(Node):
             return
         values = (message.twist.linear.x, message.twist.linear.y, message.twist.linear.z,
                   message.twist.angular.x, message.twist.angular.y, message.twist.angular.z)
-        if not all(math.isfinite(v) for v in values) or message.twist.linear.x < 0:
+        if not all(math.isfinite(v) for v in values):
             return
+        # **후진은 여기서 0 으로 깎는다** (계약 2절, PM 9/9 조건 1). 워치독이 cmd_vel 의 유일한
+        #   기록자가 되면서 후진 금지를 처음으로 **강제되는 불변식**으로 만들 수 있다 — 종전
+        #   배선은 Nav2 → cmd_vel 직결이라 Nav2 의 BackUp 이 그대로 나갔고,
+        #   `test_no_reverse_anywhere_in_source` 는 우리 소스만 봤다. 메시지를 통째로 버리지
+        #   않고 병진만 깎는 이유: 각속도는 살려야 BackUp 뒤 회전 복구가 이어진다
+        if message.twist.linear.x < 0.0:
+            message.twist.linear.x = 0.0
         # 힌트 회전의 속도·발행 주기는 바꾸지 않고 즉시 전달한다.
         self.pub_vel.publish(message)
         self.last_command_at = now

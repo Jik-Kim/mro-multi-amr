@@ -5,13 +5,20 @@ import math
 class SafetyController:
     """시각·센서를 호출자가 공급하는 안전 상태기계."""
 
-    def __init__(self, stop=0.30, clear=0.38, yaw=0.25, rotate_s=5.0,
-                 scan_valid_s=0.5, pause_s=2.0, sweep_clear_m=0.21, max_angle_deg=75.0, odom_valid_s=0.5, stopped_linear=0.01, stopped_angular=0.02, stopped_s=0.3):
+    def __init__(self, stop=0.30, clear=0.38, yaw=0.25, rotate_s=7.0,
+                 scan_valid_s=0.5, pause_s=2.0, sweep_clear_m=0.21, max_angle_deg=90.0, odom_valid_s=0.5, stopped_linear=0.01, stopped_angular=0.02, stopped_s=0.3):
         values = (stop, clear, yaw, rotate_s, scan_valid_s, pause_s, sweep_clear_m, max_angle_deg, odom_valid_s, stopped_linear, stopped_angular, stopped_s)
         if not all(math.isfinite(v) and v > 0 for v in values):
             raise ValueError('안전 파라미터는 유한한 양수여야 한다')
-        if clear <= stop or yaw > 0.3 or rotate_s > 5.0 or max_angle_deg > 90:
-            raise ValueError('clear > stop, 회전 ≤ 0.3 rad/s·5 s·90°가 필요하다')
+        # **각도 한도가 시간 한도보다 먼저 걸려야 한다** (PM 9/9). 반각 35° 부채꼴에서 정면 벽
+        #   d 를 풀려면 d / cos(θ − 35°) > clear_dist 가 되는 θ 까지 돌아야 한다 — 0.30 m 면
+        #   72.9°, 실주행 실측 0.29 m 면 75.3°. 종전 0.25 rad/s × 5 s = 71.6° 는 그 어느 것도
+        #   못 풀고, 각도 상한 75° 는 5 s 가 항상 먼저 걸려 죽은 값이었다. 90° / 7 s 면
+        #   0.25 × 7 = 100° > 90° 라 각도가 먼저 걸리고, 0.22 m 벽까지 덮는다
+        if clear <= stop or yaw > 0.3 or rotate_s > 10.0 or max_angle_deg > 90:
+            raise ValueError('clear > stop, 회전 ≤ 0.3 rad/s·10 s·90°가 필요하다')
+        if yaw * rotate_s <= math.radians(max_angle_deg):
+            raise ValueError('시간 한도가 각도 한도보다 먼저 걸린다 — 각도 상한이 죽은 값이 된다 (PM 9/9)')
         self.stop, self.clear_dist, self.yaw = stop, clear, yaw
         self.rotate_s, self.scan_valid_s, self.pause_s = rotate_s, scan_valid_s, pause_s
         self.sweep_clear_m = sweep_clear_m
