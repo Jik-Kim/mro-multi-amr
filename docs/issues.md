@@ -749,7 +749,7 @@
 
 **`/fleet/status` 가 전역이라 관제를 두 벌 띄우면 서로의 상태를 덮어쓴다**
 
-`mro_fleet` (`robot_control_node.py` · `robot_state_manager.py`) · 심각도 **상** · 담당 관제 김민준 · 등록 2026-09-10 (PM, PR #79 검토 중)
+`mro_fleet` (`robot_status.py` · `robot_state_manager.py`) · 심각도 **상** · 담당 관제 김민준 · 등록 2026-09-10 (PM, PR #79 검토 중)
 
 - **내용** — `FLEET_STATUS_TOPIC = '/fleet/status'` 는 앞에 `/` 가 붙은 **전역 토픽**이다. 관제 PC 를 두 벌 띄우면
   두 인스턴스가 **같은 `robot_ns` 로** 1 Hz 씩 발행하고, 받는 쪽 `update_fleet_status()` 는 들어온 `message.x` 를
@@ -779,7 +779,7 @@
 
 **필드별 신선도가 없어 소스가 죽어도 마지막 값이 현재값처럼 남는다**
 
-`mro_fleet` (`robot_control_node.py` · `robot_state_manager.py`) · 심각도 **상** · 담당 관제 김민준 · 등록 2026-09-10 (PM, PR #79 검토 중)
+`mro_fleet` (`robot_status.py` · `robot_state_manager.py`) · 심각도 **상** · 담당 관제 김민준 · 등록 2026-09-10 (PM, PR #79 검토 중)
 
 - **내용** — `RobotStatus` 는 토픽마다 콜백에서 딕셔너리 한 칸을 갱신하고 `_publish_status()` 가 1 Hz 로 전부
   내보낸다. **어느 칸이 언제 갱신됐는지는 아무도 안 들고 있다.** 화면의 `stale` 판정은
@@ -813,7 +813,7 @@
 
 **`RobotStatus` 의 초기값이 「값 없음」이 아니라 유효한 값으로 발행된다**
 
-`mro_fleet` (`robot_control_node.py`) · 심각도 **상** · 담당 관제 김민준 · 등록 2026-09-10 (PM, PR #78 검토 중)
+`mro_fleet` (`robot_status.py`) · 심각도 **상** · 담당 관제 김민준 · 등록 2026-09-10 (PM, PR #78 검토 중)
 
 - **내용** — `_initial_status()`(`:63~75`)가 `battery` 0.0 · `x`/`y`/`yaw` 0.0 으로 채우고,
   `_publish_status()` 는 그 값을 **1 Hz 로 그대로 내보낸다.** 해당 토픽을 아직 못 받았다는 표시가 없다.
