@@ -25,8 +25,12 @@
                                # robot8 은 cy 가 367.6 으로 중앙(352)에서 15.6 px 벗어나 있는데 정상이다
                                # (가로 cx 는 352.4 로 가운데. 배율은 폭 기준이라 영향 없다).
                                #
-                               # **amr_detection 과 공용이다** — 1.7778 → 1.8336 은 target/map_point 의 좌우
-                               # 성분을 3.1 % 키운다 (1.1 m 지점에서 약 3 cm). target/distance(depth)는 영향 없다.
+                               # **amr_detection 과 공용이다.** 1.7778 → 1.8336 은 fx 를 +3.14 % 키우는데,
+                               # 두 토픽에 **반대 방향**으로 나타난다:
+                               #   aruco/distance    +3.1 % 커진다   d = fx × 마커크기 ÷ 픽셀 (fx 가 분자)
+                               #   target/map_point  좌우 3.0 % 줄어든다  x = (u−cx) × z ÷ fx (fx 가 분모)
+                               # map_point 절대량은 작다 — 1.1 m 에서 화면 중앙 0 · 100 px 옆 0.33 cm ·
+                               # 화면 맨 끝 1.17 cm. target/distance(depth)는 영향 없다.
                                # 근본 해결은 로봇이 영상과 맞는 camera_info 를 내보내는 것. 그때 1.0 으로 되돌린다
 
     # --- amr_detection_node (17개 전부 declare_parameter 로 읽는다 · camera_fx_scale 은 위 공용 · README §3 과 1:1) ---
@@ -38,7 +42,15 @@
     sync_slop_s: 0.1           # RGB·depth ApproximateTimeSynchronizer 허용 시차.
                                # 9/7 실측 stamp 차 median 0.1 ms 지만 robot3 최댓값이 99.9 ms 로 이 값에
                                # 붙어 있다. 통합 때 쌍 성립률(9/7 기준 98.4 %)이 떨어지면 올린다
-    reid_threshold: 0.6        # Q-13 [팀 확정 필요] — 같은/다른 인형 유사도 분포로 결정, 마감 9/8.
+    reid_threshold: 0.34       # Q-13 확정 9/10 — 실측 분포로 정했다 (계약 2절 '눈대중 금지').
+                               # 웹캠1 등록 서술자 ↔ 로봇 관측, 양쪽 10프레임 평균 (README 5절):
+                               #   같은 인형  min 0.348 · p50 0.401 · max 0.470
+                               #   다른 인형  min 0.248 · p50 0.319 · max 0.361
+                               # 옛 값 0.6 은 같은 인형 최댓값(0.470)보다 높아 자동 페어링이 한 번도
+                               # 안 걸렸다 — 등록 서술자 36개 전부 통과율 0 %. FR-12 가 사실상 죽어 있었다.
+                               # 0.34 는 같은 인형 최솟값 바로 아래라 놓침 0 %. 두 분포가 0.348/0.361 로
+                               # 살짝 겹치지만 gate() 가 복장 클래스를 먼저 거르므로(core/reid.py)
+                               # 오붙음은 YOLO 오분류 때만 성립한다.
                                # 계약 5절대로 이 파일이 단일 출처다 — robotN.yaml 의 중복 항목은 삭제했다 (9/8)
     descriptor_frames: 10      # 색 지문 평균 창. 웹캠1 DESCRIPTOR_FRAMES 와 같아야 같은 척도
     pair_on_s: 1.0             # 이 시간 연속 통과해야 paired=True (웹캠1 register_s 와 같은 발상)
