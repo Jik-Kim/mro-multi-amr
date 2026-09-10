@@ -635,7 +635,7 @@ class FollowTarget(Node):
             return None                      # 아직 못 봄 → 이번엔 Nav2 Spin 으로
         self.cmd_pub = self.create_publisher(
             TwistStamped if self.cmd_stamped else Twist, topic, 1)
-        self.get_logger().info(f'제자리 회전: {name} '
+        self.get_logger().info(f'제자리 회전: {self.ns}/{topic} '   # 타입은 cmd_vel 로 조회, 발행은 topic
                                f'({"TwistStamped" if self.cmd_stamped else "Twist"}) '
                                f'{SEARCH_ROTATE_SPEED} rad/s')
         return self.cmd_pub
