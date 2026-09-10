@@ -17,11 +17,12 @@ launch 가 붙여주는 것: `namespace`, `/tf → tf` 리맵, `params/robotN.ya
 **단독 시험** (웹캠·관제·Nav2 없이 카메라만) — TS-U03·U04·U05 는 이걸로 한다.
 
 ```bash
-ros2 run mro_perception amr_detection_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static \
-    -p show_window:=false
+ros2 run mro_perception amr_detection_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static
 ```
 
-- **SSH 로 띄우면 `show_window:=false` 필수.** 창을 못 만들면 노드가 죽는다. 모니터가 있으면 빼도 된다
+- **미리보기 창은 기본으로 꺼져 있다** (I-043). 모니터 앞이라 보고 싶으면 `-p show_window:=true` 를 붙인다.
+  화면 없는 PC(SSH)에서 켜면 창을 못 만들어 노드가 죽으므로 기본을 끔으로 둔 것이다. 창 없이 보려면 2절의
+  `rqt_image_view` 를 쓴다 — 어느 PC 에서든 되고 SSH 에서도 된다
 - 서술자·미션이 없으면 노드는 "확신도 1등 작업자" 를 대상으로 잡고 `paired=False` 를 낸다 — 단독 시험용 동작
 - TF(localization)가 없어도 `target/visible`·`target/distance`·`target/image` 는 나간다. `target/map_point` 만 안 나간다
 
@@ -64,7 +65,7 @@ ros2 run rqt_image_view rqt_image_view /robot3/target/image/compressed   # 오�
 | `bbox_inner` | 0.5 | 거리 측정 bbox 중심부 비율 | — |
 | `sync_slop_s` | 0.1 | RGB·depth 시각 차 허용 | 동기화 쌍이 안 나오면 0.2 |
 | `camera_fx_scale` | 1.7778 | `camera_info` 초점거리 보정 (I-031). `map_point` 좌우에 영향 | 로봇이 맞는 `camera_info` 를 내면 1.0 |
-| `show_window` | true | 미리보기 창 | SSH 면 false |
+| `show_window` | **false** | 미리보기 창 (기동 때만) | 모니터 앞이면 true. SSH 면 그대로 둔다 (I-043) |
 | `jpeg_quality` | 80 | `target/image/compressed` 품질 | 웹캠 노드와 같은 값 유지 |
 | `diag_log_s` | 1.0 | `[diag]` 계측 로그 주기 | 0 이면 끔. 렉 의심될 때 1 |
 | `tf_wait_s` | 0.0 | `to_map` 이 TF 를 기다리는 시간 | **항상 0.** 1.0 은 9/8 렉 재현용 (7절) |
@@ -165,7 +166,7 @@ nvidia-smi                                                 # YOLO 가 GPU 를 �
 
 | 증상 | 자리 | 확인 |
 |---|---|---|
-| `proc avg` ≫ 100 ms | **계산이 느림** — GPU 미사용, 또는 SSH -X 로 창 띄움 | `nvidia-smi`, `show_window:=false` 로 다시 |
+| `proc avg` ≫ 100 ms | **계산이 느림** — GPU 미사용, 또는 SSH -X 로 창 띄움 | `nvidia-smi` 확인, 창을 켰다면 끄고 다시 |
 | `cb rgb` ≪ `topic hz` 입력 | **콜백이 굶음** — 노드가 메시지를 못 꺼냄 | `tf` 콜백 수가 높으면 TF 리스너를 별도 스레드로(`spin_thread=True`) |
 | `age` 큰데 `topic delay` 도 큼 | **입력이 늦게 옴** — RPi·Wi-Fi | 로봇 Wi-Fi, RPi 부하. 단 `/scan` 지연도 같은 값이면 **시계 어긋남**(지연 아님) |
 | `proc max` 가 **1000·2000 ms** | **TF 대기 블로킹** — `to_map` 이 실행기를 세움 | 9/8 수정(`timeout=0`)이 든 빌드인지. 탐지될 때만 렉이 나는 게 지문 |
@@ -173,7 +174,7 @@ nvidia-smi                                                 # YOLO 가 GPU 를 �
 | depth 지연만 크다, 도구가 `구독자 2 이상` | **중복 노드** — 탐지 노드가 여러 개 떠서 RPi 가 스트림을 N 번 전송 | `pkill -f amr_detection_node` 후 하나만. GPU 에 python 이 여럿이면 의심 |
 | 노드 `age` 는 작은데 rqt 만 늦음 | **출력 대역폭** — JPEG 로 ≈ 6 MB/s (raw 였으면 27, 9/8 압축으로 전환) | rqt 를 다른 PC 에서 보면 그래도 Wi-Fi 부담. `bw` 확인, rqt 끄고 `age` 재확인 |
 
-한 번에 하나씩 끄면서 본다: ① rqt 끄기 → ② `show_window:=false` → ③ 그래도 `age` 크면 `cb` 와 `topic hz` 비교.
+한 번에 하나씩 끄면서 본다: ① rqt 끄기 → ② 미리보기 창 끄기(기본이 꺼짐) → ③ 그래도 `age` 크면 `cb` 와 `topic hz` 비교.
 
 ### 렉 재현 (전/후 비교·시연용)
 

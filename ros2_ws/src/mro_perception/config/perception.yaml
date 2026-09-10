@@ -32,8 +32,10 @@
     target_stale_s: 1.0        # 마지막으로 본 후보·거리를 "지금" 으로 치는 시간(초). 프레임 주기(0.1 s)의 열 배.
                                # 프레임이 이보다 늦어지면 폴백 버튼이 안 뜨고 요청도 NO_TARGET 으로 거절된다 —
                                # 렉이 나는 현장에서는 2~3 으로 올린다 (I-045)
-    show_window: true          # 로컬 미리보기 창. launch 가 이 파일을 넘기므로 모니터 없는 로봇 PC(SSH)는
-                               # 여기서 false 로 — 창을 못 만들면 노드가 죽는다
+    show_window: false         # 로컬 미리보기 창. 기본은 끔 — launch 가 이 파일을 모든 로봇에 넘기는데
+                               # 화면 없는 PC(SSH)에서 창을 못 만들면 노드가 죽어 회차가 통째로 날아간다 (I-043).
+                               # 보고 싶으면 여기서 true 로 (실행 중에는 못 바꾼다 — 창은 기동 때 만들어진다).
+                               # 영상은 rqt_image_view 로 target/image/compressed 를 보는 편이 낫다 — 어느 PC 에서든 된다
 
     # --- aruco_detector_node (계산은 core/aruco.py) ---
     marker_size_m: 0.10        # 인쇄된 검은 사각형 한 변 실측값 (9/7 자로 확인, 4장 동일).
