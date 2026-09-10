@@ -11,11 +11,9 @@ import threading
 from ament_index_python.packages import get_package_share_directory
 
 from mro_fleet.core.db import FleetDB
-from mro_fleet.nodes.MonitorWebApp import MonitorWebApp
-from mro_fleet.nodes.fleet_client import FleetUICommands
-from mro_fleet.nodes.robot_control_node import (
-    DEFAULT_ROBOTS, FLEET_STATUS_TOPIC,
-)
+from mro_fleet.nodes.fleet_ui_commands import FleetUICommands
+from mro_fleet.nodes.monitor_web_app import MonitorWebApp
+from mro_fleet.nodes.robot_status import DEFAULT_ROBOTS, FLEET_STATUS_TOPIC
 from mro_fleet.nodes.robot_state_manager import RobotStateManager
 
 from mro_interfaces.msg import (

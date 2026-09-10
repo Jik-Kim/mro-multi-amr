@@ -1,7 +1,7 @@
 """로봇별 RobotStatus 객체를 생성하고 관리한다."""
 import time
 
-from mro_fleet.nodes.robot_control_node import RobotStatus, STATUS_SOURCES
+from mro_fleet.nodes.robot_status import RobotStatus, STATUS_SOURCES
 
 from mro_interfaces.msg import Mission
 

@@ -18,12 +18,12 @@ except ModuleNotFoundError:
     flask_stub.send_file = lambda *_args, **_kwargs: None
     sys.modules['flask'] = flask_stub
 
-from mro_fleet.nodes import robot_control_node
-from mro_fleet.nodes.MonitorWebApp import (
+from mro_fleet.nodes import robot_status
+from mro_fleet.nodes.monitor_web_app import (
     MonitorWebApp, load_dock_landmarks, load_map_config,
 )
-from mro_fleet.nodes.fleet_client import FleetUICommands
-from mro_fleet.nodes.robot_control_node import RobotStatus
+from mro_fleet.nodes.fleet_ui_commands import FleetUICommands
+from mro_fleet.nodes.robot_status import RobotStatus
 from mro_fleet.nodes.robot_state_manager import RobotStateManager
 
 
@@ -166,7 +166,7 @@ def test_battery_status_is_stored_by_instance_namespace():
     fake = make_robot_control_fake()
 
     with patch.object(
-        robot_control_node.time, 'monotonic', return_value=10.0
+        robot_status.time, 'monotonic', return_value=10.0
     ):
         RobotStatus._receive_battery_status(
             fake, SimpleNamespace(percentage=0.73)
