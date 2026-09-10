@@ -124,7 +124,7 @@
 |---|---|---|
 | `arena.yaml` | 베이 waypoint·ArUco ID, 대기공간, `dock_zone`(pose·approach·holding), `passages`, `semaphore_zones` 폴리곤, `homography_marks`, `loc_check_marker`. **데이터 yaml 이라 ROS 파라미터가 아니다** — 런치가 경로만 넘기고 노드가 직접 읽는다. `9/9` 읽히지 않던 `bay_dwell_s`·`t_lim_s`·`t_ret_s`·`dock_retry` 삭제 (단일 출처는 `common.yaml`) | 박병후·이시율 |
 | `common.yaml` `9/8 신설` | 전 로봇 공통값 — `follow_standoff_m` 0.5, `min_separation_m` 0.3, `v_max` 0.3, `bay_dwell_s` 5, **`t_lim_s` 120(로봇·관제 공유 계약값 — `fleet_pc.launch.py` 도 이 파일을 넘긴다)**, `t_ret_s` 180, `dock_retry` 2, 셔틀·베이정렬 상수, `9/9` **추종 9개** (`lost_s`·`standby_s`·`approach_skip_m`·`hint_valid_s`·재탐지 넷·`search_step_deg`). `hint_valid_s` 는 **여기 하나뿐이다** — 유효기간은 받는 쪽만 판단한다 (I-047) | 박병후·이시율 |
-| `robot3.yaml` / `robot8.yaml` | **로봇마다 다른 값만** — `robot_ns`, `dock_pose`, `depth_k`. 로봇 추가 = 이 파일 하나 복사 | 박병후·이시율 |
+| `robot3.yaml` / `robot8.yaml` | **로봇마다 다른 값만** — `robot_ns`, `dock_pose`. 로봇 추가 = 이 파일 하나 복사. `9/10` `depth_k` 삭제 — ArUco 거리가 pnp 하나가 되면서 아무도 안 읽는다 (PR #76). 실측 기록은 주석으로 남겼다 | 박병후·이시율 |
 | `fleet.yaml` `9/8 신설` | **관제 전용 값만** — `robot_namespaces`(로봇 명단의 단일 출처), `battery_min`. `t_lim_s` 는 `9/9` 여기서 빼고 `common.yaml` 로 통일했다 — 로봇과 관제가 갈라지면 로봇은 계속 가는데 관제만 `TLIM_EXCEEDED` 를 찍는다 | 김민준 |
 | `mro_perception/config/perception.yaml` | `detect_conf`, `max_core_gap_mm`, `sync_slop_s`, `marker_size_m`, `reid_threshold`(단일 출처) | 정정인·민범진 |
 | ~~`mro_navigation/config/navigation.yaml`~~ | **삭제됨 9/9** — 어떤 launch 도 안 넘기는 죽은 파일이었고, PR #56 이전 값이 남아 있어 되살리면 재탐지가 느려진다. 값은 `common.yaml` 이 갖는다 | — |

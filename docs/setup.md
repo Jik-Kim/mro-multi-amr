@@ -97,7 +97,7 @@ ros2 launch mro_bringup robot.launch.py namespace:=/robot3
 두 번째 로봇은 다른 PC 에서 `/robot8` 로 동일하게. **Nav2 launch 는 로봇당 한 PC 에서만** (`controller_server` 중복 = `/cmd_vel` 퍼블리셔 2개).
 
 로봇을 추가·교체할 때 코드는 건드리지 않는다 — `namespace:=/robotN` 이 `mro_bringup/params/robotN.yaml` 을 이름으로 찾아 쓴다.
-새 로봇이면 ① `params/robot3.yaml` 을 복사해 `dock_pose`·`depth_k` 실측을 채우고 ② `params/arena.yaml` 의
+새 로봇이면 ① `params/robot3.yaml` 을 복사해 `dock_pose` 실측을 채우고 (`depth_k` 는 `9/10` 없앴다 — PR #76) ② `params/arena.yaml` 의
 `waiting_zone`·`dock_zone.pose`·`dock_zone.approach` 에 항목을 넣고 ③ `params/fleet.yaml` 의 `robot_namespaces` 에 추가한다.
 네임스페이스 없이 노드를 띄우면 예전처럼 조용히 robot3 인 척하지 않고 **바로 죽는다** (9/8).
 

@@ -49,7 +49,7 @@
 | `homography_marks.cam2` | 위와 동일 | 웹캠팀 협의 | [ ] |
 
 `dock_zone.pose` 를 넣은 뒤에는 **같은 값을 `robot3.yaml`/`robot8.yaml` 의 `dock_pose` 에도 반영**한다 (I-013 — 두 값이 다르면 map 원점이 어긋난다).
-`9/8` `robotN.yaml` 은 **로봇마다 다른 값만** 담는다 (`robot_ns`·`dock_pose`·`depth_k`). 공통값은 `common.yaml` 이므로 그쪽은 건드리지 않는다.
+`9/8` `robotN.yaml` 은 **로봇마다 다른 값만** 담는다 (`robot_ns`·`dock_pose`. `depth_k` 는 `9/10` 삭제 — PR #76). 공통값은 `common.yaml` 이므로 그쪽은 건드리지 않는다.
 `semaphore_zones` 의 ID(`P1`, `DOCK`)는 `zone_semaphore_node.py` 의 `ZONES` 상수와 철자까지 동일해야 한다.
 
 ## 2. I-004 — 벽 받침대 vs 통로 실폭
