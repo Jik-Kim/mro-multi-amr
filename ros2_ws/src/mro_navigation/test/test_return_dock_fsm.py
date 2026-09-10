@@ -431,3 +431,49 @@ def test_dock_pose_matches_arena(ros):
     assert len(arena_pose) == 3
     assert arena_pose != [0.0, 0.0, 0.0], '(0,0,0) 이면 초기자세가 맵 원점이 된다'
     node.destroy_node()
+
+
+def test_first_goal_waits_until_follow_is_idle(ros):
+    """finish 직후 추종이 아직 FOLLOWING 이면 IDLE 이 될 때까지 첫 목표를 미룬다 (9/10 17:15 경합)."""
+    node = make_node()
+    stub_token(node, {})
+    node.follow_state = 'FOLLOWING'
+    seen = []
+    real = node.navigator.goToPose
+
+    def goto(pose, behavior_tree=''):
+        seen.append(node.follow_state)
+        return real(pose, behavior_tree)
+
+    node.navigator.goToPose = goto
+    node.create_timer(0.3, lambda: setattr(node, 'follow_state', 'IDLE'))   # 추종이 0.3 s 뒤 내려온다
+    node.run_return()
+    assert seen and seen[0] == 'IDLE', f'추종이 IDLE 이 되기 전에 목표를 보냈다: {seen}'
+    assert node.status_log == ['RETURNING', 'DOCKING', 'DOCKED']
+    node.destroy_node()
+
+
+def test_goal_preempted_right_after_send_is_resent_once(ros):
+    """첫 목표가 보내자마자 CANCELED 로 끝나면 이동 실패가 아니라 선점으로 보고 한 번 다시 보낸다."""
+    node = make_node()
+    stub_token(node, {})
+    results = ['CANCELED', 'SUCCEEDED']
+    node.navigator.getResult = lambda: types.SimpleNamespace(name=results.pop(0) if results else 'SUCCEEDED')
+    node.run_return()
+    goals = node.navigator.goals()
+    assert goals == [('goto', *APPROACH_R3), ('goto', *APPROACH_R3)], f'같은 접근 지점을 두 번 보내야 한다: {goals}'
+    assert 'FAILED' not in node.status_log
+    assert node.status_log == ['RETURNING', 'DOCKING', 'DOCKED']
+    node.destroy_node()
+
+
+def test_goal_that_fails_late_is_not_resent(ros):
+    """오래 달리다 실패한 목표는 선점이 아니다 — 재전송 없이 포기한다."""
+    node = make_node()
+    stub_token(node, {})
+    node.navigator.result_name = 'FAILED'
+    node.navigator.nav_ticks = 30                     # 30 틱 × 0.1 s = 3 s > PREEMPT_RETRY_S
+    node.run_return()
+    assert node.navigator.goals() == [('goto', *APPROACH_R3)]
+    assert node.status_log[-1] == 'FAILED'
+    node.destroy_node()
