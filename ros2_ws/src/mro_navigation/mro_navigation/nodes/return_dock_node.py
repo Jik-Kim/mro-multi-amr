@@ -55,6 +55,9 @@ import yaml
 
 FINISH_TOPIC = 'mission/finish'
 ESTOP_TOPIC = 'safety/estop'
+FOLLOW_STATUS_TOPIC = 'approach/status'   # 추종 노드 상태. finish 직후 IDLE 이 될 때까지 첫 목표를 미룬다
+FOLLOW_RELEASE_S = 2.0     # 추종이 IDLE 로 내려오길 기다리는 상한 [s]
+PREEMPT_RETRY_S = 2.0      # 목표가 이 시간 안에 실패로 끝나면 '선점당한 것' 으로 보고 한 번 다시 보낸다 [s]
 STATUS_TOPIC = 'shuttle/status'
 TOKEN_SRV = '/fleet/zone_token'     # 관제 PC 의 zone_semaphore. 전역 이름
 ZONE_DOCK = 'DOCK'
@@ -110,9 +113,11 @@ class ReturnDock(Node):
 
         self.create_subscription(Bool, FINISH_TOPIC, self.finish_cb, 10)
         self.create_subscription(Bool, ESTOP_TOPIC, self.estop_cb, 1)
+        self.create_subscription(String, FOLLOW_STATUS_TOPIC, self.follow_cb, 10)
         self.pub_status = self.create_publisher(String, STATUS_TOPIC, 10)
         self.cli_token = self.create_client(ZoneToken, TOKEN_SRV)
 
+        self.follow_state = None    # approach/status 마지막 값. 추종 노드가 없으면 None 그대로
         self.pending = False        # finish 를 받았다 (실행은 메인 루프)
         self.running = False
         self.estop = False
@@ -148,6 +153,9 @@ class ReturnDock(Node):
             self.get_logger().warn('이미 복귀 중이다 — 중복 종료 신호를 버린다')
             return
         self.pending = True
+
+    def follow_cb(self, msg):
+        self.follow_state = msg.data
 
     def estop_cb(self, msg):
         was = self.estop
@@ -209,9 +217,29 @@ class ReturnDock(Node):
         return self.navigator.getPoseStamped([float(x), float(y)], math.degrees(yaw))
 
     def goto(self, pose, label):
-        """목표 1건. 콜백 밖에서만 불린다."""
+        """목표 1건. 콜백 밖에서만 불린다.
+
+        **선점 1회 재전송** (9/10 17:15). finish 는 추종·복귀 두 노드가 같은 순간 받는다. 추종의
+        '현재 목표 취소' 와 우리의 첫 goToPose 가 30 ms 안에 Nav2 에 닿으면, Nav2 는 새 목표를
+        받은 뒤 취소를 처리해 **우리 목표가 곧바로 CANCELED** 로 끝난다 — 복귀가 0.03 s 만에
+        FAILED 로 포기됐고 관제가 RETURN 을 한 번 더 눌러서야 돌아왔다. 목표가 PREEMPT_RETRY_S
+        안에 실패로 끝나면 이동 실패가 아니라 그 경합으로 보고 같은 목표를 한 번 다시 보낸다
+        """
         gx, gy = pose.pose.position.x, pose.pose.position.y
-        self.motion_pause.navigate(pose, label)
+        for attempt in (1, 2):
+            t_sent = self.now()
+            try:
+                self.motion_pause.navigate(pose, label)
+                break
+            except ReturnAbort as e:
+                took = self.now() - t_sent
+                if attempt == 1 and '이동 실패' in str(e) and took < PREEMPT_RETRY_S:
+                    self.get_logger().warn(
+                        f'{label} 목표가 {took:.2f} s 만에 끝났다 ({e}) — 추종 취소와 겹친 선점으로 보고 '
+                        f'같은 목표를 한 번 다시 보낸다')
+                    self.motion_pause.idle()
+                    continue
+                raise
         self.motion_pause.idle()
         at = self.tf_pose(warn=False)
         if at is None:
@@ -328,6 +356,12 @@ class ReturnDock(Node):
             # S9: 진행 중 주행 취소. 추종 중단(페어링 해제)은 follow_target 이 같은 토픽으로 한다
             self.navigator.cancelTask()
             self.set_status('RETURNING')
+            # 추종이 자기 목표를 다 거두고 IDLE 이 될 때까지 첫 목표를 미룬다 (위 goto 주석의 경합).
+            #   추종 노드가 없으면(follow_state None) 기다릴 것도 없다
+            if self.follow_state not in (None, 'IDLE'):
+                if not self.wait(lambda: self.follow_state == 'IDLE', timeout=FOLLOW_RELEASE_S):
+                    self.get_logger().warn(
+                        f'추종이 {FOLLOW_RELEASE_S} s 안에 IDLE 이 되지 않았다 ({self.follow_state}) — 그대로 출발')
 
             # S10: DOCK 을 먼저 — 홀딩 포인트가 P1 바깥이라 순서가 이렇다
             self.acquire_zone(ZONE_DOCK, on_denied=lambda: self.go_holding(holding))
