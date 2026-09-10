@@ -11,7 +11,6 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'models'), glob('models/*.pt')),
         (os.path.join('share', package_name, 'config'), glob('config/*.*')),
         (
             os.path.join('share', package_name, 'config', 'WebCam1'),
@@ -32,7 +31,6 @@ setup(
         'console_scripts': [
             'webcam_register_node = mro_webcam.nodes.webcam_register_node:main',
             'webcam_hint_node = mro_webcam.nodes.webcam_hint_node:main',
-            'test_subscription = mro_webcam.nodes.test_subscription:main',
             'webcam2 = mro_webcam.nodes.webcam2:main',
             'kpi_logger_node = mro_webcam.nodes.kpi_logger_node:main',
             'calibrate_homography = mro_webcam.core.homography:main',
