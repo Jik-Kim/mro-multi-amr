@@ -19,6 +19,10 @@
 규칙
 - 관제는 **전체에서 한 대만** (I-054). 두 대면 UI 에 빨간 배너.
 - 안 쓰는 로봇의 스택은 띄우지 않는다 (디스커버리 부하 — 9/10 13:46 링크 끊김 회차에 robot3 풀스택이 같이 떠 있었다).
+- **2대는 겹쳐서 올리지 않는다 (9/10 추가).** 로봇 A 가 T8 `Managed nodes are active` 를 낼 때까지
+  기다린 뒤 로봇 B 의 T3 를 시작한다. 그리고 **T2(bag) 과 T4(rviz) 는 양쪽 T8 이 다 뜬 뒤에 켠다** —
+  둘 다 `scan`·`tf`·`odom` 을 로봇에서 **구독자마다 따로** 끌어오는데, 기동 구간엔 필요가 없다.
+  5절 판정은 관제 미션부터 시작하므로 **bag 을 늦게 켜도 잃는 기록이 없다.**
 - `teleop_twist_keyboard` 창은 주행 중 절대 열어 두지 않는다 (키 하나가 로봇을 움직인다).
 - 미션 시작·종료 토픽은 **관제만** 낸다. 로봇 PC 에서 `mission/assigned` 를 수동 발행하지 않는다.
 
@@ -44,7 +48,7 @@ cd ~/mro-multi-amr && git pull --ff-only && git log --oneline -1
 source /etc/turtlebot4_discovery/setup.bash && source ~/turtlebot4_ws/install/setup.bash && source ~/mro-multi-amr/ros2_ws/install/setup.bash && echo "$ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT"
 ```
 
-기대값 `3 ;192.168.108.41:11811 True`. 웹캠 PC 와 Nav2 창만 `False`. 다르면 `/etc/turtlebot4_discovery/setup.bash` 의
+기대값 `3 ;192.168.108.41:11811 True`. 웹캠 PC 와 Nav2 창만 `False` (6-1 을 적용했다면 그 창들도 `False`). 다르면 `/etc/turtlebot4_discovery/setup.bash` 의
 `ROS_DISCOVERY_SERVER=";192.168.108.41:11811"` 을 맞춘다. **스크립트·SSH 로 띄우면 `ROS_SUPER_CLIENT` 가 조용히 False 가 되어
 토픽이 거의 안 보인다** — 관제 창은 `export ROS_SUPER_CLIENT=True` 를 명시한다.
 
@@ -122,7 +126,7 @@ cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 node list | sort | uni
 ```
 도크 `True` · scan 7.5 Hz · 관제/웹캠 각 1개 · 중복 없음.
 
-### T2 · bag — 유지
+### T2 · bag — 유지 · **양쪽 T8 이 뜬 뒤에 켠다** (0절 규칙)
 ```bash
 mkdir -p ~/bags && cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 bag record -o ~/bags/merge_ROBOT_$(date +%m%d_%H%M) /rosout /webcam2/target_hint /webcam1/worker_descriptor /fleet/zone_event /fleet/status /fleet/mission /ROBOT/mission/assigned /ROBOT/mission/finish /ROBOT/shuttle/status /ROBOT/approach/status /ROBOT/shuttle/arrived /ROBOT/safety/estop /ROBOT/safety/state /ROBOT/cmd_vel /ROBOT/cmd_vel_navigation /ROBOT/cmd_vel_search /ROBOT/scan /ROBOT/amcl_pose /ROBOT/odom /ROBOT/dock_status /ROBOT/battery_state /ROBOT/hazard_detection /ROBOT/tf /ROBOT/tf_static /ROBOT/target/map_point /ROBOT/target/visible /ROBOT/target/paired /ROBOT/target/pair_state /ROBOT/target/distance /ROBOT/target/worker_id /ROBOT/aruco/id /ROBOT/aruco/distance /ROBOT/aruco/pose /ROBOT/goal_pose /ROBOT/local_costmap/costmap
 ```
@@ -132,7 +136,7 @@ mkdir -p ~/bags && cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 bag
 cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch turtlebot4_navigation localization.launch.py namespace:=/ROBOT map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
 ```
 
-### T4 · rviz — 유지 (2D Pose Estimate 누르지 않음)
+### T4 · rviz — 유지 · **양쪽 T8 이 뜬 뒤에 켠다** (2D Pose Estimate 누르지 않음)
 ```bash
 cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch turtlebot4_viz view_navigation.launch.py namespace:=/ROBOT
 ```
@@ -215,8 +219,114 @@ T11  CLEAR 유지. 막히면 STOPPING → SAFE_ROTATE → CLEAR
 | 관제 UI 에 로봇이 없음 | 로봇 토픽이 관제에 안 닿음 | 로봇 PC `ros2 topic hz /ROBOT/approach/status` (T9) → 관제 창 `ROS_SUPER_CLIENT` → 관제 2대 여부 |
 | T6 뒤에도 `AMCL cannot publish` | 초기자세 첫 발행 유실 (디스커버리 느림) | T6 재시작 |
 | T8 이 `bond` 타임아웃으로 안 뜸 | 디스커버리 과부하 (talker·bag 재생·다른 로봇 스택) | 불필요한 노드 내리고 T8 재시작 |
+| **로봇 2대 중 두 번째 T8 이 안 뜸** (순서 무관·핑 200 ms) | 디스커버리 명단 배포 폭주 — 아래 6-1 | 0절의 2대 기동 순서 → 그래도 안 되면 6-1 |
+| 그때 `Timed out waiting for transform from base_link to map` 이 뜨고 활성화가 3번(`planner_server`)에서 멈춤 | I-035 — `global_costmap` 이 `map→base_link` 를 못 받았고, 매니저는 **재시도하지 않는다** | **T8 을 재시작하지 말고** RESUME — 아래 6-2 |
 | 로봇이 스캔 없이 멈춤 (`STUCK: 유효한 LiDAR 스캔 없음`) | 로봇↔PC 링크 끊김 (13:46) | `ros2 topic hz /ROBOT/scan` → RPi `sudo systemctl restart turtlebot4.service` |
 | 리그를 띄우자 로봇이 도크에서 빠짐 | Create3 가 cmd_vel 수신에 반응 (14:34·14:55) | 워치독이 도킹 중 발행 금지 — 재발 시 `ros2 topic info -v /ROBOT/cmd_vel` 로 다른 발행자 확인 |
 | 작업자를 봐도 SEARCHING 만 반복 | 재식별 sim < 0.34 (`unpaired`) | 인형을 웹캠1 앞에 정지 2~3 s 로 재등록, 또는 manual_pair |
 | RETURN 눌러도 즉시 FAILED | 추종 취소와 복귀 첫 목표 경합 (17:15) | PR #88 에서 수정 (IDLE 대기·1회 재전송). 그 전 판이면 RETURN 한 번 더 |
 | 힌트 방향으로 안 돌고 20° 씩 | `webcam_hint` 가 서버에 없음 | PC-W2 `echo $ROS_DISCOVERY_SERVER`, 로봇 PC `ros2 node list | grep webcam_hint` |
+
+## 6-1. 두 번째 로봇의 Nav2 가 안 뜰 때 — `node` 모드
+
+**아직 실주행 검증 전이다 (9/10 밤, 시간이 없어 못 쟀다). 먼저 0절의 기동 순서부터 지키고,
+그래도 두 번째가 안 뜰 때만 쓴다.** 이걸 먼저 켜 놓고 시연에 들어가지 않는다 — 9/10 에
+검증한 것은 아래를 **안 쓴** 경로다.
+
+### 왜 이걸 의심하는가
+
+`ROS_SUPER_CLIENT=True` 인 참가자는 자기에게 필요한 것이 아니라 디스커버리 서버가 가진
+**전체 참가자 명단**을 받는다. 절차서대로 띄우면 로봇 PC 한 대에 **15벌**이다 —
+T2 bag 1 · T3 localization 3 · T4 rviz 1 · T5 리그 2 · T6·T7 2 · T9 리그 2 · T10 1 ·
+T11~T13 echo 3. **2대면 30벌**이고, 시스템 전체 참가자는 약 75벌이다.
+
+Nav2 는 `turtlebot4_navigation/nav2.launch.py` 가 `use_composition` 을 `'False'` 로
+하드코딩해서 **프로세스가 11개**다. 두 번째 Nav2 를 켜는 순간이 *명단이 제일 클 때* 와
+*참가자 11개가 한꺼번에 들어올 때* 가 겹치는 지점이다. **순서와 무관하게 항상 두 번째가
+실패하는 것**이 이것으로 설명된다.
+
+### 조치 — 노드만 띄우는 터미널을 일반 클라이언트로
+
+**T3 · T5 · T6 · T7 · T9 · T10** 의 `source tools/shuttle_env.sh` 를
+`source tools/shuttle_env.sh node` 로 바꾼다. 나머지는 손대지 않는다.
+
+```bash
+cd ~/mro-multi-amr && source tools/shuttle_env.sh node && ros2 launch turtlebot4_navigation localization.launch.py namespace:=/ROBOT map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
+```
+
+PC 당 9벌, 2대면 **18벌**이 명단 배포 대상에서 빠진다.
+
+**바꾸지 않는 것** — 전체 그래프를 조회하는 터미널은 `True` 라야 한다:
+T1(점검) · **T2(bag — 타입 확인에 `get_topic_names_and_types` 를 쓴다)** ·
+T11·T12·T13(`topic echo`) · T14(`service call`) · 관제 PC · T8 은 원래 `nav2`.
+
+### 되돌리기와 판정
+
+틀렸다면 **기동 2분 안에 드러난다** — T6 이 `초기자세 … 전송` 을 못 내거나, T11·T12 에
+상태가 안 찍힌다. 그때는 `node` 를 빼고 그 창만 다시 띄우면 원래대로다. 바꾼 창 말고는
+아무것도 달라지지 않으므로 **원인 변수가 하나로 유지된다.**
+
+> `use_composition` 을 `True` 로 돌리면 Nav2 프로세스가 11 → 2 벌이 된다. 걸림돌로 본
+> `SetRemap`(`global_costmap/scan`→`scan`)·`PushRosNamespace` 는 둘 다 composable 노드에
+> 전달되는 것을 확인했다 (`launch_ros/actions/load_composable_nodes.py:297,304`).
+> 다만 컨테이너(`component_container_isolated`)를 직접 띄워야 하고 **실주행 재검증이
+> 필요하다** — Phase 1 시연 뒤에 볼 것.
+
+## 6-2. 활성화가 `planner_server` 에서 멈췄을 때 — RESUME
+
+`Managed nodes are active` 가 안 나오고 아래가 뜬 채로 멈춘 경우다. **T8 을 껐다 켜지 않는다.**
+
+```
+[planner_server-N] [global_costmap.global_costmap]: Timed out waiting for transform
+    from base_link to map to become available, tf error: ...
+```
+
+### 이게 3번이다
+
+T8 의 활성화 순서는 `navigation_launch.py:43` 에 있다 — ① `controller_server` ② `smoother_server`
+③ **`planner_server`** ④ `route_server` ⑤ `behavior_server` ⑥ `velocity_smoother`
+⑦ `collision_monitor` ⑧ `bt_navigator` ⑨ `waypoint_follower` ⑩ `docking_server` (+ 매니저 = 11 프로세스).
+
+- **`local_costmap` 은 `controller_server`(①) 것이고 `odom` 프레임이라 map 없이도 뜬다.** 그래서 ①은 통과한다.
+- **map 이 필요한 것은 `planner_server`(③) 의 `global_costmap` 이다.** 위 메시지는 여기서만 나온다 —
+  `route_server`(④) 에는 map 관련 메시지가 없고, TB4 `nav2.yaml` 에 설정 자체가 없다.
+  **줄 수로 세지 말고 메시지 본문으로 판정한다.**
+
+### 왜 2대일 때만 나오나
+
+I-035 는 초기자세를 안 보내서 생긴 문제였고 9/8 에 고쳤다 (`shuttle_mission_node` 가 기동 시 전송).
+**보내는 것은 이제 맞다. 2대에서 문제가 되는 것은 그게 제때 도착하느냐다.**
+
+디스커버리 서버를 쓰면 **같은 PC 안의 두 프로세스도 서로를 찾으려면 PC-F 를 거친다** (멀티캐스트
+탐색이 꺼진다). 데이터는 그다음에 로컬로 흐르지만 **짝을 맺는 것 자체가 무선 왕복**이다. 그래서
+T6→AMCL(`initialpose`) 이나 AMCL→`planner_server`(`map→odom` TF) 중 하나만 늦어도 ③에서 멈춘다.
+**서버가 제일 바쁜 때가 정확히 두 번째 Nav2 를 켜는 순간**이라 2대에서만 드러난다.
+
+그리고 I-035 가 적어둔 대로 **매니저는 나중에 TF 가 생겨도 재시도하지 않는다** — 잠깐 늦은 것이
+영구 실패가 된다. "느리게 켜짐" 이 아니라 "안 켜짐" 으로 보이는 이유다.
+
+### 조치
+
+AMCL 이 살아 있는지 먼저 본다. 값이 나오면 `map→odom` 은 있는 것이다.
+
+```bash
+cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 topic echo /ROBOT/amcl_pose --once
+```
+
+그다음 활성화를 다시 건다 (`command: 2` = RESUME). **I-035 에 실측 확인 기록이 있는 명령이다** —
+`global_costmap`·`planner_server`·`behavior_server`·`bt_navigator`·`velocity_smoother`·
+`waypoint_follower` 가 모두 `active [3]` 이 되는 것을 9/7 에 확인했다.
+
+```bash
+cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 service call /ROBOT/lifecycle_manager_navigation/manage_nodes nav2_msgs/srv/ManageLifecycleNodes "{command: 2}"
+```
+
+확인:
+
+```bash
+cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 service call /ROBOT/bt_navigator/get_state lifecycle_msgs/srv/GetState
+```
+
+**T8 을 껐다 켜면 안 되는 이유** — 재시작은 참가자 11개를 내렸다가 다시 올리는 것이라
+**디스커버리 폭풍을 한 번 더 만든다.** 이미 서버가 막혀서 생긴 증상인데 부하를 더 준다.
+RESUME 은 떠 있는 노드의 상태만 전이시키므로 디스커버리가 다시 일어나지 않는다.
