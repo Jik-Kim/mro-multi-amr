@@ -20,6 +20,8 @@ class RobotStateManager:
     def __init__(self, namespaces, executor):
         """namespace마다 RobotStatus 객체를 하나씩 생성한다."""
         self.executor = executor
+        # 관제가 두 벌 떠 있을 때 화면에 띄울 경고 (I-054). FleetManager 가 채운다.
+        self.duplicate_monitor_warning = ''
         self.robots = {}
         self.last_received_status = {}
         for namespace in namespaces:

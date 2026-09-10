@@ -334,3 +334,12 @@ def test_missing_manual_pair_response_does_not_report_success():
     assert accepted is False
     assert '응답 없음' in message
     assert publisher.messages == []
+
+
+def test_dashboard_shows_duplicate_monitor_banner():
+    """관제가 두 벌 떠 있으면 화면 위에 경고를 띄운다 (I-054)."""
+    with open(TEMPLATE_PATH, encoding='utf-8') as template_file:
+        html = template_file.read()
+
+    assert 'id="monitorAlert"' in html
+    assert 'duplicate_warning' in html
