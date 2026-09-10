@@ -296,6 +296,7 @@ class ShuttleMission(Node):
         self.motion_pause = MotionPause(self, 'shuttle_mission', MissionAbort)
         self.last_status = None
         self.token_held = False
+        self.token_requested = False   # P1 을 요청한 적이 있다 — 못 얻고 끝나도 반납해 대기열에서 나온다 (I-033)
 
         self.create_subscription(Mission, MISSION_TOPIC, self.mission_cb, 10)
         self.create_subscription(Int32, ARUCO_ID_TOPIC, self.aruco_id_cb, 1)
@@ -523,11 +524,18 @@ class ShuttleMission(Node):
         return bool(res.granted)
 
     def release_token(self, reason):
-        """성공·실패와 무관하게 반드시 반납한다 (계약 3절). 두 번 불려도 안전하다."""
-        if not self.token_held:
+        """성공·실패와 무관하게 반드시 반납한다 (계약 3절). 두 번 불려도 안전하다.
+
+        **요청만 했어도 반납한다** (I-033, return_dock 과 같은 형태). 거절당한 로봇은 세마포어 FIFO
+        대기열에 남는다. 대기 중 T_lim·estop 으로 포기하면서 반납을 안 보내면 그 로봇이 선두로
+        남아 다른 로봇이 P1 에 영구히 거절되고, 60 s 강제 회수는 보유자만 훑으므로 자동 복구도
+        없다 — 2대 동시 배송(TS-07)에서만 드러난다. 세마포어는 보유한 적 없는 반납도 대기열에서
+        빼 준다 (zone_semaphore_node.py, RELEASE 이벤트는 내지 않는다)
+        """
+        if not (self.token_held or self.token_requested):
             return
         self.token(False)
-        self.token_held = False
+        self.token_held = self.token_requested = False
         self.get_logger().info(f'P1 반납 ({reason})')
 
     def aruco_ok(self, expect_id):
@@ -568,7 +576,7 @@ class ShuttleMission(Node):
     def run_mission(self, m):
         self.mission = m
         self.t0 = self.now()
-        self.token_held = False
+        self.token_held = self.token_requested = False
         try:
             bay, waiting = self.mission_targets(m)
             self.init_pose()
@@ -1232,6 +1240,7 @@ class ShuttleMission(Node):
         거절은 정상이므로 실패로 세지 않는다 (계약 3절). 무한 대기는 T_lim 이 끊고,
         세마포어에도 60 초 강제 회수가 있다.
         """
+        self.token_requested = True                  # 첫 요청부터 — 거절돼도 대기열에 올라간다
         while not self.token(True):
             self.get_logger().info(f"P1 대기 — {self.p('token_retry_s')} s 후 재요청")
             self.wait(lambda: False, timeout=self.p('token_retry_s'))  # 무한 대기는 T_lim 이 끊는다
