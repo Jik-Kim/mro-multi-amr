@@ -13,7 +13,9 @@ from launch.substitutions import LaunchConfiguration
 
 SPIN_MAX_RAD_S = 0.3    # Nav2 Spin 상한. TB4 기본 1.0 — 아래 주석
 SPIN_MIN_RAD_S = 0.15   # Nav2 Spin 하한. TB4 기본 0.4
-INFLATION_RADIUS_M = 0.20   # 내접 0.186 + 여유. 0.25(9/6 합의)는 0.79 m 통로를 비용으로 다 덮어 rviz 가 뚱뚱했다 (9/10 오후). 0.19 아래는 벽 붙기 재현
+INFLATION_RADIUS_M = 0.12   # 주행 결정 9/10 오후 (이시율): 0.25·0.20 은 rviz 가 뚱뚱하다. **내접 0.186 아래라**
+                            #   Nav2 가 'inflation smaller than inscribed' 경고를 내고 벽에 붙어 달릴 수 있다 —
+                            #   통로에서 STUCK 이 재현되면 이 값을 0.20 으로 되돌린다 (9/10 오전 P1 벽 0.20 m 사례)
 
 
 def _setup(context):
