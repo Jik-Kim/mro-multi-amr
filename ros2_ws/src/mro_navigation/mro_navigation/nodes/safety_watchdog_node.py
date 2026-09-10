@@ -55,6 +55,8 @@ class SafetyWatchdog(Node):
         self.search_at = float('-inf')
         self.epoch = self.control.epoch
         self.last_state = None
+        self.dock_known = False          # dock_status 를 한 번이라도 받았나. 받기 전엔 cmd_vel 을 내지 않는다
+        self.hold_warned_at = float('-inf')
         self.last_command_at = float('-inf')
         self.pub_estop = self.create_publisher(Bool, 'safety/estop', 10)
         self.pub_state = self.create_publisher(String, 'safety/state', 10)
@@ -83,6 +85,7 @@ class SafetyWatchdog(Node):
         self.paused[name] = (stamp, time.monotonic())
 
     def dock_cb(self, message):
+        self.dock_known = True
         self.control.dock_state(message.is_docked)
 
     def scan_cb(self, message):
@@ -143,6 +146,8 @@ class SafetyWatchdog(Node):
         #   영원히 버려져 CLEAR 인데도 로봇이 안 움직인다** — 겉으로는 정상인 완전 정지다
         if self.control.estop or now - self.clear_at < CLEAR_FLUSH_S:
             return
+        if self.hold_cmd_vel(now):         # 도킹 중·도킹 미확인엔 cmd_vel 을 한 건도 내지 않는다 (아래 tick 주석)
+            return
         # 탐색 종료의 0 명령도 잠시 우선해 늦은 Nav2 출력과의 경합을 막는다.
         if source == 'search':
             self.search_at = now
@@ -163,6 +168,17 @@ class SafetyWatchdog(Node):
         self.pub_vel.publish(message)
         self.last_command_at = now
 
+    def hold_cmd_vel(self, now):
+        """도킹 중이거나 도킹 여부를 아직 모르면 참 — cmd_vel 발행 보류."""
+        if self.control.docked:
+            return True
+        if not self.dock_known:
+            if now - self.hold_warned_at > 5.0:
+                self.hold_warned_at = now
+                self.get_logger().warn('dock_status 미수신 — 도킹 여부를 알 때까지 cmd_vel 을 내지 않는다')
+            return True
+        return False
+
     def tick(self):
         now = time.monotonic()
         was = self.control.estop
@@ -173,7 +189,16 @@ class SafetyWatchdog(Node):
             self.epoch = self.control.epoch
             self.clear_at = now
             self.search_at = self.last_command_at = float('-inf')
-        if yaw is not None or now - self.last_command_at > self.p('nav_cmd_valid_s'):
+        # **도킹 중엔 cmd_vel 을 내지 않는다** (9/10 14:34 로봇8). 워치독이 20 Hz 로 0 을 내기
+        #   시작한 0.7 s 뒤 로봇이 스스로 7 cm 후진해 도크에서 떨어졌고, 다시 도킹하자 곧바로 또
+        #   떨어졌다. Create3 는 도킹 중 cmd_vel 수신에 반응할 수 있다. 도크 위에서는 어차피
+        #   낼 명령이 없다 — 언독은 Create3 액션이고, 도크 위 회전 탈출은 원래 금지다
+        #   **dock_status 를 받기 전에도 내지 않는다** (9/10 14:55). 첫 패치는 docked 만 봤는데,
+        #   기동 직후 dock_status(1 Hz·transient local) 가 매칭되기 전 첫 틱의 0 이 먼저 나가
+        #   0.2 s 뒤 로봇이 ±2 rad/s 로 요동치며 후진해 도크에서 떨어졌다
+        if self.hold_cmd_vel(now):
+            pass
+        elif yaw is not None or now - self.last_command_at > self.p('nav_cmd_valid_s'):
             message = TwistStamped()
             message.header.stamp = self.get_clock().now().to_msg()
             message.header.frame_id = 'base_link'

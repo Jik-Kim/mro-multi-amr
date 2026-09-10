@@ -14,6 +14,7 @@ def node():
     node = SafetyWatchdog()
     node.sent = []
     node.pub_vel = SimpleNamespace(publish=node.sent.append)
+    node.dock_cb(SimpleNamespace(is_docked=False))   # 도크 밖 — 도킹 여부를 모르면 아무것도 안 낸다 (별도 시험)
     yield node
     node.destroy_node()
     rclpy.shutdown()
@@ -133,3 +134,27 @@ def test_reverse_is_clamped_not_dropped(node):
     assert node.sent, 'BackUp 을 통째로 버리면 뒤이은 회전 복구가 끊긴다'
     assert node.sent[-1].twist.linear.x == 0.0
     assert node.sent[-1].twist.angular.z == 0.3
+
+
+def test_docked_robot_gets_no_cmd_vel_at_all(node):
+    """도킹 중엔 주기 0 도, 전달 명령도 cmd_vel 로 나가지 않는다 (9/10 14:34 로봇8).
+
+    워치독이 0 을 20 Hz 로 내기 시작한 0.7 s 뒤 로봇이 스스로 7 cm 후진해 도크에서 떨어졌고
+    재도킹 직후 또 떨어졌다. 도크 위에선 낼 명령이 없다 — 언독은 Create3 액션이다.
+    """
+    import time
+    node.control.state = 'CLEAR'
+    node.clear_at = time.monotonic() - 1.0
+    node.last_command_at = float('-inf')
+    node.dock_known = False                       # 기동 직후처럼 dock_status 를 아직 못 받은 상태
+    node.tick()                                   # 첫 틱부터 보류
+    node.command_cb('navigation', command(node, 0.3))
+    assert node.sent == [], f'dock_status 수신 전에 cmd_vel 이 나갔다: {node.sent}'
+    node.dock_cb(SimpleNamespace(is_docked=True))
+    node.tick()                                   # 주기 0 발행 지점
+    node.command_cb('navigation', command(node, 0.3))
+    node.command_cb('search', command(node, 0.3))
+    assert node.sent == [], f'도킹 중 cmd_vel 이 나갔다: {node.sent}'
+    node.dock_cb(SimpleNamespace(is_docked=False))   # 도크를 벗어나면 원래대로
+    node.tick()
+    assert node.sent, '도크를 벗어났는데 주기 발행이 안 돌아왔다'
