@@ -94,7 +94,7 @@
 |---|---|---|---|---|
 | `/webcam1/worker_descriptor` | webcam_register | fleet_manager, amr_detection, webcam_hint | WorkerDescriptor | S1 등록 ≤ 10 s. `robot_ns` 는 현재 빈 값이며 AMR 배정은 `RequestMission` 수락 시 확정 |
 | `/webcam2/target_hint` | webcam_hint | follow_target, kpi_logger | TargetHint | E-1. **10 Hz** 발행, 유효 2 s. **BEST_EFFORT** — 구독자도 sensor_data QoS 로 잡아야 받는다 |
-| `/webcam2/image_raw/compressed` | webcam_hint | (뷰어·영상 판독 기록) | CompressedImage | **jpeg 80, 10 Hz** (`image_publish_hz`). raw `Image` 는 발행하지 않는다 — 다른 PC 에서 구독하면 Wi-Fi 를 막는다 (NR-03). 안전 판단 금지, 세션 판정 후 폐기 (R-10). PR #14 |
+| `/webcam2/image_raw/compressed` | webcam_hint | (뷰어·영상 판독 기록) | CompressedImage | **jpeg 80, 10 Hz** (`image_publish_hz`). raw `Image` 는 발행하지 않는다 — 다른 PC 에서 구독하면 Wi-Fi 를 막는다 (NR-03). 안전 판단 금지, 세션 판정 후 폐기 (R-10). **항상 오버레이다** — YOLO bbox 가 그려진 프레임만 나가고, 첫 검출 주기 전에는 발행하지 않는다 (I-042, 9/10). 원본이 섞여 나가면 받는 쪽이 어느 쪽인지 알 수 없어 판독 기록이 못 된다. **다만 이 영상에는 검출기 자신의 판단이 그려져 있다 — 「웹캠2 가 작업자를 봤나」를 이 영상으로 따질 때 독립 증거가 아니다.** PR #14 |
 | `/fleet/mission` | fleet_manager | kpi_logger, UI | Mission | 상태 전이마다 |
 | `/fleet/status` | 로봇별 RobotStatus (`robot_status.py`) | fleet_manager, MonitorWebApp, kpi_logger | FleetStatus | 1 Hz. AMR 상태의 단일 집계 경로 |
 | `/fleet/intervention` | **FleetUICommands** (`fleet_ui_commands.py`) | kpi_logger, fleet_manager | Intervention | 운영자 버튼. `9/10` 발행 주체가 `control_ui` 에서 옮겨졌다 (PR #73·#77) |
