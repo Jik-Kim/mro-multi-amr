@@ -146,7 +146,16 @@ while(i<md.length){
 
   // 이어지는 줄인가 — 표·제목·인용·구분선·목록·코드블록의 시작이 아니면 앞 문단에 붙는다
   const cont=t=>t!==undefined && t.trim()!=='' && !/^\|/.test(t) && !/^#{1,4} /.test(t)
-      && !/^>\s?/.test(t) && !/^---+\s*$/.test(t) && !/^\s*[-*] /.test(t) && !/^```/.test(t);
+      && !/^>\s?/.test(t) && !/^---+\s*$/.test(t) && !/^\s*[-*] /.test(t) && !/^```/.test(t) && !/^\s*\d+[.)]\s/.test(t);
+
+  if(/^\s*\d+[.)]\s/.test(line)){
+    const ind=line.match(/^\s*/)[0].length;
+    let txt=line.trim(); i++;
+    while(cont(md[i])){ txt+=' '+md[i].trim(); i++; }
+    children.push(new Paragraph({spacing:{before:0,after:50,line:270},
+      indent:{left:ind>=2?600:300,hanging:300},children:runs(txt,{})}));
+    continue;
+  }
 
   if(/^\s*[-*] /.test(line)){
     const ind=line.match(/^\s*/)[0].length;
