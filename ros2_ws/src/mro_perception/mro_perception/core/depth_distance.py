@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-depth_distance.py — 보정 적용 거리 측정 (공용 모듈 + 뷰어)
+"""보정 적용 거리 측정 (공용 모듈 + 뷰어).
 
 두 가지 용도로 씁니다.
 
@@ -31,7 +30,8 @@ try:                                   # ROS 는 아래 뷰어 노드(DepthViewe
     from rclpy.node import Node
     from sensor_msgs.msg import CompressedImage, Image
 except ImportError:                    # ROS 없이 roi_distance·decode_compressed_depth 만 쓰는 경우
-    rclpy = CvBridge = CompressedImage = Image = None   # (core/aruco 단위 테스트, tools/aruco_offline_check)
+    # (core/aruco 단위 테스트, tools/aruco_offline_check 에서 쓴다)
+    rclpy = CvBridge = CompressedImage = Image = None
     Node = object
 
 # =====================================================================
@@ -69,8 +69,8 @@ def correct_depth(z_m):
 
 
 def decode_compressed_depth(msg):
-    """
-    sensor_msgs/CompressedImage (compressedDepth) → uint16 numpy (mm).
+    """압축 depth 메시지(compressedDepth)를 uint16 numpy 배열(mm)로 푼다.
+
     실패하면 None. cv_bridge 로는 12 byte 헤더 때문에 못 푼다.
     """
     if 'rvl' in msg.format.lower():
@@ -83,8 +83,9 @@ def decode_compressed_depth(msg):
 
 
 def roi_distance(depth_mm, x0, y0, x1, y1):
-    """
-    depth_mm[y0:y1, x0:x1] 의 통계로 거리 계산.
+    """지정한 사각 영역의 depth 통계로 거리를 낸다.
+
+    depth_mm[y0:y1, x0:x1] 을 본다.
     반환: dict(z_raw, z_corr, n, lo, q, med, hi, spread, extrapolated)  단위 m / mm
           유효 픽셀 부족 또는 범위 밖이면 None
     """
@@ -121,11 +122,11 @@ def distance_at(depth_mm, u, v, half=CLICK_HALF):
 
 
 def distance_from_bbox(depth_mm, x1, y1, x2, y2, inner_ratio=0.5, scale=1.0):
-    """
-    검출기 bbox 로 측정.
-      inner_ratio : bbox 중심에서 이 비율만큼의 안쪽 영역만 ROI 로 사용 (가장자리 배경 회피)
-      scale       : bbox 좌표계 → depth 좌표계 배율.
-                    예) YOLO 가 352×352 preview 에서 돌고 depth 가 704×704 면 2.0
+    """검출기가 낸 bbox 로 거리를 잰다.
+
+    inner_ratio : bbox 중심에서 이 비율만큼의 안쪽 영역만 ROI 로 사용 (가장자리 배경 회피)
+    scale       : bbox 좌표계 → depth 좌표계 배율.
+                  예) YOLO 가 352×352 preview 에서 돌고 depth 가 704×704 면 2.0
     """
     x1, y1, x2, y2 = (v * scale for v in (x1, y1, x2, y2))
     cx, cy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
@@ -274,7 +275,7 @@ class DepthViewer(Node):
         self.get_logger().info(f'샘플 {len(self.samples)}개 저장 (측정 {z_raw:.3f} / 실측 {z_true:.3f})')
 
     def fit(self):
-        """역깊이 공간 최소제곱:  1/z_true = a·(1/z_meas) + b"""
+        """역깊이 공간 최소제곱으로 보정 계수를 구한다. 1/z_true = a·(1/z_meas) + b."""
         if len(self.samples) < 3:
             self.get_logger().warn(f'샘플 부족 ({len(self.samples)}/3)')
             return

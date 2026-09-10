@@ -1,6 +1,4 @@
-"""
-target_utils.py — 픽셀 → 카메라 3D → map 좌표 → standoff 목표. click_to_goal / amr_control 공용.
-"""
+"""픽셀 → 카메라 3D → map 좌표 → standoff 목표. click_to_goal / amr_control 공용."""
 import math
 
 from geometry_msgs.msg import PointStamped, PoseStamped, Quaternion
@@ -30,7 +28,7 @@ def back_project(K, u, v, z, frame_id, stamp):
 
 
 def to_map(tf_buffer, pt, logger=None, timeout=TF_TIMEOUT):
-    """camera → map. 메시지 시각 TF 가 없으면(시계 어긋남) 최신 TF 로 재시도. 실패 시 None.
+    """카메라 좌표를 map 좌표로. 메시지 시각 TF 가 없으면(시계 어긋남) 최신 TF 로 재시도. 실패 시 None.
 
     timeout — tf2_ros 는 기다리는 동안 호출 스레드를 잠재운다(sleep 루프, 실행기 정지). 단일 스레드 노드에서는
     그 사이 /tf 콜백이 돌지 않아 아무리 기다려도 변환이 도착하지 않고 시간만 잃는다 — amr_detection 에서 탐지된
@@ -60,9 +58,9 @@ def robot_xy(tf_buffer, logger=None):
 
 
 def standoff_goal(rx, ry, tx, ty, standoff, stamp):
-    """
-    로봇 (rx,ry) → 물체 (tx,ty) 방향으로, 물체 앞 standoff m 지점을 목표로.
-    이미 그보다 가까우면 제자리에서 물체를 바라보게만.
+    """물체 앞 standoff m 지점을 바라보는 목표 자세를 만든다.
+
+    로봇 (rx,ry) → 물체 (tx,ty) 방향으로 잡되, 이미 그보다 가까우면 제자리에서 물체를 바라보게만 한다.
     반환: (PoseStamped, 거리, yaw)
     """
     dx, dy = tx - rx, ty - ry

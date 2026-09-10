@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""[이관] Kn1_mini/nav/amr_detection_node.py → ros2_ws/src/mro_perception/mro_perception/nodes/amr_detection_node.py
+"""로봇 카메라로 작업자를 찾아 "어디에 있는지·내 담당이 맞는지" 를 알려주는 노드.
+
+[이관] Kn1_mini/nav/amr_detection_node.py → mro_perception/nodes/amr_detection_node.py
 
 amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾아 "어디에 있는지·내 담당이 맞는지" 를 알려주는 노드
 
@@ -24,13 +26,13 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
 ■ 내보내는 토픽 (계약 interfaces.md 6절 — 전부 상대 이름, launch 가 /robotN 을 앞에 붙인다)
   target/map_point  PointStamped(frame=map)  대상 위치. ⑥ 품질 게이트 통과분만            → follow_target 목표점
   target/visible    Bool                     매 프레임 "대상이 화면에 잡혔나". 품질 무관  → kpi_logger Lost(K-04)
-  target/distance   Float32 (m)                대상까지 **직선거리**. ⑥ 품질 게이트 통과분만  → kpi_logger AC-05 추종거리
+  target/distance   Float32 (m)              대상까지 **직선거리**. ⑥ 품질 통과분만  → kpi_logger AC-05
                                              카메라 3D 점의 노름 — 화면 어디 있든 줄자와 같다. TF 없이 나간다 (TS-U05)
   target/paired     Bool                     재식별 게이트 통과 여부 (바뀔 때 + 1 Hz)     → follow_target 추종 허가,
-  target/worker_id  String                   짝이 된 작업자 ID (W1/W2, 미확정이면 '')        fleet_manager → PAIRED
-  target/pair_state String                   PAIRED / GATE_FAIL / NO_TARGET (바뀔 때 + 1 Hz)  → control_ui 폴백 버튼
+  target/worker_id  String                   짝이 된 작업자 ID (W1/W2, 미확정 '')  fleet_manager → PAIRED
+  target/pair_state String                   PAIRED / GATE_FAIL / NO_TARGET   → control_ui 폴백 버튼
   target/image/compressed  CompressedImage(jpeg)  모니터링. 좌 RGB+bbox / 우 depth 컬러맵 → rqt_image_view
-                                             raw 는 내지 않는다 — 2.97 MB×9 Hz=214 Mbit/s 라 Wi-Fi 를 막는다 (I-016 교훈)
+                                             raw 는 내지 않는다 — 2.97 MB×9 Hz 라 Wi-Fi 를 막는다 (I-016)
 
 ■ "대상" 이 누구인가
   서술자·미션이 아직 없으면(S1~S3 전)  → 보이는 작업자 중 확신도 최고. paired 는 False (단독 시험용 동작)
@@ -60,7 +62,8 @@ amr_detection_node.py — [AMR Detection] 로봇 카메라로 작업자를 찾�
 사용법·시험 절차(TS-U03·U04·U05·Q-13)·오버레이 읽는 법: 패키지 루트 README.md (ros2_ws/src/mro_perception/README.md)
 
 실행: ros2 launch mro_bringup robot.launch.py            (namespace·tf 리맵·robotN.yaml 을 launch 가 붙인다)
-단독: ros2 run mro_perception amr_detection_node --ros-args -r __ns:=/robot3 -r /tf:=tf -r /tf_static:=tf_static
+단독: ros2 run mro_perception amr_detection_node --ros-args -r __ns:=/robot3
+        -r /tf:=tf -r /tf_static:=tf_static
 
 파라미터 (robotN.yaml / config/perception.yaml 이 덮어쓴다. 아래 모듈 상수는 기본값):
   detect_conf · reid_threshold · descriptor_frames · pair_on_s · pair_off_s · publish_hz
@@ -71,32 +74,33 @@ import math
 import os
 import time
 
+from ament_index_python.packages import get_package_share_directory
 import cv2
+from cv_bridge import CvBridge
+from geometry_msgs.msg import PointStamped
+from message_filters import ApproximateTimeSynchronizer, Subscriber
+from mro_interfaces.msg import Mission, WorkerDescriptor
+from mro_interfaces.srv import ManualPair
+# core/ 는 ROS 에 의존하지 않는 순수 계산 함수 모음 (단위 테스트 대상).
+# 이 노드는 메시지 변환과 호출 순서만 맡는다
+from mro_perception.core.camera import corrected_K, read_fx_scale
+from mro_perception.core.depth_distance import (colorize_depth, decode_compressed_depth,
+                                                DEPTH_TRANSPORT, distance_from_bbox, format_result)
+from mro_perception.core.reid import (hsv_hist, manual_pair_decision, norm_ns, PairingGate,
+                                      PairStateTracker)
+from mro_perception.core.target_utils import back_project, to_map
 import numpy as np
+from rcl_interfaces.msg import SetParametersResult
 import rclpy
 from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
-from rcl_interfaces.msg import SetParametersResult
 from sensor_msgs.msg import CameraInfo, CompressedImage, Image
 from std_msgs.msg import Bool, Float32, String
-from geometry_msgs.msg import PointStamped
 from tf2_ros import Buffer, TransformListener
-from cv_bridge import CvBridge
-from message_filters import ApproximateTimeSynchronizer, Subscriber
 from ultralytics import YOLO
-from ament_index_python.packages import get_package_share_directory
-from mro_interfaces.msg import Mission, WorkerDescriptor
-from mro_interfaces.srv import ManualPair
 
-# core/ 는 ROS 에 의존하지 않는 순수 계산 함수 모음 (단위 테스트 대상). 이 노드는 메시지 변환과 호출 순서만 맡는다
-from mro_perception.core.camera import corrected_K, read_fx_scale
-from mro_perception.core.depth_distance import (DEPTH_TRANSPORT, colorize_depth, decode_compressed_depth,
-                                                distance_from_bbox, format_result)
-from mro_perception.core.reid import PairingGate, PairStateTracker, hsv_hist, manual_pair_decision, norm_ns
-from mro_perception.core.target_utils import back_project, to_map
-
-# ── 모델 ─────────────────────────────────────────────────────────────────────────────────────────────
+# ── 모델 ───────────────────────────────────────────────────────────────────────────────────────────
 # worker.pt 는 mro_perception/models/ 가 단일 출처 — 웹캠1·2 launch 도 같은 파일을 가리킨다 (models/README.md)
 MODEL_PATH = os.path.join(get_package_share_directory('mro_perception'), 'models', 'worker.pt')
 
@@ -105,15 +109,18 @@ POINT_TOPIC = 'target/map_point'     # 대상 위치(map). 거리 품질 게이�
 IMAGE_TOPIC = 'target/image/compressed'   # 모니터링 오버레이 JPEG. raw 로 내면 다른 PC 의 rqt 가 Wi-Fi 를 막는다
 VISIBLE_TOPIC = 'target/visible'     # 매 프레임 True/False. 거리 품질과 무관 → kpi_logger 가 Lost(1→0) 를 센다
 DISTANCE_TOPIC = 'target/distance'   # 대상까지 직선거리(m). AC-05 의 기준값(FR-29) → kpi_logger. 품질 통과분만
-PAIRED_TOPIC = 'target/paired'       # 재식별 게이트 통과 여부 → follow_target(추종 허가), fleet_manager(PAIRED 전이)
+# 재식별 게이트 통과 여부 → follow_target(추종 허가), fleet_manager(PAIRED 전이)
+PAIRED_TOPIC = 'target/paired'
 WORKER_ID_TOPIC = 'target/worker_id'  # 짝이 된 작업자 ID (W1/W2). 미확정이면 ''
-PAIR_STATE_TOPIC = 'target/pair_state'   # PAIRED / GATE_FAIL / NO_TARGET → control_ui(폴백 버튼)·fleet_manager (계약 10.2)
-MANUAL_PAIR_SERVICE = 'manual_pair'      # srv/ManualPair 서버. fleet_manager 가 /robotN/manual_pair 로 부른다 (계약 10.3)
+# PAIRED / GATE_FAIL / NO_TARGET → control_ui(폴백 버튼)·fleet_manager (계약 10.2)
+PAIR_STATE_TOPIC = 'target/pair_state'
+# srv/ManualPair 서버. fleet_manager 가 /robotN/manual_pair 로 부른다 (계약 10.3)
+MANUAL_PAIR_SERVICE = 'manual_pair'
 FINISH_TOPIC = 'mission/finish'          # 관제 → 이 로봇. True 면 페어링(자동·수동 모두) 즉시 해제 (FR-30, 계약 10.6)
 MISSION_TOPIC = 'mission/assigned'   # 관제 → 이 로봇. worker_id 로 "내 담당" 을 안다 (상대 이름)
 DESCRIPTOR_TOPIC = '/webcam1/worker_descriptor'   # 웹캠1 → 전역. 절대 이름 — 네임스페이스를 붙이면 안 된다
 
-# ── 검출 ────────────────────────────────────────────────────────────────────────────────────────────
+# ── 검출 ───────────────────────────────────────────────────────────────────────────────────────────
 # 클래스는 반드시 "이름" 으로 거른다. worker.pt 의 번호표가 알파벳순이라 amr=0, worker_b=1, worker_a=2 다
 # (models/README.md). 번호로 매핑하면 검출은 멀쩡해 보이는데 a/b 가 뒤바뀌어 페어링만 전부 틀린다
 DETECT_CLASSES = ('worker_a', 'worker_b')   # 추종 후보 = 작업자 둘. amr(상대 로봇)은 후보에서 뺀다 (회피 용도는 미결)
@@ -125,7 +132,8 @@ DESCRIPTOR_FRAMES = 10       # 지문 평균 창. 웹캠1 의 DESCRIPTOR_FRAMES 
 PAIR_ON_S = 1.0              # 이 시간 연속 통과해야 paired=True (웹캠1 register_s 와 같은 발상)
 PAIR_OFF_S = 3.0             # 이 시간 연속 실패·미검출이면 paired=False. 짧은 가림에 짝이 풀리지 않게 [팀 확정]
 PUBLISH_HZ = 1.0             # paired·worker_id·pair_state 재발행 주기. 늦게 켜진 노드도 받게 한다
-GATE_FAIL_S = 30.0           # 작업자가 보이는데 게이트를 이 시간 넘게 못 넘으면 pair_state=GATE_FAIL → 관제에 폴백 버튼 (FR-13)
+# 작업자가 보이는데 게이트를 이 시간 넘게 못 넘으면 pair_state=GATE_FAIL → 관제에 폴백 버튼 (FR-13)
+GATE_FAIL_S = 30.0
 MANUAL_PAIR_MAX_M = 1.0      # 명시 페어링도 이 거리 안에서만 받는다 (FR-14). 멀면 좌표 오차가 커서 수동이든 자동이든 결과가 같다
 # 마지막으로 본 후보·거리를 "지금" 으로 치는 시간. 정상(10 fps)이면 열 배 여유지만, 프레임이 이보다 늦어지면
 # 폴백 경로가 통째로 닫힌다 — 버튼도 안 뜨고(1 Hz 타이머가 NO_TARGET 으로 내림) 요청도 NO_TARGET 으로 거절된다.
@@ -133,7 +141,9 @@ MANUAL_PAIR_MAX_M = 1.0      # 명시 페어링도 이 거리 안에서만 받�
 TARGET_STALE_S = 1.0
 JPEG_QUALITY = 80            # 모니터 영상 압축 품질. 웹캠 노드와 같은 값 (webcam.yaml jpeg_quality)
 DIAG_LOG_S = 1.0             # 계측 로그 주기(초). 0 이면 끔. 렉 원인 분리용 — 처리 프레임 나이·루프/콜백/처리 속도
-TF_WAIT_S = 0.0              # to_map 이 TF 를 기다리는 시간. 0 = 즉시 판정(정상). 1.0 이면 9/8 렉(프레임당 2 s)이 재현된다 — 시연·검증용
+# to_map 이 TF 를 기다리는 시간. 0 = 즉시 판정(정상).
+# 1.0 이면 9/8 렉(프레임당 2 s)이 재현된다 — 시연·검증용
+TF_WAIT_S = 0.0
 
 # ── 거리 측정 (파라미터 기본값) ──────────────────────────────────────────────────────────────────────
 BBOX_INNER = 0.5             # bbox 중심부 50 % 만 depth 를 읽는다. 가장자리는 인형 뒤 바닥·벽의 depth 가 섞인다
@@ -150,7 +160,8 @@ SYNC_SLOP_S = 0.1            # RGB 와 depth 의 타임스탬프 차이가 이 �
 SYNC_QUEUE = 20
 # 카메라 구독 QoS — "최신 한 장만". 처리가 잠깐 밀려도 전송 계층이 묵은 프레임을 버려 화면이 '몇 초 전' 이 되지 않는다.
 # RELIABLE·큐 10 이던 이관 설정은 밀린 10장을 순서대로 재생했다 (9/8 렉 분석). BEST_EFFORT 구독은 RELIABLE 발행자도 받는다
-CAMERA_QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, history=HistoryPolicy.KEEP_LAST, depth=1)
+CAMERA_QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT,
+                        history=HistoryPolicy.KEEP_LAST, depth=1)
 # 실행 중에 못 바꾸는 파라미터 — 값이 구조를 만들기 때문이다. 동기화기·창·타이머·지문 버퍼·보정 K 는
 # 기동 때 한 번 만들어지고, 뒤에 값만 바꿔도 이미 만들어진 것에는 닿지 않는다. 바꾸려면 노드를 다시 띄운다
 RESTART_ONLY = ('sync_slop_s', 'show_window', 'publish_hz', 'descriptor_frames', 'camera_fx_scale')
@@ -223,7 +234,8 @@ class AmrDetection(Node):
         if self.target_stale_s <= 0:
             # 0 이하면 _fresh 가 항상 거짓이라 '아무도 안 보인다' 가 되어 폴백이 통째로 죽는다 — 조용히 먹으면 안 된다.
             # 기동 때는 launch 가 넘긴 yaml 이 틀린 경우라 거절할 상대가 없다. 로그를 남기고 기본값으로 뜬다
-            self.get_logger().error(f'target_stale_s={self.target_stale_s} 는 0 보다 커야 한다 — 기본값 {TARGET_STALE_S} 로 진행')
+            self.get_logger().error(f'target_stale_s={self.target_stale_s} 는 0 보다 커야 한다 — '
+                                    f'기본값 {TARGET_STALE_S} 로 진행')
             self.target_stale_s = TARGET_STALE_S
         self.tf_wait = Duration(seconds=float(p('tf_wait_s')))   # 0 이 아니면 실행기가 그만큼 멈춘다 (재현용)
         # camera_info 의 초점거리가 704×704 crop 영상에 안 맞아(I-031) fx·fy 에 곱하는 배율. 기본 16/9.
@@ -234,8 +246,9 @@ class AmrDetection(Node):
         # 선언과 초기 읽기가 다 끝난 뒤에 단다 — 앞에 달면 declare_parameter 도 이 콜백을 타는데 그때는 속성이 없다
         self.add_on_set_parameters_callback(self._on_set_parameters)
 
-        self.diag = dict(t0=time.monotonic(), loops=0, rgb_cb=0, depth_cb=0, synced=0, processed=0,
-                         age_sum=0.0, age_max=0.0, proc_ms_sum=0.0, proc_ms_max=0.0, tf_cb=0)
+        self.diag = {'t0': time.monotonic(), 'loops': 0, 'rgb_cb': 0, 'depth_cb': 0, 'synced': 0,
+                     'processed': 0, 'age_sum': 0.0, 'age_max': 0.0, 'proc_ms_sum': 0.0,
+                     'proc_ms_max': 0.0, 'tf_cb': 0}
 
         # 모델. names 는 {0: 'amr', 1: 'worker_b', 2: 'worker_a'} — 번호를 이름으로 바꾸는 표
         self.model = YOLO(MODEL_PATH)
@@ -250,7 +263,8 @@ class AmrDetection(Node):
         self.gate = PairingGate(float(p('reid_threshold')), int(p('descriptor_frames')),
                                 float(p('pair_on_s')), float(p('pair_off_s')))
         self.my_worker_id = ''           # mission/assigned 에서
-        self.descriptors = {}            # worker_id -> (outfit_class, color_hist)  웹캠1 이 1 Hz 로 재발행
+        # worker_id -> (outfit_class, color_hist). 웹캠1 이 1 Hz 로 재발행
+        self.descriptors = {}
         self.paired = False              # 마지막으로 발행한 값 (바뀔 때 즉시 발행)
         self.last_reason = ''
 
@@ -272,9 +286,12 @@ class AmrDetection(Node):
                                    qos_profile=CAMERA_QOS)
         else:
             depth_sub = Subscriber(self, Image, 'oakd/stereo/image_raw', qos_profile=CAMERA_QOS)
-        rgb_sub = Subscriber(self, CompressedImage, 'oakd/rgb/image_raw/compressed', qos_profile=CAMERA_QOS)
-        rgb_sub.registerCallback(lambda m: self.diag.__setitem__('rgb_cb', self.diag['rgb_cb'] + 1))
-        depth_sub.registerCallback(lambda m: self.diag.__setitem__('depth_cb', self.diag['depth_cb'] + 1))
+        rgb_sub = Subscriber(self, CompressedImage, 'oakd/rgb/image_raw/compressed',
+                             qos_profile=CAMERA_QOS)
+        rgb_sub.registerCallback(
+            lambda m: self.diag.__setitem__('rgb_cb', self.diag['rgb_cb'] + 1))
+        depth_sub.registerCallback(
+            lambda m: self.diag.__setitem__('depth_cb', self.diag['depth_cb'] + 1))
         # RGB 와 depth 는 별도 토픽으로 따로 도착한다. 타임스탬프가 SYNC_SLOP_S 안으로 맞는 쌍만 synced_cb 로 넘겨,
         # "이 컬러 프레임의 이 픽셀이 저 depth 프레임의 이 거리" 라고 말할 수 있게 한다
         self.sync = ApproximateTimeSynchronizer([rgb_sub, depth_sub], queue_size=SYNC_QUEUE,
@@ -314,11 +331,14 @@ class AmrDetection(Node):
         if self.show_window:
             cv2.namedWindow('AMR Detection', cv2.WINDOW_NORMAL)
             cv2.resizeWindow('AMR Detection', 1408, 704)     # 704×704 두 장을 가로로 붙인 크기
-        self.get_logger().info(f'YOLO {MODEL_PATH} | ns={self.get_namespace()} | 검출 대상 {DETECT_CLASSES} '
+        self.get_logger().info(f'YOLO {MODEL_PATH} | ns={self.get_namespace()} | '
+                               f'검출 대상 {DETECT_CLASSES} '
                                f'conf≥{self.detect_conf} | reid_threshold={self.gate.threshold} '
                                f'| 출력: {POINT_TOPIC}, {VISIBLE_TOPIC}, {DISTANCE_TOPIC}, '
-                               f'{PAIRED_TOPIC}, {WORKER_ID_TOPIC}, {PAIR_STATE_TOPIC} | 서비스: {MANUAL_PAIR_SERVICE} '
-                               f'(gate_fail_s={self.tracker.fail_s:.0f}, manual_pair_max_m={self.manual_pair_max_m}, '
+                               f'{PAIRED_TOPIC}, {WORKER_ID_TOPIC}, {PAIR_STATE_TOPIC} | '
+                               f'서비스: {MANUAL_PAIR_SERVICE} '
+                               f'(gate_fail_s={self.tracker.fail_s:.0f}, '
+                               f'manual_pair_max_m={self.manual_pair_max_m}, '
                                f'target_stale_s={self.target_stale_s})')
 
     # ── 실행 중 파라미터 변경 ───────────────────────────────────────────────────────────────────────
@@ -334,8 +354,10 @@ class AmrDetection(Node):
             'reid_threshold': ('0 이상 1 이하', lambda v: 0 <= v <= 1,
                                lambda v: setattr(self.gate, 'threshold', float(v))),
             'pair_on_s': ('0 초과', lambda v: v > 0, lambda v: setattr(self.gate, 'on_s', float(v))),
-            'pair_off_s': ('0 초과', lambda v: v > 0, lambda v: setattr(self.gate, 'off_s', float(v))),
-            'gate_fail_s': ('0 초과', lambda v: v > 0, lambda v: setattr(self.tracker, 'fail_s', float(v))),
+            'pair_off_s': ('0 초과', lambda v: v > 0,
+                           lambda v: setattr(self.gate, 'off_s', float(v))),
+            'gate_fail_s': ('0 초과', lambda v: v > 0,
+                            lambda v: setattr(self.tracker, 'fail_s', float(v))),
             'target_stale_s': ('0 초과', lambda v: v > 0,
                                lambda v: setattr(self, 'target_stale_s', float(v))),
             'manual_pair_max_m': ('0 초과', lambda v: v > 0,
@@ -387,13 +409,15 @@ class AmrDetection(Node):
         if self.K is None:
             # 보정 없이 쓰면 back_project 의 좌우(x) 성분이 1.76 배 크게 나와 추종 목표가 옆으로 밀린다 (I-031)
             self.K = corrected_K(msg, self.fx_scale)
-            self.get_logger().info(f'camera_info 수신 — fx {msg.k[0]:.1f} × {self.fx_scale:.4f} 보정 (I-031)')
+            self.get_logger().info(f'camera_info 수신 — fx {msg.k[0]:.1f} × '
+                                   f'{self.fx_scale:.4f} 보정 (I-031)')
 
     def synced_cb(self, rgb_msg, depth_msg):
         """시각이 맞는 (RGB, depth) 한 쌍 → 디코드해서 self.pair 에 보관만 한다. 계산은 process() 가."""
         depth = (decode_compressed_depth(depth_msg) if isinstance(depth_msg, CompressedImage)
-                 else self.bridge.imgmsg_to_cv2(depth_msg, desired_encoding='passthrough'))   # mm 단위 2차원 배열
-        rgb = cv2.imdecode(np.frombuffer(rgb_msg.data, np.uint8), cv2.IMREAD_COLOR)          # JPEG → BGR 배열
+                 else self.bridge.imgmsg_to_cv2(depth_msg,
+                                                desired_encoding='passthrough'))   # mm 2차원 배열
+        rgb = cv2.imdecode(np.frombuffer(rgb_msg.data, np.uint8), cv2.IMREAD_COLOR)   # JPEG → BGR
         if depth is not None and rgb is not None:
             self.diag['synced'] += 1
             # 시각·frame_id 는 depth 쪽 것을 쓴다 — 거리(3D 점)의 출처가 depth 카메라이기 때문
@@ -401,13 +425,15 @@ class AmrDetection(Node):
 
     def mission_cb(self, msg):
         """mission/assigned → 내 담당 worker_id. 관제가 로봇마다 따로 보내지만 robot_ns 가 있으면 한 번 더 확인한다."""
-        if msg.robot_ns and norm_ns(msg.robot_ns) != norm_ns(self.get_namespace()):   # manual_pair 와 같은 규칙
+        # manual_pair 와 같은 이름 비교 규칙
+        if msg.robot_ns and norm_ns(msg.robot_ns) != norm_ns(self.get_namespace()):
             return
         if msg.worker_id and msg.worker_id != self.my_worker_id:
             if self.manual_worker and msg.worker_id != self.manual_worker:
                 # 계약 10.6 은 mission/finish 로 푸는 것이 정상 경로다. finish 없이 다른 작업자가 배정되면(유실·순서 뒤바뀜)
                 # 옛 잠금을 들고 새 미션을 도는 것이 더 나쁘다 — 잠금을 풀고 새 미션의 자동 게이트부터 다시
-                self.get_logger().warn(f'새 미션 {msg.worker_id} — 명시 페어링 {self.manual_worker} 해제 (mission/finish 없이 재배정)')
+                self.get_logger().warn(f'새 미션 {msg.worker_id} — 명시 페어링 '
+                                       f'{self.manual_worker} 해제 (mission/finish 없이 재배정)')
                 self.manual_worker = self.manual_outfit = ''
                 self.tracker.reset()
                 self._set_pair_state('NO_TARGET', publish=False)
@@ -420,7 +446,8 @@ class AmrDetection(Node):
         """/webcam1/worker_descriptor → worker_id 별 (복장, 색 지문). 웹캠1 이 1 Hz 로 재발행하므로 늦게 켜져도 받는다."""
         if not msg.worker_id or not msg.color_hist:
             return
-        self.descriptors[msg.worker_id] = (msg.outfit_class, np.asarray(msg.color_hist, np.float32))
+        self.descriptors[msg.worker_id] = (msg.outfit_class,
+                                           np.asarray(msg.color_hist, np.float32))
         if msg.worker_id == self.my_worker_id:
             self._bind()
 
@@ -438,7 +465,8 @@ class AmrDetection(Node):
         """mission/finish → 페어링 해제. 수동 확정도 여기서만 풀린다 (계약 10.6, FR-30). 다음 미션은 자동 게이트부터."""
         if not msg.data:
             return
-        self.get_logger().info(f'미션 종료 — 페어링 해제 (manual={self.manual_worker!r}, worker={self.my_worker_id!r})')
+        self.get_logger().info(f'미션 종료 — 페어링 해제 (manual={self.manual_worker!r}, '
+                               f'worker={self.my_worker_id!r})')
         self.manual_worker = self.manual_outfit = ''
         self.my_worker_id = ''
         self.gate.reset(forget=True)     # 서술자까지 잊는다 — 다음 mission/assigned 전에는 짝을 만들지 않는다 (캐시는 남음)
@@ -447,13 +475,14 @@ class AmrDetection(Node):
         self.paired, self.last_reason = False, 'mission finished'
         self.publish_pairing()           # worker_id·paired·pair_state 를 한 번에 — 서로 어긋난 순간이 없게
 
-    # ── 출력 ─────────────────────────────────────────────────────────────────────────────────────────
+    # ── 출력 ───────────────────────────────────────────────────────────────────────────────────────
     def publish_pairing(self, force=False):
         """worker_id·paired·pair_state 발행. 타이머(1 Hz)와 값이 바뀐 순간 둘 다에서 부른다."""
         # 프레임이 끊기면 process() 가 안 돌아 pair_state 가 굳는다 — 후보를 못 본 지 target_stale_s 가 지났으면 여기서
         # 시계를 돌려 NO_TARGET 으로 내린다 (관제 버튼은 떠 있는데 요청은 NO_TARGET 으로 거절되는 모순 방지)
         if not self.paired and not self._fresh(self.last_seen_t, self._now_s()):
-            self._set_pair_state(self.tracker.update(self._now_s(), False, False, self.gate.ready()), publish=False)
+            self._set_pair_state(
+                self.tracker.update(self._now_s(), False, False, self.gate.ready()), publish=False)
         wid = self.manual_worker or self.my_worker_id
         # worker_id 를 먼저 — fleet_manager 는 paired=True 를 받는 순간 마지막 worker_id 를 읽는다. 토픽이 달라 DDS 가
         # 순서를 보장하진 않지만(그쪽은 DB 의 미션 worker_id 로 보완), 같은 순간의 세 값이 한 묶음으로 나가는 것이 요점
@@ -462,11 +491,12 @@ class AmrDetection(Node):
         self.pub_pair_state.publish(String(data=self.pair_state))
 
     def _set_paired(self, paired, reason):
-        """paired 갱신. 바뀌면 세 값을 함께 발행하고 True 를 돌려준다 — pair_state 는 이 전에 맞춰 두어야 한다."""
+        """짝 여부(paired)를 갱신한다. 바뀌면 세 값을 함께 발행하고 True 를 돌려준다 — pair_state 는 이 전에 맞춰 두어야 한다."""
         changed = paired != self.paired
         if changed:
             self.paired = paired
-            self.get_logger().info(f'paired={paired} ({self.manual_worker or self.my_worker_id}) — {reason}')
+            self.get_logger().info(
+                f'paired={paired} ({self.manual_worker or self.my_worker_id}) — {reason}')
             self.publish_pairing()                           # 바뀐 순간 즉시. 타이머는 재발행용
         self.last_reason = reason
         return changed
@@ -491,7 +521,9 @@ class AmrDetection(Node):
 
     # ── 명시 페어링 폴백 (FR-13, 계약 10절) ─────────────────────────────────────────────────────────
     def manual_pair_cb(self, req, res):
-        """/robotN/manual_pair — 운영자가 고른 (robot_ns, worker_id). 받을지는 core.reid.manual_pair_decision 이 정한다.
+        """운영자가 고른 (robot_ns, worker_id) 를 받는다 — /robotN/manual_pair.
+
+        받을지는 core.reid.manual_pair_decision 이 정한다.
 
         수락하면 그 자리에서 paired=True·worker_id 를 발행한다 — 발행자는 이 노드 하나뿐이다 (계약 10.4).
         판정 재료는 process() 가 남긴 최근 상태(마지막으로 본 시각·거리·게이트 결과)라 기다리는 일이 없다.
@@ -499,24 +531,29 @@ class AmrDetection(Node):
         t = self._now_s()
         visible = self._fresh(self.last_seen_t, t)
         dist = self.last_dist if self._fresh(self.last_dist_t, t) else None
-        ok, reason = manual_pair_decision(req.robot_ns, self.get_namespace(), req.worker_id, self.my_worker_id,
-                                          self.paired, visible, dist, self.manual_pair_max_m, self.gate.last_ok)
+        ok, reason = manual_pair_decision(req.robot_ns, self.get_namespace(), req.worker_id,
+                                          self.my_worker_id, self.paired, visible, dist,
+                                          self.manual_pair_max_m, self.gate.last_ok)
         res.accepted, res.reason = ok, reason
         if ok:
             # 운영자가 가리킨 "지금 보이는 사람" 의 복장을 기억한다 — 이후 그 복장의 후보만 대상 (다른 복장에 뺏기지 않게)
             self.manual_worker, self.manual_outfit = req.worker_id, self.last_seen_cls
             self.tracker.update(t, True, True)
             self._set_pair_state('PAIRED', publish=False)
-            self._set_paired(True, f'manual pair {req.worker_id}')   # worker_id·paired·pair_state 한 묶음
+            # worker_id·paired·pair_state 를 한 묶음으로
+            self._set_paired(True, f'manual pair {req.worker_id}')
             self.get_logger().warn(f'★ 명시 페어링 수락: {req.worker_id} (거리 {dist:.2f} m) — 운영자 결정. '
                                    f'mission/finish 까지 유지')
         else:
-            self.get_logger().warn(f'명시 페어링 거부: {reason} (robot_ns={req.robot_ns!r} worker_id={req.worker_id!r} '
+            self.get_logger().warn(f'명시 페어링 거부: {reason} '
+                                   f'(robot_ns={req.robot_ns!r} worker_id={req.worker_id!r} '
                                    f'paired={self.paired} visible={visible} dist={dist})')
         return res
 
     def _bbox_distance(self, depth, bx, frame_id, stamp, t_now):
-        """bbox 하나 → (r, pt, dist). ⑤ 거리 → ⑥ 품질 게이트 → ⑦ 3D 점·직선거리. 게이트 탈락이면 pt·dist 는 None.
+        """검출 영역 하나로 (r, pt, dist) 를 낸다. ⑤ 거리 → ⑥ 품질 게이트 → ⑦ 3D 점·직선거리.
+
+        게이트 탈락이면 pt·dist 는 None.
 
         target/distance 와 명시 페어링의 1 m 판정(FR-14)이 **같은 자**를 쓰도록 계산은 여기 한 곳에만 있다.
         통과한 거리는 last_dist 에 남긴다 — manual_pair 서비스가 "1 m 안인가" 를 볼 재료.
@@ -535,7 +572,7 @@ class AmrDetection(Node):
         self.last_dist, self.last_dist_t = dist, t_now
         return r, pt, dist
 
-    # ── 메인 처리 ─────────────────────────────────────────────────────────────────────────────────────
+    # ── 메인 처리 ────────────────────────────────────────────────────────────────────────────────────
     def process(self):
         """메인 루프가 매번 호출. 보관된 최신 한 쌍을 ①~⑧ 순서로 처리하고 소비한다."""
         self.diag['loops'] += 1
@@ -555,7 +592,8 @@ class AmrDetection(Node):
 
         if self.K is not None:                               # K 가 없으면 3D 변환을 못 하니 검출도 건너뛴다
             # ① YOLO — 작업자 후보 전부 (확신도 내림차순)
-            boxes = worker_boxes(self.model(rgb, verbose=False), self.names, DETECT_CLASSES, self.detect_conf)
+            boxes = worker_boxes(self.model(rgb, verbose=False), self.names,
+                                 DETECT_CLASSES, self.detect_conf)
 
             # ②③ 게이트 — 서술자·미션이 있으면 "내 담당" 을 고른다. 없으면(단독 시험·S1 전) 확신도 1등을 대상으로
             top = boxes[0] if boxes else None            # 게이트가 고르지 않았을 때의 대상 = 확신도 1등
@@ -583,8 +621,8 @@ class AmrDetection(Node):
                 self.last_seen_t, self.last_seen_cls = t_now, seen[5]
             # ③' 폴백 상태 (FR-13) — 후보가 보이는데 못 넘는 시간을 재서 gate_fail_s 를 넘기면 관제에 손을 든다.
             # pair_state 를 먼저 맞추고 _set_paired 가 세 값을 한 묶음으로 낸다 — paired 와 pair_state 가 어긋난 순간이 없게
-            state_changed = self._set_pair_state(self.tracker.update(t_now, bool(boxes), paired, self.gate.ready()),
-                                                 publish=False)
+            state_changed = self._set_pair_state(
+                self.tracker.update(t_now, bool(boxes), paired, self.gate.ready()), publish=False)
             if not self._set_paired(paired, reason) and state_changed:
                 self.pub_pair_state.publish(String(data=self.pair_state))
             if target is None and top is not None:
@@ -613,12 +651,15 @@ class AmrDetection(Node):
                     if pm is not None:                       # TF 가 아직 없으면(기동 직후·시계 어긋남) 건너뛴다
                         # ⑧ follow_target 이 받아 "이 앞 0.5 m" 를 목표로 삼는다 (paired 일 때만 쓴다 — 주행 TODO ④)
                         self.pub_point.publish(pm)
-                        label = f"{cls_name} {dist:.2f} m -> map ({pm.point.x:.2f}, {pm.point.y:.2f}) {tag}"
+                        label = (f'{cls_name} {dist:.2f} m -> map '
+                                 f'({pm.point.x:.2f}, {pm.point.y:.2f}) {tag}')
                     else:
-                        label = f"{cls_name} {dist:.2f} m (no TF) {tag}"
+                        label = f'{cls_name} {dist:.2f} m (no TF) {tag}'
                 elif r is not None:
-                    label = f"core gap {r['med'] - r['q']:.0f} mm > {self.max_core_gap_mm:.0f} - rejected"
-                cv2.putText(vis, label, (x1, max(15, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    label = (f"core gap {r['med'] - r['q']:.0f} mm > "
+                             f'{self.max_core_gap_mm:.0f} - rejected')
+                cv2.putText(vis, label, (x1, max(15, y1 - 6)), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.6, (0, 255, 0), 2)
             else:
                 label = f'detecting - no target ({self.last_reason})'
 
@@ -630,7 +671,8 @@ class AmrDetection(Node):
         ok, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])
         if ok:
             msg = CompressedImage()
-            msg.header.stamp = stamp                          # 원본 프레임 시각 — ros2 topic delay 로 지연을 잴 수 있게
+            # 원본 프레임 시각 — ros2 topic delay 로 지연을 잴 수 있게
+            msg.header.stamp = stamp
             msg.header.frame_id = frame_id
             msg.format = 'jpeg'
             msg.data = buf.tobytes()
@@ -653,7 +695,8 @@ class AmrDetection(Node):
         n = max(d['processed'], 1)
         self.get_logger().info(
             f"[diag {dt:.1f}s] loop {d['loops'] / dt:.0f}/s | cb rgb {d['rgb_cb'] / dt:.1f} "
-            f"depth {d['depth_cb'] / dt:.1f} tf {d['tf_cb'] / dt:.0f}/s | synced {d['synced'] / dt:.1f}/s "
+            f"depth {d['depth_cb'] / dt:.1f} tf {d['tf_cb'] / dt:.0f}/s | "
+            f"synced {d['synced'] / dt:.1f}/s "
             f"| processed {d['processed'] / dt:.1f}/s "
             f"| age avg {d['age_sum'] / n * 1000:.0f} max {d['age_max'] * 1000:.0f} ms "
             f"| proc avg {d['proc_ms_sum'] / n:.0f} max {d['proc_ms_max']:.0f} ms")

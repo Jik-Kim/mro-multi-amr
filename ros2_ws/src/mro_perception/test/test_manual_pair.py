@@ -2,9 +2,8 @@
 
 실행: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest test/test_manual_pair.py -v
 """
+from mro_perception.core.reid import manual_pair_decision, PairingGate, PairStateTracker
 import numpy as np
-
-from mro_perception.core.reid import PairingGate, PairStateTracker, manual_pair_decision
 
 
 # ── PairStateTracker: 언제 GATE_FAIL 로 손을 드나 ──────────────────────────────────────────────────────
@@ -45,7 +44,7 @@ def test_disappearance_resets_timer():
 
 
 def test_paired_wins_and_clears_timer():
-    """paired 면 무조건 PAIRED. 세던 시간도 버린다 — 다시 풀리면 30 s 를 처음부터 센다."""
+    """짝이 되면 무조건 PAIRED. 세던 시간도 버린다 — 다시 풀리면 30 s 를 처음부터 센다."""
     tr = PairStateTracker(fail_s=30.0)
     tr.update(0.0, True, False)
     assert tr.update(29.0, True, True) == 'PAIRED'
@@ -68,9 +67,9 @@ def test_reset_returns_to_start():
     assert tr.state == 'NO_TARGET' and tr.fail_elapsed(40.0) == 0.0
 
 
-# ── manual_pair_decision: 계약 10.5 표 ───────────────────────────────────────────────────────────────
-OK = dict(req_ns='/robot3', my_ns='/robot3', req_worker='W1', my_worker='W1',
-          paired=False, visible=True, distance_m=0.8, max_m=1.0, gate_ok=False)
+# ── manual_pair_decision: 계약 10.5 표 ──────────────────────────────────────────────────────────
+OK = {'req_ns': '/robot3', 'my_ns': '/robot3', 'req_worker': 'W1', 'my_worker': 'W1',
+      'paired': False, 'visible': True, 'distance_m': 0.8, 'max_m': 1.0, 'gate_ok': False}
 
 
 def dec(**kw):

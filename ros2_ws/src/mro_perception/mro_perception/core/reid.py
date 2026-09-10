@@ -7,7 +7,8 @@ ROS 에 의존하지 않는 순수 함수·클래스만 둔다 (단위 테스트
   similarity()   지문 두 개의 닮은 정도 0~1
   gate()         한 번의 판정 — 복장 클래스가 같고 유사도가 임계 이상이면 통과
   PairingGate    프레임마다 gate() 를 부르고, 연속 시간으로 paired 를 켜고 끄는 상태기계
-  PairStateTracker        target/pair_state 값을 정한다 — NO_TARGET / GATE_FAIL(30 s) / PAIRED (FR-13, 계약 10.1·10.2)
+  PairStateTracker        target/pair_state 값을 정한다 — NO_TARGET / GATE_FAIL(30 s) / PAIRED
+                          (FR-13, 계약 10.1·10.2)
   manual_pair_decision()  운영자의 명시 페어링 요청을 받을지 판정 — 거부 사유 표는 계약 10.5·10.8
   norm_ns()               로봇 네임스페이스 표기 통일 ('/robot3' == 'robot3' == '/robot3/')
 """
@@ -17,7 +18,7 @@ import numpy as np
 
 
 def hsv_hist(bgr_crop, bins=(16, 8)):
-    """bbox crop → 정규화된 H·S 히스토그램(1차원). 웹캠1과 AMR 이 같은 함수를 써야 비교가 성립한다."""
+    """검출 영역을 잘라 정규화된 H·S 히스토그램(1차원)으로. 웹캠1과 AMR 이 같은 함수를 써야 비교가 성립한다."""
     import cv2
     hsv = cv2.cvtColor(bgr_crop, cv2.COLOR_BGR2HSV)
     h = cv2.calcHist([hsv], [0, 1], None, list(bins), [0, 180, 0, 256])
@@ -42,9 +43,10 @@ def mean_hist(hists):
 
 
 def similarity(hist_a, hist_b):
-    """0~1. 1 이 동일. (Bhattacharyya 거리의 보수)"""
+    """색 지문 두 개의 닮은 정도를 0~1 로. 1 이 동일 (Bhattacharyya 거리의 보수)."""
     import cv2
-    d = cv2.compareHist(np.asarray(hist_a, np.float32), np.asarray(hist_b, np.float32), cv2.HISTCMP_BHATTACHARYYA)
+    d = cv2.compareHist(np.asarray(hist_a, np.float32), np.asarray(hist_b, np.float32),
+                        cv2.HISTCMP_BHATTACHARYYA)
     return float(max(0.0, 1.0 - d))
 
 
@@ -80,7 +82,10 @@ class PairingGate:
     """
 
     def __init__(self, threshold, frames=10, on_s=1.0, off_s=3.0):
-        """threshold 는 Q-13 임계, frames 는 지문 평균 창, on_s/off_s 는 켜짐·꺼짐 히스테리시스(초)."""
+        """임계·창 크기·히스테리시스를 받는다.
+
+        threshold 는 Q-13 임계, frames 는 지문 평균 창, on_s/off_s 는 켜짐·꺼짐 히스테리시스(초).
+        """
         self.threshold = threshold
         self.on_s = on_s
         self.off_s = off_s
@@ -122,14 +127,17 @@ class PairingGate:
         if self.ready():
             same = [c for c in candidates if c[0] == self.outfit]                      # ①
             if same:
-                _, chosen = max(((similarity(c[1], self.hist), c) for c in same), key=lambda x: x[0])   # ②
+                # ② 남은 후보 중 단일 프레임 유사도가 가장 높은 하나
+                _, chosen = max(((similarity(c[1], self.hist), c) for c in same),
+                                key=lambda x: x[0])
                 self.buf.append(chosen[1])                                              # ③
                 sim = similarity(mean_hist(list(self.buf)), self.hist)
                 ok, reason = gate(chosen[0], self.outfit, sim, self.threshold)          # ④
                 if not ok:
-                    self.buf.clear()                                                    # 남의 지문이 쌓이지 않게
+                    self.buf.clear()          # 남의 지문이 쌓이지 않게
             elif candidates:
-                ok, reason = False, f'outfit mismatch (visible: {sorted({c[0] for c in candidates})})'
+                seen = sorted({c[0] for c in candidates})
+                ok, reason = False, f'outfit mismatch (visible: {seen})'
             else:
                 ok, reason = False, 'no candidate'
             self.last_ok = ok
@@ -202,7 +210,8 @@ def norm_ns(ns):
     return ns.rstrip('/') or '/'
 
 
-def manual_pair_decision(req_ns, my_ns, req_worker, my_worker, paired, visible, distance_m, max_m, gate_ok):
+def manual_pair_decision(req_ns, my_ns, req_worker, my_worker, paired, visible,
+                         distance_m, max_m, gate_ok):
     """명시 페어링 요청(srv/ManualPair)을 받을지. → (accepted, reason). 위에서부터 먼저 걸리는 사유 하나만 돌려준다.
 
     계약 10.5 표 + 10.8. reason 은 srv 정의의 다섯 문자열 그대로 — control_ui 가 화면에 띄운다.

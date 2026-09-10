@@ -3,10 +3,9 @@
 todo: "core/reid.py 단위 테스트 (같은 인형 ≥ threshold, 다른 인형 < threshold)".
 실제 임계값(Q-13)은 TS-U04 프레임으로 잰다 — 여기서는 판정 논리만 검증한다.
 """
+from mro_perception.core.reid import gate, hsv_hist, mean_hist, PairingGate, similarity
 import numpy as np
 import pytest
-
-from mro_perception.core.reid import PairingGate, gate, hsv_hist, mean_hist, similarity
 
 
 def unit(seed):
@@ -19,7 +18,7 @@ A, B = unit(1), unit(2)                       # 서로 다른 두 인형
 
 
 def noisy(base, seed):
-    """base 에 잡음을 조금 섞은 지문 — 같은 인형을 다른 프레임에서 본 것."""
+    """바탕 지문에 잡음을 조금 섞는다 — 같은 인형을 다른 프레임에서 본 것."""
     return mean_hist([base, unit(seed) * 0.15 + base])
 
 
@@ -63,7 +62,7 @@ def g():
 
 
 def run(g, t, frames, cands_fn):
-    """frames 개 프레임을 0.1 s 간격으로 넣고 (마지막 결과, 다음 t) 를 돌려준다."""
+    """지정한 수의 프레임을 0.1 s 간격으로 넣고 (마지막 결과, 다음 t) 를 돌려준다."""
     res = None
     for i in range(frames):
         res = g.update(t, cands_fn(i))
@@ -81,9 +80,12 @@ def test_not_ready_without_descriptor():
 def test_picks_my_worker_even_if_other_has_higher_conf(g):
     """남의 담당이 확신도 1등이어도 내 담당을 고르고, on_s 뒤에 paired 가 된다."""
     # 후보 목록 앞이 확신도 높은 순 — 남(worker_b)이 앞에 있어도 내 담당을 골라야 한다
-    (p, tgt, s, r), t = run(g, 0.0, 1, lambda i: [('worker_b', B, 'other'), ('worker_a', noisy(A, i), 'mine')])
+    def both(i):
+        return [('worker_b', B, 'other'), ('worker_a', noisy(A, i), 'mine')]
+
+    (p, tgt, s, r), t = run(g, 0.0, 1, both)
     assert tgt == 'mine' and not p                         # 첫 프레임: 골랐지만 아직 paired 아님 (on_s)
-    (p, tgt, s, r), t = run(g, t, 11, lambda i: [('worker_b', B, 'other'), ('worker_a', noisy(A, i), 'mine')])
+    (p, tgt, s, r), t = run(g, t, 11, both)
     assert p and tgt == 'mine' and s >= 0.8
 
 
