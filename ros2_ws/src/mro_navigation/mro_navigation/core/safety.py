@@ -142,8 +142,14 @@ class SafetyController:
                 self.transition('CLEAR', now, '전방 해제 거리 확보·실제 정지 확인')
             return 0.0
         if self.braking:
-            # 제동 중 다시 막히면 재회전하지 않는다.
-            self.transition('STUCK', now, '해제 제동 중 장애물 또는 정지 ACK 소실')
+            # 제동 중 다시 막혔다 — 이 제동 시도는 끝난 것이다. **플래그를 반드시 내린다.**
+            #   내리지 않으면 매 틱 여기로 와서 transition('STUCK') 을 다시 부르고, transition 이
+            #   still_since 를 지우므로 '실제 정지 확인' 이 영원히 안 된다 → STUCK 재시도도 CLEAR 도
+            #   막힌다 (9/10 12:47 robot8: 앞 거리가 0.27 ↔ 2.17 로 깜빡여 clear 가 5 를 찍은 뒤
+            #   다시 막히자 130 s 동안 이 분기만 돌았다. 360° 여유가 36 프레임 회복돼도 못 돌았다)
+            self.braking = False
+            if self.state != 'STUCK':
+                self.transition('STUCK', now, '해제 제동 중 장애물 또는 정지 ACK 소실')
             return 0.0
         if self.state == 'STUCK':
             # 여유가 회복됐고(5 프레임) 액션이 멈춰 있고 실제로 정지해 있으면 탈출 회전을 다시 허용한다.

@@ -307,3 +307,21 @@ def test_stuck_from_missing_scan_never_retries():
         t = 2.0 + i * 0.2
         c.scan(t, 1.0, 1.0, 1.0, 1.0); c.odometry(t, 0, 0, 0); c.tick(t, True)
     assert c.state != 'SAFE_ROTATE'
+
+
+def test_flickering_front_does_not_starve_the_retry():
+    """앞 거리가 깜빡여 제동(braking)이 켜졌다 다시 막혀도 정지 확인이 살아 있어야 한다 (9/10 12:47).
+
+    종전에는 braking 이 켜진 채 다시 막히면 매 틱 transition('STUCK') 을 다시 불러 still_since 가
+    지워졌고, 그래서 360° 여유가 회복돼도 '실제 정지' 를 입증할 수 없어 재시도가 영영 안 됐다.
+    """
+    c = _stuck_for_lack_of_room()
+    t = 0.0
+    for _ in range(6):                               # 앞이 잠깐 트여 clear 가 5 를 넘는다 → braking 켜짐
+        t += 0.13; c.scan(t, 2.0, 0.19, 0.80, 0.19); c.odometry(t, 0, 0, 0); c.tick(t, True)
+    assert c.braking and c.state == 'STUCK'
+    t += 0.13; c.scan(t, 0.27, 0.19, 0.80, 0.19); c.odometry(t, 0, 0, 0); c.tick(t, True)   # 다시 막힘
+    assert not c.braking, '제동 시도가 끝나면 플래그를 내려야 정지 확인이 쌓인다'
+    for _ in range(8):                               # 360° 여유 회복 (0.25) + 정지 유지
+        t += 0.13; c.scan(t, 0.27, 0.25, 0.80, 0.25); c.odometry(t, 0, 0, 0); c.tick(t, True)
+    assert c.state == 'SAFE_ROTATE', c.reason
