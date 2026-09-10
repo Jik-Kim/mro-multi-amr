@@ -7,12 +7,12 @@ from mro_interfaces.srv import ManualPair, OperatorCommand, RequestMission
 from rclpy.node import Node
 
 
-class FleetClient(Node):
+class FleetUICommands(Node):
     """웹 UI와 FleetManager 사이의 ROS 통신을 담당한다."""
 
     def __init__(self):
         """관제 UI가 사용할 ROS 서비스 클라이언트와 발행자를 만든다."""
-        super().__init__('fleet_client')
+        super().__init__('fleet_ui_commands')
         self.declare_parameter('manual_pair_timeout_s', 3.0)
         self.manual_pair_timeout_s = float(
             self.get_parameter('manual_pair_timeout_s').value
