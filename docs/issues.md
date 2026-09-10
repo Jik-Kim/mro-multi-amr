@@ -120,7 +120,7 @@
 - **내용·재현** — 시나리오 검출 불가
 - **조치·남은 것** — **9/7 `worker.pt` 수령 (PR #19)** — yolo26s @ 640, 클래스 `amr`/`worker_b`/`worker_a`, val mAP50 0.995 · mAP50-95 0.816, test 0.803, 혼동행렬 amr↔작업자 0건, 색 편향 점검 밝기 차 0.6 % (PM 이 체크포인트 열어 클래스·파라미터 708 텐서·지표 대조 일치). 웹캠1·2 launch 가 `mro_perception/models/worker.pt` 를 `model_path` 로 넘김 (PM, 같은 날). **속도 실측 완료 (9/7):** 팀 최저 사양 RTX 3060 노트북에서 track max 42.7 ms (PR #22 정인), PC-W1 RTX 4070 max 40.5 ms (PR #26 학민) — nano 불필요, 실부하는 통합 9/9 에 재확인. **웹캠1 교체 완료 (PR #26):** 등록 0.90 s, 인형 2체 W1·W2 별개, 재등록 15/15 (TS-U01 실기동 통과). **남은 것:** `amr_detection` 모델 경로·클래스 교체 + `ONLY_OUR_CAR` 해제 — **9/7 저녁 인지 작업 중, PR 예정** (마감 9/9). 그 PR 머지 때 닫는다 (PM·인지 합의 9/7)
 
-  **종결 (9/8, PR #45).** `amr_detection` 이 `models/worker.pt` 로 교체됐다 — 클래스를 이름(`worker_a`/`worker_b`)으로 거르고, 옛 `car` 클래스와 흰차 필터를 지웠다. 재식별 게이트(`core/reid.PairingGate`)까지 붙어 `target/paired`·`target/worker_id` 가 나간다. 남은 것은 이 이슈가 아니라 Q-13 `reid_threshold` 확정(TS-U04)이다.
+  **종결 (9/8, PR #45).** `amr_detection` 이 `models/worker.pt` 로 교체됐다 — 클래스를 이름(`worker_a`/`worker_b`)으로 거르고, 옛 `car` 클래스와 흰차 필터를 지웠다. 재식별 게이트(`core/reid.PairingGate`)까지 붙어 `target/paired`·`target/worker_id` 가 나간다. Q-13 `reid_threshold` 는 9/10 에 실측 분포로 **0.34** 확정했다 (SOT Q-13).
 
 ### I-004
 
