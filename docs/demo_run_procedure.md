@@ -22,6 +22,20 @@
 - `teleop_twist_keyboard` 창은 주행 중 절대 열어 두지 않는다 (키 하나가 로봇을 움직인다).
 - 미션 시작·종료 토픽은 **관제만** 낸다. 로봇 PC 에서 `mission/assigned` 를 수동 발행하지 않는다.
 
+## 0-1. 모든 PC 공통 — **먼저 같은 코드인지 맞춘다** (9/10 밤 추가)
+
+**9/10 에 PR 이 19 건 들어갔다. 그리고 그날 밤 「추종이 안 된다」의 원인이 정확히 이것이었다** —
+코드는 고쳐져 있는데 로봇 PC 가 안 받은 상태였다 (`reid_threshold` 0.6 → 0.34).
+
+**PC 5대 전부에서** 돌리고 **해시가 같은지 눈으로 대조한다.**
+
+```bash
+cd ~/mro-multi-amr && git pull --ff-only && git log --oneline -1
+```
+
+다르면 그 PC 만 뒤처진 것이다. `--ff-only` 가 거부하면 그 PC 에 커밋되지 않은 변경이 있다는 뜻이니
+`git status` 로 확인하고 정리한 뒤 다시 받는다 — **시연 아침에 그 자리에서 고치지 않는다.**
+
 ## 1. 모든 PC 공통 — 터미널 첫 줄
 
 로봇 제어 PC 는 `source tools/shuttle_env.sh` 가 아래를 대신한다.
@@ -79,8 +93,12 @@ cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 node list | grep -E "w
 | 대기공간 | `(-1.00, 0.94)` | `(-1.59, 0.94)` |
 
 ### T0 · 빌드 + 청소 — 임시 (모든 ROS 창 내린 뒤)
+> **`mro_navigation` 을 반드시 넣는다 (9/10 밤 추가).** `setup.py:15` 가 `launch/*.launch.py` 를
+> **빌드 시점 glob** 으로 설치한다. 재빌드하지 않으면 PR #88 이 새로 만든 **`safety_nav2.launch.py` 가
+> 로봇 PC 에 아예 없다** — T8 에서 「그런 런치 파일 없음」으로 막힌다. `core/safety.py`·`motion_pause.py` 도
+> 같은 날 새로 생긴 모듈이다. **관제 PC(PC-F)는 `mro_fleet` 도 함께 넣는다** — 9/10 에 노드 구성이 바뀌었다.
 ```bash
-cd ~/mro-multi-amr/ros2_ws && colcon build --packages-select mro_bringup mro_perception --symlink-install
+cd ~/mro-multi-amr/ros2_ws && colcon build --packages-select mro_bringup mro_perception mro_navigation --symlink-install
 ```
 ```bash
 rm -f /dev/shm/sem.fastrtps_* /dev/shm/fastrtps_* /dev/shm/fast_datasharing_* /tmp/launch_params_* && rm -rf ~/.ros/log/* && echo "shm $(ls /dev/shm | grep -ci fastrtps)"
