@@ -226,7 +226,13 @@ class AmrDetection(Node):
             self.get_logger().error(f'target_stale_s={self.target_stale_s} 는 0 보다 커야 한다 — 기본값 {TARGET_STALE_S} 로 진행')
             self.target_stale_s = TARGET_STALE_S
         self.tf_wait = Duration(seconds=float(p('tf_wait_s')))   # 0 이 아니면 실행기가 그만큼 멈춘다 (재현용)
-        # camera_info 의 초점거리가 704×704 crop 영상에 안 맞아(I-031) fx·fy 에 곱하는 배율. 기본 16/9.
+        # camera_info 의 초점거리가 704×704 crop 영상에 안 맞아(I-031) fx·fy 에 곱하는 배율.
+        # **기본값이 9/10 로 16/9 = 1.7778(기하 추정) → 1.8336(줄자 확정) 으로 바뀌었다.**
+        # 이 노드에서 K 가 쓰이는 곳은 back_project 한 곳뿐이고, 거기서 fx 는 **분모**다
+        # (x = (u−cx) × z ÷ fx, z 는 depth). 그래서 target/map_point 의 좌우가 3.0 % 줄어든다 —
+        # aruco/distance 가 +3.1 % 커지는 것과 **방향이 반대**다(그쪽은 fx 가 분자). 절대량은
+        # 1.1 m 깊이에서 화면 중앙 0 · 광축 100 px 옆 0.33 cm · 화면 맨 끝 1.17 cm.
+        # target/distance 는 depth 가 미터를 직접 내므로 영향이 없다.
         # 선언·범위 검증은 core/camera.read_fx_scale 이 한다 — aruco_detector 와 같은 이름·같은 기본값을 쓰기 위해
         self.fx_scale = read_fx_scale(self)
         # 실행 중 파라미터 변경을 실제로 반영한다. 이게 없으면 ros2 param set 이 성공했다고 답하면서 노드는 옛 값을
