@@ -25,6 +25,19 @@ _SE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 _SE_WS="$_SE_DIR/ros2_ws"
 _SE_MODE="${1:-}"
 
+# 모르는 모드는 **소리를 낸다 (9/10).** 예전에는 조용히 아래 else 로 떨어져 ROS_SUPER_CLIENT=True
+#   가 됐다. 그러면 `node` 를 아직 안 받은 PC 에서 `source tools/shuttle_env.sh node` 를 쳐도
+#   아무 일도 안 일어나고 **친 사람이 그걸 알 방법이 없다** — 위 9/8 의 '조용히 False 가 된다' 와
+#   정확히 같은 종류의 함정이다. 오타(`nav`·`Node`)도 여기서 걸린다.
+case "$_SE_MODE" in
+  ''|node|nav2|build) ;;
+  *)
+    echo "경고: '$_SE_MODE' 는 모르는 모드다. 아는 것은 (없음)·node·nav2·build 뿐이다."
+    echo "      이대로 두면 ROS_SUPER_CLIENT=True 로 간다. 저장소가 최신인지 확인할 것:"
+    echo "      cd $_SE_DIR && git pull --ff-only && git log --oneline -1"
+    ;;
+esac
+
 # ① 디스커버리 (ROS_DOMAIN_ID·ROS_DISCOVERY_SERVER). 이것이 빠지면 다른 터미널의 노드를 영원히 못 찾는다
 source /etc/turtlebot4_discovery/setup.bash
 
@@ -70,8 +83,12 @@ fi
 #   T10 1 · T11~T13 echo 3. **2대면 30벌.** 시스템 전체 참가자는 약 75벌이다.
 # 여기에 Nav2 는 turtlebot4_navigation/nav2.launch.py 가 use_composition 을 'False' 로
 #   하드코딩해서 **프로세스가 11개**다. 두 번째 Nav2 를 켜는 순간이 '명단이 제일 클 때' 와
-#   '참가자 11개가 한꺼번에 들어올 때' 가 겹치는 지점이다 — 순서와 무관하게 항상 **두 번째**
-#   가 안 뜨고 그때 핑이 200 ms 까지 튀는 것이 이것으로 설명된다.
+#   '참가자 11개가 한꺼번에 들어올 때' 가 겹치는 지점이다.
+#
+# **다만 이것이 T8 실패의 유일한 원인은 아니다 (9/10 밤 bag 으로 정정).** 20:53 은 먼저 띄운
+#   로봇8 이 bond 실패했고, 21:08 로봇3 은 초기자세가 아예 안 가서 실패했다 (셔틀 노드 로그
+#   0건). '항상 두 번째가 실패한다' 는 성립하지 않는다 — 부하는 실패를 쉽게 만들 뿐이다.
+#   증상을 보면 먼저 절차서 6-2 로 원인을 가른다.
 #
 # 전체 명단이 실제로 필요한 것은 **그래프를 조회하는 것들뿐**이다:
 #   ros2 topic list/echo/hz · ros2 node list · ros2 param get · ros2 service call ·
