@@ -155,7 +155,9 @@ CAMERA_QOS = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, history=Histo
 # 기동 때 한 번 만들어지고, 뒤에 값만 바꿔도 이미 만들어진 것에는 닿지 않는다. 바꾸려면 노드를 다시 띄운다
 RESTART_ONLY = ('sync_slop_s', 'show_window', 'publish_hz', 'descriptor_frames', 'camera_fx_scale')
 
-SHOW_WINDOW = True           # 로컬 미리보기 창. 모니터 없는 로봇 PC 에서는 yaml 로 false — 창을 못 만들면 노드가 죽는다
+# 로컬 미리보기 창. 기본은 끔 (I-043) — 화면 없는 PC 에서 창을 못 만들면 노드가 죽는다. 창이 안 뜨는 손해는
+# 플래그 하나 붙여 다시 띄우면 끝이지만, 죽는 손해는 그 회차를 통째로 날린다. 보려면 show_window:=true
+SHOW_WINDOW = False
 
 
 def worker_boxes(results, names, cls_names, conf_min):
