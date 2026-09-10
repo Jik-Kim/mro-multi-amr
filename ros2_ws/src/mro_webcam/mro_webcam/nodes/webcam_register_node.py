@@ -30,6 +30,7 @@ fleet_manager 가 이를 받아 작업자-로봇을 배정하고 언독(S2)으�
 확인
   ros2 topic echo /webcam1/worker_descriptor
 """
+import json
 import os
 from collections import deque
 
@@ -50,6 +51,10 @@ from mro_perception.core.reid import hsv_hist, similarity   # 계약: AMR(amr_de
 PERCEPTION_SHARE = get_package_share_directory('mro_perception')
 # ############################################################################
 MODEL_PATH = os.path.join(PERCEPTION_SHARE, 'models', 'worker.pt')
+# 인형별 **기준 색 지문** (I-058). tools/make_worker_hist.py 가 데이터셋에서 굽는다.
+# 모델과 같은 곳에 둔다 — 둘 다 '인형이 어떻게 생겼나' 를 담은 산출물이고 mro_perception 이
+# 단일 출처다 (models/README.md)
+HIST_PATH = os.path.join(PERCEPTION_SHARE, 'models', 'worker_hist.json')
 WEBCAM_INDEX = -1            # -1: 자동 탐색(높은 번호부터). 파라미터라 None 을 못 써서 -1 을 쓴다.
                              # 내장 카메라가 있는 PC 는 자동 탐색이 그걸 고를 수 있다 — 그때 번호를 준다
 CONF = 0.5                   # 인지팀 perception.yaml detect_conf 와 같은 값.
@@ -126,6 +131,7 @@ class WebcamDetection(Node):
     def __init__(self):
         super().__init__('webcam_register')   # launch·문서·파라미터 파일과 이름을 맞춘다
         self.declare_parameter('model_path', MODEL_PATH)
+        self.declare_parameter('hist_path', HIST_PATH)
         self.declare_parameter('target_classes', TARGET_CLASSES)
         self.declare_parameter('rematch_threshold', REMATCH_THRESHOLD)
         self.declare_parameter('webcam_index', WEBCAM_INDEX)
@@ -136,6 +142,7 @@ class WebcamDetection(Node):
         self.conf = float(self.get_parameter('conf').value)
         index = int(self.get_parameter('webcam_index').value)
         self.model = YOLO(model_path)
+        self.canon = self._load_canon(self.get_parameter('hist_path').value or HIST_PATH)
         self.names = self.model.names
         self.bridge = CvBridge()
         # 모니터링용. 계약상 카메라 토픽은 sensor_data(BEST_EFFORT) — 밀리면 버리고 발행자를 막지 않는다
@@ -248,9 +255,9 @@ class WebcamDetection(Node):
             #   '웹캠1 이 방금 1초 동안 본 것' 이 되고, S1 동선상 그 마지막 1초는 작업자가
             #   시야를 빠져나가는 구간이다 — bbox 가 잘리고 흐리고 측면이다. 등록 조건이
             #   이미 'REGISTER_S 동안 끊기지 않은 트랙' 이라 이 순간의 평균이 가장 좋다
-            #   h 는 위에서 self.hists.get(tid) 로 받아둔 값이다. bbox 가 매 프레임 찌그러져
-            #   crop 이 한 번도 안 잡히면 None 일 수 있다 — 그때는 고정하지 않고 등록만 한다
-            #   (발행 쪽이 알아서 건너뛴다). 종전 동작과 같다
+            # h 는 위에서 self.hists.get(tid) 로 받아둔 값이다. bbox 가 매 프레임 찌그러져 crop 이
+            # 한 번도 안 잡히면 None 일 수 있다 — 그때는 고정하지 않고 등록만 한다 (발행 쪽이
+            # 알아서 건너뛴다). 종전 동작과 같다
             if h is not None:
                 self.frozen[tid] = h
             self.get_logger().info(f'등록 확정 {wid} (track {tid}, {cls_name}) — 서술자 고정')
@@ -283,10 +290,34 @@ class WebcamDetection(Node):
             cv2.imshow('WebCam Detection', img)
             cv2.waitKey(1)
 
+    def _load_canon(self, path):
+        """인형별 기준 색 지문을 읽는다 (I-058). 없으면 빈 dict — 등록 순간 고정본으로 떨어진다.
+
+        **왜 사전 지문인가** — 등록 순간에 만든 지문은 품질이 그 1 초의 운(거리·각도·조명·가림)에
+        걸린다. 실기동에서 등록 4 초 사이 지문이 0.92 → 0.43 까지 흔들려 로봇 쪽 sim 이 임계를
+        한 번도 못 넘은 적이 있다. 인형은 둘뿐이고 생김새가 고정이라, 데이터셋 전체 평균을 한 번
+        구워 두는 편이 안정적이다 — 실측으로 같은 인형 최솟값이 0.348 → 0.527 로 올라가
+        임계 0.34 까지의 여유가 0.008 에서 0.187 이 된다.
+        """
+        try:
+            data = json.loads(open(path, encoding='utf-8').read())
+        except (OSError, ValueError) as e:
+            self.get_logger().warning(
+                f'기준 지문을 못 읽었다 ({path}: {e}) — 등록 순간 고정본을 발행한다')
+            return {}
+        canon = {k: np.asarray(v, np.float32) for k, v in data.items() if not k.startswith('_')}
+        self.get_logger().info(f'기준 지문 {sorted(canon)} ← {path}')
+        return canon
+
     def publish_workers(self):
         """등록된 작업자를 PUBLISH_HZ 로 재발행. 관제(fleet_manager)가 늦게 켜져도 받게 한다."""
         for tid, (wid, outfit) in self.workers.items():
-            h = self.frozen.get(tid)          # 이동평균(hists)이 아니라 등록 순간의 고정본 (I-058)
+            # **기준 지문이 먼저다 (I-058).** 인형은 둘뿐이고 생김새가 고정이라 등록 때 본
+            # 것보다 데이터셋 평균이 안정적이다. 파일이 없을 때만 등록 순간 고정본으로
+            # 떨어진다 — 그 경우에도 이동평균은 쓰지 않는다
+            h = self.canon.get(outfit)
+            if h is None:
+                h = self.frozen.get(tid)
             if h is None:
                 continue
             m = WorkerDescriptor()
