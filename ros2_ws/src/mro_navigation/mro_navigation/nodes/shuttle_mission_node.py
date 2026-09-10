@@ -120,6 +120,9 @@ TOKEN_SRV = '/fleet/zone_token'   # 관제 PC 의 zone_semaphore. 전역 이름
 ZONE_P1 = 'P1'                    # arena.yaml semaphore_zones · ZoneToken.srv 와 ID 일치
 MAP_FRAME = 'map'
 BASE_FRAME = 'base_link'
+# 회전 실행량을 재는 기준. map 은 AMCL 보정이 섞여 **로봇이 안 돈 것과 AMCL 이 돌았다고
+#   말하는 것을 구분하지 못한다.** odom 은 점프가 없어 그 둘을 가른다 (9/10)
+ODOM_FRAME = 'odom'
 # aruco/pose 의 header.frame_id 가 비어 올 때만 쓰는 대체값 (aruco_detector 와 같은 이름)
 CAMERA_FRAME_FALLBACK = 'oakd_rgb_camera_optical_frame'
 TICK_S = 0.1                      # spin_once 주기
@@ -389,6 +392,12 @@ class ShuttleMission(Node):
         self.aruco_dist = None   # (m, 수신 시각)
         # aruco/pose 원본을 그대로 쌓는다 — TF 변환은 메인 루프에서 한다 (콜백은 값만 저장)
         self.aruco_poses = deque(maxlen=30)
+        # **거리도 창을 둔다.** 자세는 5프레임 중앙값을 내면서 크기의 기준인 거리만 '가장 최근
+        #   한 값' 을 쓰고 있었다. 검출기 거리가 PR #76 이후 순수 solvePnP 라 정사각 마커의
+        #   두 해 모호성이 거리에도 실린다 — 9/10 R5-2 에서 로봇이 천천히 움직이는 동안
+        #   1.241 → 1.325 → 1.312 → 1.209 로 ±6 % 흔들렸다(정지 측정 산포는 1 mm 였다).
+        #   그 한 값이 8 cm 틀리면 이동량 전체가 그만큼 틀어진다
+        self.aruco_dists = deque(maxlen=30)
         self.cam_tf = None       # (프레임 이름, base_link←카메라 변환) — 고정이라 한 번만 찾는다
         self.estop = False
         self.last_status = None
@@ -467,6 +476,8 @@ class ShuttleMission(Node):
 
     def aruco_dist_cb(self, msg):
         self.aruco_dist = (float(msg.data), self.now())
+        if math.isfinite(float(msg.data)):
+            self.aruco_dists.append((float(msg.data), self.now()))
 
     def aruco_pose_cb(self, msg):
         """마커 자세. 여기서는 TF 를 만지지 않는다 — 변환은 메인 루프의 marker_sample() 이 한다."""
@@ -708,6 +719,7 @@ class ShuttleMission(Node):
             self.t0 = None                           # 폐기 — 늦은 도착을 계상하지 않는다 (계약 7절)
             self.aruco_id = self.aruco_dist = None
             self.aruco_poses.clear()
+            self.aruco_dists.clear()
             self.set_status('READY')
 
     def mission_targets(self, m):
@@ -978,6 +990,7 @@ class ShuttleMission(Node):
         want = max(1, int(self.p('bay_align_samples')))
         window = window_s or self.positive_parameter('bay_align_sample_s')
         self.aruco_poses.clear()
+        self.aruco_dists.clear()
         # ID 일치를 **기다리는 조건에 넣는다.** 미리 한 번 보고 없다고 곧장 포기하면, 회전 직후
         #   한두 프레임 놓친 것만으로 미션이 죽는다 (9/8 T15·T16 이 그랬다)
         self.wait(lambda: (len(self.aruco_poses) >= want
@@ -994,20 +1007,19 @@ class ShuttleMission(Node):
         tf = self.camera_transform(frames[0][0].header.frame_id or CAMERA_FRAME_FALLBACK)
         if tf is None:
             return None
-        # 거리는 검출기가 vetting 한 aruco/distance 를 쓴다 (위 marker_in_base 설명)
-        distance = None
-        if self.aruco_dist is not None:
-            value, stamp = self.aruco_dist
-            if self.now() - stamp <= self.p('aruco_valid_s') and math.isfinite(value):
-                distance = float(value)
+        # 거리는 검출기가 vetting 한 aruco/distance 를 쓰되 **같은 창의 중앙값**을 쓴다
+        #   (위 marker_in_base 설명 · 창을 둔 이유는 aruco_dists 선언부 참조)
+        valid = self.p('aruco_valid_s')
+        recent = [v for v, stamp in self.aruco_dists if self.now() - stamp <= valid]
+        distance = median(recent) if recent else None
         if distance is None:
             self.get_logger().warn('aruco/distance 가 신선하지 않다 — pose 크기를 그대로 쓴다')
         else:
-            # 9/8 미해결: 검출기가 0.899 m 를 찍은 순간 우리 계산이 1.104 m 였다. 어느 쪽이
-            #   어긋났는지 로그로 바로 가리려고 쓴 값을 남긴다 (내일 첫 항목)
+            # 산포를 같이 남긴다 — 검출기 거리가 흔들리면 이동량이 통째로 틀어지므로,
+            #   나중에 '왜 그만큼 갔나' 를 되짚을 때 이 폭이 첫 단서가 된다
             self.get_logger().info(
                 f'마커 표본 {len(frames)}개 · 자로 쓴 aruco/distance {distance:.3f} m '
-                f'(수신 {self.now() - self.aruco_dist[1]:.2f} s 전)')
+                f'(표본 {len(recent)}개 · {min(recent):.3f}~{max(recent):.3f})')
         rows, last = [], None
         for msg, recv in frames:
             row = self.marker_in_base(msg, tf, distance)
@@ -1091,6 +1103,61 @@ class ShuttleMission(Node):
         self.get_logger().info(f'{label} — 원하는 {want:.3f} m, 명령 {cmd:.3f} m')
         self.run_behavior(lambda: self.navigator.driveOnHeading(cmd, speed, allow), label)
 
+    def odom_yaw(self):
+        """odom←base_link 의 방위 [rad]. 못 읽으면 None.
+
+        **회전 실행량은 이 값으로 재야 한다.** map 은 AMCL 보정이 섞여 있어 로봇이 실제로
+        돈 각과 '돌았다고 AMCL 이 말하는 각' 이 구분되지 않는다. odom 은 바퀴·IMU 적산이라
+        절대 정확도는 떨어져도 **점프가 없어** 짧은 구간의 상대 회전에는 이쪽이 맞다.
+        """
+        try:
+            t = self.tf_buffer.lookup_transform(ODOM_FRAME, BASE_FRAME, Time())
+        except Exception:
+            return None
+        q = t.transform.rotation
+        return math.atan2(2.0 * (q.w * q.z + q.x * q.y),
+                          1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+
+    def log_turn(self, label, angle, before_map, after_map, before_odom, after_odom):
+        """명령한 각과 실제로 돈 각을 **두 기준으로** 남긴다 (9/10).
+
+        9/10 A2·A4 에서 육안으로는 로봇이 눈에 띄게 비뚤었는데 map 기준 계측은 오차가
+        0.2~4.6° 라고 했다. **둘 다 참일 수 없다.** 그러면 남는 용의자가 map 방위,
+        즉 AMCL 이다. 두 값을 나란히 찍으면 다음 회차에서 바로 갈린다:
+
+            odom 이 정확하고 map 도 정확  → 로봇은 제대로 돌았다. 원인은 다른 곳
+            odom 은 정확한데 map 이 어긋남 → **AMCL 방위가 튄다.** 측량값도 못 믿는다
+            odom 이 어긋남                 → 로봇이 실제로 명령대로 안 돈다
+        """
+        def diff(before, after):
+            if before is None or after is None:
+                return None
+            return wrap_pi(after - before)
+
+        odom = diff(before_odom, after_odom)
+        mapped = diff(None if before_map is None else before_map.yaw,
+                      None if after_map is None else after_map.yaw)
+        if odom is None and mapped is None:
+            self.get_logger().warn(f'{label} 실행량을 못 쟀다 — TF 를 못 읽었다')
+            return
+        parts = [f'{label} 실행 — 명령 {math.degrees(angle):+.1f}°']
+        for name, got in (('odom', odom), ('map', mapped)):
+            if got is None:
+                parts.append(f'{name} 못 읽음')
+            else:
+                parts.append(f'{name} {math.degrees(got):+.1f}° '
+                             f'(오차 {math.degrees(wrap_pi(got - angle)):+.1f}°)')
+        line = ' · '.join(parts)
+        # 두 기준이 서로 다르면 그것 자체가 발견이다 — 로봇의 회전과 측위의 회전이 다르다
+        if odom is not None and mapped is not None:
+            gap = wrap_pi(mapped - odom)
+            if abs(gap) > math.radians(5.0):
+                line += (f'   ← **두 기준이 {math.degrees(abs(gap)):.1f}° 다르다.** '
+                         'AMCL 방위가 튀었다는 뜻이다')
+        elif odom is not None and abs(wrap_pi(odom - angle)) > math.radians(5.0):
+            line += '   ← 분해능 2.3° 를 크게 넘는다'
+        self.get_logger().info(line)
+
     def turn(self, angle, label):
         """분해능 위일 때만 제자리 회전한다. **명령한 각을** 돌려준다.
 
@@ -1110,19 +1177,10 @@ class ShuttleMission(Node):
                 f'{label} 생략 — {math.degrees(angle):+.1f}° 는 Spin 분해능 미만')
             return 0.0
         allow = max(1, int(self.p('bay_align_timeout_s')))
-        before = self.tf_sample(warn=False)
+        before_map, before_odom = self.tf_sample(warn=False), self.odom_yaw()
         self.run_behavior(lambda: self.navigator.spin(angle, allow), label)
-        after = self.tf_sample(warn=False)
-        if before is not None and after is not None:
-            actual = wrap_pi(after.yaw - before.yaw)
-            err = wrap_pi(actual - angle)
-            self.get_logger().info(
-                f'{label} 실행 — 명령 {math.degrees(angle):+.1f}° · '
-                f'실제 {math.degrees(actual):+.1f}° · 오차 {math.degrees(err):+.1f}°'
-                + ('   ← 분해능 2.3° 를 크게 넘는다'
-                   if abs(err) > math.radians(5.0) else ''))
-        else:
-            self.get_logger().warn(f'{label} 실행량을 못 쟀다 — TF 를 못 읽었다')
+        after_map, after_odom = self.tf_sample(warn=False), self.odom_yaw()
+        self.log_turn(label, angle, before_map, after_map, before_odom, after_odom)
         # **명령한 각을 돌려준다.** 다음 단계의 회전량은 '우리가 무엇을 명령했나' 위에서
         #   계산되어야 앞뒤가 맞는다. 실제로 돈 각을 쓰면 측정 잡음이 계산에 섞인다
         return angle
@@ -1142,9 +1200,15 @@ class ShuttleMission(Node):
         e_lat = sample.lat_error
         tol = self.positive_parameter('bay_align_tol_lat_m')
         cap = self.positive_parameter('bay_align_max_lat_m')
-        if abs(e_lat) <= tol:
+        # **회전하기 전에 실제로 갈 거리가 남는지 본다.** 허용치(0.05)와 오버슛 보정(0.068)
+        #   사이 구간에서는 90° 를 돌고 나서 직진이 생략되어 **돌고, 안 가고, 도로 도는**
+        #   일이 벌어진다 (9/10 R5-1 2회차: 이탈 0.067). 5 초를 버리고 회전 오차만 얹은 뒤
+        #   그 직후 마커를 놓쳤다. 갈 거리가 없으면 아예 이 단계에 들어가지 않는다
+        if abs(e_lat) <= tol or self.drive_command(abs(e_lat)) <= 0.0:
             self.get_logger().info(
-                f'{label} 횡정렬 불필요 — 이탈 {e_lat:+.3f} m 가 허용 {tol:.3f} m 안이다')
+                f'{label} 횡정렬 불필요 — 이탈 {e_lat:+.3f} m '
+                f'(허용 {tol:.3f} · 오버슛 보정을 빼면 실제 이동 '
+                f'{max(0.0, self.drive_command(abs(e_lat))):.3f} m)')
             return 0.0
         if abs(e_lat) > cap:
             self.get_logger().warn(

@@ -213,11 +213,36 @@ if [ "$STAGE" = "mission" ]; then
          "zone_semaphore 미기동. 셔틀이 '단독 모드' 로 진행해 판정 5(토큰 시점)를 검증할 수 없다"
   fi
 
-  # 마커 주입 — 셔틀의 신선도 판정이 1.0 s 라 '있다' 가 아니라 '계속 온다' 여야 한다
+  # ── 카메라 사슬 (3단계 real_aruco 전용, 9/10 추가) ────────────────────────
+  # **조용히 실패하는 종류다.** aruco_detector 는 camera_info 를 못 받으면 self.K 가 None 이라
+  #   `if not cand or self.K is None: return` 으로 **id·distance·pose 를 하나도 안 낸다.**
+  #   오류도 안 낸다. 그 상태로 미션을 보내면 '마커 확인' 에서 포기해 회차를 통째로 버린다.
+  #   PR #76 이후 거리가 순수 solvePnP 라 fx 없이는 거리 계산 자체가 불가능하다.
+  #   9/10 실주행에서 검출기 기동 로그의 'CameraInfo 수신' 줄이 안 떠서 발견했다.
+  CAM_INFO_HZ="$(timeout 12 ros2 topic hz "$NS/oakd/rgb/camera_info" --window 3 2>/dev/null \
+                 | grep -m1 'average rate' | awk '{print $3}')"
+  if [ -n "$CAM_INFO_HZ" ]; then
+    pass "$NS/oakd/rgb/camera_info $CAM_INFO_HZ Hz"
+  else
+    # 로봇 전체가 없는 것인지 카메라만 없는 것인지 가른다 — 고칠 곳이 다르다
+    if r2 15 topic list 2>/dev/null | grep -q "^$NS/scan$"; then
+      fail "$NS/oakd/rgb/camera_info 가 없다 (로봇의 다른 토픽은 있다)" \
+           "로봇의 카메라 노드만 죽었다. aruco_detector 가 id·distance·pose 를 하나도 안 낸다"
+    else
+      fail "$NS 토픽이 거의 없다 — 로봇이 안 올라왔다" \
+           "로봇 전원·브링업·디스커버리 서버를 먼저 볼 것 (가이드 B-0)"
+    fi
+  fi
+
+  # ── 마커 발행 ────────────────────────────────────────────────────────────
+  # 주입 리그와 실물 검출기는 **정상 상태가 다르다.** 주입은 마커가 보이든 말든 5 Hz 로 계속
+  #   내지만, 실물 검출기는 **마커가 시야에 있을 때만** 낸다. 도크에서 점검하면 실물 쪽은
+  #   조용한 것이 정상이라, 한 잣대로 재면 멀쩡한 회차를 막거나 깨진 회차를 통과시킨다.
+  ARUCO_QUIET=0
   for t in aruco/id aruco/distance; do
     HZ="$(timeout 12 ros2 topic hz "$NS/$t" --window 5 2>/dev/null | grep -m1 'average rate' | awk '{print $3}')"
     if [ -z "$HZ" ]; then
-      fail "$NS/$t 가 발행되지 않는다" "마커 주입 미기동 — 셔틀이 '관측 None' 으로 오도착 판정한다"
+      ARUCO_QUIET=$((ARUCO_QUIET+1))
     else
       RATE_OK="$(awk -v h="$HZ" 'BEGIN{print (h>=2.0)?"y":"n"}')"
       if [ "$RATE_OK" = y ]; then pass "$NS/$t $HZ Hz"
@@ -225,6 +250,13 @@ if [ "$STAGE" = "mission" ]; then
       fi
     fi
   done
+  if [ "$ARUCO_QUIET" -gt 0 ] && [ -n "$CAM_INFO_HZ" ]; then
+    warn "$NS/aruco/* 가 지금은 조용하다 ($ARUCO_QUIET/2)" \
+         "카메라는 살아 있다. 실물 검출기(real_aruco:=true)는 마커가 보일 때만 내므로 도크에서는 정상이다. 주입 리그로 돌리는 중이라면 FAIL 로 볼 것"
+  elif [ "$ARUCO_QUIET" -gt 0 ]; then
+    fail "$NS/aruco/* 가 발행되지 않는다 ($ARUCO_QUIET/2)" \
+         "위 카메라 FAIL 과 같은 원인이다 — 검출기는 camera_info 없이는 아무것도 내지 않는다"
+  fi
 
   # 셔틀이 미션 토픽을 실제로 구독하고 있는지 (가이드 B-4 ③)
   SUB="$(timeout 15 ros2 topic info "$NS/mission/assigned" --verbose 2>/dev/null)"
