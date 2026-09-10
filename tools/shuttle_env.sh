@@ -1,7 +1,8 @@
 # 셔틀 시험 터미널의 첫 줄. source 로 실행한다 — 실행(./)하면 아무 효과가 없다.
 #
 #   source tools/shuttle_env.sh          # source 4종 (모든 터미널)
-#   source tools/shuttle_env.sh nav2     # + ROS_SUPER_CLIENT=False  (T3 Nav2 터미널만)
+#   source tools/shuttle_env.sh node     # + ROS_SUPER_CLIENT=False  (노드만 띄우는 터미널)
+#   source tools/shuttle_env.sh nav2     # + ROS_SUPER_CLIENT=False  (T8 Nav2 터미널)
 #   source tools/shuttle_env.sh build    # + colcon build 4패키지 후 source
 #
 # 왜 sh 파일을 따로 두나 — tools/shuttle_preflight.sh 는 자식 프로세스라 거기서 source 해도
@@ -47,16 +48,47 @@ else
   return 1
 fi
 
-# T3(Nav2) 터미널만 슈퍼클라이언트를 끈다. 나머지 터미널은 True 여야 ros2 CLI 가 전체 노드를 본다.
+# 슈퍼클라이언트를 끄는 터미널은 T8(Nav2) 과 `node` 모드뿐이다. 나머지는 True 여야
+# ros2 CLI 가 전체 노드를 본다.
 #
 # **여기서 True 를 명시적으로 넣는다 (9/8).** /etc/turtlebot4_discovery/setup.bash 는
 #   `[ -t 0 ] && export ROS_SUPER_CLIENT=True || export ROS_SUPER_CLIENT=False`
 # 로 **stdin 이 TTY 일 때만** True 를 준다. 사람이 치는 터미널은 True 지만 스크립트·SSH 비대화
 # 실행·CI 에서는 조용히 False 가 되고, 그러면 디스커버리 서버가 전체 토픽·노드를 안 넘겨줘서
 # `ros2 topic list` 가 거의 비어 나온다 — '노드가 안 보인다' 로 오진하기 딱 좋다 (가이드 D-5).
-if [ "$_SE_MODE" = "nav2" ]; then
+#
+# ─ `node` 모드는 왜 있나 (9/10, 2대 동시 기동 실패 진단) ────────────────────────
+# **아직 실주행 검증 전이다. 절차서 기본값이 아니고, 2대가 안 뜰 때 쓰는 조치다**
+#   (docs/demo_run_procedure.md 6절).
+#
+# 슈퍼클라이언트는 '자기에게 필요한 것' 이 아니라 디스커버리 서버가 가진 **전체 참가자
+# 명단**을 받는다. 그래서 슈퍼클라이언트가 늘수록, 참가자 하나가 뜰 때마다 그 엔드포인트
+# 전부가 슈퍼클라이언트 수만큼 무선으로 복제된다.
+#
+# 절차서대로 띄우면 로봇 PC 한 대에 슈퍼클라이언트가 15벌이다 — T2 bag 1 · T3 localization 3
+#   (map_server·amcl·lifecycle_manager) · T4 rviz 1 · T5 리그 2 · T6·T7 2 · T9 리그 2 ·
+#   T10 1 · T11~T13 echo 3. **2대면 30벌.** 시스템 전체 참가자는 약 75벌이다.
+# 여기에 Nav2 는 turtlebot4_navigation/nav2.launch.py 가 use_composition 을 'False' 로
+#   하드코딩해서 **프로세스가 11개**다. 두 번째 Nav2 를 켜는 순간이 '명단이 제일 클 때' 와
+#   '참가자 11개가 한꺼번에 들어올 때' 가 겹치는 지점이다 — 순서와 무관하게 항상 **두 번째**
+#   가 안 뜨고 그때 핑이 200 ms 까지 튀는 것이 이것으로 설명된다.
+#
+# 전체 명단이 실제로 필요한 것은 **그래프를 조회하는 것들뿐**이다:
+#   ros2 topic list/echo/hz · ros2 node list · ros2 param get · ros2 service call ·
+#   ros2 bag record (타입 확인에 get_topic_names_and_types 를 쓴다)
+# ros2 run / ros2 launch 로 노드만 띄우는 터미널은 자기가 쓰는 토픽만 매칭되면 되고, 그
+#   매칭은 일반 클라이언트에게도 서버가 걸러서 준다. → T3·T5·T6·T7·T9·T10 이 `node` 다.
+#   **PC 당 9벌, 2대면 18벌**이 명단 배포 대상에서 빠진다.
+#
+# **위 9/8 경고와 헷갈리지 말 것** — '조용히 False 가 되어 토픽이 안 보인다' 는
+#   `ros2 topic list` 가 비어 나오는 **CLI 터미널** 이야기다. 노드만 띄우는 터미널은
+#   해당 없다. 그래도 틀렸다면 증상이 기동 2분 안에 드러난다 (T6 초기자세 미전송,
+#   T11·T12 상태 없음) — 그때는 `node` 를 빼고 다시 띄우면 원래대로다.
+if [ "$_SE_MODE" = "nav2" ] || [ "$_SE_MODE" = "node" ]; then
   export ROS_SUPER_CLIENT=False
-  echo "환경 준비됨 (Nav2 터미널) — ROS_DOMAIN_ID=$ROS_DOMAIN_ID · ROS_SUPER_CLIENT=False"
+  _SE_WHO=$([ "$_SE_MODE" = "nav2" ] && echo "Nav2 터미널" || echo "노드 터미널")
+  echo "환경 준비됨 ($_SE_WHO) — ROS_DOMAIN_ID=$ROS_DOMAIN_ID · ROS_SUPER_CLIENT=False"
+  unset _SE_WHO
 else
   export ROS_SUPER_CLIENT=True
   echo "환경 준비됨 — ROS_DOMAIN_ID=$ROS_DOMAIN_ID · ROS_SUPER_CLIENT=True · 디스커버리 $ROS_DISCOVERY_SERVER"
