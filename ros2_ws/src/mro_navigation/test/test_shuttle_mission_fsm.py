@@ -1008,3 +1008,21 @@ def test_method_b_premise_holds_in_arena():
 
 if __name__ == '__main__':
     sys.exit(pytest.main([__file__, '-v']))
+
+
+def test_p1_released_even_when_never_granted(ros):
+    """P1 대기 중 T_lim 으로 포기해도 반납을 보낸다 (I-033, GitHub #55).
+
+    거절당한 로봇은 세마포어 FIFO 대기열에 남는다. 반납 없이 끝내면 그 로봇이 선두로 남아
+    다른 로봇이 P1 에 영구히 거절된다 — 2대 동시 배송에서만 드러난다. return_dock 은 PR #46 에서
+    같은 문제를 `requested` 로 고쳤고, 셔틀도 같은 형태여야 한다.
+    """
+    node = make_node(t_lim_s=3.0, token_retry_s=0.2)
+    stub_token(node, [False] * 100)                 # 끝까지 거절 → T_lim 이 끊는다
+    fresh_marker(node)
+    node.run_mission(assigned('A', 'M33'))
+    assert node.status_log[-2:] == ['FAILED', 'READY']
+    assert 'acquire' in node.token_log, 'P1 을 요청은 했어야 한다'
+    assert node.token_log[-1] == 'release', f'못 얻은 채 끝나도 반납해야 대기열에서 빠진다: {node.token_log[-3:]}'
+    assert node.token_held is False and node.token_requested is False
+    node.destroy_node()
