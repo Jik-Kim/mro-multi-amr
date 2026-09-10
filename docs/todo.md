@@ -5,23 +5,19 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 118/190 완료** (████████████░░░░░░░░)  ·  기준 09/10
+**전체 121/189 완료** (█████████████░░░░░░░)  ·  기준 09/10
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 7/9 | `████████░░` | — |
-| mro_perception [인지 — 정정인, 민범진] | 18/29 | `██████░░░░` | **9** |
+| mro_perception [인지 — 정정인, 민범진] | 21/28 | `████████░░` | **5** |
 | mro_webcam [웹캠 — 한세교, 김학민] | 24/34 | `███████░░░` | **6** |
 | mro_navigation [주행 — 박병후, 이시율] | 45/86 | `█████░░░░░` | **25** |
 | mro_fleet [관제 — 김민준] | 14/19 | `███████░░░` | **4** |
 | mro_bringup [PM 김병직] | 10/13 | `████████░░` | **1** |
 
-**마감이 지난 항목 45건**
+**마감이 지난 항목 41건**
 
-- `9/9` mro_perception — robot8 TS-U05 독립 점 1개 (I-031) — depth_k 0.028 은 줄자 3점을 전부 적합에 썼다. 유일한 검…
-- `9/9` mro_perception — robot3 실기 재확인 (PR #50 후속) — depth_wait_s 를 0.08 → 0.25 로 3배 올린 것이 robot…
-- `9/9` mro_perception — perception.yaml 에 k 검증 범위를 적는다 (PR #43 후속) — k 를 편 범위는 보정값 0.843~1.565 …
-- `9/9` mro_perception — calibrated_depth 가 depth_min 게이트에 의존한다 (PR #43 후속) — z_raw 로 나누므로 게이트가 …
 - `9/9` mro_perception — mro_perception flake8 정리 — main 55건 → PR #40 으로 80건 → 9/9 실측 156건(99자 기…
 - `9/8` mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - `9/8` mro_perception — TS-U05 줄자 대조 — target/distance 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오…
@@ -64,10 +60,11 @@
 - `9/8` mro_fleet — fleet_manager_node.py: aruco/id·aruco/distance 구독 → ID 4 수신 시 |amcl_pos…
 - `9/8` mro_bringup — v_max 0.3 m/s 와 Nav2 max_vel_x 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘…
 
-**오늘 마감 18건**
+**오늘 마감 19건**
 
 - mro_interfaces — 계약 v1.20 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤) — 신규 토픽 safety/state(STOPPING/…
 - mro_interfaces — docs/setup.md:92 의 nav2 런치 줄 (I-049 후속) — turtlebot4_navigation/nav2.la…
+- mro_perception — camera_fx_scale 1.7778 → 1.8336 PM 승인 · 민범진 통보 — 근거는 줄자다 (체커보드는 재현성 8 %…
 - mro_perception — FR-13 실기 확인 (인지↔관제 합동) — 인형이 보이는 상태로 GATE_FAIL 30 s → 관제 버튼 → 수락까지 한 번에…
 - mro_webcam — webcam_hint 의 target_classes 를 yaml 로 (PR #62 후속) — webcam_hint 의 코드 전용…
 - mro_webcam — webcam.yaml 의 show_window 줄 삭제 (PR #65 후속) — launch 가 yaml 뒤에 딕셔너리로 넘겨 …
@@ -101,15 +98,18 @@
 - [x] `WorkerDescriptor.color_hist` — H16×S8=128, `reid.hsv_hist()` 공유 호출로 확정 · 마감 9/6
 
 ## mro_perception [인지 — 정정인, 민범진]
-- [ ] **robot8 TS-U05 독립 점 1개 (I-031)** — `depth_k` 0.028 은 줄자 3점을 **전부 적합에 썼다.** 유일한 검증점이 「약 1.30 m」(줄자 불확실) +3.42 cm 다. pnp 로 검증하면 자기 검증이 된다(robot8 pnp 가 −2.4~−4.3 % 치우침). **그때까지 FR-35 는 이 값을 신뢰하지 않는다** · 마감 9/9
-- [ ] **`tools/aruco_offline_check.py` 상수를 robot8 값으로 (I-031)** — **값은 9/9 에 받았다 (PR #74)**: `fx = fy 566.0106 · cx 352.383 · cy 367.613` (704×704). robot3 566.654 와 **0.11 % 차**. **아직 못 닫는 이유 — 왜곡계수 `D` 8개가 안 왔다.** 도구는 `K_INFO` 와 `D` 를 같이 쓰므로 K 만 바꾸면 robot4 왜곡으로 robot8 을 렌더한다. `ros2 topic echo /robot8/oakd/rgb/camera_info --once` 의 `d` 배열만 더 받으면 끝난다. **곁가지로 확인된 것**: `cx` 는 704/2 에서 0.4 px 라 가로 16/9 crop 전제가 성립하고 `camera_fx_scale` 1.7778 을 유지해도 된다. 반면 **`cy` 367.613 은 15.6 px 아래로 치우쳤다** — 정사각 crop 이 세로로는 가운데가 아니다. 세로 오차는 기운각·법선 추정에 들어가므로 I-039(pnp 실효계수 요동)와 같이 볼 값이다 · 마감 9/11
+- [x] **robot8 fx 재확인 — 마커 흰 여백부터 (I-031)** — robot8 이 ID 2·3 에서 최대 −16 % 짧게 나오고 검출도 깜빡였다. 카메라를 의심했으나 **원인은 마커였다** — 벽에 바로 붙여 흰 여백이 없으니 검은 테두리가 벽 경계선과 이어져 ⓐ 윤곽이 사각형으로 안 잡히고 ⓑ 서브픽셀 보정이 꼭짓점을 바깥으로 끌어 사각형이 커졌다(커지면 거리가 가까워진다). **재투영 오차는 0.01 px 로 깨끗해 지표로 안 걸렸다.** 흰 배경 3~5 cm 를 붙이자 검출 100 %, `implied marker` 11.6 → 9.8~10.6 cm, 줄자 0.980/1.265/1.530 m 에서 +0.5/+1.2/+3.2 cm — 운용 구간(0.9~1.5 m) 판정 기준 10 cm 의 1/3 안. **robot8 fx 정상 · 체커보드 재촬영 불필요.** 계약 6절이 요구하는 여백(한 칸 이상 ≈ 2 cm)이 이것이다 · 마감 9/10
+- [ ] **`camera_fx_scale` 1.7778 → 1.8336 PM 승인 · 민범진 통보** — **근거는 줄자다** (체커보드는 재현성 8 % 로 소수점을 못 정한다 — I-031). robot3 5점(0.575~1.455 m) 1.7 cm 안 · robot8 3점 3.2 cm 안. **`amr_detection` 의 `target/map_point` 좌우 성분이 +3.1 % 이동하므로** 짝(민범진)에게 먼저 알리고 PM 승인을 받는다. `target/distance`(depth)는 영향 없다 · 마감 9/10
+- [x] **`tools/checker_calib.py` 에 재현성 검증 추가** — RMS 만 보면 속는다. RMS 는 **오차 큰 사진을 자동으로 뺀 뒤**의 값이라 서로 말이 맞는 사진만 골라내면 좋아 보인다 (robot3 은 그 과정에서 RMS 가 0.73 → 0.31 로 좋아지는 동안 fx 가 1035 → 1096 으로 5.8 % 움직였다). 사진을 홀수/짝수로 갈라 풀고 20장씩 무작위로 12번 더 풀어 폭을 잰다 (합격선 2 % = 1.5 m 에서 3 cm). 실측 robot3 8.2 % · robot8 8.7 % — **둘 다 초과라 체커보드 값은 후보로만 두고 줄자로 확정한다.** `show` 의 결론도 그 판정을 따른다 · 마감 9/11
+- ~~**robot8 TS-U05 독립 점 1개 (I-031)** — `depth_k` 0.028 은 줄자 3점을 **전부 적합에 썼다.** 유일한 검증점이 「약 1.30 m」(줄자 불확실) +3.42 cm 다. pnp 로 검증하면 자기 검증이 된다(robot8 pnp 가 −2.4~−4.3 % 치우침). **그때까지 FR-35 는 이 값을 신뢰하지 않는다** · 마감 9/9~~  **→ 취소 9/10 (`feature/aruco-pnp-only`) — `depth_k` 가 없어졌다.** 체커보드로 fx 를 실측해 depth 기준자 경로를 통째로 걷어냈다 (`marker_depth`·`radial_from_depth`·`calibrated_depth` 와 파라미터 7개 삭제). 완료가 아니라 **할 일 자체가 없어진 것**이라 체크박스를 뗀다 — 셈에서 빠진다
+- [x] **`tools/aruco_offline_check.py` 상수를 robot8 값으로 (I-031)** — **값은 9/9 에 받았다 (PR #74)**: `fx = fy 566.0106 · cx 352.383 · cy 367.613` (704×704). robot3 566.654 와 **0.11 % 차**. **아직 못 닫는 이유 — 왜곡계수 `D` 8개가 안 왔다.** 도구는 `K_INFO` 와 `D` 를 같이 쓰므로 K 만 바꾸면 robot4 왜곡으로 robot8 을 렌더한다. `ros2 topic echo /robot8/oakd/rgb/camera_info --once` 의 `d` 배열만 더 받으면 끝난다. **곁가지로 확인된 것**: `cx` 는 704/2 에서 0.4 px 라 가로 16/9 crop 전제가 성립하고 `camera_fx_scale` 1.7778 을 유지해도 된다. 반면 **`cy` 367.613 은 15.6 px 아래로 치우쳤다** — 정사각 crop 이 세로로는 가운데가 아니다. 세로 오차는 기운각·법선 추정에 들어가므로 I-039(pnp 실효계수 요동)와 같이 볼 값이다 · 마감 9/11  **→ 완료 9/10 — 못 닫던 이유였던 왜곡계수 `D` 8개를 받았다** (`13.3801 −150.4605 0.0022977 0.0011334 541.2130 13.1323 −148.4299 533.8889`, rational_polynomial). K 와 D 를 한 짝으로 `CAMERAS` 에 넣고 `--robot` 으로 고르게 했다 — robot3 도 같이 넣어서 앞으로 남의 광학으로 합격을 매기는 일이 없다. 재실행: robot8 최대 1.1 cm · robot3 0.8 cm (계약 6절 조건 안). stereo 는 `frame_id` 가 rgb optical, K 동일, `D` 전부 0 — depth 를 RGB 에 정렬해 내보내므로 **정상이다**
 - [x] **`show_window` 기본값을 `false` 로 (I-043)** — `robot.launch.py` 가 `perception.yaml` 을 모든 로봇에 넘긴다. SSH 로만 붙은 PC 가 하나라도 있으면 회차가 통째로 날아간다. 웹캠 쪽은 이미 `false` 다 · 마감 9/9  **→ 완료 9/10 (PR #75) — yaml 과 노드 모듈 기본값 둘 다. `ros2 run` 은 yaml 을 안 받고 그것이 곧 SSH 시험 경로라 한쪽만 고치면 안 됐다. `DISPLAY` 없는 환경에서 기본값 정상 기동·`true` 는 Aborted 재현 확인. PM 확인: 런치가 딕셔너리로 덮지 않아 이 값이 실제로 닿는다 — 웹캠 `webcam.yaml` 과 구조가 다르다**
-- [ ] **robot3 실기 재확인 (PR #50 후속)** — `depth_wait_s` 를 0.08 → 0.25 로 3배 올린 것이 robot3 발행 주기에 영향 없는지. robot3 은 마커가 시야에 없어 미확인이다 · 마감 9/9
+- ~~**robot3 실기 재확인 (PR #50 후속)** — `depth_wait_s` 를 0.08 → 0.25 로 3배 올린 것이 robot3 발행 주기에 영향 없는지. robot3 은 마커가 시야에 없어 미확인이다 · 마감 9/9~~  **→ 취소 9/10 (`feature/aruco-pnp-only`) — `depth_wait_s` 가 없어졌다.** 체커보드로 fx 를 실측해 depth 기준자 경로를 통째로 걷어냈다 (`marker_depth`·`radial_from_depth`·`calibrated_depth` 와 파라미터 7개 삭제). 완료가 아니라 **할 일 자체가 없어진 것**이라 체크박스를 뗀다 — 셈에서 빠진다
 - [x] **TS-U05 독립 점 1개 (I-031 마무리)** — 완료 9/8 (PR #43). 배율 모델이 1.55 m 에서 3.0 cm 틀려 **역깊이(시차 편향) 보정**으로 교체. 독립점 1.19 m 에서 −0.5 cm. PM 재적합 확인 — 배율은 어떻게 펴도 최선이 1.9~2.1 cm 라 모델 꼴 문제였다. **robot8 독립점은 카메라 올라온 뒤** (9/8 기체 교체로 2호기 보정은 원점)
 - [x] `core/aruco.py` ROS 비의존 — 완료 9/8 (PR #43). `depth_distance` 의 ROS import 를 뷰어 노드 전용 try/except 로. PM 확인: `AMENT_PREFIX_PATH` 빈 셸에서 `rclpy` 미적재 · 단위 시험 18/18
 - [x] **robot3 depth 가 RGB 보다 +83 ms 늦다 (I-038)** — ArUco 프레임 73 % 가 depth 대신 pnp 대체로 떨어진다. 값은 같은 자라 지금 오차는 없지만, 기동 직후 '못 봤다' 구간과 오래된 depth/pnp 비가 남는다. 큐 방식 짝짓기 · 마감 9/9  **→ 완료 9/8 (PR #50) — 큐 방식 짝짓기 · `depth_wait_s` 0.25. robot8 은 같은 원인으로 **발행 0 %** 였다**
-- [ ] **`perception.yaml` 에 k 검증 범위를 적는다 (PR #43 후속)** — k 를 편 범위는 보정값 0.843~1.565 m 인데 발행 한계는 2.0 m 다 (보정량 −9.2 cm, 미검증). 계약 6절 수용 1.5 m 는 검증 범위 안이라는 것까지 한 줄 · 마감 9/9
-- [ ] **`calibrated_depth` 가 `depth_min` 게이트에 의존한다 (PR #43 후속)** — `z_raw` 로 나누므로 게이트가 없으면 0 원값에서 죽는다. docstring 에 명시 · 마감 9/9
+- ~~**`perception.yaml` 에 k 검증 범위를 적는다 (PR #43 후속)** — k 를 편 범위는 보정값 0.843~1.565 m 인데 발행 한계는 2.0 m 다 (보정량 −9.2 cm, 미검증). 계약 6절 수용 1.5 m 는 검증 범위 안이라는 것까지 한 줄 · 마감 9/9~~  **→ 취소 9/10 (`feature/aruco-pnp-only`) — `depth_k` 가 없어졌다.** 체커보드로 fx 를 실측해 depth 기준자 경로를 통째로 걷어냈다 (`marker_depth`·`radial_from_depth`·`calibrated_depth` 와 파라미터 7개 삭제). 완료가 아니라 **할 일 자체가 없어진 것**이라 체크박스를 뗀다 — 셈에서 빠진다
+- ~~**`calibrated_depth` 가 `depth_min` 게이트에 의존한다 (PR #43 후속)** — `z_raw` 로 나누므로 게이트가 없으면 0 원값에서 죽는다. docstring 에 명시 · 마감 9/9~~  **→ 취소 9/10 (`feature/aruco-pnp-only`) — `calibrated_depth` 함수가 없어졌다.** 체커보드로 fx 를 실측해 depth 기준자 경로를 통째로 걷어냈다 (`marker_depth`·`radial_from_depth`·`calibrated_depth` 와 파라미터 7개 삭제). 완료가 아니라 **할 일 자체가 없어진 것**이라 체크박스를 뗀다 — 셈에서 빠진다
 - [x] **robot8 `depth_k` 실측 (I-031·I-040)** — 9/8 기체 교체로 **보정값이 없다**(`robot8.yaml` `depth_k: 0.0`). 구 robot4 의 0.0076 은 그 카메라 값이라 승계 불가 (robot3 은 0.024 — 3 배 차). 0.8 m 이상 줄자 2점 이상으로 `k = 평균(1/줄자 − 1/원값)`. **I-040 으로 robot3 보정도 그동안 안 먹고 있었으므로 TS-U05 재측정과 함께** · 마감 9/10  **→ 완료 9/8 (PR #50) — `0.028` (줄자 3점, 1.5 m 안 최대 1.01 cm). **독립 검증점은 아직** — I-031 참조**
 - [ ] `mro_perception` flake8 정리 — main 55건 → PR #40 으로 80건 → **9/9 실측 156건(99자 기준).** 늘고 있다. 대부분 D400·D403 docstring 형식과 99자 초과라 한 번에 정리된다. **아무도 이 시험을 안 돌리고 있다는 뜻** · 마감 9/9
 - [x] **`amr_detection_node.py`: 명시 페어링 폴백 서버 (FR-13, 계약 10절)** — ① `target/pair_state` 발행 (`PAIRED`/`GATE_FAIL`/`NO_TARGET`) ② 게이트 미달 30 s 계측 — **대상이 보이는데 못 넘는 경우만 센다**(`NO_TARGET` 은 세지 않음) ③ `/robotN/manual_pair` 서비스 서버 — 거부 사유 6종(10.5 표) ④ `mission/finish` 구독해 명시 페어링 해제 ⑤ 확정 시 `target/paired`·`target/worker_id` 발행은 **여기서만** · 마감 9/9  **→ 완료 9/9 (PR #53) — 단위 18건. 거부 사유는 5종**(10.5 표 5행 + 10.8 은 `WRONG_ROBOT` 에 흡수)

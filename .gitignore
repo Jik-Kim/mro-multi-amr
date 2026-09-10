@@ -2,6 +2,14 @@
 ros2_ws/build/
 ros2_ws/install/
 ros2_ws/log/
+# colcon 을 ros2_ws/ 밖에서 돌리면 그 자리에 build·install·log 가 또 생긴다 (49 MB).
+# 정상 위치는 ros2_ws/ 안이다 — 아래는 잘못 돌렸을 때 딸려 올라가는 것을 막는 그물이다
+/build/
+/install/
+/log/
+ros2_ws/src/*/build/
+ros2_ws/src/*/install/
+ros2_ws/src/*/log/
 __pycache__/
 *.pyc
 # 데이터 (Google Drive 로) — 모델(.pt)·맵·호모그래피 json 은 커밋한다
@@ -17,5 +25,8 @@ yolo_output/
 *.db
 *.csv
 !ros2_ws/src/**/config/*.csv
+# 체커보드 원본 사진 242장 (69 MB). 결과 요약은 tools/checker_result_*.npz(각 4 KB)에 들어 있고
+# 확정 숫자는 docs/camera_calibration_guide.md 에 적혀 있다. 원본은 Drive
+tools/checker_shots/
 docs/feedback.local.md
 .vscode/

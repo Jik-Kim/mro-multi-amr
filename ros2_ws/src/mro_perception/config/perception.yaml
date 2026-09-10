@@ -3,12 +3,31 @@
 /**:
   ros__parameters:
     # --- 공용 (두 노드가 core/camera.py 로 같이 쓴다) ---
-    camera_fx_scale: 1.7778    # = 16/9. camera_info 의 fx·fy 가 자르기 전 16:9 전체 폭 기준이라
-                               # 704×704 정사각 crop 영상에 안 맞는다. 보정 없이 aruco/distance 는
-                               # 1.74 배 작게, target/map_point 좌우는 1.76 배 크게 나온다 (9/7 실측).
-                               # 실측 비 1.728 / 1.744 / 1.761 — depth 를 기준자로 써서 2 % 낮게 나온
-                               # 것으로 보고 이론값을 쓴다. TS-U05 줄자 대조로 확정. 근본 해결(로봇이
-                               # 맞는 camera_info 를 내보냄)이 되면 1.0 으로 되돌린다
+    camera_fx_scale: 1.8336    # camera_info 의 fx·fy 가 704×704 crop 영상에 안 맞아 곱해 주는 값 (I-031).
+                               # 그 전에는 정사각 crop 기하에서 어림한 16/9 = 1.7778 을 썼다.
+                               #
+                               # **확정 근거는 줄자다 (9/10). 체커보드는 출발점일 뿐이다.**
+                               # 체커보드(tools/checker_calib.py)로 58·63장씩 찍어 두 대 모두 fx ≈ 1038 이
+                               # 나왔지만, 같은 사진에서 20장씩 다시 풀면 배율이 robot3 28 % · robot8 13 %
+                               # 폭으로 흔들린다. 값 하나만 보고 확정할 수 없어 줄자로 판정했다:
+                               #   robot3  0.575 / 0.66 / 0.87 / 1.07 / 1.455 m  — 전 구간 1.7 cm 안
+                               #   robot8  0.980 / 1.265 / 1.530 m               — +0.5 / +1.2 / +3.2 cm
+                               # 운용 구간은 0.9 m(베이 최종 정차) ~ 1.5 m(계약 6절 검출 한계)이고,
+                               # 두 대 모두 그 구간에서 판정 기준 10 cm 의 1/3 안에 든다. 로봇별로
+                               # 나눌 이유가 없어 공용으로 쓴다.
+                               #
+                               # **마커에 흰 여백이 없으면 이 값이 맞아도 거리가 틀린다** (9/10 robot8,
+                               # 최대 −16 %). 검은 테두리가 벽 경계선과 붙으면 꼭짓점이 바깥으로 끌려가
+                               # 사각형이 커지고 거리가 가깝게 나온다. 재투영 오차는 깨끗해서 안 드러난다.
+                               # 계약 6절이 요구하는 여백(한 칸 이상 ≈ 2 cm)을 반드시 둔다.
+                               #
+                               # 주점(cx·cy)은 곱하지 않는다 — 로봇이 싣고 오는 값이 참값이다.
+                               # robot8 은 cy 가 367.6 으로 중앙(352)에서 15.6 px 벗어나 있는데 정상이다
+                               # (가로 cx 는 352.4 로 가운데. 배율은 폭 기준이라 영향 없다).
+                               #
+                               # **amr_detection 과 공용이다** — 1.7778 → 1.8336 은 target/map_point 의 좌우
+                               # 성분을 3.1 % 키운다 (1.1 m 지점에서 약 3 cm). target/distance(depth)는 영향 없다.
+                               # 근본 해결은 로봇이 영상과 맞는 camera_info 를 내보내는 것. 그때 1.0 으로 되돌린다
 
     # --- amr_detection_node (17개 전부 declare_parameter 로 읽는다 · camera_fx_scale 은 위 공용 · README §3 과 1:1) ---
     detect_conf: 0.5           # 학습 conf 스윕의 F1 최적은 0.4 지만 올려 쓴다.
@@ -37,47 +56,29 @@
                                # 보고 싶으면 여기서 true 로 (실행 중에는 못 바꾼다 — 창은 기동 때 만들어진다).
                                # 영상은 rqt_image_view 로 target/image/compressed 를 보는 편이 낫다 — 어느 PC 에서든 된다
 
-    # --- aruco_detector_node (계산은 core/aruco.py) ---
+    # --- aruco_detector_node (계산은 core/aruco.py · camera_fx_scale 은 위 공용) ---
+    # 거리는 마커 네 꼭짓점만으로 낸다 (solvePnP). d = fx × marker_size_m ÷ 화면 마커 픽셀 크기.
+    # 9/9 체커보드로 fx 를 실측하면서 depth 경로(distance_source · depth_k · depth_scale ·
+    # depth_min_m · pair_tol_s · depth_wait_s · fx_ratio_log_s)를 전부 걷어냈다 — 그 값들은
+    # 어림한 fx 를 depth 로 눈금 맞추기 위한 장치였다. 노드 304줄 → 179줄.
     marker_size_m: 0.10        # 인쇄된 검은 사각형 한 변 실측값 (9/7 자로 확인, 4장 동일).
-                               # solvePnP 거리는 여기에 정비례. depth 거리는 무관
+                               # 거리에 정비례한다 — fx 와 함께 곱으로만 들어가는 두 값 중 하나다
     marker_ids: [1, 2, 3, 4]   # 1·2·3 베이 A/B/C (FR-08) · 4 대기공간 측위 검증 (FR-35, 계약 9.2 ①).
                                # **4 를 빼면 관제의 측위 검증이 죽는다.** 10~19 는 Phase 2 예약이라 넣지 않는다
-    distance_source: auto      # auto: depth 있으면 depth, 없으면 solvePnP · depth · pnp
-                               # depth 는 초점거리를 안 써 I-031 계수와 무관하다.
-    depth_k: 0.0               # 역깊이(시차) 편향, 1/m. 보정 z = depth_scale / (1/z_raw + depth_k)
-                               # (core/aruco.calibrated_depth). **카메라 개체값이라 로봇별로 다르다** —
-                               # 실제 값은 mro_bringup/params/robotN.yaml 에 있고 여기 0.0 은 '보정 없음'. 스테레오 오차는 시차에
-                               # 상수로 붙어 거리 오차가 z² 로 커지므로 배율 하나로는 0.85~1.55 m 를 동시에 못
-                               # 맞춘다 (9/8 robot3: 배율 0.972 가 1.55 m 에서 +3.0 cm, k=0.024 는 전부 ≤ 1.5 cm)
-    depth_scale: 1.0           # 보정 뒤 곱하는 배율. 보통 1.0 — 시차 편향으로 설명이 안 되는 원인이 있을 때만.
-                               # Kn1_mini 보정식(correct_depth, A=1.023·B=0.024)은 여기서 안 쓴다 — 같은 꼴이지만
-                               # A 가 이 로봇들에 안 맞아 9/7 줄자 5점에서 1 m 이상을 4~7 cm 짧게 만들었다
-    depth_min_m: 0.8           # 이 아래는 depth 를 버리고 pnp 로. 9/7 실측(당시 2호기 robot4) 0.57 m 에서
-                               # depth 원값 +6.6 cm(11 %), 474 프레임 동일 — 카메라 근거리 한계.
-                               # robot8 의 ID 4 정차가 0.58 m 라 이 구간이 중요하다
-    pair_tol_s: 0.02           # 같은 프레임 쌍으로 볼 RGB·depth stamp 차. 같은 트리거라 median 0.1 ms
-    depth_wait_s: 0.25         # RGB 뒤 짝 depth 를 이만큼 기다린다. depth 가 RGB 보다 늦게 온다 —
-                               # robot3 +83 ms, robot8 +117 ms(90 % 138, 최대 209; 9/8 실측). 0.08 이면 robot8 은
-                               # 짝 0 % 라 아예 발행을 못 했다. 0.25 면 99 %. 시한이 지나면 pnp×비 로 낸다.
-                               # 발행 지연이 이만큼 늘지만 판정 주기(10 Hz)에는 무리 없다
     max_distance_m: 2.0        # 이보다 멀면 '못 봤다'(id = -1). 원거리 오검출을 거르는 느슨한 한계다 —
                                # 주행이 aruco_max_dist_m 1.5 로 다시 자른다(계약 6절 검출 조건).
                                # 1.5 로 두면 정확히 1.5 m 에 둔 마커가 1.52 로 걸러진다 (I-031 PM 재현)
     publish_pose: true         # aruco/pose(PoseStamped, 카메라 광학 프레임) — 마커 중심 위치·자세. 주행 베이 정렬용
-                               # (계약 4절, PR #40). 위치는 aruco/distance 와 같은 자(depth/pnp 비 반영)
-    publish_pose_log: true     # 검출 로그에 거리(출처)·기운각 남김. 통합 때 시끄러우면 false
-    fx_ratio_log_s: 10.0       # depth/pnp 비(최근 20 프레임 ≈ 2 초 중앙값)를 이 주기로 로그. 노드는 이 비를
-                               # depth 없는 프레임의 pnp 대체값과 aruco/pose 위치에 곱한다 — 9/7 robot3 에서
-                               # pnp 가 자리에 따라 5~10 % 길게 나와(실효 계수 1.63~1.82) 그대로 내면 대체
-                               # 프레임마다 9 cm 튄다. 0 이면 로그만 끔 (곱하기는 계속)
+                               # (계약 4절, PR #40). 위치는 solvePnP 의 tvec 그대로라 aruco/distance 와 같은 자다
+    publish_pose_log: true     # 검출 로그에 거리·기운각 남김. 통합 때 시끄러우면 false
 
-# 로봇별 값(depth_k)은 **여기 있지 않다** — mro_bringup/params/robotN.yaml 로 옮겼다 (9/8).
+# 로봇별 값은 **여기 있지 않다** — mro_bringup/params/robotN.yaml 에 있다 (9/8).
 #   로봇마다 다른 값은 한 파일에 모아 두려는 것이다: 로봇을 추가할 때 이 파일은 건드리지 않는다.
 #   robot.launch.py 가 [common.yaml, perception.yaml, robotN.yaml] 순으로 넘긴다 — 광역(/**) 파일이 먼저,
 #   로봇별(/robotN/**) 파일이 마지막이어야 로봇별 값이 이긴다. **이 파일에 /robotN/** 블록을 다시 넣지 말 것**:
 #   이 파일이 robotN.yaml 보다 먼저 오므로, 여기 있는 /robotN/** 는 묶음 순서가 앞당겨져 되레 덮인다.
 #   실제로 그래서 9/8 이전까지 robot3 의 depth_k 0.024 가 안 먹고 0.0 으로 돌고 있었다 (I-040).
-#   줄자 대조 (카메라 렌즈면→마커, 0.8 m 이상 점만), k = 평균(1/줄자 − 1/원값). 지금까지 실측:
-#     robot3 (9/7·9/8, 4점)  0.85→원값 0.861 · 0.98→1.012 · 1.31→1.344 · 1.55→1.626 → k 0.024  (잔차 −0.8~+1.5 cm)
-#     robot4 (9/7, 2점)      1.05→원값 1.058 · 1.565→1.585                          → k 0.0076 (잔차 ≤ 0.1 cm)
-#                            ↑ robot4 는 9/8 하드웨어 이슈로 빠졌다. robot8 은 카메라가 달라 재실측 필요
+#
+# robotN.yaml 의 `depth_k` 는 **9/9 부로 아무도 읽지 않는다** — aruco_detector 가 depth 를 안 쓰게 됐고,
+#   선언되지 않은 파라미터는 조용히 무시된다. 삭제는 mro_bringup 소관이라 여기서 하지 않았다.
+#   (인형 추종의 target/distance 는 amr_detection 이 depth 를 그대로 쓰지만 depth_k 를 쓰지는 않는다.)

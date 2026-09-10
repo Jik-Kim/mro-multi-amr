@@ -4,17 +4,15 @@
 tools/aruco_offline_check.py 도 같은 함수를 import 한다 — 노드와 검증 도구가 서로 다른 계산을
 갖고 있으면 한쪽만 고쳐져 검증이 검증이 아니게 된다.
 
-거리를 두 가지 방법으로 낸다. 서로 원리가 달라서 하나가 다른 하나의 자가 된다.
+거리는 마커 네 꼭짓점으로 푼 평면 자세(solvePnP)에서 나온다. 원리는 한 줄이다:
 
-  depth   스테레오 시차 → 미터. 초점거리를 쓰지 않아 camera_info 결함(I-031)과 무관하다.
-          원값에 로봇별 시차 편향 보정(calibrated_depth)을 건다. 마커 안쪽 40 % 만 읽어
-          가장자리에 배경 depth 가 섞이지 않게 한다.
-  pnp     마커 네 꼭짓점으로 평면 자세(solvePnP). 초점거리에 정비례하므로 camera_fx_scale 이
-          틀리면 그만큼 틀린다. 대신 좌우·상하 위치와 기운각이 나온다 — depth 는 이걸 못 낸다.
+    d = fx × 마커 한 변 ÷ (화면에서의 마커 픽셀 크기)
 
-발행하는 거리는 **카메라 광학중심 → 마커 중심 직선거리**다. depth 는 광축 방향(Z)이라
-pnp 가 준 방향으로 환산한다(radial_from_depth). 방향은 픽셀 위치에서 오므로 fx 오차에 거의
-둔감하다(기울기 15° 에서 fx 4 % 오차가 0.3 % 로 준다).
+fx 와 마커 크기는 곱으로만 들어가므로 **fx 가 틀리면 거리가 그 비율 그대로 틀린다.** 그래서
+camera_fx_scale(core/camera.py)을 체커보드로 실측했다 — 9/9 이전에는 기하 추정 16/9 를 쓰고
+스테레오 depth 로 눈금을 맞췄지만, fx 를 재고 나니 그럴 필요가 없어져 depth 경로를 걷어냈다
+(marker_depth · radial_from_depth · calibrated_depth 삭제, 9/9). depth 는 마커가 없는 인형
+추종(amr_detection)에서만 쓴다.
 
 solvePnP 는 IPPE_SQUARE 로 푼다 — 정사각 평면은 해가 둘 나올 수 있어서(앞으로 기운 것과
 뒤로 기운 것이 같은 그림), 재투영 오차가 작은 쪽을 고른다. 거리·위치는 두 해가 거의 같고
@@ -25,11 +23,8 @@ import math
 import cv2
 import numpy as np
 
-from .depth_distance import roi_distance
 
 DICT = cv2.aruco.DICT_4X4_50   # 계약 6절. ID 1/2/3 = 베이 A/B/C, 4 = 측위 검증, 10~19 = Phase 2 예약
-DEPTH_INNER = 0.4              # 거리 측정에 쓰는 마커 안쪽 비율. 바깥은 흰 여백·배경이 섞인다
-MAX_CORE_GAP_MM = 150          # amr_detection 과 같은 품질 게이트 — ROI 핵심부(p20~median)가 이보다 벌어지면 불신
 
 
 def make_detector(refine=True):
@@ -123,39 +118,6 @@ def solve_pose(corners, K, D, size_m, prev_rvec=None, tie_px=3.0):
         'angle_deg': float(np.degrees(np.arccos(np.clip(abs(R[2, 2]), -1.0, 1.0)))),
         'reproj_px': err,
     }
-
-
-def marker_depth(depth_mm, corners, scale=1.0):
-    """마커 안쪽 정사각 ROI 의 depth 거리. → roi_distance 의 dict · 부족하면 None
-
-    scale : RGB 픽셀 → depth 픽셀 배율 (둘의 해상도가 같으면 1.0)
-    핵심부 간격(med − q)이 MAX_CORE_GAP_MM 을 넘으면 None — 가장자리에 배경이 섞인 프레임이다.
-    """
-    cx, cy = corners.mean(axis=0) * scale
-    side = float(np.mean([np.linalg.norm(corners[i] - corners[(i + 1) % 4]) for i in range(4)])) * scale
-    half = max(2, int(side * DEPTH_INNER / 2.0))
-    r = roi_distance(depth_mm, int(cx) - half, int(cy) - half, int(cx) + half + 1, int(cy) + half + 1)
-    if r is None or (r['med'] - r['q']) > MAX_CORE_GAP_MM:
-        return None
-    return r
-
-
-def radial_from_depth(z_depth, tvec):
-    """depth 의 광축 방향 거리 → 카메라→마커 직선거리. 방향은 pnp 의 tvec 에서 가져온다."""
-    return float(z_depth * np.linalg.norm(tvec) / tvec[2])
-
-
-def calibrated_depth(z_raw, k=0.0, scale=1.0):
-    """센서 depth 원값(m) → 보정 거리(m).   z = scale / (1/z_raw + k),  k 단위 1/m
-
-    스테레오는 시차(disparity)로 거리를 내므로 정합·캘리브레이션 오차는 거리가 아니라 **시차에 상수로**
-    붙는다. 시차 편향 Δd 는 역깊이 편향 k = Δd/(f·B) 가 되고, 거리 오차는 z² 에 비례해 커진다.
-    그래서 배율 하나로는 가까운 곳과 먼 곳을 동시에 못 맞춘다 — robot3 줄자 4점(0.85~1.55 m)에서
-    배율 0.972 는 1.55 m 를 +3.0 cm 로 냈고, k=0.024 하나는 전부 1.5 cm 안에 넣었다 (9/8 실측).
-    k 는 로봇마다 다르다 (perception.yaml /robotN/**). scale 은 보통 1.0 — 시차 편향으로 설명이
-    안 되는 원인이 따로 있을 때만 쓴다. Kn1_mini 의 correct_depth 가 같은 꼴(1/(A/z+B))이다.
-    """
-    return float(scale / (1.0 / float(z_raw) + k))
 
 
 def rvec_to_quat(rvec):
