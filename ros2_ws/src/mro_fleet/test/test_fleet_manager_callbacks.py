@@ -870,3 +870,34 @@ def test_failed_mission_state_can_receive_later_shuttle_progress():
     )
 
     assert fake.robot['/robot3']['mission_state'] == Mission.WAITING
+
+
+def test_extra_fleet_status_publisher_is_reported():
+    """관제가 두 벌 떠 있으면 화면에 띄울 경고를 남긴다 (I-054)."""
+    manager = SimpleNamespace(duplicate_monitor_warning='')
+    fake = SimpleNamespace(
+        robot_namespaces=['/robot3', '/robot8'],
+        robot_state_manager=manager,
+        count_publishers=lambda _topic: 4,
+        get_logger=lambda: FakeLogger(),
+    )
+
+    FleetManager._check_duplicate_monitor(fake)
+
+    assert '4 개' in manager.duplicate_monitor_warning
+    assert 'I-054' in manager.duplicate_monitor_warning
+
+
+def test_expected_publisher_count_is_not_reported():
+    """자기 인스턴스 발행분만 있으면 경고를 지운다 (I-054)."""
+    manager = SimpleNamespace(duplicate_monitor_warning='이전 경고')
+    fake = SimpleNamespace(
+        robot_namespaces=['/robot3', '/robot8'],
+        robot_state_manager=manager,
+        count_publishers=lambda _topic: 2,
+        get_logger=lambda: FakeLogger(),
+    )
+
+    FleetManager._check_duplicate_monitor(fake)
+
+    assert manager.duplicate_monitor_warning == ''
