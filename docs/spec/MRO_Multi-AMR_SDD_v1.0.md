@@ -50,25 +50,25 @@ PC 5대와 로봇 2대가 PC-F 의 단일 offboard Discovery Server(ID 1, `192.1
 ### 2.1 고레벨 아키텍처 다이어그램
 
 ```
- Wi-Fi SSID turtle08 / ROS_DOMAIN_ID = 3
+                      Wi-Fi  SSID turtle08  /  ROS_DOMAIN_ID = 3
  ┌──────────────┬──────────────┬────────────────────────┬───────────────┬───────────────┐
- │ [PC-W1] │ [PC-W2] │ [PC-F] 192.168.108.41 │ [PC-R3] │ [PC-R8] │
- │ Ubuntu 24.04 │ Ubuntu 24.04 │ Ubuntu 24.04 / Jazzy │ Jazzy + GPU │ Jazzy + GPU │
- │ Jazzy │ Jazzy │ ★ Discovery Server │ localization │ localization │
- │ mro_webcam │ mro_webcam │ ID 1 :11811 │ nav2 · RViz │ nav2 · RViz │
- │ webcam_ │ webcam_hint │ mro_fleet + SQLite │ mro_perception│ mro_perception│
- │ register │ (재탐지 힌트)│ Flask control_ui │ mro_navigation│ mro_navigation│
- │ SUPER_CLIENT │ SUPER_CLIENT │ kpi_logger │ ns=/robot3 │ ns=/robot8 │
- │ = False │ = False │ │ │ │
+ │ [PC-W1]      │ [PC-W2]      │ [PC-F]  192.168.108.41 │ [PC-R3]       │ [PC-R8]       │
+ │ Ubuntu 24.04 │ Ubuntu 24.04 │ Ubuntu 24.04 / Jazzy   │ Jazzy + GPU   │ Jazzy + GPU   │
+ │ Jazzy        │ Jazzy        │ ★ Discovery Server     │ localization  │ localization  │
+ │ mro_webcam   │ mro_webcam   │   ID 1  :11811         │ nav2 · RViz   │ nav2 · RViz   │
+ │ webcam_      │ webcam_hint  │ mro_fleet + SQLite     │ mro_perception│ mro_perception│
+ │  register    │ (재탐지 힌트)  │ Flask control_ui       │ mro_navigation│ mro_navigation│
+ │ SUPER_CLIENT │ SUPER_CLIENT │ kpi_logger             │ ns=/robot3    │ ns=/robot8    │
+ │  = False     │  = False     │                        │               │               │
  └──────┬───────┴──────┬───────┴───────────┬────────────┴───────┬───────┴───────┬───────┘
- └──────────────┴──── ROS_DISCOVERY_SERVER=";192.168.108.41:11811" ──────┘
- │
- ┌──────────────────┴──────────────────┐
- [robot3 TurtleBot4] [robot8 TurtleBot4]
- RPi4 / Jazzy RPi4 / Jazzy
- create3 · depthai(OAK-D) · rplidar (동일)
- onboard Discovery ID 3 (유지, 미사용) onboard ID 8 (유지, 미사용)
- Offboard IP → 192.168.108.41 Offboard IP → 192.168.108.41
+        └──────────────┴──── ROS_DISCOVERY_SERVER=";192.168.108.41:11811" ──────┘
+                                           │
+                        ┌──────────────────┴──────────────────┐
+                   [robot3 TurtleBot4]                  [robot8 TurtleBot4]
+                    RPi4 / Jazzy                         RPi4 / Jazzy
+                    create3 · depthai(OAK-D) · rplidar    (동일)
+                    onboard Discovery ID 3 (유지, 미사용)  onboard ID 8 (유지, 미사용)
+                    Offboard IP → 192.168.108.41          Offboard IP → 192.168.108.41
 ```
 
 **핵심:** 디스커버리 트래픽만 PC-F 를 경유하고, **토픽 데이터는 노드 간 P2P** 로 흐른다. 로봇 온보드 서버는 남겨두되 PC 쪽 `ROS_DISCOVERY_SERVER` 에 넣지 않는다 — RPi 가 디스커버리 허브를 겸하던 부하 문제(Q-24)가 이 구조로 사라진다.
@@ -652,10 +652,10 @@ gap 이 반씩 줄어 하한에서 저절로 끝나기 때문이다. 멀리서 �
 
 ```
 Nav2 최종 출력 ──▶ cmd_vel_navigation ─┐
-추종 탐색 회전 ──▶ cmd_vel_search ─────┴─▶ safety_watchdog ──▶ cmd_vel ──▶ 로봇
- ▲
- /scan · odom · dock_status
- safety/paused/<노드> (정지 확인)
+추종 탐색 회전 ──▶ cmd_vel_search  ─────┴─▶ safety_watchdog ──▶ cmd_vel ──▶ 로봇
+                                            ▲
+                                    /scan · odom · dock_status
+                                    safety/paused/<노드> (정지 확인)
 ```
 
 발행자를 하나로 모은 이유 — estop 중에 외부 명령을 통과시키는 방식이면 **estop 을 무시한 노드가 로봇을

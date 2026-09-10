@@ -108,14 +108,19 @@ while(i<md.length){
     buf.forEach(t=>children.push(new Paragraph({
       spacing:{before:0,after:0,line:230},
       shading:{type:ShadingType.CLEAR,fill:'F4F6F8'},
-      children:[new TextRun({text:t||' ',font:MONOBLK,size:15})]})));
+      children:[new TextRun({text:(t||' ').replace(/ /g,'\u00A0'),font:MONOBLK,size:15})]})));   // 공백 → NBSP: HTML 계열 뷰어가 연속 공백을 접어도 도식 정렬이 유지된다
     children.push(new Paragraph({spacing:{after:140},children:[]}));
     continue;
   }
 
-  if(/^#{1,4} /.test(line)){
+  if(/^#{1,6} /.test(line)){
     const lv=line.match(/^#+/)[0].length;
     const txt=line.replace(/^#+\s*/,'');
+    if(lv>=5){   // h5·h6 — 번호 없는 소소제목: 굵은 문단으로 (목차·아웃라인에는 넣지 않는다)
+      children.push(new Paragraph({spacing:{before:200,after:80},keepNext:true,
+        children:runs(txt,{size:21,bold:true,color:'12294D'})}));
+      i++; continue;
+    }
     const H=[HeadingLevel.TITLE,HeadingLevel.HEADING_1,HeadingLevel.HEADING_2,HeadingLevel.HEADING_3][lv-1];
     children.push(new Paragraph({heading:H,
       spacing:{before:lv===1?0:(lv===2?320:240),after:lv===1?80:140},
@@ -145,7 +150,7 @@ while(i<md.length){
   }
 
   // 이어지는 줄인가 — 표·제목·인용·구분선·목록·코드블록의 시작이 아니면 앞 문단에 붙는다
-  const cont=t=>t!==undefined && t.trim()!=='' && !/^\|/.test(t) && !/^#{1,4} /.test(t)
+  const cont=t=>t!==undefined && t.trim()!=='' && !/^\|/.test(t) && !/^#{1,6} /.test(t)
       && !/^>\s?/.test(t) && !/^---+\s*$/.test(t) && !/^\s*[-*] /.test(t) && !/^```/.test(t) && !/^\s*\d+[.)]\s/.test(t);
 
   if(/^\s*\d+[.)]\s/.test(line)){
