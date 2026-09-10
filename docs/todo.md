@@ -5,21 +5,20 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 117/190 완료** (████████████░░░░░░░░)  ·  기준 09/10
+**전체 118/190 완료** (████████████░░░░░░░░)  ·  기준 09/10
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 7/9 | `████████░░` | — |
-| mro_perception [인지 — 정정인, 민범진] | 17/29 | `██████░░░░` | **10** |
+| mro_perception [인지 — 정정인, 민범진] | 18/29 | `██████░░░░` | **9** |
 | mro_webcam [웹캠 — 한세교, 김학민] | 24/34 | `███████░░░` | **6** |
 | mro_navigation [주행 — 박병후, 이시율] | 45/86 | `█████░░░░░` | **25** |
 | mro_fleet [관제 — 김민준] | 14/19 | `███████░░░` | **4** |
 | mro_bringup [PM 김병직] | 10/13 | `████████░░` | **1** |
 
-**마감이 지난 항목 46건**
+**마감이 지난 항목 45건**
 
 - `9/9` mro_perception — robot8 TS-U05 독립 점 1개 (I-031) — depth_k 0.028 은 줄자 3점을 전부 적합에 썼다. 유일한 검…
-- `9/9` mro_perception — show_window 기본값을 false 로 (I-043) — robot.launch.py 가 perception.yaml 을 …
 - `9/9` mro_perception — robot3 실기 재확인 (PR #50 후속) — depth_wait_s 를 0.08 → 0.25 로 3배 올린 것이 robot…
 - `9/9` mro_perception — perception.yaml 에 k 검증 범위를 적는다 (PR #43 후속) — k 를 편 범위는 보정값 0.843~1.565 …
 - `9/9` mro_perception — calibrated_depth 가 depth_min 게이트에 의존한다 (PR #43 후속) — z_raw 로 나누므로 게이트가 …
@@ -104,7 +103,7 @@
 ## mro_perception [인지 — 정정인, 민범진]
 - [ ] **robot8 TS-U05 독립 점 1개 (I-031)** — `depth_k` 0.028 은 줄자 3점을 **전부 적합에 썼다.** 유일한 검증점이 「약 1.30 m」(줄자 불확실) +3.42 cm 다. pnp 로 검증하면 자기 검증이 된다(robot8 pnp 가 −2.4~−4.3 % 치우침). **그때까지 FR-35 는 이 값을 신뢰하지 않는다** · 마감 9/9
 - [ ] **`tools/aruco_offline_check.py` 상수를 robot8 값으로 (I-031)** — **값은 9/9 에 받았다 (PR #74)**: `fx = fy 566.0106 · cx 352.383 · cy 367.613` (704×704). robot3 566.654 와 **0.11 % 차**. **아직 못 닫는 이유 — 왜곡계수 `D` 8개가 안 왔다.** 도구는 `K_INFO` 와 `D` 를 같이 쓰므로 K 만 바꾸면 robot4 왜곡으로 robot8 을 렌더한다. `ros2 topic echo /robot8/oakd/rgb/camera_info --once` 의 `d` 배열만 더 받으면 끝난다. **곁가지로 확인된 것**: `cx` 는 704/2 에서 0.4 px 라 가로 16/9 crop 전제가 성립하고 `camera_fx_scale` 1.7778 을 유지해도 된다. 반면 **`cy` 367.613 은 15.6 px 아래로 치우쳤다** — 정사각 crop 이 세로로는 가운데가 아니다. 세로 오차는 기운각·법선 추정에 들어가므로 I-039(pnp 실효계수 요동)와 같이 볼 값이다 · 마감 9/11
-- [ ] **`show_window` 기본값을 `false` 로 (I-043)** — `robot.launch.py` 가 `perception.yaml` 을 모든 로봇에 넘긴다. SSH 로만 붙은 PC 가 하나라도 있으면 회차가 통째로 날아간다. 웹캠 쪽은 이미 `false` 다 · 마감 9/9
+- [x] **`show_window` 기본값을 `false` 로 (I-043)** — `robot.launch.py` 가 `perception.yaml` 을 모든 로봇에 넘긴다. SSH 로만 붙은 PC 가 하나라도 있으면 회차가 통째로 날아간다. 웹캠 쪽은 이미 `false` 다 · 마감 9/9  **→ 완료 9/10 (PR #75) — yaml 과 노드 모듈 기본값 둘 다. `ros2 run` 은 yaml 을 안 받고 그것이 곧 SSH 시험 경로라 한쪽만 고치면 안 됐다. `DISPLAY` 없는 환경에서 기본값 정상 기동·`true` 는 Aborted 재현 확인. PM 확인: 런치가 딕셔너리로 덮지 않아 이 값이 실제로 닿는다 — 웹캠 `webcam.yaml` 과 구조가 다르다**
 - [ ] **robot3 실기 재확인 (PR #50 후속)** — `depth_wait_s` 를 0.08 → 0.25 로 3배 올린 것이 robot3 발행 주기에 영향 없는지. robot3 은 마커가 시야에 없어 미확인이다 · 마감 9/9
 - [x] **TS-U05 독립 점 1개 (I-031 마무리)** — 완료 9/8 (PR #43). 배율 모델이 1.55 m 에서 3.0 cm 틀려 **역깊이(시차 편향) 보정**으로 교체. 독립점 1.19 m 에서 −0.5 cm. PM 재적합 확인 — 배율은 어떻게 펴도 최선이 1.9~2.1 cm 라 모델 꼴 문제였다. **robot8 독립점은 카메라 올라온 뒤** (9/8 기체 교체로 2호기 보정은 원점)
 - [x] `core/aruco.py` ROS 비의존 — 완료 9/8 (PR #43). `depth_distance` 의 ROS import 를 뷰어 노드 전용 try/except 로. PM 확인: `AMENT_PREFIX_PATH` 빈 셸에서 `rclpy` 미적재 · 단위 시험 18/18
