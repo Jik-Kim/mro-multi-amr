@@ -11,9 +11,9 @@ import threading
 from ament_index_python.packages import get_package_share_directory
 
 from mro_fleet.core.db import FleetDB
-from mro_fleet.nodes.MonitorWebApp import MonitorWebApp
-from mro_fleet.nodes.fleet_client import FleetUICommands
-from mro_fleet.nodes.robot_control_node import DEFAULT_ROBOTS
+from mro_fleet.nodes.fleet_ui_commands import FleetUICommands
+from mro_fleet.nodes.monitor_web_app import MonitorWebApp
+from mro_fleet.nodes.robot_status import DEFAULT_ROBOTS, FLEET_STATUS_TOPIC
 from mro_fleet.nodes.robot_state_manager import RobotStateManager
 
 from mro_interfaces.msg import (
@@ -154,6 +154,8 @@ class FleetManager(Node):
             callback_group=self.manual_pair_service_group,
         )
         self.create_timer(1.0, self._mark_overdue_missions)
+        # 첫 판정은 10 초 뒤 — 그 전에는 디스커버리가 덜 끝나 발행자가 덜 보인다.
+        self.create_timer(10.0, self._check_duplicate_monitor)
 
     def _record_intervention_event(self, message):
         """개입 메시지의 원 시각과 내용을 SQLite 이벤트로 기록한다."""
@@ -330,6 +332,32 @@ class FleetManager(Node):
         message.state = state
         message.note = row['note'] or ''
         self.pub_mission.publish(message)
+
+    def _check_duplicate_monitor(self):
+        """관제가 두 벌 떠 있는지 보고 조용히 틀리지 않게 한다 (I-054).
+
+        ``/fleet/status`` 는 전역 토픽이라 다른 PC 의 관제도 **같은 robot_ns 로**
+        발행한다. 받는 쪽은 나중에 온 것을 그대로 쓰므로, 이쪽이 amcl 에서 막 받은
+        pose 가 저쪽 값에 1 초 안에 덮인다. 값 자체는 늘 그럴듯해서 화면만 보면
+        무엇이 틀렸는지 알 수 없다 — 그래서 세어서 말해 준다.
+
+        기대 발행자 수는 이 프로세스의 ``RobotStatus`` 개수, 즉 로봇 수다.
+        """
+        expected = len(self.robot_namespaces)
+        found = self.count_publishers(FLEET_STATUS_TOPIC)
+        manager = getattr(self, 'robot_state_manager', None)
+        if found <= expected:
+            if manager is not None:
+                manager.duplicate_monitor_warning = ''
+            return
+        warning = (
+            f'{FLEET_STATUS_TOPIC} 발행자가 {found} 개다 (이 관제가 내는 것은 '
+            f'{expected} 개) — 다른 PC 에서 관제가 함께 돌고 있다. 두 인스턴스가 '
+            f'서로의 로봇 상태를 덮어쓴다. 관제는 한 대에서만 띄운다 (I-054)'
+        )
+        if manager is not None:
+            manager.duplicate_monitor_warning = warning
+        self.get_logger().error(warning)
 
     def _mark_overdue_missions(self):
         """T_lim을 넘긴 미도착 미션을 실패 처리하되 운행은 유지한다."""

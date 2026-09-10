@@ -208,8 +208,15 @@ class MonitorWebApp:
         return jsonify(ok=accepted, message=reason)
 
     def get_robot_status(self):
-        """로봇별 최신 상태를 JSON으로 보여준다."""
-        return jsonify(self._robot_status_snapshot())
+        """로봇별 최신 상태와 관제 자체의 경고를 JSON으로 보여준다."""
+        payload = dict(self._robot_status_snapshot())
+        # 로봇 키(`/robotN`)와 섞이지 않도록 밑줄로 시작하는 이름을 쓴다.
+        payload['_monitor'] = {
+            'duplicate_warning': getattr(
+                self.robot_state_manager, 'duplicate_monitor_warning', ''
+            ),
+        }
+        return jsonify(payload)
 
     def get_map_metadata(self):
         """맵 좌표 변환에 필요한 메타데이터와 도크 위치를 보여준다."""

@@ -117,10 +117,10 @@ ros2 launch mro_bringup webcam2_pc.launch.py
 
 웹캠 PC 는 주로 **발행만** 하므로 `ROS_SUPER_CLIENT=False` 로 띄워 디스커버리 부하를 줄인다. 띄운 뒤 `/webcam1/worker_descriptor`, `/webcam2/target_hint` 가 로봇·관제에서 보이는지 확인할 것.
 
-웹캠2 압축 영상의 수신률·대역폭·발행→구독 지연을 확인할 때는 PC-W2와 같은 ROS 환경에서 아래 측정 노드를 실행한다. 출력에는 FPS, Mbps, 지연 평균·p95·최대와 2초 이상 수신 중단 경고가 포함된다. 동일한 `webcam_hint`를 둘 이상 띄우면 각 노드가 같은 토픽에 10 Hz씩 발행해 측정값이 합산되므로 먼저 중복 노드가 없는지 확인한다.
+웹캠2 압축 영상의 수신률·대역폭·발행→구독 지연을 확인할 때는 PC-W2와 같은 ROS 환경에서 아래 진단 도구를 실행한다 (`ros2 run` 진입점이 아니라 `tools/` 의 스크립트다 — 이름이 단위 시험처럼 읽혀 9/10 에 옮겼다). 출력에는 FPS, Mbps, 지연 평균·p95·최대와 2초 이상 수신 중단 경고가 포함된다. 동일한 `webcam_hint`를 둘 이상 띄우면 각 노드가 같은 토픽에 10 Hz씩 발행해 측정값이 합산되므로 먼저 중복 노드가 없는지 확인한다.
 
 ```bash
-ros2 run mro_webcam test_subscription \
+python3 tools/diag_webcam2_image.py \
   --ros-args -p show_window:=false -p log_interval_s:=5.0
 ```
 
@@ -131,6 +131,22 @@ ros2 launch mro_bringup fleet_pc.launch.py     # http://localhost:5000, kpi_logg
                                                #   로봇 명단은 params/fleet.yaml 의 robot_namespaces
 # 한 번만 다른 명단으로 띄울 때 (파일은 그대로 두고)
 ros2 launch mro_bringup fleet_pc.launch.py robots:="[/robot3,/robot8,/robot9]"
+```
+
+**관제는 한 대에서만 띄운다 (I-054).** `/fleet/status` 는 네임스페이스 없는 전역 토픽이라, 두 대에서
+띄우면 두 인스턴스가 **같은 `robot_ns` 로** 1 Hz 씩 발행하고 받는 쪽은 나중에 온 것을 쓴다. 화면 값이
+1 초마다 두 관제 사이를 오가는데 **값 자체는 늘 그럴듯해서 무엇이 틀렸는지 알 수 없다.** 로봇 쪽의
+「Nav2 launch 는 로봇당 한 PC 에서만」과 같은 종류의 규칙이다.
+
+9/10 부터 `fleet_manager` 가 기동 10 초 뒤부터 `/fleet/status` 발행자 수를 세어, 자기가 내는 수보다
+많으면 화면 위에 빨간 배너를 띄우고 로그에 `ERROR` 를 남긴다. **배너가 보이면 다른 PC 의 관제를 먼저
+내린다.** 검증하느라 굳이 두 대를 띄워야 하면 한쪽을 격리한다:
+
+```bash
+ros2 run mro_fleet fleet_manager_node --ros-args \
+  --params-file install/mro_bringup/share/mro_bringup/params/common.yaml \
+  --params-file install/mro_bringup/share/mro_bringup/params/fleet.yaml \
+  -r /fleet/status:=/fleet/status_isolated
 ```
 
 ## 안 될 때

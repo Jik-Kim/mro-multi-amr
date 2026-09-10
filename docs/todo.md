@@ -5,26 +5,24 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 121/189 완료** (█████████████░░░░░░░)  ·  기준 09/10
+**전체 131/201 완료** (█████████████░░░░░░░)  ·  기준 09/10
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 7/9 | `████████░░` | — |
-| mro_perception [인지 — 정정인, 민범진] | 21/28 | `████████░░` | **5** |
-| mro_webcam [웹캠 — 한세교, 김학민] | 24/34 | `███████░░░` | **6** |
-| mro_navigation [주행 — 박병후, 이시율] | 45/86 | `█████░░░░░` | **25** |
-| mro_fleet [관제 — 김민준] | 14/19 | `███████░░░` | **4** |
+| mro_perception [인지 — 정정인, 민범진] | 23/28 | `████████░░` | **4** |
+| mro_webcam [웹캠 — 한세교, 김학민] | 28/34 | `████████░░` | **5** |
+| mro_navigation [주행 — 박병후, 이시율] | 46/92 | `█████░░░░░` | **25** |
+| mro_fleet [관제 — 김민준] | 17/25 | `███████░░░` | **4** |
 | mro_bringup [PM 김병직] | 10/13 | `████████░░` | **1** |
 
-**마감이 지난 항목 41건**
+**마감이 지난 항목 39건**
 
 - `9/9` mro_perception — mro_perception flake8 정리 — main 55건 → PR #40 으로 80건 → 9/9 실측 156건(99자 기…
 - `9/8` mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - `9/8` mro_perception — TS-U05 줄자 대조 — target/distance 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오…
 - `9/9` mro_perception — 시험 절차 — 대기공간 로봇이 서향이므로 S5 페어링 때 RC카를 로봇 정면(서쪽)으로 돌아 들어오게 조종 (FR-14 정면 1…
-- `9/8` mro_perception — reid_threshold 확정 — 같은/다른 인형 유사도 분포를 그려 결정 (SOT Q-13). 추출 영역이 인형 전체라 다른…
 - `9/9` mro_webcam — /webcam2/image_raw/compressed 를 오버레이로 통일 (I-042) — 지금은 오버레이와 원본이 섞여 나가고…
-- `9/9` mro_webcam — test_subscription 을 tools/ 로 (PR #48 후속) — setup.py 콘솔 진입점으로 등록돼 ros2 r…
 - `9/8` mro_webcam — 웹캠2 캡처 fps 실측 — webcam.yaml 의 webcam_hint.fps: 30.0 은 장치 사양 가정이고 실측 기록이…
 - `9/8` mro_webcam — 웹캠2 호모그래피 재검증 (I-002 · TS-U02) — 재캘리 완료(PR #32: LiDAR 중심 AMCL 13점, RMSE…
 - `9/8` mro_webcam — webcam_hint_node.py: YOLO 타이머 재진입 차단 (I-027) — 개별 MutuallyExclusiveCall…
@@ -60,22 +58,19 @@
 - `9/8` mro_fleet — fleet_manager_node.py: aruco/id·aruco/distance 구독 → ID 4 수신 시 |amcl_pos…
 - `9/8` mro_bringup — v_max 0.3 m/s 와 Nav2 max_vel_x 0.26 충돌 정리 — 계약이 0.3 이라고 적었으니 Nav2 쪽을 맞춘…
 
-**오늘 마감 19건**
+**오늘 마감 16건**
 
-- mro_interfaces — 계약 v1.20 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤) — 신규 토픽 safety/state(STOPPING/…
+- mro_interfaces — 계약 v1.22 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤) — 신규 토픽 safety/state(STOPPING/…
 - mro_interfaces — docs/setup.md:92 의 nav2 런치 줄 (I-049 후속) — turtlebot4_navigation/nav2.la…
-- mro_perception — camera_fx_scale 1.7778 → 1.8336 PM 승인 · 민범진 통보 — 근거는 줄자다 (체커보드는 재현성 8 %…
 - mro_perception — FR-13 실기 확인 (인지↔관제 합동) — 인형이 보이는 상태로 GATE_FAIL 30 s → 관제 버튼 → 수락까지 한 번에…
-- mro_webcam — webcam_hint 의 target_classes 를 yaml 로 (PR #62 후속) — webcam_hint 의 코드 전용…
-- mro_webcam — webcam.yaml 의 show_window 줄 삭제 (PR #65 후속) — launch 가 yaml 뒤에 딕셔너리로 넘겨 …
 - mro_webcam — mro_webcam flake8 — 9/9 실측 365건 (등록 시 345건) — 이번 PR 탓은 아니지만 이 정도면 아무도 이…
 - mro_navigation — T_lim 120 s 실측 확정 (BRD Q-14) — 오늘 오전 중 — 새 축소 아레나 동선에서 요청 접수 → 대기공간(Z-0…
 - mro_navigation — 웹캠2 힌트 발행이 48 s 끊긴 사유 (I-050 곁가지) — follow_0909_1609 에서 10 Hz 로 오다 48.0…
 - mro_navigation — bag 기록 목록에 target/worker_id 를 넣는다 — hint_bearing() 이 이 값으로 남의 작업자 힌트를 거…
 - mro_navigation — estop 탈출 회전을 워치독이 직접 만든다 (I-049, 상) — PM 승인 완료 9/9 — 1차 SAFE_ROTATE(병진 …
 - mro_navigation — 회전 과도 9~34° 를 없앤다 (I-051) — odom 이 늦게 와서 이미 지나친 뒤에 멈춘다. 초과분은 상수가 아니라 그때…
-- mro_navigation — DriveOnHeading 오버슛 6.8 cm 보정 — TS-07 전 1순위 (I-044 후속) — 지금 베이에 서는 자리가 b…
 - mro_navigation — R2 xy_goal_tolerance 0.25 → 0.10 은 이미 실패한 값이다 (PR #74 계획 재검토) — I-029 에…
+- mro_navigation — 베이 마커 세 장의 흰 여백을 눈으로 확인 (I-052, 상) — TS-07 전 — 여백 없이 벽에 바로 붙으면 거리가 18~2…
 - mro_navigation — safety_watchdog 에 네임스페이스 가드 (I-048) — 나머지 셋(:178·:114·:82)에는 있고 안전 노드에만…
 - mro_navigation — 주행 README 의 불변식에 I-033 을 밝힌다 (PR #64 후속) — 「요청한 토큰은 모든 종료 경로에서 반납한다」가 지…
 - mro_navigation — docs/diagrams/README.md 목록에 navigation_review_flow.drawio 추가 (PR #64 후속…
@@ -87,7 +82,7 @@
 <!-- STATS:END -->
 
 ## mro_interfaces [PM 김병직]
-- [ ] **계약 v1.20 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤)** — 신규 토픽 `safety/state`(`STOPPING/SAFE_ROTATE/CLEAR/STUCK`)·`safety/paused/<주행 노드>` 를 4절에 넣고, **`cmd_vel` 행의 발행자를 「safety_watchdog 단독」으로** 고친다 (v1.13 이 「safety_watchdog, Nav2, follow_target」로 적어 두었다). `approach/status` 8개 값은 안 건드린다. **PR 을 보고 쓴다** — 미리 쓰면 구현과 어긋난다 · 마감 9/10
+- [ ] **계약 v1.22 — 워치독 출력 권한 분리 (I-049, 주행 PR 뒤)** — 신규 토픽 `safety/state`(`STOPPING/SAFE_ROTATE/CLEAR/STUCK`)·`safety/paused/<주행 노드>` 를 4절에 넣고, **`cmd_vel` 행의 발행자를 「safety_watchdog 단독」으로** 고친다 (v1.13 이 「safety_watchdog, Nav2, follow_target」로 적어 두었다). `approach/status` 8개 값은 안 건드린다. **PR 을 보고 쓴다** — 미리 쓰면 구현과 어긋난다 · 마감 9/10
 - [ ] **`docs/setup.md:92` 의 nav2 런치 줄 (I-049 후속)** — `turtlebot4_navigation/nav2.launch.py` → `safety_nav2.launch.py`. 주행 PR 에 포함해 달라고 요청했으나 빠지면 머지 때 PM 이 고친다 · 마감 9/10
 - [x] **계약 v1.17** — `ARRIVED` 도 발행되지 않는다(`APPROACH_2` 와 하나의 같은 사실). **값 목록은 8개 그대로**임을 못박아 관측 사실이 계약 축소로 읽히지 않게 했다 (PR #67 후속) · 마감 9/9
 - [x] **계약 v1.13** — `aruco/pose` 비준(회전은 정렬에 쓰지 않는다) · ArUco 발행 한계 2.0 / 수용 조건 1.5 분리 · `cmd_vel` 에 `follow_target` 추가와 estop 전진만 차단 (I-036) · 마감 9/8
@@ -99,7 +94,7 @@
 
 ## mro_perception [인지 — 정정인, 민범진]
 - [x] **robot8 fx 재확인 — 마커 흰 여백부터 (I-031)** — robot8 이 ID 2·3 에서 최대 −16 % 짧게 나오고 검출도 깜빡였다. 카메라를 의심했으나 **원인은 마커였다** — 벽에 바로 붙여 흰 여백이 없으니 검은 테두리가 벽 경계선과 이어져 ⓐ 윤곽이 사각형으로 안 잡히고 ⓑ 서브픽셀 보정이 꼭짓점을 바깥으로 끌어 사각형이 커졌다(커지면 거리가 가까워진다). **재투영 오차는 0.01 px 로 깨끗해 지표로 안 걸렸다.** 흰 배경 3~5 cm 를 붙이자 검출 100 %, `implied marker` 11.6 → 9.8~10.6 cm, 줄자 0.980/1.265/1.530 m 에서 +0.5/+1.2/+3.2 cm — 운용 구간(0.9~1.5 m) 판정 기준 10 cm 의 1/3 안. **robot8 fx 정상 · 체커보드 재촬영 불필요.** 계약 6절이 요구하는 여백(한 칸 이상 ≈ 2 cm)이 이것이다 · 마감 9/10
-- [ ] **`camera_fx_scale` 1.7778 → 1.8336 PM 승인 · 민범진 통보** — **근거는 줄자다** (체커보드는 재현성 8 % 로 소수점을 못 정한다 — I-031). robot3 5점(0.575~1.455 m) 1.7 cm 안 · robot8 3점 3.2 cm 안. **`amr_detection` 의 `target/map_point` 좌우 성분이 +3.1 % 이동하므로** 짝(민범진)에게 먼저 알리고 PM 승인을 받는다. `target/distance`(depth)는 영향 없다 · 마감 9/10
+- [x] **`camera_fx_scale` 1.7778 → 1.8336 PM 승인 · 민범진 통보** — **근거는 줄자다** (체커보드는 재현성 8 % 로 소수점을 못 정한다 — I-031). robot3 5점(0.575~1.455 m) 1.7 cm 안 · robot8 3점 3.2 cm 안. **`amr_detection` 의 `target/map_point` 좌우 성분이 +3.1 % 이동하므로** 짝(민범진)에게 먼저 알리고 PM 승인을 받는다. `target/distance`(depth)는 영향 없다 · 마감 9/10  **→ 승인 9/10 (PR #76 머지). PM 검산: PR 본문의 「좌우 성분을 3.1 % 키운다」는 부호·크기가 다르다 — `x = (u−cx)·z/fx` 라 좌우는 3.04 % **줄고**, 화면 안 최대 좌우가 `z·tan(18.7°)` 로 묶여 1.1 m 에서 최악 1.13 cm 다. 수평시야 38.5 → 37.4° 로 `search_step_deg` 20° 는 여전히 유효**
 - [x] **`tools/checker_calib.py` 에 재현성 검증 추가** — RMS 만 보면 속는다. RMS 는 **오차 큰 사진을 자동으로 뺀 뒤**의 값이라 서로 말이 맞는 사진만 골라내면 좋아 보인다 (robot3 은 그 과정에서 RMS 가 0.73 → 0.31 로 좋아지는 동안 fx 가 1035 → 1096 으로 5.8 % 움직였다). 사진을 홀수/짝수로 갈라 풀고 20장씩 무작위로 12번 더 풀어 폭을 잰다 (합격선 2 % = 1.5 m 에서 3 cm). 실측 robot3 8.2 % · robot8 8.7 % — **둘 다 초과라 체커보드 값은 후보로만 두고 줄자로 확정한다.** `show` 의 결론도 그 판정을 따른다 · 마감 9/11
 - ~~**robot8 TS-U05 독립 점 1개 (I-031)** — `depth_k` 0.028 은 줄자 3점을 **전부 적합에 썼다.** 유일한 검증점이 「약 1.30 m」(줄자 불확실) +3.42 cm 다. pnp 로 검증하면 자기 검증이 된다(robot8 pnp 가 −2.4~−4.3 % 치우침). **그때까지 FR-35 는 이 값을 신뢰하지 않는다** · 마감 9/9~~  **→ 취소 9/10 (`feature/aruco-pnp-only`) — `depth_k` 가 없어졌다.** 체커보드로 fx 를 실측해 depth 기준자 경로를 통째로 걷어냈다 (`marker_depth`·`radial_from_depth`·`calibrated_depth` 와 파라미터 7개 삭제). 완료가 아니라 **할 일 자체가 없어진 것**이라 체크박스를 뗀다 — 셈에서 빠진다
 - [x] **`tools/aruco_offline_check.py` 상수를 robot8 값으로 (I-031)** — **값은 9/9 에 받았다 (PR #74)**: `fx = fy 566.0106 · cx 352.383 · cy 367.613` (704×704). robot3 566.654 와 **0.11 % 차**. **아직 못 닫는 이유 — 왜곡계수 `D` 8개가 안 왔다.** 도구는 `K_INFO` 와 `D` 를 같이 쓰므로 K 만 바꾸면 robot4 왜곡으로 robot8 을 렌더한다. `ros2 topic echo /robot8/oakd/rgb/camera_info --once` 의 `d` 배열만 더 받으면 끝난다. **곁가지로 확인된 것**: `cx` 는 704/2 에서 0.4 px 라 가로 16/9 crop 전제가 성립하고 `camera_fx_scale` 1.7778 을 유지해도 된다. 반면 **`cy` 367.613 은 15.6 px 아래로 치우쳤다** — 정사각 crop 이 세로로는 가운데가 아니다. 세로 오차는 기운각·법선 추정에 들어가므로 I-039(pnp 실효계수 요동)와 같이 볼 값이다 · 마감 9/11  **→ 완료 9/10 — 못 닫던 이유였던 왜곡계수 `D` 8개를 받았다** (`13.3801 −150.4605 0.0022977 0.0011334 541.2130 13.1323 −148.4299 533.8889`, rational_polynomial). K 와 D 를 한 짝으로 `CAMERAS` 에 넣고 `--robot` 으로 고르게 했다 — robot3 도 같이 넣어서 앞으로 남의 광학으로 합격을 매기는 일이 없다. 재실행: robot8 최대 1.1 cm · robot3 0.8 cm (계약 6절 조건 안). stereo 는 `frame_id` 가 rgb optical, K 동일, `D` 전부 0 — depth 를 RGB 에 정렬해 내보내므로 **정상이다**
@@ -119,7 +114,7 @@
 - [x] 데이터 수집·라벨링 (9/6 완료) · 마감 9/6
 - [x] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) — PR #19, yolo26s@640 · val mAP50-95 0.816 · 밝기 차 0.6 % (PM 체크포인트 대조 일치) · 마감 9/7
 - [x] **배포 PC 에서 `tools/bench_yolo.py` 로 `worker.pt` 10 Hz 확인** (PR #22 최저 사양 RTX 3060 track max 42.7 ms · PR #26 PC-W1 max 40.5 ms — nano 불필요, 실부하는 통합 9/9) — max 가 100 ms 넘으면 nano(`yolo26n`@640) 로 교체. PM 노트북 CPU 는 track 9 ms (PR #19) · 마감 9/8
-- [ ] **TS-U04 측면·후면** — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·`outfit_class` 유지 확인 (AC-10 근거, SDD 부록 B). 판정 기준은 SDD v0.10 · 마감 9/8
+- [ ] **TS-U04 측면·후면** — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·`outfit_class` 유지 확인 (AC-10 근거, SDD 부록 B). **판정 기준 9/10 인지팀 확정** — 방향별 유사도 최솟값을 표로 남기고 정면에서 `paired`=True 를 확인한다 (SDD FR-18). **`reid_threshold` 0.34 의 검증을 겸한다** — 측면·후면에서 같은 인형 유사도가 0.348 아래로 떨어지면 0.34 도 놓치기 시작한다 (README 5절 한계). **녹화 시 `/webcam1/worker_descriptor` 를 같은 bag 에 담는다** — 같은 시각·같은 조명의 짝이 생겨 한계 2개(날짜·조명 차이)가 사라진다 (인지팀 제안 9/10) · 마감 9/8
 - [x] `amr_detection_node.py`: `MODEL_PATH` → `worker.pt`, `DETECT_CLASS` → worker_a/b (이름으로 거른다, 인덱스 아님), **`ONLY_OUR_CAR` 흰차 필터 해제**, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9  **→ 완료 9/8 (PR #45)**
 - [x] `amr_detection_node.py`: RGB·depth 구독 QoS → `qos_profile_sensor_data` (계약 8절 — 발행자가 BEST_EFFORT 면 영상이 한 장도 안 온다) · `camera_info` K 를 `core/camera.corrected_K` 로 보정 (`target/map_point` 좌우 1.76 배, I-031) — PR #30 후속, 교체 PR 에 같이 · 마감 9/9  **→ 완료 9/8 (PR #45) — 렉의 주원인이었다**
 - [x] `amr_detection_node.py`: **`target/distance` 발행 (FR-29)** — 추종거리 판정의 기준값. kpi_logger 는 이미 구독 중이라 이것만 붙으면 AC-05 가 측정된다 · 마감 9/8  **→ 완료 9/8 (PR #45)**
@@ -129,14 +124,14 @@
 - [x] `aruco_detector_node.py`: 검출·거리 초안 · 마감 9/7
 - [x] `aruco_detector_node.py`: solvePnP 자세, 마커 ID 필터 — PR #30: solvePnP(IPPE_SQUARE) · `marker_ids` 허용 목록 · 거리 게이트 1.5 m · `camera_info` fx 16/9 보정 (I-031, PM 합성 재현: 보정 후 오차 ≤ 1.9 cm, 보정 없이 1.35 → 0.77 m) · 마감 9/8
 - [x] `core/reid.py` 단위 테스트 (같은 인형 ≥ threshold, 다른 인형 < threshold) · 마감 9/8  **→ 완료 9/8 (PR #45) — 11건**
-- [ ] `reid_threshold` 확정 — 같은/다른 인형 유사도 분포를 그려 결정 (SOT Q-13). 추출 영역이 인형 전체라 다른 인형끼리도 0.5 안팎에서 시작한다 · 마감 9/8
+- [x] ~~`reid_threshold` 확정 — 같은/다른 인형 유사도 분포를 그려 결정 (SOT Q-13)~~ · 마감 9/8  **→ 확정 9/10: `0.6` → `0.34`.** 웹캠1 실기동 화면(9/10)에서 등록 서술자를, AMR 화면녹화(9/8)에서 로봇 관측을 뽑아 **게이트가 실제로 하는 시점 건너는 비교**로 쟀다 — 같은 인형 min 0.348 · max 0.470, 다른 인형 max 0.361. **옛 값 0.6 은 같은 인형 최댓값보다 높아 자동 페어링이 한 번도 안 걸렸다** (등록 36개 전부 통과율 0 %). 근거·한계는 `mro_perception/README.md` 5절
 
 ## mro_webcam [웹캠 — 한세교, 김학민]
 - [ ] **`/webcam2/image_raw/compressed` 를 오버레이로 통일 (I-042)** — 지금은 오버레이와 원본이 섞여 나가고 받는 쪽이 구분할 수 없다. 원본 대체를 빼고 첫 검출 주기 전에는 발행하지 않는다 (PM 결정 9/8) · 마감 9/9
 - [x] **`hint_valid_s` 죽은 설정 정리 (I-047)** — `webcam_hint_node` 가 선언·검사만 하고 안 쓴다. `webcam.yaml` 주석은 「이 시간 지난 힌트는 쓰지 않는다」고 적혀 있어 만지면 「바꿨는데 안 변한다」가 된다. **지우는 쪽을 권한다** — 유효기간은 받는 쪽이 정하고 `common.yaml` 이 단일 출처가 된다 · 마감 9/10  **→ 완료 9/9 (PM 작업) — 웹캠팀이 판단을 위임해 지웠다. `common.yaml` 하나가 단일 출처**
-- [ ] **`test_subscription` 을 `tools/` 로 (PR #48 후속)** — `setup.py` 콘솔 진입점으로 등록돼 `ros2 run mro_webcam test_subscription` 으로 뜬다. 이름이 단위 시험처럼 읽히는데 진단 도구다. `tools/diag_lag.py` 가 선례 · 마감 9/9
-- [ ] **`webcam_hint` 의 `target_classes` 를 yaml 로 (PR #62 후속)** — `webcam_hint` 의 코드 전용 값 중 경로가 아닌 것은 이것 하나 남았다 (`homography_json`·`model_path` 는 launch 가 주는 경로라 대상이 아니다). **웹캠1(`webcam_register`)쪽 yaml 에는 이미 있다** (`webcam.yaml:10`) — 같은 개념인데 한쪽만 코드에 있다. 기본값 `["worker_a","worker_b"]` 그대로 한 줄 · 마감 9/10
-- [ ] **`webcam.yaml` 의 `show_window` 줄 삭제 (PR #65 후속)** — launch 가 yaml 뒤에 딕셔너리로 넘겨 **항상 덮으므로 그 줄은 이제 아무 일도 안 한다.** 값이 같아 지금은 무해하지만 시연하려고 `true` 로 고치면 안 바뀐다. `show_window` 는 「어떻게 접속해 띄우느냐」에 달린 값이라 launch 인자가 제 자리다 — yaml 이 갖지 않기로 한다 (오늘 셋째 사례: I-045·I-047 과 같은 유형) · 마감 9/10
+- [x] ~~**`test_subscription` 을 `tools/` 로 (PR #48 후속)**~~ · 마감 9/9  **→ 완료 9/10** — `tools/diag_webcam2_image.py` 로 옮기고 `setup.py` 콘솔 진입점을 지웠다. 이름도 하는 일(웹캠2 압축 영상 진단)에 맞췄다 — `tools/diag_lag.py` 선례. `docs/setup.md` 실행 안내도 같이 고쳤다
+- [x] ~~**`webcam_hint` 의 `target_classes` 를 yaml 로 (PR #62 후속)**~~ · 마감 9/10  **→ 완료 9/10** — `webcam.yaml` 의 `webcam_hint` 에 기본값 그대로 넣었다. 이제 같은 개념이 두 노드 모두 yaml 에 있다
+- [x] ~~**`webcam.yaml` 의 `show_window` 줄 삭제 (PR #65 후속)**~~ · 마감 9/10  **→ 완료 9/10** — `webcam_hint` 쪽 한 줄만 지웠다. **`webcam_register`(30행)는 남긴다** — `webcam1_pc.launch.py` 는 `show_window` 를 넘기지 않아 그 줄이 실제로 쓰이고 있다 (덮이는 것은 웹캠2 뿐이다)
 - [ ] **`mro_webcam` flake8 — 9/9 실측 365건** (등록 시 345건) — 이번 PR 탓은 아니지만 이 정도면 아무도 이 시험을 안 돌리고 있다는 뜻이다. `mro_perception` 도 비슷하다 · 마감 9/10
 - [ ] **웹캠2 캡처 fps 실측** — `webcam.yaml` 의 `webcam_hint.fps: 30.0` 은 장치 사양 가정이고 실측 기록이 없다. 웹캠1(Jieli)은 9/6 에 재서 25 로 확정했다. 두 캠이 같은 모델이면 30 이 아니라 25 다. `v4l2-ctl --list-formats-ext` 로 확인하고 다른 값이면 yaml 을 고친다 — 설계도는 이 파일을 읽어 그리므로 다시 생성만 하면 따라온다. 계약 4절이 '장치 상한 그대로' 라 동작에는 영향이 없다 (캡처 ≥ 발행 10 Hz) · 마감 9/8
 - [x] **새 아레나 호모그래피 (I-002)** — cam2 완료 (PR #9, AMCL 기준점 13개, RMSE 2.8 cm). **cam1 은 하지 않는다 (9/6)** — 웹캠1 은 등록만, map 좌표 없음 · 마감 9/6
@@ -145,7 +140,7 @@
 - [x] `webcam_register_node.py`: YOLO track ID, 복장 클래스, `hsv_hist` 서술자 → `WorkerDescriptor` 발행 (PR #6) · 마감 9/7
 - [x] `webcam_register_node.py`: `worker.pt` 교체 후 **TS-U01** (등록 ≤ 10 s, 2명 별개 ID) — PR #26 실기동: 등록 0.90 s · W1/W2 별개 · 재등록 15/15 (체류 시간은 Q-26 todo 별도) · 마감 9/8
 - [x] `webcam_register_node.py`: `mean_hist()` 스케일 정정 — 평균 뒤 **L2 정규화**로 바꿨다(`hsv_hist` 가 `cv2.normalize` 기본값 NORM_L2 라 L2=1 이다). 종전에는 합을 128 로 맞춰 발행 `color_hist` 의 L2 가 **31.6** 이었다. 유사도는 Bhattacharyya 척도 불변이라 영향 없음을 실측 확인(차이 5e-09) — 오늘 낸 측정값은 그대로 유효하다 (PR #26 PM 노트) · 마감 9/8
-- [ ] `webcam_hint_node.py`: `DEFAULT_MODEL_PATH` 를 `mro_perception/models/worker.pt` 로, `mro_webcam/models/best.pt` 사본 삭제 (단일 출처, PR #26 노트) · 마감 9/8  **→ 절반 (9/9 확인): `DEFAULT_MODEL_PATH` 는 `mro_perception/models/worker.pt` 로 됐으나 `mro_webcam/models/best.pt` 사본이 아직 남아 있다**
+- [x] ~~`webcam_hint_node.py`: `DEFAULT_MODEL_PATH` 를 `mro_perception/models/worker.pt` 로, `mro_webcam/models/best.pt` 사본 삭제 (단일 출처, PR #26 노트)~~ · 마감 9/8  **→ 완료 9/10** — 남아 있던 사본 6.2 MB 를 지웠다. `setup.py` 의 `models/*.pt` 설치 항목도 같이 지웠다 — 설치할 파일이 없어져 죽은 설정이 된다
 - [x] `webcam_register_node.py`: 헤더 주석 '관제센터 시야' → 출입구, `등록 구역 게이트` TODO 삭제 — 시야 전체가 등록 구역이라 게이트 불필요 (PR #16, Q-26, PR #20) · 마감 9/8
 - [x] `webcam_register_node.py`: `webcam.yaml` 파라미터화 — `webcam_index`·`conf` (PR #26) (9/7 내장 카메라가 잡히고 conf 를 못 낮춰 두 번 막힘, PR #20 노트). yaml 의 `model_path: ""` 는 launch 가 덮으므로 그대로 두되 주석 정정 · 마감 9/8
 - [x] **웹캠1 출입구 체류 시간 실측 (Q-26 해소)** — 실측 결과 문제 없다. 등록 없는 상태에서 시작해 **첫 통과에 두 명 다 등록**(0.90 / 0.91 s). 체류 구간 **18.99 · 16.30 s** 로 필요한 **1.3 s** 의 10배 이상 여유. 재등록 3/3(sim 0.71·0.75·0.77) · 마감 9/8
@@ -177,8 +172,14 @@
 - [ ] **회전 과도 9~34° 를 없앤다 (I-051)** — `odom` 이 늦게 와서 이미 지나친 뒤에 멈춘다. 초과분은 상수가 아니라 **그때의 `odom` 지연 × 각속도** 라 산포다(PM 검산: 같은 회차에서 +9.8·+27.8·+33.2·+33.8°). **③ `SEARCH_ROTATE_SPEED` 1.5 → 0.8 rad/s 가 산포 폭을 줄이는 1순위** (모듈 상수라 파라미터화가 먼저다) ② 감속 하한 0.4 를 낮춤 ① `search_lead_deg` 고정 리드는 산포를 못 지우므로 위 둘 뒤에 남는 몫으로만. **셋을 같이 넣고 한 회차로 재측정** — 따로 재면 회차가 세 번 든다. 판정은 「명령 20° 에 실제 20±5°」와 「`(n/18)` 이 실제 한 바퀴와 맞는가」 · 마감 9/10
 - [ ] **`max_search_tries()` 의 `한 바퀴 18회` 를 실제와 맞춘다 (I-051 곁가지)** — `360/20` = 18 인데 실제 회전량이 32° 라 **11~12회**에 한 바퀴다. 과도를 고치면 저절로 맞으므로 I-051 뒤에 확인만 한다 · 마감 —
 - [ ] ~~힌트도 첫 회차에만 방향을 정하고 잠근다 (I-050)~~ **보류 (9/9 실주행 판정).** 힌트 회전이 잠금보다 재획득이 **2.2배 빠르고**(2.81 s vs 6.21 s) 좌우 반전 → 실패 사례가 **0건**이다. 부호가 뒤집힌 원인도 힌트가 아니라 회전 과도(I-051)였다 — 힌트 좌표는 12초간 0.1 cm 밖에 안 움직였다. **로그 모양만 보고 잘 되는 동작을 바꾸지 않는다.** 다수결 방식은 사람이 정면을 가로지르는 경우에 값이 있으므로 I-050 의 재검토 조건이 성립하면 그때 넣는다 · 마감 —
-- [ ] **`DriveOnHeading` 오버슛 6.8 cm 보정 — TS-07 전 1순위 (I-044 후속)** — 지금 베이에 서는 자리가 `base_link` 0.835 로 **하드 바닥 0.805 위 3.0 cm** 뿐이다. 잔차 산포가 7 mm 라 estop 이 걸릴 자리는 아니지만 얇다. 잔차 −0.068 이 **계통 오차임이 두 방법으로 확인됐으므로**(줄자 −0.064 · 노드 자체 −0.071) 그만큼 더 명령하면 0.900 에 서고 설계 여유 9.5 cm 가 돌아온다. `bay_align_min_range_m` 0.45 → 0.80 도 같이 (PM 요청, 미이행) · 마감 9/10
+- [x] **`DriveOnHeading` 오버슛 6.8 cm 보정 — TS-07 전 1순위 (I-044 후속)** — 지금 베이에 서는 자리가 `base_link` 0.835 로 **하드 바닥 0.805 위 3.0 cm** 뿐이다. 잔차 산포가 7 mm 라 estop 이 걸릴 자리는 아니지만 얇다. 잔차 −0.068 이 **계통 오차임이 두 방법으로 확인됐으므로**(줄자 −0.064 · 노드 자체 −0.071) 그만큼 더 명령하면 0.900 에 서고 설계 여유 9.5 cm 가 돌아온다. `bay_align_min_range_m` 0.45 → 0.80 도 같이 (PM 요청, 미이행) · 마감 9/10  **→ 완료 9/10 (PR #80) — 상수 0.068 + 비례 0.0 두 항을 다 뒀다. 두 표본의 명령값이 0.270·0.257 로 거의 같아 상수/비례가 안 갈렸다고 밝혔다 — 짧은 이동(0.10 m 급) 회차 하나면 갈린다. `bay_align_min_range_m` 0.35 → 0.80 도 같이 (PM 요청 미이행분)**
 - [ ] **R2 `xy_goal_tolerance` 0.25 → 0.10 은 이미 실패한 값이다 (PR #74 계획 재검토)** — I-029 에 「0.25 → 0.15 → 0.1 로 낮출 때마다 목표 근처에서 좌우로 진동하며 도착 판정을 못 한다(9/7 robot3 실측)」가 있고 I-013 에도 같은 기록이 있다. **그대로 돌리면 회차 하나를 버린다.** 무엇이 달라졌는지(AMCL `update_min_d` 0.05 적용 등)를 먼저 적고, 아니면 오버슛 보정 + `bay_align_min_range_m` 으로 같은 사슬을 끊는 편이 낫다 — 「덜 간 채 완료」를 메우는 것이 `bay_align` 의 원래 일이다 · 마감 9/10
+- [ ] **YOLO 복장 클래스 오분류율을 잰다 (PR #84 후속, AC-04 근거)** — `reid_threshold` 0.34 에서 두 분포가 **0.348 / 0.361 로 겹치므로**, 오추종 0 건을 지탱하는 것은 임계가 아니라 `core/reid.update()` 의 **복장 클래스 필터**다. 다른 인형 쌍은 YOLO 가 클래스를 틀려야만 유사도까지 오고, **오붙음은 그때 17.8 %** 다. 즉 실질 위험 = `P(YOLO 오분류) × 17.8 %` 인데 **앞의 항이 미측정**이다. **AC-04 는 0 건이 절대 기준**이라 이 숫자가 없으면 근거가 비어 있다. TS-U04 녹화에서 같이 센다 · 마감 9/11
+- [ ] **`aruco/distance` 의 주행 중 산포를 발행 측에서 다룬다 (I-056)** — 정지 1 mm / 주행 중 **11.6 cm(±4.7 %)**. PR #83 이 `shuttle_mission` 에 중앙값을 넣었으나 **발행 측에는 없고** `fleet_manager`(FR-35)는 원값을 받는다. 발행 측 중앙값이나 **산포 동시 발행**이 낫다 — 소비자마다 각자 완화하면 언젠가 한쪽이 빠진다. 계약 `aruco/distance` 행에도 단서가 없어 회전만 위험한 것으로 읽힌다(v1.21 은 회전에만 걸려 있다) · 마감 —
+- [ ] **`Spin` 5 % 초과 보정 (PR #83 후속)** — odom 기준 90° 급에서 네 번 모두 4.2~5.2° 지나친다. **순회전은 상쇄되어 맞으므로**(명령 합 +19.9° · 실제 +20.0°) 급하지 않다. I-051(제자리 회전 과도 9~34°)과 **같은 자리인지 먼저 본다** — 저쪽은 `rotate_in_place`, 이쪽은 Nav2 `Spin` 이라 다른 경로다 · 마감 —
+- [ ] **회전 중 걸린 estop 을 전진 전에 재확인 (PR #83 후속)** — `run_behavior` 가 명령 **전에만** estop 을 보므로 회전 도중 걸린 것을 못 본다. 9/10 R5-1 탈출 실패가 이것이다(`ESTOP: 전방 0.27 m` 뒤 전진 명령 → 20 s 시간초과). **I-049 로 워치독을 끄면 당장은 안 나타나지만 켜는 순간 돌아온다** · 마감 —
+- [ ] **`bay_align_max_lat_m` 0.30 을 `d_n` 비례로 (PR #80 후속)** — 고정값인데 안전 여부는 거리에 비례한다. ①을 건너뛰면 ②가 법선 방향으로 돌아 마커가 `atan(e_lat/d_n)` 만큼 옆으로 가는데, **PR #76 이 시야를 38.5 → 37.4° 로 좁혀** 목표 0.9 m 에서 여유가 0.82 → **0.27°** 가 됐다. `cap = d_n · tan(반시야)` 면 0.9 m 에 0.305 · 0.8 m 에 0.271 이다. 0.25 로 내리는 것만으로도 충분하다. **막지는 않는다** — 놓치면 이전 `d_n` 으로 넘어가는 경로가 있다 · 마감 —
+- [ ] **베이 마커 세 장의 흰 여백을 눈으로 확인 (I-052, 상) — TS-07 전** — 여백 없이 벽에 바로 붙으면 거리가 **18~25 cm** 틀리고 검출이 깜빡이는데 **재투영 오차는 0.01 px 로 깨끗해 지표로 안 걸린다**(9/9 robot8 실측). 베이 여유는 **3.0 cm** 뿐이라 어느 방향이든 무너진다. ① 베이 A·B·C + ID 4 의 여백 3~5 cm 와 평평함(그림자 선) 확인 ② `tools/aruco_live_check.py` 의 `implied marker` 가 10.0 cm 근처인지 — 벗어나면 종이 문제다. 계약 6절에 요구를 올렸다(v1.20) · 마감 9/10
 - [ ] **`safety_watchdog` 에 네임스페이스 가드 (I-048)** — 나머지 셋(`:178`·`:114`·`:82`)에는 있고 **안전 노드에만 없다.** 없이 뜨면 상대 토픽이라 `/scan` 을 못 받아 오류 없이 estop 을 영영 안 건다. `return_dock_node.py:80` 의 가드를 그대로 · 마감 9/10
 - [ ] **주행 README 의 불변식에 I-033 을 밝힌다 (PR #64 후속)** — 「요청한 토큰은 모든 종료 경로에서 반납한다」가 지금 `shuttle_mission` 에서 지켜지지 않는다. 코드리뷰 자료가 열린 상 이슈를 가린다. **리뷰 전에** · 마감 9/10
 - [ ] **`docs/diagrams/README.md` 목록에 `navigation_review_flow.drawio` 추가 (PR #64 후속)** — 그 README 가 「손으로 고치지 않고 생성기를 고친다」라고 적혀 있어, 손으로 만든 파일이 하나 들어온 것을 밝혀두지 않으면 다음 사람이 `system_flowchart.drawio` 도 손으로 고친다 · 마감 9/10
@@ -256,12 +257,31 @@
 - [x] 도킹 반복 시험 TS-U12 (9/6) — 로봇별 10회, 차폐판 없이 오도킹 0 확인 (I-006 종결) · 마감 9/8
 
 ## mro_fleet [관제 — 김민준]
+
+### 시연 전 상위 결함
+
+- [ ] **`RobotStatus` 초기값이 유효한 값으로 나간다 (I-053, 상)** — `battery` 0.0 이 `fleet_manager_node.py:381` 의 배정 게이트(`>= battery_min` 0.25)에 걸려 **토픽이 안 온 로봇이 방전으로 취급**된다. 표시가 아니라 동작 결함이다. pose 0,0 은 미측위 로봇을 맵 원점에 그리는데 **robot8 도크가 원점에서 4.1 cm** 라 자기 도크에 선 것처럼 보인다. **수신 여부 플래그로 「미수신」과 「부족」을 가르는 것만 먼저 해도 동작 결함은 사라진다** — UI 표시(`위치 미상`)는 `FleetStatus` 변경이라 계약이 같이 움직인다 · 마감 9/11 시연 전  **PR #81 이 소스별 수신 시각·발행자 수를 만들어 뒀으므로 이제 짧다 (9/10).** 같이 볼 것: `battery_state`·`target/pair_state` 는 **주기 발행**이라 발행자 수만으로는 「노드가 살아 있는데 멈춘 것」을 못 잡는다 — 그 둘에만 나이 검사를 덧댄다 (I-055 남는 구분)
+
+### 실환경·UI 확인
+- [ ] **관제 맵 도크 라벨 겹침 (PR #78 후속)** — 라벨이 원 바깥으로 나가면서 도크가 가까우면(robot3·robot8 약 8 cm) 글자가 겹친다. **좌표는 정확하다** — 보기 문제다 · 마감 —
+- [ ] **`core/db_down.py` 를 `tools/` 로 (PR #85 후속)** — `responsibilities.md` 는 `core/` 를 「ROS 비의존이므로 **단위 테스트 대상**」으로 두는데 이것은 `argparse` CLI 점검 도구다. 저장소의 CLI 는 `tools/` 에 모여 있다(`kpi_report.py`·`aruco_static_check.py`·`todo_stats.py`). **이름도 `db_down` 이 무엇을 내리는 것인지 읽히지 않는다** — 하는 일이 CRUD 점검이니 `fleet_db_check.py` 쪽이 맞다. 아무도 import 하지 않아 실행에는 영향이 없다 · 마감 —
 - [ ] **대시보드 JS 의 로봇 이름 하드코딩 (PR #51 후속)** — `uiState.robots` 가 `{robot3, robot8}` 고정 사전이라 `robot_namespaces` 를 바꾸면 화면만 조용히 어긋난다 (빠진 로봇은 「수신 대기」로 남고 새 로봇은 안 보인다). `/status` 응답의 키로 카드를 만들면 된다 — 백엔드는 이미 `fleet.yaml` 명단을 쓴다. 오늘 robot4 → robot8 을 한 번 겪었다 · 마감 9/10
 - [ ] **FR-13 대시보드 실제 조작 확인 (PR #47·#51)** — 브라우저에서 ① `GATE_FAIL` 발행 시 버튼이 뜨는가 ② 누르면 `인지 서비스 응답 없음` 이 뜨는가(인지 서버 미구현이라 이게 정답) ③ **그때 `MANUAL_PAIR` 개입 이벤트가 발행되지 않는가** — 실패한 시도를 개입으로 세면 AC-13 IPH 가 부풀어 실제보다 나빠 보인다 · 마감 9/9
+
+### 후순위·외부 입력 의존
+
 - [ ] **FR-35 는 `loc_check_marker.xy` 실측 뒤에 켠다** — `[0.0, 0.0]` 인 채로 읽으면 측위가 정상인데도 `localization_suspect` 로 기록된다. 그리고 **`aruco/distance`(카메라 기준)와 `|amcl_pose − xy|`(base_link 기준)의 6 cm 오프셋을 빼고 비교**한다 (TF 실측, `tolerance_m` 0.10 의 60 %) · 마감 9/9
+- [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
+- [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①). **기준점 주의:** `aruco/distance` 는 카메라→마커, `\|amcl_pose − xy\|` 는 base_link→마커 — `tf2_echo base_link oakd_rgb_camera_optical_frame` 으로 오프셋을 재서 뺀다 (I-031) · 마감 9/8
+
+### 완료
+
+- [x] **관제 DB 단독 CRUD 점검 도구** — `db_down.py`에서 `workers`·`missions`·`events`별 생성·조회·수정·삭제를 제공하고, 인자 없이 `~/mro_fleet.db` 전체 테이블을 터미널 표로 출력. 임시 DB CRUD 실행과 삭제 후 빈 테이블 확인 · 마감 9/10
+- [x] **관제 정상 시나리오 단일 로봇 실환경 연동** — 작업자 등록 토픽 발행 → UI 자재 요청 → `mission/assigned` 수신 → 대기 위치 도착 → UI 「작업 종료 → 복귀」 → 실제 도킹 완료까지 확인. DB·KPI 값 대조와 2대 동시 운용은 별도 검증으로 남김 · 마감 9/10
+- [x] **상세 화면 탭 선택 유지 (I-056)** — `/status` 1초 폴링은 `refreshRobotDetail()`로 내용만 갱신하고 `openRobotDetail()`의 기본 정보 탭 초기화 흐름을 다시 타지 않도록 분리. 회귀 테스트 포함 45건 통과 · 마감 9/10
 - [x] **`control_ui`: 명시 페어링 폴백 버튼 (FR-13, 계약 10절)** — `target/pair_state = GATE_FAIL` 이면 버튼 표시, 운영자가 로봇·작업자 선택 → `fleet_manager` 가 `/robotN/manual_pair` 호출, 응답의 `reason` 을 화면에 그대로 보여준다. 성공 시 `/fleet/intervention` 에 **`kind = MANUAL_PAIR`** 발행 — IPH 에 들어간다(10.7) · 마감 9/9  **→ 완료 9/8 (PR #47) — `/fleet/manual_pair` 중계까지**
-- [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8  **→ 9/9 로봇별 `RobotControlNode(namespace)`가 AMR 원본 상태를 전담하고 `/fleet/status`를 1 Hz 발행. `fleet_manager` 는 이 요약을 받아 미션 전이·DB만 담당한다(계약 v1.18, PM 승인). HTTP·맵은 `MonitorWebApp.py`가 담당**
-- [x] **작업자 등록과 AMR 배정 시점 분리** — 등록 시에는 `workers`에 작업자만 저장하고, `RequestMission` 시 가용 `RobotControlNode` 상태를 기준으로 AMR을 선택해 `missions.robot_ns`에 저장(계약 v1.19) · 마감 9/10
+- [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8  **→ 9/9 로봇별 `RobotStatus(namespace)`가 AMR 원본 상태를 전담하고 `/fleet/status`를 1 Hz 발행. `fleet_manager` 는 이 요약을 받아 미션 전이·DB만 담당한다(계약 v1.18, PM 승인). HTTP·맵은 `monitor_web_app.py`가 담당**
+- [x] **작업자 등록과 AMR 배정 시점 분리** — 등록 시에는 `workers`에 작업자만 저장하고, `RequestMission` 시 가용 `RobotStatus` 상태를 기준으로 AMR을 선택해 `missions.robot_ns`에 저장(계약 v1.19) · 마감 9/10
 - [x] `control_ui`: 작업자별/전체 종료 버튼, `fleet_manager` RETURN_ALL · 마감 9/8
 - [x] `fleet_manager_node.py`: yaw 계산, 미션 상태 전이 구독 (`shuttle/status` → Mission state) (PR #7) · 마감 9/8
 - [x] `fleet_manager_node.py`: 배터리 25 % 미만 미션 거부·사유 기록 (FR-06) (PR #7) · 마감 9/8
@@ -270,8 +290,6 @@
 - [x] **일시적 `FAILED` 가 미션을 굳히지 않게 (I-026)** — approach FAILED 는 미션 전이에서 빼고, FAILED 를 터미널에서 뺀다 (DONE 만 터미널) (PR #18, 9/7) · 마감 9/8
 - [x] `fleet_manager_node.py`: `/fleet/intervention` 구독 → DB events 기록 (I-021, FR-28) (PR #23, PM 스텁 18/18) · 마감 9/8
 - [x] `fleet_manager_node.py`: `/fleet/zone_event` 구독 → DB `events` kind `ZONE` 기록 (I-030, 계약 v1.11 §7) · 마감 9/8  **→ 완료 (9/9 확인) — `_zone_event_cb`(:275)가 형식·구역·로봇을 검사하고 SQLite ZONE 이벤트로 기록**
-- [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
-- [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①). **기준점 주의:** `aruco/distance` 는 카메라→마커, `\|amcl_pose − xy\|` 는 base_link→마커 — `tf2_echo base_link oakd_rgb_camera_optical_frame` 으로 오프셋을 재서 뺀다 (I-031) · 마감 9/8
 - [x] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') — 1 s 배치 창 + `worker_id` 정렬, W1→robot3·W2→robot8 로 순서 무관 재현 (PR #28, PM 스텁 24/24) · 마감 9/8
 - [x] `control_ui`: 페어링 폴백(명시 페어링) 버튼 (FR-13) · 마감 9/8  **→ 완료 9/8 (PR #47)**
 - [x] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) (PR #7) · 마감 9/9

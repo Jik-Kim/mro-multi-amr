@@ -1,7 +1,7 @@
 """로봇별 RobotStatus 객체를 생성하고 관리한다."""
 import time
 
-from mro_fleet.nodes.robot_control_node import RobotStatus
+from mro_fleet.nodes.robot_status import RobotStatus, STATUS_SOURCES
 
 from mro_interfaces.msg import Mission
 
@@ -14,12 +14,37 @@ APPROACH_MISSION_STATES = {
 }
 
 
+def source_freshness(received_time, publishers, current_time):
+    """소스 하나가 아직 믿을 만한지 판정한다 (I-055).
+
+    기준은 나이가 아니라 **소스가 살아 있는지**다. `safety/estop` 은 바뀔 때만,
+    `amcl_pose` 는 로봇이 움직일 때만 발행하므로, 나이로 재면 멀쩡한 로봇이
+    계속 「확인 불가」가 된다. 발행자가 사라졌을 때만 마지막 값이 현재값이
+    아니게 된다.
+
+    ``publishers`` 가 ``None`` 이면 아직 세기 전이다 — 한 번도 못 받았을 때만
+    모른다고 한다. 세는 타이머가 처음 돌기 전 잠깐이다.
+    """
+    age = None if received_time is None else round(
+        max(0.0, current_time - received_time), 3
+    )
+    if received_time is None:
+        stale = True
+    elif publishers is None:
+        stale = False
+    else:
+        stale = publishers == 0
+    return {'age_s': age, 'publishers': publishers, 'stale': stale}
+
+
 class RobotStateManager:
     """관제가 다룰 로봇 객체를 namespace별로 관리한다."""
 
     def __init__(self, namespaces, executor):
         """namespace마다 RobotStatus 객체를 하나씩 생성한다."""
         self.executor = executor
+        # 관제가 두 벌 떠 있을 때 화면에 띄울 경고 (I-054). FleetManager 가 채운다.
+        self.duplicate_monitor_warning = ''
         self.robots = {}
         self.last_received_status = {}
         for namespace in namespaces:
@@ -63,6 +88,8 @@ class RobotStateManager:
         for namespace, robot in self.robots.items():
             status = robot.get_status()
             received_time = status.pop('_received_monotonic', None)
+            source_times = status.pop('_source_monotonic', {})
+            source_publishers = status.pop('_source_publishers', {})
             if received_time is None:
                 status['age_s'] = None
                 status['stale'] = True
@@ -70,6 +97,16 @@ class RobotStateManager:
                 age = max(0.0, current_time - received_time)
                 status['age_s'] = round(age, 3)
                 status['stale'] = age > robot.status_overtime_sec
+            # 칸마다 따로 판정한다 — 배터리 하나가 살아 있다고 위치·E-STOP 까지
+            #   신선하다고 말하면 화면이 「모른다」를 말할 수 없다 (I-055).
+            status['sources'] = {
+                source: source_freshness(
+                    source_times.get(source),
+                    source_publishers.get(source),
+                    current_time,
+                )
+                for source in STATUS_SOURCES
+            }
             all_status[namespace] = status
         return all_status
 

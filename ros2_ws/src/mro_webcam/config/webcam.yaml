@@ -38,6 +38,9 @@ webcam_hint:                # 웹캠2 (PC-W2) — 재탐지 힌트 E-1. 한세�
     buffer_size: 5          # 캡처 버퍼 크기
     process_hz: 10.0        # YOLO 처리 주기(0.1 s, 0.3 s 동안 약 3회)
     confidence: 0.5         # YOLO 검출 최소 신뢰도
+    target_classes: ["worker_a", "worker_b"]   # Hint 후보로 허용할 복장 클래스.
+                            # 웹캠1(webcam_register)에도 같은 항목이 있다 — 같은 개념을
+                            # 한쪽만 코드에 두지 않는다 (PR #62 후속)
     image_publish_hz: 10.0  # YOLO process_hz와 독립적인 압축 영상 발행 주기
     compressed_topic: "/webcam2/image_raw/compressed"
     image_frame_id: "webcam2_optical_frame"
@@ -45,4 +48,3 @@ webcam_hint:                # 웹캠2 (PC-W2) — 재탐지 힌트 E-1. 한세�
     detection_confirm_s: 0.3     # 동일 track ID가 이 시간 검출되면 최초 확정
     detection_hold_s: 0.5     # 순간 누락 시 기존 트랙 연속성 유지 시간
     lost_confirm_s: 1.0       # 이 시간 이상 미검출 시 Lost 확정
-    show_window: false        # 통합 운용에서는 창 없이 TargetHint만 발행

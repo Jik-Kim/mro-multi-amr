@@ -1,4 +1,15 @@
-"""웹캠2 압축 영상의 통신 상태와 화면을 확인하는 테스트 노드."""
+#!/usr/bin/env python3
+"""웹캠2 압축 영상의 수신률·대역폭·발행→구독 지연을 확인하는 진단 도구.
+
+  python3 tools/diag_webcam2_image.py --ros-args -p show_window:=false -p log_interval_s:=5.0
+
+PC-W2 와 같은 ROS 환경에서 돌린다. FPS·Mbps·지연 평균/p95/최대와 2 초 이상 수신 중단
+경고를 찍는다. `webcam_hint` 를 둘 이상 띄우면 같은 토픽에 각각 10 Hz 로 발행해 측정값이
+합산되므로, 먼저 중복 노드가 없는지 본다.
+
+**단위 시험이 아니라 진단 도구다.** 종전 이름 `test_subscription` 이 단위 시험처럼 읽혀
+9/10 에 `tools/` 로 옮겼다 (`tools/diag_lag.py` 선례).
+"""
 
 import os
 import time

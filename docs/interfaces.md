@@ -1,4 +1,4 @@
-# Interfaces — 계약 v1.19 (2026-09-10)
+# Interfaces — 계약 v1.21 (2026-09-10)
 
 > v1.0(9/5) 에 **주기·시간 상수 규칙**을 더하고(v1.1), **캡처 fps 를 장치 상한으로 완화**하고(v1.2), **`color_hist` 추출 영역을 인형 전체로 재확정**했고(v1.3), **P1 통과 방향을 9/6 배치도로 정정**했고(v1.4), **KPI 산출 계약(9절)을 신설**하고(v1.5), **판정 주체와 그 한계를 9.2 로 분리**했고(v1.6), **대기공간 측위 검증 마커(ArUco ID 4)를 추가**했고(v1.7), **웹캠1 호모그래피를 뺐고**(v1.8), **웹캠2 압축 영상 토픽을 추가했고**(v1.9, PR #14), **웹캠1 시야를 관제탑 구역 → 출입구로 좁혔다**(v1.10, PR #16 · Q-26).
 > **v1.11 (9/7 저녁): 세마포어 이벤트 토픽 `/fleet/zone_event` 신설** — 대기·획득·반납·강제 회수를 기록해 K-06(교착 자동 해결률)을 센다 (I-030). `mro_interfaces` 는 바꾸지 않고 `std_msgs/String` 을 쓴다.
@@ -10,7 +10,9 @@
 > **v1.16 (9/8, PR #49): `approach/status` 의 접근 두 값에 뜻을 붙인다.** 값 목록은 그대로다. `APPROACH_1` = 중간 목표 · `APPROACH_2` = 최종 목표이며, **기본값에서는 후자가 발행되지 않는다** — 값이 안 보이는 것이 고장이 아님을 적어 두지 않으면 나중에 그것을 찾느라 시간을 쓴다.
 > **v1.17 (9/9, PR #67): `ARRIVED` 도 같은 이유로 발행되지 않는다.** `approach_final` 이 참일 때만 내므로 v1.16 의 `APPROACH_2` 와 **하나의 같은 사실**이다 — 한쪽만 적어두면 다음 사람이 `ARRIVED` 가 안 오는 것을 고장으로 보고 찾는다. **값 목록은 8개 그대로다.** 9/9 실주행에서 확인했다.
 > **v1.18 (9/9, PM 승인): AMR 상태 소유자를 로봇별 `RobotControlNode(namespace)`로 이관.** 각 인스턴스가 셔틀·접근·배터리·위치·E-stop·페어링을 집계해 `/fleet/status`를 1 Hz로 발행한다. `FleetStatus`에 `approach_state`·`shuttle_state`·`pair_state`를 추가했고, `fleet_manager`는 요약 토픽을 받아 미션 전이·DB 기록만 한다.
-> **v1.19 정정 (9/10, PM): 관제 UI 노드가 둘로 나뉘었다.** `control_ui_node` 가 없어지고 **`MonitorWebApp`(웹 화면)** 과 **`FleetUICommands`(ROS 발행·서비스 요청, `fleet_client.py`)** 이 됐다. 아래 표의 발행·구독 칸은 고쳤고, **10절 산문에 남은 `control_ui` 는 이 둘을 합친 역할**로 읽는다 — 그 이름의 노드는 이제 없다.
+> **v1.21 (9/10, PM, PR #80): `aruco/pose` 의 회전을 베이 정렬에 쓴다 — 단 산포 검사를 통과할 때만.** v1.13 이 「회전은 정렬에 쓰지 않는다」로 못박은 근거는 **PM 합성 검증(−30° 기울기에서 33° 오차)** 이었는데, 9/10 실주행은 **다른 기하**다 — 정렬 절차가 마커를 정면 근처에서 보게 만들고 그 자리에서 잰 산포가 MAD **0.1~0.7°**, 회차 사이 이탈 **1.2°** 안이다. **두 해 문제가 사라진 것이 아니다** — 표본 창 안 산포로 거르고, 넘으면 정렬을 건너뛰고 미션을 계속한다. 자세한 것은 아래 `aruco/pose` 행.
+> **v1.20 (9/10, PM): ArUco 마커에 흰 여백을 요구한다 (6절).** 인지가 9/9 에 겪은 것이다 — 여백 없이 벽에 바로 붙이면 거리가 **18~25 cm** 틀리고 검출이 깜빡이는데 **재투영 오차는 0.01 px 로 깨끗해 지표로 안 걸린다.** 가이드에만 있으면 아레나를 세팅하는 사람에게 닿지 않아 계약에 올린다 (I-052).
+> **v1.19 정정 (9/10, PM): 관제 UI 노드가 둘로 나뉘었다.** `control_ui_node` 가 없어지고 **`MonitorWebApp`(웹 화면, `monitor_web_app.py`)** 과 **`FleetUICommands`(ROS 발행·서비스 요청, `fleet_ui_commands.py`)** 이 됐다. 아래 표의 발행·구독 칸은 고쳤고, **10절 산문에 남은 `control_ui` 는 이 둘을 합친 역할**로 읽는다 — 그 이름의 노드는 이제 없다.
 > **v1.19 (9/10): 작업자 등록과 AMR 배정 시점을 분리.** `WorkerDescriptor` 수신 시에는 작업자만 DB에 등록하고, UI의 `RequestMission` 요청 시 `FleetStatus`를 받은 로봇 중 미션·E-stop이 없고 배터리 기준을 충족한 AMR을 배정한다. 배정 결과의 단일 저장 위치는 `missions.robot_ns`이다. 이 변경은 BRD v3.5 S1·S2의 등록 직후 고정 배정과 다르므로 차기 BRD·SDD에서 동기화해야 한다.
 >
 > 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더했고, v1.14 는 하나를 갈고 하나의 뜻을 바꿨으며, v1.15 는 기존 서비스 형식의 관제 내부 경로 하나를 명시했다.
@@ -50,10 +52,13 @@
 | **주기** | 웹캠은 **캡처는 장치 상한 그대로(25~30 fps) · 추론 발행 10 Hz**, AMR OAK-D 는 10 Hz. 세 카메라의 주기를 통일하지 않는다 | 지켜야 하는 것은 특정 숫자가 아니라 **캡처 ≥ 발행** 이다. 장치가 30 을 못 내면 그 상한을 쓴다 (웹캠1 Jieli = 25 fps, 9/6 확인). 하는 일의 시간 상수가 달라 주기를 맞출 이유가 없고, 맞춰야 하는 것은 주기가 아니라 위의 **시각**이다 (SDD 2.3 주기 정책) |
 | **시간 상수 표기** | 히스테리시스·유효기간 같은 값은 **프레임 수가 아니라 초로** 적고 파라미터로 노출한다 | 프레임 수로 적으면 추론 주기를 바꿨을 때 의미가 조용히 달라진다 |
 
-**남은 1건 — `reid_threshold`**
-값은 **파라미터**(`robotN.yaml`, 잠정 `0.6`)이므로 **구현은 이 값 없이도 진행할 수 있다.** 확정 절차만 정해둔다.
+**`reid_threshold` — 9/10 확정 `0.34`** (`perception.yaml` 단독, 계약 5절)
+아래 절차대로 분포를 실측해 정했다. **재는 대상을 틀리지 않는 것이 핵심이다** — 게이트는 로봇 crop 끼리가 아니라 **웹캠1 등록 서술자 ↔ 로봇 crop** 을 비교하므로 시점을 건넌다. 로봇끼리 재면 0.135/0.546 으로 시원하게 갈리지만, 실제 조건에서는 같은 인형 0.348~0.470 · 다른 인형 0.248~0.361 로 좁고 **살짝 겹친다.** 옛 값 `0.6` 은 같은 인형 최댓값보다 높아 자동 페어링이 한 번도 안 걸렸다. 근거·한계는 `mro_perception/README.md` 5절.
 
 > 수집한 데이터셋에서 **같은 인형끼리의 유사도 분포**와 **다른 인형끼리의 유사도 분포**를 각각 구하고, **다른 인형 분포의 최댓값보다 위**에 임계를 둔다(오페어링 0건이 절대 기준이므로). 두 분포가 겹치면 서술자 자체를 손봐야 한다는 신호다. — 담당 정정인·민범진, 9/8 학습 완료 직후
+>
+> **PM 정정 (9/10) — 이 규칙은 지켜지지 않았고, 그래서 오페어링 0건의 근거가 옮겨갔다.**
+> 실측에서 두 분포가 **0.348 / 0.361 로 겹쳤다.** 겹침에 대해 위 규칙은 「서술자 자체를 손봐야 한다」고 했으나, 그건 시연 전에 할 수 있는 일이 아니라 **겹치는 구간에서 놓침 0 %(0.34)를 택했다.** 결과적으로 **AC-04 오추종 0 건을 지탱하는 것은 임계가 아니라 `core/reid.update()` 의 복장 클래스 필터**다 — 다른 인형 쌍은 **YOLO 가 클래스를 틀려야만** 유사도 비교까지 온다. **그 오분류율은 아직 아무도 재지 않았다.** 임계만 보고 「0건이 보장된다」고 읽으면 안 된다. 겹침이 남아 있는 한 서술자 개선(하의·머리가 두 인형에서 동일한 문제, 46행)은 여전히 유효한 방향이다.
 >
 > **추출 영역이 인형 전체로 정해지면서(9/6) 이 절차가 더 중요해졌다.** 하의·머리가 공통이라 다른 인형끼리도 0.5 안팎에서 시작한다. 0.6 이나 0.7 같은 어림값을 그대로 쓰면 두 인형이 같은 사람으로 판정될 수 있다. **분포를 실제로 그려보고 정한다.**
 >
@@ -91,8 +96,8 @@
 | `/webcam2/target_hint` | webcam_hint | follow_target, kpi_logger | TargetHint | E-1. **10 Hz** 발행, 유효 2 s. **BEST_EFFORT** — 구독자도 sensor_data QoS 로 잡아야 받는다 |
 | `/webcam2/image_raw/compressed` | webcam_hint | (뷰어·영상 판독 기록) | CompressedImage | **jpeg 80, 10 Hz** (`image_publish_hz`). raw `Image` 는 발행하지 않는다 — 다른 PC 에서 구독하면 Wi-Fi 를 막는다 (NR-03). 안전 판단 금지, 세션 판정 후 폐기 (R-10). PR #14 |
 | `/fleet/mission` | fleet_manager | kpi_logger, UI | Mission | 상태 전이마다 |
-| `/fleet/status` | 로봇별 RobotControlNode | fleet_manager, MonitorWebApp, kpi_logger | FleetStatus | 1 Hz. AMR 상태의 단일 집계 경로 |
-| `/fleet/intervention` | **FleetUICommands** (`fleet_client.py`) | kpi_logger, fleet_manager | Intervention | 운영자 버튼. `9/10` 발행 주체가 `control_ui` 에서 옮겨졌다 (PR #73·#77) |
+| `/fleet/status` | 로봇별 RobotStatus (`robot_status.py`) | fleet_manager, MonitorWebApp, kpi_logger | FleetStatus | 1 Hz. AMR 상태의 단일 집계 경로 |
+| `/fleet/intervention` | **FleetUICommands** (`fleet_ui_commands.py`) | kpi_logger, fleet_manager | Intervention | 운영자 버튼. `9/10` 발행 주체가 `control_ui` 에서 옮겨졌다 (PR #73·#77) |
 | `/fleet/zone_event` | zone_semaphore | kpi_logger, fleet_manager | String | **v1.11 (I-030).** `"<zone_id> <robot_ns> <REJECT\|GRANT\|RELEASE\|RECLAIM>"`. K-06 원천 — 3절 이벤트 규칙 |
 | `mission/assigned` | fleet_manager | shuttle_mission, **amr_detection**, RobotControlNode | Mission | **S4 트리거.** `RequestMission` 시점에 가용 AMR을 선택하고 `worker_id`·`robot_ns`·`bay`를 확정한다. `amr_detection`은 `worker_id`로 미리 받은 외형 서술자를 선택한다 |
 | `mission/finish` | fleet_manager | return_dock, **follow_target**, amr_detection | Bool | S9. follow_target 은 **즉시 페어링 해제·추종 중단**(≤ 1 s), return_dock 은 복귀 시작. **amr_detection 은 명시 페어링을 해제한다** (v1.12, 10절) |
@@ -105,7 +110,7 @@
 | `target/paired`, `target/worker_id` | amr_detection | follow_target, RobotControlNode | Bool, String | 재식별 게이트 통과 여부. **발행자는 amr_detection 하나뿐이다** — 자동이든 명시 페어링이든 (10절) |
 | `target/pair_state` | amr_detection | RobotControlNode, kpi_logger | String | **v1.12 (FR-13).** `PAIRED` / `GATE_FAIL` / `NO_TARGET`. `GATE_FAIL` 은 **대상은 보이는데 게이트를 못 넘는 상태가 30 s 지속됐을 때만** 낸다 — 10절 |
 | `aruco/id`, `aruco/distance` | aruco_detector | shuttle_mission, fleet_manager | Int32, Float32 | `id = -1` 이면 없음. **거리는 depth 원값에 로봇별 시차 편향 보정(역깊이 k, 9/8)**(0.8 m 이상), 그 아래는 solvePnP × 최근 depth/pnp 비 — 초점거리 결함(I-031)과 무관하다 (PR #40). **발행 한계는 `max_distance_m` 2.0 m 이고 6절의 수용 조건 1.5 m 는 소비자가 건다** |
-| `aruco/pose` | aruco_detector | shuttle_mission (베이 정렬) | PoseStamped | **v1.13 비준. 선택 발행** (`publish_pose`, 기본 켬). 마커 중심의 위치·자세, `frame_id` = 카메라 광학 프레임(x 우·y 하·z 앞). `id` 와 같은 프레임에서만 발행. 좌우 치우침 = x, 방위 = atan2(x, z). **회전(yaw)은 정렬에 쓰지 않는다** — 정사각 마커의 두 해 문제로 PM 합성 검증에서 −30° 가 1.0 m 에서 33°, 2.0 m 에서 20° 로 나왔다. 위치는 `pnp × depth/pnp 비` 라 `aruco/distance` 와 몇 cm 다를 수 있다 |
+| `aruco/pose` | aruco_detector | shuttle_mission (베이 정렬) | PoseStamped | **v1.13 비준. 선택 발행** (`publish_pose`, 기본 켬). 마커 중심의 위치·자세, `frame_id` = 카메라 광학 프레임(x 우·y 하·z 앞). `id` 와 같은 프레임에서만 발행. 좌우 치우침 = x, 방위 = atan2(x, z). **회전(yaw)은 산포 검사를 통과할 때만 정렬에 쓴다** (`v1.21`, PR #80). ~~v1.13: 정렬에 쓰지 않는다~~ — 그 근거였던 PM 합성 검증(−30° 가 1.0 m 에서 33°, 2.0 m 에서 20°)은 **기울여 본 기하**였고, 베이 정렬은 마커를 정면 근처에서 본다. 9/10 실주행 2회에서 표본 창 안 MAD 0.1~0.7°·회차 사이 이탈 1.2°. **다만 두 해 문제는 사라지지 않았다** — `bay_align_normal_spread_deg`(6°) 로 창 안 산포를 재서 넘으면 **정렬을 건너뛰고 미션은 계속한다.** 검사의 한계도 알려져 있다: **표본 절반 이상이 같은 해로 쏠리면 산포는 작고 중앙값이 조용히 그쪽으로 정해진다.** 그래서 「믿어도 된다」가 아니라 「검사를 통과하면 쓴다」이고, 실패는 **정렬 생략**이지 미션 실패가 아니다. 위치는 `pnp × depth/pnp 비` 라 `aruco/distance` 와 몇 cm 다를 수 있다 |
 | `approach/status` | follow_target | RobotControlNode, kpi_logger | String | IDLE / SEARCHING / APPROACH_1 / APPROACH_2 / ARRIVED / FOLLOWING / STANDBY / FAILED. **v1.16 — 접근 두 값의 뜻 (PR #49):** `APPROACH_1` = **중간 목표**, `APPROACH_2` = **최종 목표**. 접근은 단계를 세지 않고 남은 거리의 절반씩 좁힌다(`max(follow_standoff_m, gap/2)`) — 회차 수가 정해져 있지 않으므로 이 두 값은 *몇 번째*가 아니라 *어떤 목표*를 뜻한다. **기본값에서는 `APPROACH_2` 가 발행되지 않는다**: 목표가 최종이 되는 조건 `gap ≤ 2×follow_standoff_m`(1.0)과 접근을 쓰는 조건 `gap > approach_skip_m`(1.0)이 겹치지 않는다. 마지막 0.5 m 는 `FOLLOWING` 이 맡고 AC-05 채점 구간도 `FOLLOWING` 뿐이라 기능상 빠지는 것은 없다. **없다고 고장이 아니다.** **같은 이유로 `ARRIVED` 도 발행되지 않는다** (9/9 추가) — `ARRIVED` 는 `approach_final` 이 참일 때만 내므로 위와 **하나의 같은 사실**이다. 나온다 해도 `set_state('ARRIVED')` 직후 같은 주기에서 `enter_follow()` 가 `FOLLOWING` 을 덮어 **토픽에 한 건**만 스친다. **실제로 나오는 값은 IDLE · SEARCHING · APPROACH_1 · FOLLOWING · STANDBY 5개**다 — `FAILED` 는 `follow_target` 이 내지 않는다(estop·finish 로 멈추는 것은 실패가 아니다, I-026). 한쪽만 적어두면 다음 사람이 `ARRIVED` 가 안 오는 것을 고장으로 보고 찾는다. **단 값 목록은 8개 그대로다 — 지금 안 나올 뿐 뺀 것이 아니다.** `approach_skip_m` 한 줄이면 둘 다 되살아난다 (`fleet_manager` 는 이미 8개를 다 받는다) |
 | `safety/estop` | safety_watchdog | 모든 로봇 노드, fleet_manager | Bool | True 동안 **주행 명령 금지** |
 | `cmd_vel` | safety_watchdog, Nav2, **follow_target**(제자리 회전 전용) | Create3 | TwistStamped | **v1.13.** estop 중 워치독이 20 Hz 로 덮어쓴다. **병진은 전부 0** — 전진은 장애물 쪽이라 막고, **후진은 애초에 쓰지 않는다**(2절 확정: 범퍼·클리프가 전방에만 있다). **각속도만 0.4 rad/s 상한으로 통과시킨다** — 제자리 회전은 footprint 내접 0.175 / 외접 0.189 라 쓸고 가는 폭이 1.4 cm 뿐이고, 이것이 유일한 탈출 수단이다. 해제 거리 **`CLEAR_DIST` 0.38 m**(0.45 에서 내림) — 0.45 는 P1 반폭 0.395 m 보다 커서 통로 안에서는 어느 방향으로 돌아도 해제 조건이 성립하지 않는다 (I-036) |
@@ -141,6 +146,7 @@
 | ID | 의미 |
 |---|---|
 | 1 / 2 / 3 | 베이 A / B / C. 10 cm, **선반 뒤 벽면 높이 20 cm.** 실측 광축은 23.5 cm 라 마커는 그보다 3.5 cm 아래에 오지만 화각 안이다. 올리면 선반(25 cm)에 가린다. 바닥 부착 금지 — 가까워지면 시야 아래로 사라진다. 무광 인쇄, 검은 테두리 바깥에 흰 여백 한 칸 이상 |
+| **모든 마커** | **검은 테두리 둘레에 흰 여백 3~5 cm** (`v1.20`, I-052). 없거나 마커가 떠서 그림자 선이 생기면 윤곽이 사각형으로 안 잡혀 **검출이 깜빡이고**, 서브픽셀 보정이 꼭짓점을 경계선 쪽으로 끌어 **거리가 18~25 cm 틀린다.** 모양은 반듯해서 **재투영 오차로는 안 걸린다** — `tools/aruco_live_check.py` 의 `implied marker` 가 10.0 cm 근처인지로 본다. `marker_size_m` 0.10 은 **여백을 뺀 검은 테두리 바깥 변**이다. 절차는 `docs/camera_calibration_guide.md` 1-b |
 | 10~19 | *(예약)* KOZ 바닥 마커 — Phase 2. Phase 1 에서는 쓰지 않는다 |
 | **4** | **측위 검증 마커** (9/6 신설) — 웹캠1 박스 북쪽 ≈ 0.4 m 앞 거치대, 북향, 10 cm, 높이 23.5 cm. 베이 마커와 달리 **AMCL 이 맞는지 확인하는 용도**다. 로봇이 P1 을 나와 남쪽으로 대기공간에 접근하는 구간에서 정면에 들어온다 (턴 시점 ≈ 1.36 m · robot3 정차 1.08 m · robot8 정차 0.58 m, 9/6 실측). map 좌표는 `arena.yaml` `loc_check_marker` (주행 실측 9/7). 규칙은 9.2 |
 
