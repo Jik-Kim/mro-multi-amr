@@ -19,6 +19,8 @@
 규칙
 - 관제는 **전체에서 한 대만** (I-054). 두 대면 UI 에 빨간 배너.
 - 안 쓰는 로봇의 스택은 띄우지 않는다 (디스커버리 부하 — 9/10 13:46 링크 끊김 회차에 robot3 풀스택이 같이 떠 있었다).
+- **2대 운용은 노드 창을 `node` 모드로 띄운다 (9/11 기본).** T3·T5·T6·T7·T9·T10 — 아래 명령어에
+  이미 들어 있다. 이유와 되돌리는 법은 6-1. 1대만 돌릴 때는 종전대로 `node` 없이 띄워도 된다.
 - **2대는 겹쳐서 올리지 않는다 (9/10 추가).** 로봇 A 가 T8 `Managed nodes are active` 를 낼 때까지
   기다린 뒤 로봇 B 의 T3 를 시작한다. 그리고 **T2(bag) 과 T4(rviz) 는 양쪽 T8 이 다 뜬 뒤에 켠다** —
   둘 다 `scan`·`tf`·`odom` 을 로봇에서 **구독자마다 따로** 끌어오는데, 기동 구간엔 필요가 없다.
@@ -27,8 +29,34 @@
   부족하다 — 9/10 21:08 로봇3 은 셔틀 노드 로그가 **0건**이었고 AMCL 이 890 초 내내 초기자세를 못
   받았다. TF 가 실제로 생긴 것을 보고 T8 을 띄운다 (T6 절 참조). **확인 못 하면 T8 을 띄우지 않는다** —
   초기자세 없이 뜬 Nav2 는 ③에서 멈추고 **매니저가 재시도하지 않는다** (I-035).
+- **두 대가 대기공간에 동시에 서면 안 된다.** `arena.yaml` 의 대기 좌표가 로봇3 `x=-0.998`, 로봇8
+  `x=-1.593` 로 중심 간 0.595 m — 내접 반지름 0.186 씩 빼면 **옆 간격 0.22 m** 다. 워치독 `stop_dist`
+  0.30 보다 좁고 **Nav2 inflation 0.25 보다도 좁아서** 두 번째는 목표점이 첫 번째의 팽창 영역 안이라
+  도착 자체가 안 되고, 탐색 회전이 시작되면 서로 estop 이다. **두 번째 미션의 타이밍은 관제가
+  조정한다** (첫 로봇이 대기공간을 떠난 뒤 — T12 `FOLLOWING`).
 - `teleop_twist_keyboard` 창은 주행 중 절대 열어 두지 않는다 (키 하나가 로봇을 움직인다).
 - 미션 시작·종료 토픽은 **관제만** 낸다. 로봇 PC 에서 `mission/assigned` 를 수동 발행하지 않는다.
+
+## 0-0. 9/11 아침 — 목표와 순서
+
+**목표는 2대 동시 운용을 녹화하는 것이다.** 단독 완주 영상은 이미 있다. 그래서 **부하를 줄여
+Nav2 가 2벌 `active` 가 되는 것이 첫 번째**이고, 그다음이 bag + 영상으로 2대 회차를 남기는 것이다.
+11:30 제출·발표라 **로봇 작업은 10:00 에 끊는다.** 그때까지 2대 완주가 없으면 단독 영상 + 양쪽
+`active` 화면 + 관제 UI 에 2대 뜬 화면으로 간다.
+
+**깨끗하게 시작한다.** 9/10 밤 회차엔 유령 등록 · `talker` · 관제 두 벌 · rviz 로봇당 3개가 함께
+떠 있었다. 순서 규칙만으론 유령이 남아 있으면 첫 번째부터 느리다.
+
+| 순서 | 무엇 | 왜 |
+|---|---|---|
+| ① | **PC-F 디스커버리 서버 재시작** — 서버 창 Ctrl-C 후 `fastdds discovery -i 1 -l 0.0.0.0 -p 11811` 다시. **아무것도 띄우기 전에** | 어제 밤의 유령 등록을 지운다. 노드가 떠 있는 채로 재시작하면 전부 다시 등록해야 하니 맨 처음에 한다 |
+| ② | RPi 2대 `sudo systemctl restart turtlebot4.service` (안 되면 재부팅) | 로봇 쪽 참가자도 새로 등록시킨다 |
+| ③ | PC 5대 `git pull --ff-only` → 해시 대조 (0-1절) | 9/10 밤 「추종 안 됨」이 안 받은 PC 였다 |
+| ④ | 로봇 PC 에서 `tools/shuttle_preflight.sh pre /ROBOT` | `talker`·rviz·이전 세션 잔재가 없는지 |
+| ⑤ | **로봇8 단독** — 노드 창 `node` 모드(6-1) · T6 → `preflight pose` → T8 `active` → 미션 1회 완주 | 2대 가기 전에 1대가 새 구성으로 도는지 |
+| ⑥ | **로봇3 추가** — 같은 순서. 양쪽 `active` · 관제 UI 에 2대 | 여기까지가 첫 번째 목표 |
+| ⑦ | T2 bag 켜고 **2대 회차** — 폰 영상 동시 촬영 | 두 번째 미션 타이밍은 관제가 조정한다 (아래 규칙) |
+| ⑧ | 성공이면 한 번 더. 실패면 **원인 하나만** 고쳐 재시도. **10:00 중단** | |
 
 ## 0-1. 모든 PC 공통 — **먼저 같은 코드인지 맞춘다** (9/10 밤 추가)
 
@@ -52,7 +80,7 @@ cd ~/mro-multi-amr && git pull --ff-only && git log --oneline -1
 source /etc/turtlebot4_discovery/setup.bash && source ~/turtlebot4_ws/install/setup.bash && source ~/mro-multi-amr/ros2_ws/install/setup.bash && echo "$ROS_DOMAIN_ID $ROS_DISCOVERY_SERVER $ROS_SUPER_CLIENT"
 ```
 
-기대값 `3 ;192.168.108.41:11811 True`. 웹캠 PC 와 Nav2 창만 `False` (6-1 을 적용했다면 그 창들도 `False`). 다르면 `/etc/turtlebot4_discovery/setup.bash` 의
+기대값 `3 ;192.168.108.41:11811 True`. 웹캠 PC · Nav2 창 · **2대 운용 시 노드 창(T3·T5·T6·T7·T9·T10, `node` 모드)** 은 `False`. 다르면 `/etc/turtlebot4_discovery/setup.bash` 의
 `ROS_DISCOVERY_SERVER=";192.168.108.41:11811"` 을 맞춘다. **스크립트·SSH 로 띄우면 `ROS_SUPER_CLIENT` 가 조용히 False 가 되어
 토픽이 거의 안 보인다** — 관제 창은 `export ROS_SUPER_CLIENT=True` 를 명시한다.
 
@@ -137,7 +165,7 @@ mkdir -p ~/bags && cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 bag
 
 ### T3 · localization — 유지
 ```bash
-cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch turtlebot4_navigation localization.launch.py namespace:=/ROBOT map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
+cd ~/mro-multi-amr && source tools/shuttle_env.sh node && ros2 launch turtlebot4_navigation localization.launch.py namespace:=/ROBOT map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
 ```
 
 ### T4 · rviz — 유지 · **양쪽 T8 이 뜬 뒤에 켠다** (2D Pose Estimate 누르지 않음)
@@ -147,13 +175,13 @@ cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch turtlebot4_viz 
 
 ### T5 · 셔틀 리그 — 유지 (워치독 · ArUco 검출기 · 세마포어는 관제 것)
 ```bash
-cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch mro_navigation shuttle_step1_rig.launch.py namespace:=/ROBOT bay:=BAY real_aruco:=true semaphore:=false safety_participants:="shuttle_mission,follow_target,return_dock"
+cd ~/mro-multi-amr && source tools/shuttle_env.sh node && ros2 launch mro_navigation shuttle_step1_rig.launch.py namespace:=/ROBOT bay:=BAY real_aruco:=true semaphore:=false safety_participants:="shuttle_mission,follow_target,return_dock"
 ```
 띄운 뒤 로봇이 도크에 그대로 있어야 한다 (워치독은 dock_status 를 받기 전·도킹 중엔 cmd_vel 을 내지 않는다).
 
 ### T6 · 셔틀 노드 — 유지 · Nav2 보다 먼저
 ```bash
-cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/ROBOT -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/common.yaml --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/ROBOT.yaml
+cd ~/mro-multi-amr && source tools/shuttle_env.sh node && ros2 run mro_navigation shuttle_mission_node --ros-args -r __ns:=/ROBOT -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/common.yaml --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/ROBOT.yaml
 ```
 `초기자세 … 전송` 확인. T3 에 `AMCL cannot publish` 가 계속되거나 `dock_status 15 s` 경고면 이 창만 재시작 (첫 발행이 디스커버리 매칭 전에 나가 유실된 것).
 
@@ -176,7 +204,7 @@ cd ~/mro-multi-amr && source tools/shuttle_env.sh && tools/shuttle_preflight.sh 
 
 ### T7 · 복귀 노드 — 유지 (**finish 전에 떠 있는지 확인** — 9/10 16:14 에 6번 놓쳤다)
 ```bash
-cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 run mro_navigation return_dock_node --ros-args -r __ns:=/ROBOT -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/common.yaml --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/ROBOT.yaml
+cd ~/mro-multi-amr && source tools/shuttle_env.sh node && ros2 run mro_navigation return_dock_node --ros-args -r __ns:=/ROBOT -r /tf:=tf -r /tf_static:=tf_static --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/common.yaml --params-file $(ros2 pkg prefix mro_bringup)/share/mro_bringup/params/ROBOT.yaml
 ```
 
 ### T8 · Nav2 — 유지 · **T6 의 `map→odom` 확인 뒤에** (`Managed nodes are active` 까지 기다림)
@@ -190,12 +218,12 @@ cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 param get /ROBOT/contr
 
 ### T9 · 추종 리그 — 유지 (재식별 = 인지 실물)
 ```bash
-cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 launch mro_navigation follow_rig.launch.py namespace:=/ROBOT show_window:=false paired:=real
+cd ~/mro-multi-amr && source tools/shuttle_env.sh node && ros2 launch mro_navigation follow_rig.launch.py namespace:=/ROBOT show_window:=false paired:=real
 ```
 
 ### T10 · 로봇 시점 창 — 유지
 ```bash
-cd ~/mro-multi-amr && source tools/shuttle_env.sh && python3 tools/detection_view.py --ns /ROBOT
+cd ~/mro-multi-amr && source tools/shuttle_env.sh node && python3 tools/detection_view.py --ns /ROBOT
 ```
 
 ### T11 · 안전 상태 · T12 · 추종 상태 · T13 · 관제 미션 수신 — 유지
@@ -248,11 +276,17 @@ T11  CLEAR 유지. 막히면 STOPPING → SAFE_ROTATE → CLEAR
 | RETURN 눌러도 즉시 FAILED | 추종 취소와 복귀 첫 목표 경합 (17:15) | PR #88 에서 수정 (IDLE 대기·1회 재전송). 그 전 판이면 RETURN 한 번 더 |
 | 힌트 방향으로 안 돌고 20° 씩 | `webcam_hint` 가 서버에 없음 | PC-W2 `echo $ROS_DISCOVERY_SERVER`, 로봇 PC `ros2 node list | grep webcam_hint` |
 
-## 6-1. 두 번째 로봇의 Nav2 가 안 뜰 때 — `node` 모드
+## 6-1. 2대 운용의 `node` 모드 — 왜 기본인가
 
-**아직 실주행 검증 전이다 (9/10 밤, 시간이 없어 못 쟀다). 먼저 0절의 기동 순서부터 지키고,
-그래도 두 번째가 안 뜰 때만 쓴다.** 이걸 먼저 켜 놓고 시연에 들어가지 않는다 — 9/10 에
-검증한 것은 아래를 **안 쓴** 경로다.
+**9/11 부터 2대 운용의 기본이다.** T3·T5·T6·T7·T9·T10 명령어에 이미 들어 있다.
+
+실주행 검증은 아직 전이다 (9/10 밤엔 시간이 없었다). 그런데도 기본으로 두는 이유 —
+**검증된 2대 경로 자체가 없다.** 9/10 밤 두 번(`20:53`·`21:08`) 다 실패했다. 그렇다면 부하가 낮은
+쪽으로 첫 시도를 하는 게 맞고, 중간에 창 여섯 개를 내리고 모드를 바꿔 다시 띄우는 것은 **그 자체가
+디스커버리 폭풍**이다. Nav2 창(T8)은 하루 종일 `False` 로 돌았고, 노드 창을 `False` 로 두는 것은
+같은 성질이라 위험이 낮다. **7시 로봇8 단독 회차(0-0 ⑤)가 곧 검증이다.**
+
+1대만 돌릴 때는 종전대로 `node` 없이 띄워도 된다 — 그 경로는 9/10 17:15 에 완주로 검증됐다.
 
 ### 왜 이걸 의심하는가
 
@@ -275,10 +309,9 @@ Nav2 는 `turtlebot4_navigation/nav2.launch.py` 가 `use_composition` 을 `'Fals
 3개(T4 는 1개) · `talker` · 유령 등록이 함께 떠 있었다. 부하가 병목인지 판단하려면 **먼저
 절차대로 한 번 돌려야 한다.**
 
-### 조치 — 노드만 띄우는 터미널을 일반 클라이언트로
+### 적용 대상 — 노드만 띄우는 터미널
 
-**T3 · T5 · T6 · T7 · T9 · T10** 의 `source tools/shuttle_env.sh` 를
-`source tools/shuttle_env.sh node` 로 바꾼다. 나머지는 손대지 않는다.
+**T3 · T5 · T6 · T7 · T9 · T10** 이 `source tools/shuttle_env.sh node` 다. 나머지는 손대지 않는다.
 
 ```bash
 cd ~/mro-multi-amr && source tools/shuttle_env.sh node && ros2 launch turtlebot4_navigation localization.launch.py namespace:=/ROBOT map:=$(ros2 pkg prefix mro_bringup)/share/mro_bringup/maps/auto_map.yaml
@@ -293,7 +326,8 @@ T11·T12·T13(`topic echo`) · T14(`service call`) · 관제 PC · T8 은 원래
 ### 되돌리기와 판정
 
 틀렸다면 **기동 2분 안에 드러난다** — T6 이 `초기자세 … 전송` 을 못 내거나, T11·T12 에
-상태가 안 찍힌다. 그때는 `node` 를 빼고 그 창만 다시 띄우면 원래대로다. 바꾼 창 말고는
+상태가 안 찍힌다. 그때는 `node` 를 빼고 그 창만 다시 띄우면 원래대로다. 안 당긴 PC 에서 `node`
+를 치면 스크립트가 경고를 낸다 (모르는 모드는 조용히 넘어가지 않는다, 9/10). 바꾼 창 말고는
 아무것도 달라지지 않으므로 **원인 변수가 하나로 유지된다.**
 
 > `use_composition` 을 `True` 로 돌리면 Nav2 프로세스가 11 → 2 벌이 된다. 걸림돌로 본
