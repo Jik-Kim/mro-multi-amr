@@ -13,7 +13,7 @@ from launch.substitutions import LaunchConfiguration
 
 SPIN_MAX_RAD_S = 0.3    # Nav2 Spin 상한. TB4 기본 1.0 — 아래 주석
 SPIN_MIN_RAD_S = 0.15   # Nav2 Spin 하한. TB4 기본 0.4
-INFLATION_RADIUS_M = 0.25   # arena.yaml nav2_inflation_radius (9/6 합의). TB4 기본 0.15
+INFLATION_RADIUS_M = 0.20   # 내접 0.186 + 여유. 0.25(9/6 합의)는 0.79 m 통로를 비용으로 다 덮어 rviz 가 뚱뚱했다 (9/10 오후). 0.19 아래는 벽 붙기 재현
 
 
 def _setup(context):
