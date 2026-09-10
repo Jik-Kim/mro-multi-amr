@@ -18,6 +18,7 @@ fleet_manager 가 이를 받아 작업자-로봇을 배정하고 언독(S2)으�
   - rematch_threshold 는 잠정값이다. 인형 2체로 유사도 분포를 재서 확정한다 (계약 v1.3)
   - 자동 노출이 길어지면 캡처가 처리 주기 밑으로 떨어져 루프까지 느려진다
   - 셔틀 트리거는 mission/assigned 가 계약이다 (FR-07). 옛 webcam/detected 발행은 제거했다
+  - **발행하는 서술자는 등록 순간에 고정된다** (I-058). hists 의 이동평균은 재등록 판정에만 쓴다
   - 웹캠1 은 출입구만 본다 (9/7 결정, 계약 v1.10). 관제탑 구역은 시야 밖이고 map 좌표도 내지 않는다.
     등록은 작업자가 출입구를 지나는 순간에 일어나므로 통과 시간이 register_s 를 채우는지 확인할 것 (Q-26)
 
@@ -159,6 +160,7 @@ class WebcamDetection(Node):
         self.hist_buf = {}        # track_id -> 최근 DESCRIPTOR_FRAMES 개 히스토그램 (평균용)
         self.track_seen = {}      # track_id -> 연속 관측 프레임 수
         self.workers = {}         # track_id -> (worker_id, outfit_class)
+        self.frozen = {}          # track_id -> **등록 순간에 고정한** color_hist. 발행하는 것은 이것이다
         self.last_logged = None
         self.create_timer(PERIOD_S, self.process_frame)
         self.create_timer(1.0 / PUBLISH_HZ, self.publish_workers)
@@ -229,13 +231,29 @@ class WebcamDetection(Node):
             if rebound:
                 old_tid, wid, sim = rebound
                 self.workers[tid] = self.workers.pop(old_tid)      # 트랙만 갈아끼운다
+                # 고정 지문은 **등록 순간의 것을 그대로 들고 간다.** 여기서 새 트랙의 현재
+                #   평균으로 바꾸면 고정하는 의미가 없어진다 — 재등록은 시야를 한 번 벗어났다
+                #   들어온 경우라 그 순간의 crop 이 좋다는 보장이 없다. 위 rematch 판정이
+                #   이미 같은 사람임을 확인했으므로 옛 지문을 계속 쓰는 것이 맞다
+                if old_tid in self.frozen:
+                    self.frozen[tid] = self.frozen.pop(old_tid)
                 self.get_logger().info(f'재등록 {wid}: track {old_tid} → {tid} (sim {sim:.2f})')
                 continue
             if len(self.workers) >= MAX_WORKERS:
                 continue
             wid = f'W{len(self.workers) + 1}'
             self.workers[tid] = (wid, cls_name)
-            self.get_logger().info(f'등록 확정 {wid} (track {tid}, {cls_name})')
+            # **등록 순간의 평균을 고정한다 (I-058).** hists 는 maxlen 10 짜리 이동평균이라
+            #   트랙이 살아 있는 동안 계속 덮어써진다. 그대로 발행하면 로봇이 받는 지문이
+            #   '웹캠1 이 방금 1초 동안 본 것' 이 되고, S1 동선상 그 마지막 1초는 작업자가
+            #   시야를 빠져나가는 구간이다 — bbox 가 잘리고 흐리고 측면이다. 등록 조건이
+            #   이미 'REGISTER_S 동안 끊기지 않은 트랙' 이라 이 순간의 평균이 가장 좋다
+            #   h 는 위에서 self.hists.get(tid) 로 받아둔 값이다. bbox 가 매 프레임 찌그러져
+            #   crop 이 한 번도 안 잡히면 None 일 수 있다 — 그때는 고정하지 않고 등록만 한다
+            #   (발행 쪽이 알아서 건너뛴다). 종전 동작과 같다
+            if h is not None:
+                self.frozen[tid] = h
+            self.get_logger().info(f'등록 확정 {wid} (track {tid}, {cls_name}) — 서술자 고정')
 
         # 히스테리시스: 초 단위 상수를 처리 주기로 나눠 프레임 수로 환산.
         # webcam/detected 발행은 제거했고(FR-07 은 mission/assigned 가 계약), 지금은 로그 전이 판정에 쓴다
@@ -268,7 +286,7 @@ class WebcamDetection(Node):
     def publish_workers(self):
         """등록된 작업자를 PUBLISH_HZ 로 재발행. 관제(fleet_manager)가 늦게 켜져도 받게 한다."""
         for tid, (wid, outfit) in self.workers.items():
-            h = self.hists.get(tid)
+            h = self.frozen.get(tid)          # 이동평균(hists)이 아니라 등록 순간의 고정본 (I-058)
             if h is None:
                 continue
             m = WorkerDescriptor()
