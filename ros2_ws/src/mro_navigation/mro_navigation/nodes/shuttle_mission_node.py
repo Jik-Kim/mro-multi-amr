@@ -120,6 +120,9 @@ TOKEN_SRV = '/fleet/zone_token'   # 관제 PC 의 zone_semaphore. 전역 이름
 ZONE_P1 = 'P1'                    # arena.yaml semaphore_zones · ZoneToken.srv 와 ID 일치
 MAP_FRAME = 'map'
 BASE_FRAME = 'base_link'
+# 회전 실행량을 재는 기준. map 은 AMCL 보정이 섞여 **로봇이 안 돈 것과 AMCL 이 돌았다고
+#   말하는 것을 구분하지 못한다.** odom 은 점프가 없어 그 둘을 가른다 (9/10)
+ODOM_FRAME = 'odom'
 # aruco/pose 의 header.frame_id 가 비어 올 때만 쓰는 대체값 (aruco_detector 와 같은 이름)
 CAMERA_FRAME_FALLBACK = 'oakd_rgb_camera_optical_frame'
 TICK_S = 0.1                      # spin_once 주기
@@ -1091,6 +1094,61 @@ class ShuttleMission(Node):
         self.get_logger().info(f'{label} — 원하는 {want:.3f} m, 명령 {cmd:.3f} m')
         self.run_behavior(lambda: self.navigator.driveOnHeading(cmd, speed, allow), label)
 
+    def odom_yaw(self):
+        """odom←base_link 의 방위 [rad]. 못 읽으면 None.
+
+        **회전 실행량은 이 값으로 재야 한다.** map 은 AMCL 보정이 섞여 있어 로봇이 실제로
+        돈 각과 '돌았다고 AMCL 이 말하는 각' 이 구분되지 않는다. odom 은 바퀴·IMU 적산이라
+        절대 정확도는 떨어져도 **점프가 없어** 짧은 구간의 상대 회전에는 이쪽이 맞다.
+        """
+        try:
+            t = self.tf_buffer.lookup_transform(ODOM_FRAME, BASE_FRAME, Time())
+        except Exception:
+            return None
+        q = t.transform.rotation
+        return math.atan2(2.0 * (q.w * q.z + q.x * q.y),
+                          1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+
+    def log_turn(self, label, angle, before_map, after_map, before_odom, after_odom):
+        """명령한 각과 실제로 돈 각을 **두 기준으로** 남긴다 (9/10).
+
+        9/10 A2·A4 에서 육안으로는 로봇이 눈에 띄게 비뚤었는데 map 기준 계측은 오차가
+        0.2~4.6° 라고 했다. **둘 다 참일 수 없다.** 그러면 남는 용의자가 map 방위,
+        즉 AMCL 이다. 두 값을 나란히 찍으면 다음 회차에서 바로 갈린다:
+
+            odom 이 정확하고 map 도 정확  → 로봇은 제대로 돌았다. 원인은 다른 곳
+            odom 은 정확한데 map 이 어긋남 → **AMCL 방위가 튄다.** 측량값도 못 믿는다
+            odom 이 어긋남                 → 로봇이 실제로 명령대로 안 돈다
+        """
+        def diff(before, after):
+            if before is None or after is None:
+                return None
+            return wrap_pi(after - before)
+
+        odom = diff(before_odom, after_odom)
+        mapped = diff(None if before_map is None else before_map.yaw,
+                      None if after_map is None else after_map.yaw)
+        if odom is None and mapped is None:
+            self.get_logger().warn(f'{label} 실행량을 못 쟀다 — TF 를 못 읽었다')
+            return
+        parts = [f'{label} 실행 — 명령 {math.degrees(angle):+.1f}°']
+        for name, got in (('odom', odom), ('map', mapped)):
+            if got is None:
+                parts.append(f'{name} 못 읽음')
+            else:
+                parts.append(f'{name} {math.degrees(got):+.1f}° '
+                             f'(오차 {math.degrees(wrap_pi(got - angle)):+.1f}°)')
+        line = ' · '.join(parts)
+        # 두 기준이 서로 다르면 그것 자체가 발견이다 — 로봇의 회전과 측위의 회전이 다르다
+        if odom is not None and mapped is not None:
+            gap = wrap_pi(mapped - odom)
+            if abs(gap) > math.radians(5.0):
+                line += (f'   ← **두 기준이 {math.degrees(abs(gap)):.1f}° 다르다.** '
+                         'AMCL 방위가 튀었다는 뜻이다')
+        elif odom is not None and abs(wrap_pi(odom - angle)) > math.radians(5.0):
+            line += '   ← 분해능 2.3° 를 크게 넘는다'
+        self.get_logger().info(line)
+
     def turn(self, angle, label):
         """분해능 위일 때만 제자리 회전한다. **명령한 각을** 돌려준다.
 
@@ -1110,19 +1168,10 @@ class ShuttleMission(Node):
                 f'{label} 생략 — {math.degrees(angle):+.1f}° 는 Spin 분해능 미만')
             return 0.0
         allow = max(1, int(self.p('bay_align_timeout_s')))
-        before = self.tf_sample(warn=False)
+        before_map, before_odom = self.tf_sample(warn=False), self.odom_yaw()
         self.run_behavior(lambda: self.navigator.spin(angle, allow), label)
-        after = self.tf_sample(warn=False)
-        if before is not None and after is not None:
-            actual = wrap_pi(after.yaw - before.yaw)
-            err = wrap_pi(actual - angle)
-            self.get_logger().info(
-                f'{label} 실행 — 명령 {math.degrees(angle):+.1f}° · '
-                f'실제 {math.degrees(actual):+.1f}° · 오차 {math.degrees(err):+.1f}°'
-                + ('   ← 분해능 2.3° 를 크게 넘는다'
-                   if abs(err) > math.radians(5.0) else ''))
-        else:
-            self.get_logger().warn(f'{label} 실행량을 못 쟀다 — TF 를 못 읽었다')
+        after_map, after_odom = self.tf_sample(warn=False), self.odom_yaw()
+        self.log_turn(label, angle, before_map, after_map, before_odom, after_odom)
         # **명령한 각을 돌려준다.** 다음 단계의 회전량은 '우리가 무엇을 명령했나' 위에서
         #   계산되어야 앞뒤가 맞는다. 실제로 돈 각을 쓰면 측정 잡음이 계산에 섞인다
         return angle
