@@ -25,8 +25,12 @@
                                # robot8 은 cy 가 367.6 으로 중앙(352)에서 15.6 px 벗어나 있는데 정상이다
                                # (가로 cx 는 352.4 로 가운데. 배율은 폭 기준이라 영향 없다).
                                #
-                               # **amr_detection 과 공용이다** — 1.7778 → 1.8336 은 target/map_point 의 좌우
-                               # 성분을 3.1 % 키운다 (1.1 m 지점에서 약 3 cm). target/distance(depth)는 영향 없다.
+                               # **amr_detection 과 공용이다.** 1.7778 → 1.8336 은 fx 를 +3.14 % 키우는데,
+                               # 두 토픽에 **반대 방향**으로 나타난다:
+                               #   aruco/distance    +3.1 % 커진다   d = fx × 마커크기 ÷ 픽셀 (fx 가 분자)
+                               #   target/map_point  좌우 3.0 % 줄어든다  x = (u−cx) × z ÷ fx (fx 가 분모)
+                               # map_point 절대량은 작다 — 1.1 m 에서 화면 중앙 0 · 100 px 옆 0.33 cm ·
+                               # 화면 맨 끝 1.17 cm. target/distance(depth)는 영향 없다.
                                # 근본 해결은 로봇이 영상과 맞는 camera_info 를 내보내는 것. 그때 1.0 으로 되돌린다
 
     # --- amr_detection_node (17개 전부 declare_parameter 로 읽는다 · camera_fx_scale 은 위 공용 · README §3 과 1:1) ---
