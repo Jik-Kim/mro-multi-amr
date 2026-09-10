@@ -392,6 +392,12 @@ class ShuttleMission(Node):
         self.aruco_dist = None   # (m, 수신 시각)
         # aruco/pose 원본을 그대로 쌓는다 — TF 변환은 메인 루프에서 한다 (콜백은 값만 저장)
         self.aruco_poses = deque(maxlen=30)
+        # **거리도 창을 둔다.** 자세는 5프레임 중앙값을 내면서 크기의 기준인 거리만 '가장 최근
+        #   한 값' 을 쓰고 있었다. 검출기 거리가 PR #76 이후 순수 solvePnP 라 정사각 마커의
+        #   두 해 모호성이 거리에도 실린다 — 9/10 R5-2 에서 로봇이 천천히 움직이는 동안
+        #   1.241 → 1.325 → 1.312 → 1.209 로 ±6 % 흔들렸다(정지 측정 산포는 1 mm 였다).
+        #   그 한 값이 8 cm 틀리면 이동량 전체가 그만큼 틀어진다
+        self.aruco_dists = deque(maxlen=30)
         self.cam_tf = None       # (프레임 이름, base_link←카메라 변환) — 고정이라 한 번만 찾는다
         self.estop = False
         self.last_status = None
@@ -470,6 +476,8 @@ class ShuttleMission(Node):
 
     def aruco_dist_cb(self, msg):
         self.aruco_dist = (float(msg.data), self.now())
+        if math.isfinite(float(msg.data)):
+            self.aruco_dists.append((float(msg.data), self.now()))
 
     def aruco_pose_cb(self, msg):
         """마커 자세. 여기서는 TF 를 만지지 않는다 — 변환은 메인 루프의 marker_sample() 이 한다."""
@@ -711,6 +719,7 @@ class ShuttleMission(Node):
             self.t0 = None                           # 폐기 — 늦은 도착을 계상하지 않는다 (계약 7절)
             self.aruco_id = self.aruco_dist = None
             self.aruco_poses.clear()
+            self.aruco_dists.clear()
             self.set_status('READY')
 
     def mission_targets(self, m):
@@ -981,6 +990,7 @@ class ShuttleMission(Node):
         want = max(1, int(self.p('bay_align_samples')))
         window = window_s or self.positive_parameter('bay_align_sample_s')
         self.aruco_poses.clear()
+        self.aruco_dists.clear()
         # ID 일치를 **기다리는 조건에 넣는다.** 미리 한 번 보고 없다고 곧장 포기하면, 회전 직후
         #   한두 프레임 놓친 것만으로 미션이 죽는다 (9/8 T15·T16 이 그랬다)
         self.wait(lambda: (len(self.aruco_poses) >= want
@@ -997,20 +1007,19 @@ class ShuttleMission(Node):
         tf = self.camera_transform(frames[0][0].header.frame_id or CAMERA_FRAME_FALLBACK)
         if tf is None:
             return None
-        # 거리는 검출기가 vetting 한 aruco/distance 를 쓴다 (위 marker_in_base 설명)
-        distance = None
-        if self.aruco_dist is not None:
-            value, stamp = self.aruco_dist
-            if self.now() - stamp <= self.p('aruco_valid_s') and math.isfinite(value):
-                distance = float(value)
+        # 거리는 검출기가 vetting 한 aruco/distance 를 쓰되 **같은 창의 중앙값**을 쓴다
+        #   (위 marker_in_base 설명 · 창을 둔 이유는 aruco_dists 선언부 참조)
+        valid = self.p('aruco_valid_s')
+        recent = [v for v, stamp in self.aruco_dists if self.now() - stamp <= valid]
+        distance = median(recent) if recent else None
         if distance is None:
             self.get_logger().warn('aruco/distance 가 신선하지 않다 — pose 크기를 그대로 쓴다')
         else:
-            # 9/8 미해결: 검출기가 0.899 m 를 찍은 순간 우리 계산이 1.104 m 였다. 어느 쪽이
-            #   어긋났는지 로그로 바로 가리려고 쓴 값을 남긴다 (내일 첫 항목)
+            # 산포를 같이 남긴다 — 검출기 거리가 흔들리면 이동량이 통째로 틀어지므로,
+            #   나중에 '왜 그만큼 갔나' 를 되짚을 때 이 폭이 첫 단서가 된다
             self.get_logger().info(
                 f'마커 표본 {len(frames)}개 · 자로 쓴 aruco/distance {distance:.3f} m '
-                f'(수신 {self.now() - self.aruco_dist[1]:.2f} s 전)')
+                f'(표본 {len(recent)}개 · {min(recent):.3f}~{max(recent):.3f})')
         rows, last = [], None
         for msg, recv in frames:
             row = self.marker_in_base(msg, tf, distance)

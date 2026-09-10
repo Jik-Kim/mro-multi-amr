@@ -285,7 +285,8 @@ def approach_moves(node):
     return moves[:-len(EXIT_MOVES)]
 
 
-def marker_frames(node, fwd, lat, count=5, flip_normal=False, set_distance=True):
+def marker_frames(node, fwd, lat, count=5, flip_normal=False, set_distance=True,
+                  distances=None):
     """마커가 base_link 에서 (fwd, lat) 에 정면으로 보이는 aruco/pose 를 대본으로 넣는다.
 
     광학 프레임에서 (px, py, pz) 는 base 에서 (pz, −px, −py) 이므로 px = −lat, pz = fwd 다.
@@ -311,7 +312,13 @@ def marker_frames(node, fwd, lat, count=5, flip_normal=False, set_distance=True)
     if set_distance:
         # 노드는 크기를 aruco/distance 에서 가져온다 (pose 는 방향만) — 기하와 맞춰 둔다.
         #   fresh_marker() 뒤에 부를 것: 그쪽이 임의의 거리 0.9 를 넣어 둔다
-        node.aruco_dist = (math.hypot(fwd, lat), node.now())
+        # **창에도 넣는다.** 노드는 한 값이 아니라 창의 중앙값을 쓴다 — 여기를 안 채우면
+        #   시험이 조용히 '거리 없음' 폴백을 타고, 정작 검증하려던 경로를 안 지나간다
+        values = distances if distances is not None else [math.hypot(fwd, lat)]
+        node.aruco_dist = (values[-1], node.now())
+        node.aruco_dists.clear()
+        for v in values:
+            node.aruco_dists.append((v, node.now()))
 
 
 def stub_token(node, granted_sequence):
@@ -424,6 +431,27 @@ def test_bay_approach_aligns_onto_the_normal_line_first(ros):
     assert moves[2][1] == pytest.approx(-math.pi / 2, abs=1e-3)   # 다시 마커를 정면으로
     assert moves[3][1] == pytest.approx(0.1, abs=1e-3)            # 남은 법선거리
     assert node.status_log[-2:] == ['WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_distance_uses_the_median_of_the_window_not_the_latest(ros):
+    """거리는 창의 **중앙값**을 쓴다 — 마지막 한 값이 튀어도 이동량이 끌려가지 않는다.
+
+    PR #76 이후 aruco/distance 가 순수 solvePnP 라 정사각 마커의 두 해 모호성이 거리에도
+    실린다. 9/10 R5-2 에서 로봇이 천천히 움직이는 동안 1.241 → 1.325 → 1.312 → 1.209 로
+    ±6 % 흔들렸다 (같은 마커의 정지 측정 산포는 1 mm 였다). 자세는 이미 중앙값을 내면서
+    **크기의 기준인 거리만 가장 최근 한 값**을 쓰고 있었고, 그 한 값이 8 cm 틀리면 이동량
+    전체가 그만큼 틀어진다.
+    """
+    node = make_node(bay_align_enable=True, bay_align_max_iter=1)
+    stub_token(node, [True])
+    fresh_marker(node)
+    # 중앙값은 1.20 인데 마지막 값만 1.45 로 튄다 (수용 조건 1.5 m 안에 두어 오도착 판정을
+    #   건드리지 않는다 — 여기서 보려는 것은 거리의 '어느 값을 쓰나' 뿐이다)
+    marker_frames(node, fwd=1.2, lat=0.0, distances=[1.19, 1.20, 1.21, 1.20, 1.45])
+    node.run_mission(assigned('A'))
+    # 1.45 를 썼다면 0.55 를 갔을 것이다. 중앙값 1.20 을 썼으므로 0.3 이다
+    assert approach_moves(node) == [('drive', 0.3)]
     node.destroy_node()
 
 
