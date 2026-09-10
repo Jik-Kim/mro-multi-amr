@@ -10,7 +10,7 @@
 > **v1.16 (9/8, PR #49): `approach/status` 의 접근 두 값에 뜻을 붙인다.** 값 목록은 그대로다. `APPROACH_1` = 중간 목표 · `APPROACH_2` = 최종 목표이며, **기본값에서는 후자가 발행되지 않는다** — 값이 안 보이는 것이 고장이 아님을 적어 두지 않으면 나중에 그것을 찾느라 시간을 쓴다.
 > **v1.17 (9/9, PR #67): `ARRIVED` 도 같은 이유로 발행되지 않는다.** `approach_final` 이 참일 때만 내므로 v1.16 의 `APPROACH_2` 와 **하나의 같은 사실**이다 — 한쪽만 적어두면 다음 사람이 `ARRIVED` 가 안 오는 것을 고장으로 보고 찾는다. **값 목록은 8개 그대로다.** 9/9 실주행에서 확인했다.
 > **v1.18 (9/9, PM 승인): AMR 상태 소유자를 로봇별 `RobotControlNode(namespace)`로 이관.** 각 인스턴스가 셔틀·접근·배터리·위치·E-stop·페어링을 집계해 `/fleet/status`를 1 Hz로 발행한다. `FleetStatus`에 `approach_state`·`shuttle_state`·`pair_state`를 추가했고, `fleet_manager`는 요약 토픽을 받아 미션 전이·DB 기록만 한다.
-> **v1.19 정정 (9/10, PM): 관제 UI 노드가 둘로 나뉘었다.** `control_ui_node` 가 없어지고 **`MonitorWebApp`(웹 화면)** 과 **`FleetClient`(ROS 발행·서비스 요청)** 이 됐다. 아래 표의 발행·구독 칸은 고쳤고, **10절 산문에 남은 `control_ui` 는 이 둘을 합친 역할**로 읽는다 — 그 이름의 노드는 이제 없다.
+> **v1.19 정정 (9/10, PM): 관제 UI 노드가 둘로 나뉘었다.** `control_ui_node` 가 없어지고 **`MonitorWebApp`(웹 화면)** 과 **`FleetUICommands`(ROS 발행·서비스 요청, `fleet_client.py`)** 이 됐다. 아래 표의 발행·구독 칸은 고쳤고, **10절 산문에 남은 `control_ui` 는 이 둘을 합친 역할**로 읽는다 — 그 이름의 노드는 이제 없다.
 > **v1.19 (9/10): 작업자 등록과 AMR 배정 시점을 분리.** `WorkerDescriptor` 수신 시에는 작업자만 DB에 등록하고, UI의 `RequestMission` 요청 시 `FleetStatus`를 받은 로봇 중 미션·E-stop이 없고 배터리 기준을 충족한 AMR을 배정한다. 배정 결과의 단일 저장 위치는 `missions.robot_ns`이다. 이 변경은 BRD v3.5 S1·S2의 등록 직후 고정 배정과 다르므로 차기 BRD·SDD에서 동기화해야 한다.
 >
 > 토픽·메시지·서비스 정의는 v1.0 을 기준으로 v1.11 이 토픽 하나, v1.12 가 토픽 하나·서비스 하나·개입 종류 하나, v1.13 이 토픽 하나를 더했고, v1.14 는 하나를 갈고 하나의 뜻을 바꿨으며, v1.15 는 기존 서비스 형식의 관제 내부 경로 하나를 명시했다.
@@ -92,7 +92,7 @@
 | `/webcam2/image_raw/compressed` | webcam_hint | (뷰어·영상 판독 기록) | CompressedImage | **jpeg 80, 10 Hz** (`image_publish_hz`). raw `Image` 는 발행하지 않는다 — 다른 PC 에서 구독하면 Wi-Fi 를 막는다 (NR-03). 안전 판단 금지, 세션 판정 후 폐기 (R-10). PR #14 |
 | `/fleet/mission` | fleet_manager | kpi_logger, UI | Mission | 상태 전이마다 |
 | `/fleet/status` | 로봇별 RobotControlNode | fleet_manager, MonitorWebApp, kpi_logger | FleetStatus | 1 Hz. AMR 상태의 단일 집계 경로 |
-| `/fleet/intervention` | **FleetClient** | kpi_logger, fleet_manager | Intervention | 운영자 버튼. `9/10` 발행 주체가 `control_ui` 에서 `fleet_client.py` 로 옮겨졌다 |
+| `/fleet/intervention` | **FleetUICommands** (`fleet_client.py`) | kpi_logger, fleet_manager | Intervention | 운영자 버튼. `9/10` 발행 주체가 `control_ui` 에서 옮겨졌다 (PR #73·#77) |
 | `/fleet/zone_event` | zone_semaphore | kpi_logger, fleet_manager | String | **v1.11 (I-030).** `"<zone_id> <robot_ns> <REJECT\|GRANT\|RELEASE\|RECLAIM>"`. K-06 원천 — 3절 이벤트 규칙 |
 | `mission/assigned` | fleet_manager | shuttle_mission, **amr_detection**, RobotControlNode | Mission | **S4 트리거.** `RequestMission` 시점에 가용 AMR을 선택하고 `worker_id`·`robot_ns`·`bay`를 확정한다. `amr_detection`은 `worker_id`로 미리 받은 외형 서술자를 선택한다 |
 | `mission/finish` | fleet_manager | return_dock, **follow_target**, amr_detection | Bool | S9. follow_target 은 **즉시 페어링 해제·추종 중단**(≤ 1 s), return_dock 은 복귀 시작. **amr_detection 은 명시 페어링을 해제한다** (v1.12, 10절) |
