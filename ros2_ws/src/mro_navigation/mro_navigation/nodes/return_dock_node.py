@@ -37,6 +37,8 @@ TODO([주행]):
 ① `robot.launch.py` 가 이 노드에도 `arena_yaml` 을 넘기게 할 것 (지금은 셔틀만 받는다).
    그때까지는 `mro_bringup` share 를 런타임 조회하는 대체값을 쓴다 — 의존을 선언하면 순환이다. PM 요청 필요
 """
+from mro_navigation.nodes.motion_pause import MotionPause
+
 import math
 import os
 
@@ -114,6 +116,7 @@ class ReturnDock(Node):
         self.pending = False        # finish 를 받았다 (실행은 메인 루프)
         self.running = False
         self.estop = False
+        self.motion_pause = MotionPause(self, 'return_dock', ReturnAbort)
         self.t0 = None
         self.last_status = None
         # 보유(held)와 요청(requested)을 따로 둔다 — 거절당해도 대기열에 들어가므로 반납해야 한다
@@ -174,7 +177,12 @@ class ReturnDock(Node):
         """유일한 대기 수단. 모든 대기가 여기를 지나므로 T_ret 검사가 한 곳에 모인다."""
         t_start = self.now()
         while rclpy.ok():
-            if cond():
+            if self.over_tret():
+                raise ReturnAbort(f"T_ret {self.p('t_ret_s')} s 초과")
+            done = cond()
+            if self.over_tret():
+                raise ReturnAbort(f"T_ret {self.p('t_ret_s')} s 초과")
+            if done:
                 return True
             rclpy.spin_once(self, timeout_sec=TICK_S)   # 콜백은 대기 중에도 살아 있다
             if self.over_tret():
@@ -202,17 +210,9 @@ class ReturnDock(Node):
 
     def goto(self, pose, label):
         """목표 1건. 콜백 밖에서만 불린다."""
-        if self.estop:
-            self.get_logger().warn(f'estop 중 — 해제까지 {label} 보류')
-            self.wait(lambda: not self.estop)        # 계약 4절: estop 동안 주행 명령 금지
         gx, gy = pose.pose.position.x, pose.pose.position.y
-        self.get_logger().info(f'{label} → ({gx:.2f}, {gy:.2f}) 이동 시작')
-        if not self.navigator.goToPose(pose):
-            raise ReturnAbort(f'{label} 목표 거부됨')
-        self.wait(self.navigator.isTaskComplete)
-        result = self.navigator.getResult().name
-        if result != 'SUCCEEDED':
-            raise ReturnAbort(f'{label} 이동 실패: {result}')
+        self.motion_pause.navigate(pose, label)
+        self.motion_pause.idle()
         at = self.tf_pose(warn=False)
         if at is None:
             self.get_logger().info(f'{label} 도착')
@@ -311,8 +311,8 @@ class ReturnDock(Node):
             self.set_status('DOCKING')               # 재시도 중에도 DOCKING 을 유지한다 (I-026)
             if attempt:
                 self.get_logger().warn(f'도킹 재시도 {attempt}/{retry_max}')
-            self.navigator.dock()
-            if self.navigator.getDockedStatus():
+            if self.motion_pause.dock_once():
+                self.motion_pause.idle()
                 return True
             if attempt < retry_max:
                 self.get_logger().warn('도킹 실패 — 접근 지점으로 되돌아가 재시도 (후진하지 않는다)')
@@ -360,6 +360,7 @@ def main():
     try:
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=TICK_S)
+            node.motion_pause.idle()
             if node.pending:
                 node.pending = False
                 node.run_return()                    # 콜백 밖에서만 navigator 를 부른다

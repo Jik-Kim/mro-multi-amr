@@ -41,6 +41,8 @@ TODO([주행]):
 ② v_max(0.3 m/s)는 이 노드가 병진 속도를 내지 않으므로 여기서 제한할 것이 없다. Nav2 의
    max_vel_x 가 실효값이고 지금 0.26 으로 계약값과 다르다 — 아직 정리되지 않은 충돌.
 """
+from mro_navigation.nodes.motion_pause import MotionPause
+
 import math
 import time
 
@@ -134,6 +136,7 @@ class FollowTarget(Node):
         self.declare_parameter('settle_s', 1.0)             # 이동·회전 뒤 이 시간 지난 좌표만 신뢰
         self.declare_parameter('search_wait_s', 1.5)        # 회전 후 이만큼 기다려도 못 찾으면 또 회전
         self.declare_parameter('visible_wait_s', 3.0)       # 보이는데 좌표가 걸러지면 이만큼만 기다린다
+        self.declare_parameter('motion_cmd_topic', 'cmd_vel_search')
         self.declare_parameter('search_step_deg', 20.0)     # 재탐색 정지점 간격 (시야 38.5° 보다 작게)
 
         # ---- 구독 ----
@@ -144,6 +147,7 @@ class FollowTarget(Node):
         self.create_subscription(String, WORKER_TOPIC, self.worker_cb, 1)
         self.create_subscription(Bool, FINISH_TOPIC, self.finish_cb, 1)
         self.create_subscription(Bool, ESTOP_TOPIC, self.estop_cb, 1)
+        self.create_subscription(String, 'safety/state', self.safety_state_cb, 1)
         # 힌트만 QoS 가 다르다. 발행자가 BEST_EFFORT 라 기본 RELIABLE 로 잡으면 한 건도 안 온다
         self.create_subscription(TargetHint, HINT_TOPIC, self.hint_cb, qos_profile_sensor_data)
 
@@ -159,9 +163,18 @@ class FollowTarget(Node):
         self.start_req = False        # shuttle/arrived 를 받았다
         self.finish_req = False       # mission/finish 를 받았다
         self.estop = False
+        self.safety_state = 'CLEAR'
+        self.safety_resume = False
+        self.motion_pause = MotionPause(self, 'follow_target', RuntimeError)
+        self.estop_cancel_requested = False
         self.estop_cancelled = False  # estop 진입 시 goal 취소를 한 번만
         self.paired = False
         self.worker_id = ''
+        self.observed_worker_id = ''
+        self.recovery_worker_id = None
+        self.recovery_search_point = None
+        self.recovery_stamp_ns = None
+        self.recovery_pair_seen = False
         self.visible_at = 0.0
         self.latest = None            # (x, y, 수신 시각)
         self.recent = []              # accept_after 이후 받은 좌표들 (일관성 검사용)
@@ -234,6 +247,14 @@ class FollowTarget(Node):
             self.start_req = True
 
     def point_cb(self, msg):
+        if self.estop:
+            return
+        if self.recovery_worker_id is not None:
+            stamp = msg.header.stamp.sec * 1000000000 + msg.header.stamp.nanosec
+            if (not self.gate_ok() or self.recovery_stamp_ns is None
+                    or not self.recovery_stamp_ns < stamp <= self.get_clock().now().nanoseconds
+                    or self.get_clock().now().nanoseconds - stamp > self.p('lost_s') * 1e9):
+                return
         if msg.header.frame_id == 'map':
             self.latest = (msg.point.x, msg.point.y, time.time())
 
@@ -246,9 +267,17 @@ class FollowTarget(Node):
         if self.paired and not msg.data:
             self.get_logger().warn('페어링 해제됨 — 게이트를 다시 통과해야 재개한다')
         self.paired = bool(msg.data)
+        if self.recovery_stamp_ns is not None:
+            self.recovery_pair_seen = self.paired
 
     def worker_cb(self, msg):
-        self.worker_id = msg.data
+        self.observed_worker_id = msg.data
+        # ESTOP은 할당 변경이 아니다. 빈 ID나 다른 작업자 관측으로 담당을 바꾸지 않는다.
+        if self.recovery_worker_id is None and msg.data:
+            self.worker_id = msg.data
+        elif msg.data != self.recovery_worker_id:
+            self.latest = None
+            self.recent = []
 
     def finish_cb(self, msg):
         if msg.data:
@@ -258,10 +287,27 @@ class FollowTarget(Node):
         was = self.estop
         self.estop = bool(msg.data)
         if self.estop and not was:
+            self.estop_cancel_requested = False
+            self.estop_cancelled = False
+            # **담당 ID 가 있을 때만 잠근다.** 관제 없이 시험하면 `target/worker_id` 가 '' 인데,
+            #   '' 를 잠그면 gate_ok 가 영원히 거짓이고 step() 이 영원히 return 해 FSM 이 죽는다
+            #   (9/10 실주행 코드 검토). ID 가 없으면 예전처럼 paired 게이트만으로 재획득한다
+            if self.state != 'IDLE' and self.recovery_worker_id is None and self.worker_id:
+                self.recovery_worker_id = self.worker_id
+            self.recovery_stamp_ns = None
+            self.latest = None
+            self.recent = []
+            self.motion_pause.ready = False
             self.get_logger().warn('estop — 주행 명령을 멈춘다 (실패가 아니다)')
         elif was and not self.estop:
             self.get_logger().info('estop 해제')
-            self.estop_cancelled = False
+            self.safety_resume = True
+            self.recovery_stamp_ns = self.get_clock().now().nanoseconds
+            self.observed_worker_id = ''
+            self.recovery_pair_seen = False
+
+    def safety_state_cb(self, msg):
+        self.safety_state = msg.data
 
     def hint_cb(self, msg):
         """웹캠2 가 주는 작업자 map 좌표. 방위가 아니라 좌표다 — 회전 부호는 우리가 계산한다."""
@@ -284,6 +330,9 @@ class FollowTarget(Node):
 
     def gate_ok(self):
         """계약 3절 재식별 게이트. 통과 못 하면 움직이지 않는다 (BR-T16·R-05)."""
+        if self.recovery_worker_id is not None:
+            return bool(self.paired and self.recovery_pair_seen and self.recovery_worker_id
+                        and self.observed_worker_id == self.recovery_worker_id)
         return self.paired
 
     def abort_motion(self):
@@ -301,6 +350,7 @@ class FollowTarget(Node):
 
     def begin_cycle(self):
         """대기공간 도착 신호를 받은 시점. 여기서부터가 S5 다."""
+        self.recovery_search_point = None
         self.start_req = False
         self.approach_final = False
         self.search_tries = 0
@@ -321,6 +371,12 @@ class FollowTarget(Node):
     def do_finish(self):
         """mission/finish 처리 (계약 4절 '≤ 1 s'). 정상 종료이므로 FAILED 가 아니라 IDLE 이다."""
         self.finish_req = False
+        self.recovery_search_point = None
+        self.recovery_worker_id = self.recovery_stamp_ns = None
+        # 명시적 작업 종료에서만 담당을 비운다. ESTOP 경로에서는 비우지 않는다.
+        self.worker_id = self.observed_worker_id = ''
+        self.start_req = False
+        self.safety_resume = False
         self.navigator.cancelTask()
         self.paired = False
         self.follow_est = None
@@ -337,10 +393,31 @@ class FollowTarget(Node):
 
         # 2) estop 중에는 새 명령을 내지 않는다. 상태는 유지 — 해제되면 그대로 이어간다
         if self.estop:
-            if not self.estop_cancelled:
+            if not self.estop_cancel_requested:
                 self.navigator.cancelTask()
+                self.estop_cancel_requested = True
+            if not self.estop_cancelled:
+                if not self.navigator.isTaskComplete():
+                    return
                 self.estop_cancelled = True
+            self.motion_pause.ready = True
+            self.motion_pause.publish()
+            if self.safety_state == 'STUCK' and self.state != 'IDLE':
+                self.set_state('STANDBY', '안전 복구 실패 — 담당 작업자를 유지하고 정지 대기')
             return
+
+        if self.safety_resume:
+            self.safety_resume = False
+            self.estop_cancelled = False
+            self.motion_pause.ready = False
+            if self.state != 'IDLE':
+                # 담당 ID 가 없으면(관제 미기동) identity 검사 없이 paired 게이트로만 재획득한다
+                # 과거 위치는 탐색 방위에만 사용하고 새 goal에는 절대 재사용하지 않는다.
+                if self.follow_est is not None:
+                    self.recovery_search_point = self.follow_est
+                self.follow_est = self.follow_goal = self.last_target = None
+                self.visible_at = 0.0
+                return self.begin_reacquire('안전 해제 — 기존 작업자의 새 관측과 게이트로 목표 재계산')
 
         # 3) 새 사이클. FOLLOWING·STANDBY 중에 다시 와도 새로 시작한다
         if self.start_req:
@@ -481,14 +558,15 @@ class FollowTarget(Node):
         **그 사이 이동 방향을 더해** 시야 밖으로 나간 쪽을 가리킨다 — 작업자가 오른쪽으로
         걸어 나갔다면 마지막으로 본 자리보다 더 오른쪽에 있다.
         """
-        if self.follow_est is None:
+        estimate = self.follow_est if self.follow_est is not None else self.recovery_search_point
+        if estimate is None:
             return None
         rob = robot_xy(self.tf_buffer)
         yaw = self.map_yaw()
         if rob is None or yaw is None:
             return None
-        ex, ey = self.follow_est
-        if self.follow_goal is not None:
+        ex, ey = estimate
+        if self.follow_est is not None and self.follow_goal is not None:
             gx, gy = self.follow_goal
             # 이동분을 한 번 더 외삽한다. 크게 잡으면 지나치므로 마지막 이동량만큼만
             ex, ey = ex + (ex - gx), ey + (ey - gy)
@@ -546,7 +624,8 @@ class FollowTarget(Node):
         """cmd_vel 토픽 타입(Twist / TwistStamped)을 보고 퍼블리셔를 만든다. 못 찾으면 None."""
         if self.cmd_pub is not None:
             return self.cmd_pub
-        name = f'{self.ns}/cmd_vel'
+        topic = self.p('motion_cmd_topic')
+        name = f'{self.ns}/cmd_vel'  # 최종 출력 타입을 확인한다
         types = dict(self.get_topic_names_and_types()).get(name, [])
         if 'geometry_msgs/msg/TwistStamped' in types:
             self.cmd_stamped = True
@@ -555,8 +634,8 @@ class FollowTarget(Node):
         else:
             return None                      # 아직 못 봄 → 이번엔 Nav2 Spin 으로
         self.cmd_pub = self.create_publisher(
-            TwistStamped if self.cmd_stamped else Twist, 'cmd_vel', 1)
-        self.get_logger().info(f'제자리 회전: {name} '
+            TwistStamped if self.cmd_stamped else Twist, topic, 1)
+        self.get_logger().info(f'제자리 회전: {self.ns}/{topic} '   # 타입은 cmd_vel 로 조회, 발행은 topic
                                f'({"TwistStamped" if self.cmd_stamped else "Twist"}) '
                                f'{SEARCH_ROTATE_SPEED} rad/s')
         return self.cmd_pub
@@ -845,6 +924,13 @@ class FollowTarget(Node):
         now = time.time()
         seen = (self.latest is not None) or (now - self.visible_at < 1.0)
         if not seen:
+            # 침묵하면 '코마' 로 보인다 (9/10 실주행 — 검출기가 작업자를 못 잡는데 아무 로그가 없어
+            #   FSM 이 죽은 줄 알았다). 무엇이 빠졌는지 말해야 현장에서 검출기 문제인지 우리 문제인지 가른다
+            self.get_logger().info(
+                f'STANDBY 대기 중 — target/visible {now - self.visible_at:.0f} s 째 거짓 · '
+                f'좌표 없음 · 게이트 {"열림" if self.gate_ok() else "닫힘"}. '
+                f'검출기가 작업자를 보고 있는지 확인 (ros2 topic echo target/visible)',
+                throttle_duration_sec=10.0)
             return
         if not self.gate_ok():
             self.get_logger().info('작업자 재등장 — target/paired 대기 중',

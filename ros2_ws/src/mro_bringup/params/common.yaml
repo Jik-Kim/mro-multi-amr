@@ -40,13 +40,30 @@
     stop_dist: 0.30           # 전방 부채꼴 안 이 거리보다 가까우면 estop. BRD 3.2 최소 이격 하한
     clear_dist: 0.38          # 해제 거리. 0.45 는 P1 반폭 0.395 보다 커서 통로 안에서는 어느 방향으로
                               #   돌아도 해제가 안 됐다 (I-036). 히스테리시스 8 cm = RPLIDAR A1 오차의 4배
-    estop_yaw_rate_max: 0.4   # estop 중 통과시킬 각속도 상한 [rad/s]. **병진은 전부 0** — 전진은 장애물
-                              #   쪽이라 막고 후진은 애초에 안 쓴다 (계약 2절). 제자리 회전이 쓸고 가는
-                              #   폭은 footprint 내접 0.175 / 외접 0.189 라 1.4 cm 뿐이고 유일한 탈출 수단이다
-    nav_cmd_valid_s: 0.5      # Nav2 명령(cmd_vel_smoothed) 신선도. 넘으면 회전도 0 — 돌릴 근거가 없다
+    # I-049 초기 실주행값. 해제 5프레임이면 조기 종료, 시간·실측 각도 중 먼저 닿으면 정지.
+    safe_rotate_rate: 0.25
+    safe_rotate_timeout_s: 7.0        # PM 9/9: 각도가 먼저 걸려야 한다. 0.25 × 7 = 100° > 90°
+    safe_rotate_max_angle_deg: 90.0   # 정면 벽 0.30 m 해제에 72.9°, 실측 0.29 m 에 75.3° 가 필요 (반각 35°,
+                                      #   d/cos(θ−35°) > 0.38). 종전 75°/5 s 는 5 s 가 먼저 걸려 71.6° 뿐이었다
+    scan_valid_s: 1.0         # 수신 공백이 이만큼이면 '스캔 없음' 으로 정지. 9/10 실주행에서 WiFi/DDS 공백이
+                              #   1.46·1.05·0.73 s 로 세 번 있었다 (정상 간격 134 ms). 0.5 는 셋 다 estop 을
+                              #   걸어 셔틀이 목표를 취소·재전송했다. 1.0 이면 0.3 m/s 로 최대 0.30 m 를 스캔
+                              #   없이 가는데, 그 뒤에 Nav2 collision_monitor 와 Create3 범퍼가 있다
+    odom_valid_s: 0.5
+    # 정지 판정 초기 시험값 — odom 노이즈와 제동 지연을 실물에서 검증
+    stopped_linear_mps: 0.01
+    stopped_angular_rps: 0.02
+    stopped_hold_s: 0.3
+    pause_timeout_s: 2.0
+    rotation_clearance_m: 0.21  # footprint 외접 0.189 m + 여유. LiDAR 기준 실물 검증 필요
+    nav_cmd_valid_s: 0.5
+    motion_cmd_topic: cmd_vel_search
     nav2_poll_s: 5.0          # bt_navigator 가 active 가 될 때까지 폴링 간격
     nav2_poll_max: 3          # 이 횟수 안에 active 가 아니면 T_lim 을 태우지 않고 곧장 포기 (I-035, PR #44). 기본값에서 약 10 s
-    dock_status_wait_s: 5.0   # dock_status 를 기다리는 상한. 예전에는 무한 대기라 T_lim 조차 안 돌아 FAILED 도 안 나왔다 (가이드 D-2)
+    dock_status_wait_s: 15.0  # dock_status 를 기다리는 상한. 예전에는 무한 대기라 T_lim 조차 안 돌아 FAILED 도 안 나왔다 (가이드 D-2)
+                              #   5.0 → 15.0 (9/10): 스택 전체를 다시 띄운 직후 디스커버리 폭주로 dock_status 공백이
+                              #   3.6·4.7 s 였고(full_0910_0941) 5 s 를 놓쳐 초기자세를 건너뛰었다 → AMCL 자세 없음 →
+                              #   map 프레임 없음 → costmap 실패. 9/9 run_0909_1019 와 같은 연쇄다. 노드 기본값(I-035)도 15 다
     # I-037 실험 초깃값 (9/8 병후 승인). 실물 검증 전 팀 확정값이 아니다.
     tf_pose_timeout_s: 3.0   # Nav2 완료 이후 새 TF를 기다리는 상한
     tf_max_age_s: 0.3        # map→base_link 공통 시각의 최대 지연
@@ -125,6 +142,11 @@
     #   제자리 회전은 footprint 밖으로 1.4 cm 만 쓸고 가고, '제자리 회전 뒤 전진' 은 계약이 정한 방식이다
     bay_exit_turn_deg: 180.0
     bay_exit_drive_m: 0.5         # 돌고 나서 칸 밖으로 **우리가 곧게 빼 주는** 거리 [m]. 0 이면 바로 Nav2.
+    # 탈출 회전은 Nav2 Spin 이 아니라 **cmd_vel_search 로 직접** 돈다 (9/10 10:19·10:39·13:23 세 회차 모두
+    #   `Collision Ahead - Exiting Spin`). 13:23 은 360° 여유 0.35 m — 반지름 0.189 에 15 cm 남는데도 거부.
+    #   Nav2 는 costmap(inflation 0.25, P1 통과에 필요) 으로 보고, 워치독은 실측 360° 거리(0.21)로 본다
+    bay_exit_rate_rps: 0.5        # 회전 속도 [rad/s]. odom 이 0.35 s 늦어 1.5 면 30° 지나친다 (I-051) — 0.5 면 10°
+    bay_exit_lead_deg: 10.0       # 지연·관성 몫을 미리 빼고 멈춘다. 몇 도 남아도 뒤는 Nav2 가 잡는다
                                   #   돌기만 하고 넘겼더니 DWB 가 칸 안에서 35 초를 헤맸다 (9/8 T17) —
                                   #   마커가 다시 1.0 m 로 보이도록 되돌아 도는 등 부자연스럽게 움직였다.
                                   #   칸을 벗어나는 구간까지만 우리가 처리하고 열린 곳에서 Nav2 에 넘긴다

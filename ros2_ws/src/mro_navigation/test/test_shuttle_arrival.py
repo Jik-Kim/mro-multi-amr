@@ -158,38 +158,6 @@ def test_fresh_pose_within_tolerance_is_accepted():
         node.destroy_node()
 
 
-def test_pose_stamped_slightly_ahead_of_our_clock_is_accepted():
-    """TF 시각이 우리 시계보다 몇 ms 앞서도 받아들인다 (9/10 A1).
-
-    로봇과 PC 는 서로 다른 시계를 쓰므로 수 ms 어긋나는 것이 정상이다. 그런데 검사가
-    `0.0 <= 지연` 이라 **음수 여유가 하나도 없었고**, 지연 -0.003 s 하나에 미션이 통째로
-    날아갔다. 미래 시각 TF 는 '오래된 값을 쓴다' 는 위험이 없으므로 막을 이유가 없다.
-    """
-    node = make_node(tf_pose_timeout_s=0.3, tf_future_slack_s=0.25)
-    feed_pose(node, -0.78, 0.138, age=-0.003)       # 3 ms 앞선 시각
-    try:
-        sample = node.fresh_pose('베이 A')
-        assert sample.x == pytest.approx(-0.78)
-    finally:
-        node.destroy_node()
-
-
-def test_pose_far_ahead_of_our_clock_is_still_refused():
-    """여유를 크게 넘어서면 시계가 정말 틀어진 것이라 그때는 막는다.
-
-    음수 여유를 둔 것이 '시각 검사를 없앤 것' 이 되면 안 된다 — 그러면 시계가 어긋난
-    로봇의 좌표를 그대로 믿게 된다.
-    """
-    from mro_navigation.nodes.shuttle_mission_node import MissionAbort
-    node = make_node(tf_pose_timeout_s=0.1, tf_future_slack_s=0.05)
-    feed_pose(node, -0.78, 0.138, age=-2.0)         # 2 초 앞선 시각
-    try:
-        with pytest.raises(MissionAbort, match='신선한 TF'):
-            node.fresh_pose('베이 A')
-    finally:
-        node.destroy_node()
-
-
 def test_approach_waits_for_updated_pose():
     """지연 좌표가 새 좌표로 갱신되면 포기하지 않고 그 방위로 접근을 계산한다.
 

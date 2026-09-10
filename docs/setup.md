@@ -165,3 +165,7 @@ ros2 run mro_fleet fleet_manager_node --ros-args \
   ```
   **후진 금지(계약 2절)는 사람이 조작할 때도 지킨다** — 범퍼·클리프가 전방에만 있다.
   제자리 회전 뒤 전진으로 뺀다. 뺀 뒤 `robot.launch.py` 를 다시 띄워 워치독을 살린다.
+
+## I-049 안전 복구 수정안 시험
+
+새 워치독은 Nav2·추종 출력을 입력으로 받아 최종 cmd_vel을 단독 발행한다. 위의 기존 TB4 Nav2 명령과 혼용하지 말고 [ESTOP 복구 실행 구성](estop_recovery.md)의 safety_nav2.launch.py를 사용한다. 작업자 ID 보존, 실제 회전각·시간 한도와 단독 발행자 확인까지 포함한 실주행은 아직 미검증이다.

@@ -291,9 +291,10 @@ def test_dock_retry_returns_to_approach_not_undock(ros):
 
     def docked():
         tries['n'] += 1
-        return tries['n'] > 1          # 첫 확인은 실패, 두 번째는 성공
+        nav.deliver_dock_status(tries['n'] > 1)
+        return True  # 액션 완료와 실제 도킹 상태를 분리한다
 
-    nav.getDockedStatus = docked
+    nav.isDockComplete = docked
     node.run_return()
 
     assert n_calls(nav, 'undock') == 0, '후진하지 않는다'

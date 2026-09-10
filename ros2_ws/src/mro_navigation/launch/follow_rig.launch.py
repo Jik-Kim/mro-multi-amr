@@ -103,6 +103,10 @@ def _setup(context, *_args, **_kwargs):
 
     tf = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
     actions = []
+    if flag('watchdog'):
+        actions.append(Node(package='mro_navigation', executable='safety_watchdog_node',
+            name='safety_watchdog', namespace=ns, output='screen',
+            parameters=[*_params(ns), {'safety_participants': ['follow_target']}]))
 
     # ── 작업자 검출 (인지 소관 노드. 우리는 띄우기만 한다) ──
     if detection:
@@ -165,6 +169,7 @@ def _setup(context, *_args, **_kwargs):
 def generate_launch_description():
     """인자를 선언하고 구성은 OpaqueFunction 에 맡긴다 (params 경로 조회에 값이 필요하다)."""
     return LaunchDescription([
+        DeclareLaunchArgument('watchdog', default_value='false'),
         DeclareLaunchArgument('namespace', default_value='/robot3'),
         DeclareLaunchArgument('detection', default_value='true',
                               description='amr_detection 을 여기서 띄운다. 카메라 구독자는 로봇당 하나뿐이다'),

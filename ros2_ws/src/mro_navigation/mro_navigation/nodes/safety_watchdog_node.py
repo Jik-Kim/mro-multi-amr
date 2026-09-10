@@ -1,144 +1,214 @@
-"""온보드 안전 감시 — BR-T20 '인지·웹캠·네트워크와 독립된 정지 경로'의 실물.
+"""LiDAR 독립 정지·SAFE_ROTATE와 최종 cmd_vel 출력 선택 (I-049).
 
-/scan 만 본다. 전방 부채꼴(±FRONT_HALF_DEG) 안에 stop_dist 이내 점이 N 프레임 연속이면
-  ① safety/estop = True 발행
-  ② cmd_vel 에 **병진 0 · 각속도만 상한 통과**를 고주기로 발행 (Nav2 보다 나중 명령이 이기도록)
-  ③ Nav2 goal 취소 — TODO([주행]): 액션 클라이언트 미구현 (I-036 ⓓ, docs/todo.md 별도 항목)
-장애물이 clear_dist 밖으로 벗어나 M 프레임 연속이면 해제. YOLO·웹캠·Wi-Fi 와 무관해야 한다 (TS-14).
-
-**왜 각속도만 통과시키나 (I-036, 계약 v1.13, PM·안전 결정 9/8)**
-  예전에는 estop 중 cmd_vel 에 0 을 통째로 발행해 Nav2 의 복구 행동까지 덮었다. 사람은 비켜주지만
-  벽은 비켜주지 않아 **스스로 빠져나올 방법이 없었다** — 9/7 실주행에서 벽 앞에 95 초, 9/8 에도
-  P1 통로에서 76 초를 갇혔다.
-  · **병진은 전부 0.** 전진은 장애물 쪽이라 막고, **후진은 애초에 쓰지 않는다** (계약 2절 확정).
-    Create3 의 범퍼·클리프가 전방에만 있어 후진은 감지 없는 주행이고, 이 노드도 전방만 본다.
-  · **각속도만 ESTOP_YAW_RATE_MAX 상한으로 통과.** 제자리 회전이 쓸고 가는 폭은 footprint
-    내접 0.175 / 외접 0.189 라 **1.4 cm** 뿐이다. 병진 없는 회전은 안전하고, 후진을 뺀 이상
-    이것이 유일한 탈출 수단이다.
-  · Nav2 의 의도 속도는 `cmd_vel_smoothed` 에서 읽는다. 배선이
-    `controller_server → cmd_vel_nav → velocity_smoother → cmd_vel_smoothed → collision_monitor
-    → cmd_vel` 이라, 최종 토픽(cmd_vel)을 구독하면 자기 발행을 되먹는다.
-
-**왜 clear_dist 를 0.45 에서 0.38 로 낮췄나**
-  평평한 벽 0.30 m 앞에서 회전만으로 풀려면 약 83° 를 돌아야 하는데(부채꼴 최단거리
-  `0.30 / cos(θ − 35°)`), **P1 통로 안에서는 그만큼 돌면 반대쪽 벽이 정면 0.395 m 에 들어온다.**
-  0.395 < 0.45 라 어느 방향으로 돌아도 해제 조건이 성립하지 않았다. 0.38 이면 성립하고
-  히스테리시스 8 cm 는 RPLIDAR A1 오차 ±2 cm 의 네 배다.
-
-**근본 원인은 안전 계층이 아니라 측위다** — 통로 반폭 0.395 m 에 실측 측위 오차 0.32 m(I-009)를
-  더하면 최악 벽까지 0.075 m 다. 여기 조치는 걸렸을 때 빠져나오게 할 뿐이고, 애초에 안 걸리게
-  하려면 I-029·I-037 로 측위를 올려야 한다.
+Nav2 최종 출력은 cmd_vel_navigation, 추종 회전은 cmd_vel_search로 입력한다.
+이 노드만 cmd_vel을 발행해야 한다. safety_nav2.launch.py와 함께 사용한다.
+정지 확인을 받기 전에는 회전하지 않으며 실패 후에는 정지 상태를 유지한다.
 """
 import math
+import time
 
-from geometry_msgs.msg import Twist, TwistStamped
+from geometry_msgs.msg import TwistStamped
+from irobot_create_msgs.msg import DockStatus
+from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from sensor_msgs.msg import LaserScan
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Header, String
 
-FRONT_HALF_DEG = 35.0
-HIT_FRAMES = 2
-CLEAR_FRAMES = 5
-USE_TWIST_STAMPED = True   # TB4 Jazzy 는 TwistStamped. Kn1_mini approach 노드와 동일 설정
-ZERO_RATE_HZ = 20.0
-NAV_CMD_TOPIC = 'cmd_vel_smoothed'   # Nav2 의 '의도한 속도' — collision_monitor 앞단
+from mro_navigation.core.safety import SafetyController, scan_sectors
+
+
+CLEAR_FLUSH_S = 0.1     # CLEAR 전이 직후 이만큼은 명령을 버린다 — 전이 순간에 걸친 한 두 건
+PAUSE_FORGET_S = 5.0    # 정지 ACK 가 이만큼 없으면 그 노드는 떠난 것으로 본다
 
 
 class SafetyWatchdog(Node):
-    """LiDAR만으로 독립 정지를 만드는 온보드 안전 계층.
-
-    ``scan_cb``은 정지 상태를 결정하고, :meth:`tick`은 estop 동안 최종 ``cmd_vel``을
-    20 Hz로 덮어쓴다. 인지·웹캠·관제 노드가 죽어도 이 경로는 남아야 한다.
-    """
+    """최종 속도 발행자는 하나이고, ESTOP에는 외부 명령을 버린다."""
 
     def __init__(self):
         super().__init__('safety_watchdog')
-        # 거리·각속도는 시험 중에 재빌드 없이 만져야 하는 값이라 파라미터로 둔다 (AGENTS.md).
-        #   프레임 수(HIT/CLEAR)를 초 단위 파라미터로 바꾸는 것은 docs/todo.md 의 별도 항목이다.
-        self.declare_parameter('stop_dist', 0.30)            # BRD 3.2 최소 이격 하한
-        self.declare_parameter('clear_dist', 0.38)           # 히스테리시스 (I-036 으로 0.45 → 0.38)
-        self.declare_parameter('estop_yaw_rate_max', 0.4)    # estop 중 통과시킬 각속도 상한 [rad/s]
-        self.declare_parameter('nav_cmd_valid_s', 0.5)       # Nav2 명령 신선도 — 넘으면 회전도 0
-        self.estop = False
-        self.hit = 0
-        self.clear = 0
-        self.nav_yaw = None            # (각속도, 수신 시각)
-        self.create_subscription(LaserScan, 'scan', self.scan_cb, qos_profile_sensor_data)
-        self.create_subscription(TwistStamped if USE_TWIST_STAMPED else Twist,
-                                 NAV_CMD_TOPIC, self.nav_cmd_cb, 10)
+        if not self.get_namespace().strip('/'):
+            raise RuntimeError('safety_watchdog: 로봇 네임스페이스가 필요하다')
+        defaults = {'stop_dist': 0.30, 'clear_dist': 0.38,
+                    'safe_rotate_rate': 0.25, 'safe_rotate_timeout_s': 7.0,
+                    'safe_rotate_max_angle_deg': 90.0, 'odom_valid_s': 0.5,
+                    'stopped_linear_mps': 0.01, 'stopped_angular_rps': 0.02,
+                    'stopped_hold_s': 0.3, 'scan_valid_s': 0.5, 'pause_timeout_s': 2.0,
+                    'rotation_clearance_m': 0.21, 'nav_cmd_valid_s': 0.5,
+                    'safety_participants': ['follow_target', 'shuttle_mission', 'return_dock']}
+        for name, value in defaults.items():
+            self.declare_parameter(name, value)
+        self.control = SafetyController(
+            self.p('stop_dist'), self.p('clear_dist'), self.p('safe_rotate_rate'),
+            self.p('safe_rotate_timeout_s'), self.p('scan_valid_s'),
+            self.p('pause_timeout_s'), self.p('rotation_clearance_m'),
+            self.p('safe_rotate_max_angle_deg'), self.p('odom_valid_s'),
+            self.p('stopped_linear_mps'), self.p('stopped_angular_rps'),
+            self.p('stopped_hold_s'))
+        self.participants = list(self.p('safety_participants'))
+        if not self.participants or len(set(self.participants)) != len(self.participants):
+            raise ValueError('safety_participants는 중복 없는 주행 노드 목록이어야 한다')
+        self.pause_epoch = self.get_clock().now().nanoseconds
+        self.paused = {}
+        self.clear_at = float('-inf')      # 마지막 CLEAR 전이 시각 (monotonic)
+        self.search_at = float('-inf')
+        self.epoch = self.control.epoch
+        self.last_state = None
+        self.dock_known = False          # dock_status 를 한 번이라도 받았나. 받기 전엔 cmd_vel 을 내지 않는다
+        self.hold_warned_at = float('-inf')
+        self.last_command_at = float('-inf')
         self.pub_estop = self.create_publisher(Bool, 'safety/estop', 10)
-        self.pub_vel = self.create_publisher(TwistStamped if USE_TWIST_STAMPED else Twist, 'cmd_vel', 10)
-        self.create_timer(1.0 / ZERO_RATE_HZ, self.tick)
-        self.get_logger().info(
-            f"safety_watchdog: stop<{self.p('stop_dist')} m, clear>{self.p('clear_dist')} m, "
-            f"±{FRONT_HALF_DEG}° · estop 중 병진 0 · 각속도 ±{self.p('estop_yaw_rate_max')} rad/s 통과")
+        self.pub_state = self.create_publisher(String, 'safety/state', 10)
+        self.pub_vel = self.create_publisher(TwistStamped, 'cmd_vel', 10)
+        self.create_subscription(LaserScan, 'scan', self.scan_cb, qos_profile_sensor_data)
+        # 도킹 여부. 도크에 물려 있는 동안 전방 판정을 보류한다 — Create3 는 코를 박고
+        #   들어가므로 도크가 곧 전방 장애물이고, 그것을 세면 언독이 불가능해진다.
+        #   TRANSIENT_LOCAL 이라 늦게 떠도 마지막 값을 받는다
+        self.create_subscription(DockStatus, 'dock_status', self.dock_cb,
+                                 QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
+                                            durability=DurabilityPolicy.TRANSIENT_LOCAL))
+        self.create_subscription(Odometry, 'odom', self.odom_cb, qos_profile_sensor_data)
+        for source in ('navigation', 'search'):
+            self.create_subscription(TwistStamped, 'cmd_vel_' + source,
+                                     lambda m, s=source: self.command_cb(s, m), 10)
+        for name in self.participants:
+            self.create_subscription(Header, 'safety/paused/' + name,
+                                     lambda m, n=name: self.pause_cb(n, m), 10)
+        self.create_timer(0.05, self.tick)
 
     def p(self, name):
-        """파라미터 값."""
         return self.get_parameter(name).value
 
-    def now_s(self):
-        """ROS 시각 [s]. 벽시계를 섞지 않는다 (계약 2절)."""
-        return self.get_clock().now().nanoseconds * 1e-9
+    def pause_cb(self, name, message):
+        stamp = message.stamp.sec * 1000000000 + message.stamp.nanosec
+        self.paused[name] = (stamp, time.monotonic())
 
-    def nav_cmd_cb(self, msg):
-        """Nav2 가 내려는 속도. estop 중에는 여기서 각속도만 빌려 쓴다."""
-        tw = msg.twist if USE_TWIST_STAMPED else msg
-        self.nav_yaw = (float(tw.angular.z), self.now_s())
+    def dock_cb(self, message):
+        self.dock_known = True
+        self.control.dock_state(message.is_docked)
 
-    def front_min(self, scan):
-        half = math.radians(FRONT_HALF_DEG)
-        best = float('inf')
-        ang = scan.angle_min
-        for r in scan.ranges:
-            if -half <= ang <= half and scan.range_min < r < scan.range_max:
-                best = min(best, r)
-            ang += scan.angle_increment
-        return best
+    def scan_cb(self, message):
+        now = time.monotonic()
+        was = self.control.estop
+        # **헤더 시각으로 신선도를 재지 않는다.** 헤더는 로봇(Create3) 시계, 비교 기준은 PC 시계다.
+        #   둘이 0.5 s 만 어긋나도 모든 스캔이 '오래됨' 이 되어 front 가 영원히 None → STUCK 영구.
+        #   '데이터가 안 온다' 는 수신 시각(monotonic)으로 core 가 scan_valid_s 로 판정한다 —
+        #   그것이 실제 고장 모드이고 시계 어긋남에 영향받지 않는다
+        sectors = scan_sectors(message)
+        self.control.scan(now, *sectors)
+        if not was and self.control.estop:
+            self.pause_epoch = self.get_clock().now().nanoseconds
 
-    def scan_cb(self, scan):
-        d = self.front_min(scan)
-        if d < self.p('stop_dist'):
-            self.hit += 1
-            self.clear = 0
-        elif d > self.p('clear_dist'):
-            self.clear += 1
-            self.hit = 0
-        if not self.estop and self.hit >= HIT_FRAMES:
-            self.estop = True
-            self.get_logger().warn(f'ESTOP: 전방 {d:.2f} m')
-            self.pub_estop.publish(Bool(data=True))
-        elif self.estop and self.clear >= CLEAR_FRAMES:
-            self.estop = False
-            self.get_logger().info('estop 해제')
-            self.pub_estop.publish(Bool(data=False))
+    def odom_cb(self, message):
+        q = message.pose.pose.orientation
+        norm = q.x*q.x + q.y*q.y + q.z*q.z + q.w*q.w
+        if not math.isfinite(norm) or abs(norm - 1.0) > 0.01:   # 헤더 시각은 보지 않는다 (scan_cb 참조)
+            self.control.invalidate_odometry()
+            return
+        yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y*q.y + q.z*q.z))
+        twist = message.twist.twist
+        linear = math.hypot(twist.linear.x, twist.linear.y, twist.linear.z)
+        angular = math.hypot(twist.angular.x, twist.angular.y, twist.angular.z)
+        self.control.odometry(time.monotonic(), yaw, linear, angular)
 
-    def estop_yaw(self):
-        """통과시킬 각속도를 돌려준다. 신선한 Nav2 명령이 없으면 0 — 멈춘 채로 둔다."""
-        if self.nav_yaw is None:
-            return 0.0
-        yaw, t = self.nav_yaw
-        if self.now_s() - t > self.p('nav_cmd_valid_s'):
-            return 0.0                       # Nav2 가 명령을 끊었다 — 회전시킬 근거가 없다
-        limit = float(self.p('estop_yaw_rate_max'))
-        return max(-limit, min(limit, yaw))
+
+    def all_paused(self, now):
+        """정지 확인. **떠 있는 노드만 요구한다.**
+
+        종전에는 `safety_participants` 세 개를 전부 요구했다. 그러면 `return_dock` 을 안
+        띄운 구성(셔틀+추종 통합 시험)에서 ACK 가 영원히 모자라 `STOPPING` 에서 못 나오고
+        **estop 이 영구히 True** 가 된다 — 스캔이 멀쩡한데 노드 하나가 없어서 못 움직이는
+        것은 안전이 아니라 가동 불능이다 (9/10 실주행).
+
+        그래서 **한 번이라도 ACK 를 보낸 노드만** 센다. 액션을 돌리는 노드는 estop 동안
+        0.1 s 마다 ACK 를 내므로(`MotionPause.publish`) 떠 있으면 반드시 여기에 등록된다.
+        떠 있는데 ACK 가 끊긴 것은 그대로 실패로 잡힌다 — 그 노드가 아직 멈추지 않았다는 뜻이다.
+        """
+        # 오래 침묵한 노드는 죽은 것으로 보고 뺀다. 죽은 노드는 cmd_vel 을 낼 수 없으니
+        #   그 ACK 를 기다리는 것은 안전이 아니라 영구 정지다. 잠깐 멈춘 노드(회전 블로킹 등)는
+        #   spin_once 로 타이머가 돌아 ACK 가 이어지므로 여기 안 걸린다
+        for name in [n for n, (_, at) in self.paused.items() if now - at > PAUSE_FORGET_S]:
+            self.get_logger().warn(f'{name} 의 정지 ACK 가 {PAUSE_FORGET_S:.0f} s 넘게 없다 — 떠난 것으로 본다')
+            del self.paused[name]
+        known = [name for name in self.participants if name in self.paused]
+        if not known:
+            return True          # 아직 아무도 액션을 돌리지 않았다 — 멈출 것이 없다
+        return all(self.paused[name][0] >= self.pause_epoch
+                   and 0 <= now - self.paused[name][1] <= 0.5
+                   for name in known)
+
+    def command_cb(self, source, message):
+        now = time.monotonic()
+        # estop 중 도착한 명령은 여기서 버려진다 — 큐에 쌓이지 않으므로 CLEAR 뒤 밀린 명령이
+        #   쏟아지는 일은 없고, 전이 순간의 한 두 건만 CLEAR_FLUSH_S 로 거른다.
+        #   종전에는 헤더 시각을 CLEAR 시각과 비교했는데, 시계가 어긋나면 **모든 명령이
+        #   영원히 버려져 CLEAR 인데도 로봇이 안 움직인다** — 겉으로는 정상인 완전 정지다
+        if self.control.estop or now - self.clear_at < CLEAR_FLUSH_S:
+            return
+        if self.hold_cmd_vel(now):         # 도킹 중·도킹 미확인엔 cmd_vel 을 한 건도 내지 않는다 (아래 tick 주석)
+            return
+        # 탐색 종료의 0 명령도 잠시 우선해 늦은 Nav2 출력과의 경합을 막는다.
+        if source == 'search':
+            self.search_at = now
+        elif now - self.search_at < 0.15:
+            return
+        values = (message.twist.linear.x, message.twist.linear.y, message.twist.linear.z,
+                  message.twist.angular.x, message.twist.angular.y, message.twist.angular.z)
+        if not all(math.isfinite(v) for v in values):
+            return
+        # **후진은 여기서 0 으로 깎는다** (계약 2절, PM 9/9 조건 1). 워치독이 cmd_vel 의 유일한
+        #   기록자가 되면서 후진 금지를 처음으로 **강제되는 불변식**으로 만들 수 있다 — 종전
+        #   배선은 Nav2 → cmd_vel 직결이라 Nav2 의 BackUp 이 그대로 나갔고,
+        #   `test_no_reverse_anywhere_in_source` 는 우리 소스만 봤다. 메시지를 통째로 버리지
+        #   않고 병진만 깎는 이유: 각속도는 살려야 BackUp 뒤 회전 복구가 이어진다
+        if message.twist.linear.x < 0.0:
+            message.twist.linear.x = 0.0
+        # 힌트 회전의 속도·발행 주기는 바꾸지 않고 즉시 전달한다.
+        self.pub_vel.publish(message)
+        self.last_command_at = now
+
+    def hold_cmd_vel(self, now):
+        """도킹 중이거나 도킹 여부를 아직 모르면 참 — cmd_vel 발행 보류."""
+        if self.control.docked:
+            return True
+        if not self.dock_known:
+            if now - self.hold_warned_at > 5.0:
+                self.hold_warned_at = now
+                self.get_logger().warn('dock_status 미수신 — 도킹 여부를 알 때까지 cmd_vel 을 내지 않는다')
+            return True
+        return False
 
     def tick(self):
-        if not self.estop:
-            return
-        # 병진은 전부 0 으로 덮고 각속도만 상한을 씌워 통과시킨다 (I-036).
-        #   Twist 를 새로 만들므로 linear 는 0 으로 남는다 — 후진도 나가지 않는다 (계약 2절).
-        yaw = self.estop_yaw()
-        if USE_TWIST_STAMPED:
-            m = TwistStamped()
-            m.header.stamp = self.get_clock().now().to_msg()
-            m.twist.angular.z = yaw
-        else:
-            m = Twist()
-            m.angular.z = yaw
-        self.pub_vel.publish(m)
+        now = time.monotonic()
+        was = self.control.estop
+        yaw = self.control.tick(now, self.all_paused(now))
+        if not was and self.control.estop:
+            self.pause_epoch = self.get_clock().now().nanoseconds
+        if self.epoch != self.control.epoch:
+            self.epoch = self.control.epoch
+            self.clear_at = now
+            self.search_at = self.last_command_at = float('-inf')
+        # **도킹 중엔 cmd_vel 을 내지 않는다** (9/10 14:34 로봇8). 워치독이 20 Hz 로 0 을 내기
+        #   시작한 0.7 s 뒤 로봇이 스스로 7 cm 후진해 도크에서 떨어졌고, 다시 도킹하자 곧바로 또
+        #   떨어졌다. Create3 는 도킹 중 cmd_vel 수신에 반응할 수 있다. 도크 위에서는 어차피
+        #   낼 명령이 없다 — 언독은 Create3 액션이고, 도크 위 회전 탈출은 원래 금지다
+        #   **dock_status 를 받기 전에도 내지 않는다** (9/10 14:55). 첫 패치는 docked 만 봤는데,
+        #   기동 직후 dock_status(1 Hz·transient local) 가 매칭되기 전 첫 틱의 0 이 먼저 나가
+        #   0.2 s 뒤 로봇이 ±2 rad/s 로 요동치며 후진해 도크에서 떨어졌다
+        if self.hold_cmd_vel(now):
+            pass
+        elif yaw is not None or now - self.last_command_at > self.p('nav_cmd_valid_s'):
+            message = TwistStamped()
+            message.header.stamp = self.get_clock().now().to_msg()
+            message.header.frame_id = 'base_link'
+            message.twist.angular.z = yaw or 0.0
+            self.pub_vel.publish(message)
+        self.pub_estop.publish(Bool(data=self.control.estop))
+        self.pub_state.publish(String(data=self.control.state))
+        if self.last_state != self.control.state:
+            self.get_logger().warn(f'안전 상태 {self.control.state}: {self.control.reason}')
+            self.last_state = self.control.state
 
 
 def main():
@@ -148,7 +218,8 @@ def main():
         rclpy.spin(node)
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
