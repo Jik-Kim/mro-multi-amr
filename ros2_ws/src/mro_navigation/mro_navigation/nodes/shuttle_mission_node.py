@@ -35,11 +35,16 @@
   · **Nav2 목표로는 못 한다.** SimpleGoalChecker 가 xy 0.25 m · yaw 0.25 rad 라 12 cm 보정 목표를
     보내면 로봇이 움직이지 않고 곧장 SUCCEEDED 가 난다 (nav2.yaml 9/8 확인). 그래서 보정과 전진은
     behavior_server 의 Spin·DriveOnHeading(상대 이동, 허용오차 없음) 으로 실행한다.
-  · 차동구동이라 옆으로 못 간다 → **회전–직진–회전**. 직진은 항상 전진이다 (후진 금지, 계약 2절).
-  · **각도 기준은 arena.yaml 의 측량된 베이 방위**다. 마커 자세(yaw)는 정사각 마커의 두 해 문제로
-    흔들려 인지가 '보조로만 쓰라' 고 명시했다 — 계산해서 로그로만 남기고, 쓰려면
-    bay_align_use_marker_yaw 를 켠다(측량값과 크게 어긋나면 두 해 뒤집힘으로 보고 측량값으로 되돌린다).
-  · 그래서 **AMCL 의 방위 오차는 이 보정으로 지워지지 않는다.** 위치는 상대라 지워진다.
+  · 차동구동이라 옆으로 못 간다 → **회전–직진–회전–직진**. 직진은 항상 전진이다 (후진 금지, 계약 2절).
+  · **기준은 마커 법선선이다 (9/10).** 마커를 지나고 법선으로 뻗는 직선 L(s)=p+s·n 위로 먼저
+    옮기고(횡정렬), 마커를 정면으로 보고(방위정렬), 법선방향 거리를 맞춘다(거리정렬).
+    세 목적이 독립이라 각각 측정·판정된다 — 예전에는 반경 이동 하나에 뭉뚱그려 어느 것이
+    안 맞는지 로그로 갈리지 않았다.
+  · **AMCL 방위 오차가 지워진다.** 각도 기준이 측량값(AMCL 유래)이 아니라 마커라서다.
+    측량값은 대조용으로만 남기고 어긋나면 경고한다 — 어느 쪽이 틀렸는지 그 비교로는 못 가린다.
+  · **계약 v1.13 은 「aruco/pose 의 회전(yaw)은 정렬에 쓰지 않는다」고 적고 있다.** 이 노드는
+    9/10 부터 쓴다. 근거는 R0·R1 실측이다 — 기울기 잡음 σ≈2°, 회차 안 α 일치 0.1°.
+    계약 개정을 PM 에 요청했다. 방어는 표본 산포(MAD)와 횡이동 상한 두 가지다.
 
 입력  mission/assigned(Mission) · aruco/id(Int32) · aruco/distance(Float32) · aruco/pose(PoseStamped)
       safety/estop(Bool) · TF map→base_link · TF base_link→카메라 광학 프레임
@@ -147,6 +152,7 @@ class MarkerSample:
     lat: float          # base_link y [m] — 왼쪽이 +
     normal_yaw: float   # 마커 법선의 base_link 방위 [rad]. 정면이면 π (뒤에서 로봇을 본다)
     stamp_s: float
+    normal_mad: float = 0.0   # 표본 창 안 법선 방위의 중앙값절대편차 [rad] — 두 해 오감을 잡는다
 
     @property
     def bearing(self):
@@ -157,6 +163,74 @@ class MarkerSample:
     def yaw_error(self):
         """벽 법선 기준 로봇 방위 오차 [rad]. 이만큼 돌면 벽을 정면으로 본다."""
         return wrap_pi(self.normal_yaw - math.pi)
+
+    # ── 법선선 기하 (9/10) ──────────────────────────────────────────────
+    # 마커를 지나고 법선 방향으로 뻗는 직선 L(s) = p + s·n 을 기준으로 삼는다.
+    # 로봇을 **먼저 이 선 위로 옮기고**(횡정렬), **마커를 정면으로 보고**(방위정렬),
+    # **법선방향 거리를 맞춘다**(거리정렬). 세 목적이 서로 독립이라 각각 측정·판정된다.
+
+    @property
+    def normal(self):
+        """마커에서 로봇 쪽을 향하는 단위 법선 n."""
+        return math.cos(self.normal_yaw), math.sin(self.normal_yaw)
+
+    @property
+    def tangent(self):
+        """법선에 수직인 단위벡터 t = (−n_y, n_x). 마커 벽과 나란하다."""
+        nx, ny = self.normal
+        return -ny, nx
+
+    @property
+    def lat_error(self):
+        """로봇이 법선선에서 벗어난 **부호 있는** 거리 [m]. 왼쪽이 +.
+
+        선까지의 변위는 (원점 − F)·t = −(p·t) 다. **마커 위치의 t 성분과 부호가 반대**라
+        여기서 한 번만 뒤집어 두고 밖에서는 이 값을 그대로 쓴다.
+        """
+        tx, ty = self.tangent
+        return -(self.fwd * tx + self.lat * ty)
+
+    @property
+    def normal_range(self):
+        """마커 **평면**까지의 법선거리 d_n [m] = −(p·n).
+
+        지금까지 쓰던 반경거리 hypot(fwd, lat) 와 다르다. 선반·벽까지의 여유를 정하는 것은
+        반경이 아니라 이 값이다 — 옆으로 치우쳐 있으면 반경이 같아도 벽에는 더 가깝다.
+        """
+        nx, ny = self.normal
+        return -(self.fwd * nx + self.lat * ny)
+
+    @property
+    def foot(self):
+        """법선선에 내린 수선의 발 F = p + d_n·n (base_link).
+
+        ‖F‖ = |lat_error| 이다 ({n, t} 가 정규직교이고 F ⊥ n 이므로). 그래서 횡정렬의
+        직진거리를 따로 계산하지 않고 lat_error 를 쓴다.
+        """
+        nx, ny = self.normal
+        d = self.normal_range
+        return self.fwd + d * nx, self.lat + d * ny
+
+    @property
+    def face_yaw(self):
+        """마커를 정면으로 보려면 향해야 할 base_link 방위 [rad] = atan2(−n_y, −n_x).
+
+        yaw_error 와 같은 값이다(법선 방위 − π). 이름을 따로 둔 것은 쓰이는 자리가
+        달라서다 — 이쪽은 '어느 쪽을 볼까', 저쪽은 '얼마나 틀어졌나'.
+        """
+        nx, ny = self.normal
+        return math.atan2(-ny, -nx)
+
+    @property
+    def alpha(self):
+        """마커 법선과 '마커→로봇' 선 사이 각 [rad] = 방위 − 법선오차.
+
+        **제자리 회전과 반경방향 이동에 불변**이라, 회차 사이에 비교하면 법선이 튀었는지
+        사후에 가릴 수 있다. 9/9 R1b 의 두 측정이 0.1° 안에서 일치했고(회차 안 자기일관),
+        같은 자리에서 잰 R1a −10.8° · R1c −12.0° 와는 21° 달랐다(회차 사이 이탈).
+        판정에는 쓰지 않고 로그로만 남긴다 — 표본이 쌓이면 법선을 믿을지 답이 나온다.
+        """
+        return wrap_pi(self.bearing - self.yaw_error)
 
 
 def wrap_pi(a):
@@ -216,6 +290,12 @@ class ShuttleMission(Node):
         # I-037 실험값 — common.yaml 이 단일 출처. 실물 검증 전 팀 확정값이 아니다.
         self.declare_parameter('tf_pose_timeout_s', 3.0)
         self.declare_parameter('tf_max_age_s', 0.3)
+        # TF 시각이 **우리 시계보다 앞설 때** 허용할 폭 [s]. 로봇과 PC 는 서로 다른 시계를 쓰므로
+        #   수 ms 어긋나는 것이 정상이다. 9/10 A1 은 지연이 **-0.003 s** 여서 미션이 통째로
+        #   날아갔다 — 검사가 `0.0 <= 지연` 이라 음수에 여유가 하나도 없었다. 미래 시각 TF 는
+        #   '오래된 값을 쓴다' 는 위험이 없으므로 막을 이유가 없다. Nav2 의 transform_tolerance
+        #   0.1 s 보다 넉넉히 잡되, 이보다 크게 앞서면 시계가 정말 틀어진 것이라 그때는 막는다
+        self.declare_parameter('tf_future_slack_s', 0.25)
         self.declare_parameter('arrival_xy_tolerance_m', 0.25)
         # 베이 정렬 보정 (9/8 추가) — 값의 단일 출처는 common.yaml. 여기 기본값은 대체값이다.
         self.declare_parameter('bay_align_enable', True)
@@ -232,10 +312,35 @@ class ShuttleMission(Node):
         self.declare_parameter('bay_marker_range_m', 0.9)
         # 목표 거리 자체의 하한. footprint 외접 0.189 라 0.35 면 벽까지 여유 0.16 m 다.
         #   이보다 가까운 목표는 설정 오류로 보고 포기한다 — 선반에 밀어 넣는 것을 막는다
-        self.declare_parameter('bay_align_min_range_m', 0.35)
+        self.declare_parameter('bay_align_min_range_m', 0.80)
+        # 주행 중 **측정된** 법선거리의 하한. 위(목표 검증)와 다른 일을 한다 — 이건 매 측정에
+        #   걸어서, 이미 이보다 가까이 있으면 전진하지 않는다. 측정이 깨졌을 때 선반으로
+        #   밀고 들어가는 것을 막는 마지막 지점이다
+        self.declare_parameter('bay_align_min_dn_m', 0.70)
         self.declare_parameter('bay_align_max_iter', 2)
-        self.declare_parameter('bay_align_tol_xy_m', 0.05)
         self.declare_parameter('bay_align_tol_yaw_deg', 5.0)
+        # 법선선 이탈(횡오차)의 수렴 허용치와 상한.
+        #   **상한을 넘으면 횡정렬만 건너뛴다 — 미션은 죽이지 않는다.** 베이 waypoint 는
+        #   마커에서 약 1.2 m 로 베이 앞 열린 통로라(9/10 확인) 0.3 m 치우침이 실제로 가능하다.
+        #   그보다 크면 측정을 의심한다. 슬롯 안이었다면 편측 여유가 0.173 m 뿐이라 값이 달라진다
+        self.declare_parameter('bay_align_tol_lat_m', 0.05)
+        self.declare_parameter('bay_align_max_lat_m', 0.30)
+        self.declare_parameter('bay_align_tol_dn_m', 0.05)   # 법선거리 수렴 허용치
+        # 표본 창 안 법선 방위의 중앙값절대편차(MAD) 상한 — **정확도 검사이지 회전 임계가 아니다.**
+        #   두 해 사이를 프레임마다 오갈 때 잡는다. solvePnP 기울기 잡음이 σ≈2° 라(마커 0.10 m,
+        #   거리 1.2 m, 코너잡음 0.25 px) 정상 측정의 MAD 는 0.674σ ≈ 1.35° 다. 6° 는 그 4.4 배라
+        #   정상 측정을 거를 위험이 없다. **올리면 느슨해진다**
+        self.declare_parameter('bay_align_normal_spread_deg', 6.0)
+        # 90° 급 회전 뒤에는 마커가 FOV(38.5°) 밖에 있다가 돌아온다. 기존 2.0 s 로는 짧아
+        #   9/9 R1a 가 11° 회전 뒤에도 재획득을 못 했다
+        self.declare_parameter('bay_align_reacquire_s', 3.0)
+        # DriveOnHeading 계통 오버슛 보정 [m] — 명령한 것보다 이만큼 더 간다.
+        #   9/9 실측: 줄자 −0.065 · 노드 자체 측정 −0.071 (방법이 독립인데 6 mm 안에서 일치).
+        #   **상수인지 비례인지는 아직 모른다** — 두 표본의 명령값이 0.270·0.257 로 거의 같았다.
+        #   ratio 를 남겨 두었으니 짧은 이동(0.10 m 급) 회차 하나면 갈린다. 횡정렬은 0.15 m 급
+        #   이동이라 이 구분이 크게 걸린다 (상수면 +45 %, 비례면 +26 %)
+        self.declare_parameter('bay_align_drive_bias_m', 0.068)
+        self.declare_parameter('bay_align_drive_bias_ratio', 0.0)
         # 이보다 작은 회전은 **명령하지 않는다.** Nav2 의 Spin 은 min_rotational_vel 0.4 rad/s ·
         #   10 Hz 라 한 사이클에 최소 2.3° 를 돌고 그만큼 지나친다 — 0.4° 를 시키면 6배가
         #   실행된다 (9/8 실측). 수렴 판정(tol_yaw)과 같은 값으로 두어야 앞뒤가 맞는다
@@ -251,13 +356,13 @@ class ShuttleMission(Node):
         self.declare_parameter('bay_exit_drive_m', 0.5)
         self.declare_parameter('bay_align_speed_mps', 0.10)   # DriveOnHeading 속도
         self.declare_parameter('bay_align_timeout_s', 20)     # Spin·DriveOnHeading time_allowance
-        # 마커 자세(yaw)로 각도를 잡을지. **9/8 저녁에 켜 봤다가 되돌렸다.**
-        #   T11 [측량] +1.8° → −8.3° · T12 [마커] +8.3° → +16.4° → −14.1°. **둘 다 나빠졌다** —
-        #   기준의 문제가 아니라 회전 분해능과 루프의 문제였다(아래 bay_align_min_turn_deg).
-        #   T12 에서는 검출기 기운각도 9→17→22° 로 튀어 인지가 경고한 두 해 문제가 실제로
-        #   관측됐다. 루프를 고친 뒤에 다시 시험할 것.
-        self.declare_parameter('bay_align_use_marker_yaw', False)
-        self.declare_parameter('bay_align_yaw_gate_deg', 25.0)  # 측량값과 이보다 어긋나면 두 해 뒤집힘
+        # 마커 법선과 측량값(arena.yaml 방위 − AMCL 방위)이 이보다 어긋나면 **경고만** 남긴다.
+        #   **기각하지 않는다 (9/10 결정) — 어긋날 때 마커를 신뢰한다.**
+        #   측량값은 AMCL 방위에서 나오므로, 둘이 다를 때 어느 쪽이 틀렸는지 이 비교로는
+        #   가릴 수 없다. 9/9 R1b 에서 방위 β 와 법선 ε 가 **정확히 같은 양(+19.8·+19.9°)만큼**
+        #   함께 움직였는데, 이는 마커 측정이 자기일관적이고 로봇 방위 쪽이 어긋났다는 신호다.
+        #   그래서 기각의 근거로 쓰지 않고 회차마다 기록만 남겨 표본을 모은다
+        self.declare_parameter('bay_align_yaw_gate_deg', 10.0)
 
         self.arena = self._load_arena(self.p('arena_yaml'))
 
@@ -454,6 +559,7 @@ class ShuttleMission(Node):
         """새 TF를 제한시간 안에 얻지 못하면 좌표를 추측하지 않고 포기한다."""
         timeout = self.positive_parameter('tf_pose_timeout_s')
         max_age = self.positive_parameter('tf_max_age_s')
+        slack = self.positive_parameter('tf_future_slack_s')
         sample = None
 
         def ready():
@@ -461,7 +567,7 @@ class ShuttleMission(Node):
             sample = self.tf_sample(warn=False)
             return (sample is not None
                     and all(math.isfinite(v) for v in (*sample.pose, sample.stamp_s))
-                    and 0.0 <= self.now() - sample.stamp_s <= max_age
+                    and -slack <= self.now() - sample.stamp_s <= max_age
                     and (not_before is None or sample.stamp_s >= not_before))
 
         if not self.wait(ready, timeout=timeout):
@@ -858,7 +964,7 @@ class ShuttleMission(Node):
             return None                       # 수평 성분이 없다 — 방위를 낼 수 없다
         return p.position.x, p.position.y, math.atan2(ny, nx)
 
-    def marker_sample(self, expect_id=None):
+    def marker_sample(self, expect_id=None, window_s=None):
         """여러 프레임의 중앙값으로 한 점을 만든다. 표본을 못 모으면 None.
 
         **expect_id 를 주면 그 마커가 지금 보일 때만 쓴다.** `aruco/pose` 에는 ID 가 없어서
@@ -870,7 +976,7 @@ class ShuttleMission(Node):
         법선 방위는 π 근처라 그대로 중앙값을 내면 π 와 −π 가 섞이므로 첫 표본 기준으로 접어서 낸다.
         """
         want = max(1, int(self.p('bay_align_samples')))
-        window = self.positive_parameter('bay_align_sample_s')
+        window = window_s or self.positive_parameter('bay_align_sample_s')
         self.aruco_poses.clear()
         # ID 일치를 **기다리는 조건에 넣는다.** 미리 한 번 보고 없다고 곧장 포기하면, 회전 직후
         #   한두 프레임 놓친 것만으로 미션이 죽는다 (9/8 T15·T16 이 그랬다)
@@ -911,51 +1017,14 @@ class ShuttleMission(Node):
         if not rows:
             return None
         ref = rows[0][2]
+        folded = [wrap_pi(r[2] - ref) for r in rows]
+        centre = median(folded)
+        # 중앙값절대편차. 두 해 사이를 프레임마다 오가면 여기가 크게 뛴다 —
+        #   중앙값만 보면 그 오감이 안 보인다 (표본의 절반 이상이 한쪽이면 그쪽으로 정해진다)
+        mad = median([abs(f - centre) for f in folded])
         return MarkerSample(
             median([r[0] for r in rows]), median([r[1] for r in rows]),
-            ref + median([wrap_pi(r[2] - ref) for r in rows]), last)
-
-    def align_yaw(self, sample, yaw_ref, yaw_now):
-        """돌려야 할 각 φ 와 그 근거를 돌려준다.
-
-        기본은 arena.yaml 의 측량된 베이 방위다 — 이 경로는 AMCL 의 방위 오차를 그대로 물려받는다
-        (위치와 달리 상쇄되지 않는다). 마커 자세를 켜면 그 오차까지 지워지지만 두 해 문제가 있어,
-        측량값과 게이트 이상 어긋나면 뒤집힌 해로 보고 측량값으로 되돌아간다.
-        """
-        surveyed = wrap_pi(yaw_ref - yaw_now)
-        if not self.p('bay_align_use_marker_yaw'):
-            return surveyed, '측량'
-        gate = math.radians(self.positive_parameter('bay_align_yaw_gate_deg'))
-        if abs(wrap_pi(sample.yaw_error - surveyed)) > gate:
-            self.get_logger().warn(
-                f'마커 자세 기각 — 측량 {math.degrees(surveyed):+.1f}° 와 '
-                f'{math.degrees(sample.yaw_error):+.1f}° 가 게이트 {math.degrees(gate):.0f}° 를 '
-                '넘게 어긋난다 (두 해 뒤집힘으로 본다)')
-            return surveyed, '측량(마커 자세 기각)'
-        return sample.yaw_error, '마커'
-
-    def approach_translation(self, sample, r_target):
-        """**마커를 향해 곧장** 들어가는 base_link 이동량 (앞, 왼쪽).
-
-        마커 방향 단위벡터에 (지금 거리 − 목표 거리) 를 곱한 것이다. 그래서 이동 방향이 곧
-        마커 방위이고, 로봇은 벽에 거의 수직으로 들어간다.
-
-        **왜 좌우 치우침을 맞추지 않나 (9/8 실주행에서 배웠다).** 예전에는 '마커가 정면
-        정중앙에 오도록' 을 목표로 삼아 t = p − R(φ)·p* 를 썼다. 그러면 회전 φ 가 거리 r 과
-        묶여 **r·sin(φ) 만큼의 옆걸음**이 따라 나온다. 실측: 마커가 9.8 cm 오른쪽 · φ=9.8° ·
-        r=0.6 이었는데 이동 요구가 앞 0.58 · **좌 −0.20** 이 되어, 로봇이 마커를 14° 비껴간
-        방향으로 파고들다 **마커가 없는 옆벽**을 만나 `Collision Ahead` 로 중단됐다.
-        좁은 베이 칸에서 옆걸음은 옆벽으로 밀어 넣는다.
-
-        그래서 좌우는 **보정하지 않는다.** 로봇이 마커에서 좌우로 조금 어긋난 채 서게 되지만,
-        옆벽에 파고드는 것보다 낫고 그 잔차는 로그로 남는다. 정중앙 정렬이 정말 필요해지면
-        '멀리서 옆으로 정렬 → 직진 접근' 2단계로 따로 설계해야 한다 — 지금 방식으로는 안 된다.
-        """
-        reach = math.hypot(sample.fwd, sample.lat)
-        if reach <= r_target:
-            return 0.0, 0.0                    # 이미 목표보다 가깝다 — 후진 금지라 물러나지 않는다
-        scale = 1.0 - r_target / reach
-        return sample.fwd * scale, sample.lat * scale
+            ref + centre, last, mad)
 
     def behavior_server_ready(self, timeout_s=2.0):
         """Spin·DriveOnHeading 액션 서버가 떠 있는지.
@@ -969,6 +1038,196 @@ class ShuttleMission(Node):
             if client is not None and not client.wait_for_server(timeout_sec=timeout_s):
                 return False
         return True
+
+    def normal_trustworthy(self, sample, surveyed):
+        """법선을 정렬 기준으로 써도 되는지 본다. 못 쓰면 사유 문자열, 쓰면 None.
+
+        **검사는 하나뿐이다 — 표본 창 안의 산포(MAD).** 정사각 마커의 두 해가 프레임마다
+        오가면 여기가 크게 뛴다. 중앙값만 보면 그 오감이 안 보인다: 표본의 절반 이상이
+        한쪽이면 중앙값은 조용히 그쪽으로 정해진다.
+
+        **측량값과의 어긋남은 기각 사유가 아니다 (9/10 결정).** 측량값은 AMCL 방위에서
+        나오므로 둘이 다를 때 어느 쪽이 틀렸는지 이 비교로는 가릴 수 없다. 9/9 R1b 에서
+        방위 β 와 법선 ε 가 **같은 양(+19.8·+19.9°)만큼 함께 움직였고**, 이는 마커 측정이
+        자기일관적이고 로봇 방위 쪽이 어긋났다는 신호다. 경고만 남기고 표본을 모은다.
+        """
+        spread = math.radians(self.positive_parameter('bay_align_normal_spread_deg'))
+        if sample.normal_mad > spread:
+            return (f'법선 산포 {math.degrees(sample.normal_mad):.1f}° 가 상한 '
+                    f'{math.degrees(spread):.0f}° 를 넘는다 — 두 해 사이를 오가고 있다')
+        gate = math.radians(self.positive_parameter('bay_align_yaw_gate_deg'))
+        off = wrap_pi(sample.yaw_error - surveyed)
+        if abs(off) > gate:
+            self.get_logger().warn(
+                f'법선 {math.degrees(sample.yaw_error):+.1f}° 와 측량 '
+                f'{math.degrees(surveyed):+.1f}° 가 {math.degrees(abs(off)):.1f}° 어긋난다 '
+                f'(게이트 {math.degrees(gate):.0f}°) — **마커를 쓴다.** 측량값은 AMCL 방위에서 '
+                '나오므로 어느 쪽이 틀렸는지 이 비교로는 못 가린다 (9/10)')
+        return None
+
+    def drive_command(self, want):
+        """원하는 거리를 실제로 가려면 얼마를 명령해야 하는지 [m].
+
+        `DriveOnHeading` 은 명령보다 **계통적으로 더 간다** — 9/9 실측 −0.065(줄자)와
+        −0.071(노드 자체 측정)로, 방법이 독립인데 6 mm 안에서 일치했다. 그만큼 덜 명령한다.
+
+        **상수인지 비례인지는 아직 모른다.** 두 표본의 명령값이 0.270·0.257 로 거의 같아서
+        구분이 안 됐다. 두 항을 다 두었으니 짧은 이동(0.10 m 급) 회차 하나면 갈린다.
+        보정 뒤 값이 0 이하가 되면 움직이지 않는다 — 되레 지나치는 것보다 낫다.
+        """
+        bias = self.p('bay_align_drive_bias_m') + self.p('bay_align_drive_bias_ratio') * want
+        return want - bias
+
+    def drive(self, want, label):
+        """오버슛을 보정해 직진한다. 보정 뒤 남는 것이 없으면 명령하지 않는다."""
+        cmd = self.drive_command(want)
+        if cmd <= 0.0:
+            self.get_logger().info(
+                f'{label} 생략 — 원하는 {want:.3f} m 가 오버슛 보정 '
+                f'{want - cmd:+.3f} m 안에 들어간다')
+            return
+        speed = self.positive_parameter('bay_align_speed_mps')
+        allow = max(1, int(self.p('bay_align_timeout_s')))
+        self.get_logger().info(f'{label} — 원하는 {want:.3f} m, 명령 {cmd:.3f} m')
+        self.run_behavior(lambda: self.navigator.driveOnHeading(cmd, speed, allow), label)
+
+    def turn(self, angle, label):
+        """분해능 위일 때만 제자리 회전한다. **명령한 각을** 돌려준다.
+
+        전후로 TF 의 방위를 읽어 **명령 대 실제**를 로그로 남긴다. 이 알고리즘은 회전을
+        네 번 쓰므로 실행 오차가 그대로 쌓이는데, 지금까지는 그 오차를 직접 본 적이 없다.
+
+        의심하는 근거가 둘 있다. 9/9 R1b 에서 방위 β 와 법선 ε 가 **정확히 같은 양
+        (+19.8°·+19.9°)** 만큼 함께 움직였다 — 마커 측정은 자기일관적인데 로봇 방위가
+        어긋났다는 뜻이다. 9/10 A2 에서는 기하학적으로 정확한 +90.0° 를 돌린 직후 재측정이
+        **+8.1° 를 더 돌라**고 했다. 둘 다 회전이 명령대로 실행되지 않았을 때의 모양이다.
+
+        **아직 추론이므로 여기서는 재기만 한다.** 확정되면 회전을 TF 로 닫는다(목표 방위에
+        닿을 때까지 재보고 다시 돌린다). 재보기 전에 고치면 무엇을 고쳤는지 알 수 없다.
+        """
+        if not self.turn_worth_doing(angle):
+            self.get_logger().info(
+                f'{label} 생략 — {math.degrees(angle):+.1f}° 는 Spin 분해능 미만')
+            return 0.0
+        allow = max(1, int(self.p('bay_align_timeout_s')))
+        before = self.tf_sample(warn=False)
+        self.run_behavior(lambda: self.navigator.spin(angle, allow), label)
+        after = self.tf_sample(warn=False)
+        if before is not None and after is not None:
+            actual = wrap_pi(after.yaw - before.yaw)
+            err = wrap_pi(actual - angle)
+            self.get_logger().info(
+                f'{label} 실행 — 명령 {math.degrees(angle):+.1f}° · '
+                f'실제 {math.degrees(actual):+.1f}° · 오차 {math.degrees(err):+.1f}°'
+                + ('   ← 분해능 2.3° 를 크게 넘는다'
+                   if abs(err) > math.radians(5.0) else ''))
+        else:
+            self.get_logger().warn(f'{label} 실행량을 못 쟀다 — TF 를 못 읽었다')
+        # **명령한 각을 돌려준다.** 다음 단계의 회전량은 '우리가 무엇을 명령했나' 위에서
+        #   계산되어야 앞뒤가 맞는다. 실제로 돈 각을 쓰면 측정 잡음이 계산에 섞인다
+        return angle
+
+    def lateral_align(self, sample, label):
+        """① 횡정렬 — 마커 법선선 위로 옮긴다. 회전 θ_F → 직진 |e_lat|.
+
+        실제로 돈 각을 돌려준다 (안 움직였으면 0.0). 이 값은 다음 단계에서 정면을 향할
+        회전량을 내는 데 쓴다.
+
+        **여기서 실패해도 미션을 죽이지 않는다.** θ_F 는 법선에 수직이라 ±90° 급이고,
+        Nav2 `Spin` 의 충돌 예측에 걸릴 확률이 접근 동작 중 가장 높다 — 9/9 R1 은 3회 중
+        2회가 Spin 취소로 죽었다. 여기서 또 죽으면 횡정렬을 넣은 대가로 성공률이 떨어진다.
+        실패하면 그 자리에서 다음 단계로 넘어가고 잔여 횡오차는 로그로 남는다. 지금까지의
+        동작(횡오차를 아예 보정하지 않던 것)과 같은 수준일 뿐 더 나빠지지 않는다.
+        """
+        e_lat = sample.lat_error
+        tol = self.positive_parameter('bay_align_tol_lat_m')
+        cap = self.positive_parameter('bay_align_max_lat_m')
+        if abs(e_lat) <= tol:
+            self.get_logger().info(
+                f'{label} 횡정렬 불필요 — 이탈 {e_lat:+.3f} m 가 허용 {tol:.3f} m 안이다')
+            return 0.0
+        if abs(e_lat) > cap:
+            self.get_logger().warn(
+                f'{label} 횡정렬 생략 — 이탈 {e_lat:+.3f} m 가 상한 {cap:.3f} m 를 넘는다. '
+                '이 크기는 실제 치우침보다 법선 오류일 때가 많다 (법선이 δ 만큼 틀리면 '
+                f'수선의 발이 거리×sin δ 만큼 밀린다). 잔여 이탈은 그대로 둔다')
+            return 0.0
+        fx, fy = sample.foot
+        theta = math.atan2(fy, fx)
+        self.get_logger().info(
+            f'{label} 횡정렬 — 법선선에서 {e_lat:+.3f} m 벗어나 있다. '
+            f'수선의 발 ({fx:+.3f}, {fy:+.3f}) 로 {math.degrees(theta):+.1f}° 돌아 '
+            f'{abs(e_lat):.3f} m 간다')
+        try:
+            turned = self.turn(theta, f'{label} 횡정렬 회전')
+            self.drive(abs(e_lat), f'{label} 횡정렬 직진')
+            return turned
+        except MissionAbort as exc:
+            self.get_logger().warn(
+                f'{label} 횡정렬 실패({exc}) — 생략하고 방위·거리 정렬로 넘어간다. '
+                '미션은 계속한다 (횡오차는 원래 보정하지 않던 값이다)')
+            return 0.0
+
+    def face_marker(self, sample, turned, label):
+        """② 방위정렬 — 마커를 정면으로 본다. 회전 (θ_face − 이미 돈 각).
+
+        **이것은 명령 누적이 아니다.** 평행이동은 base_link 에서 마커 법선의 *방향* 을
+        바꾸지 않는다 — 바뀌는 것은 마커의 위치뿐이다. 로봇 방위는 우리가 θ_F 만큼 돌린
+        것을 알고 있으므로 남은 회전 (θ_face − θ_F) 는 이동 거리와 무관하게 기하학적으로
+        정확하다. 남는 오차는 Spin·Drive 의 실행 오차뿐이고, 그것은 다음 재측정이 잡는다.
+
+        횡정렬 자세에서는 마커가 카메라 FOV(38.5°) 밖이라 잴 수 없다. 그래서 재측정을
+        '동작 사이' 가 아니라 **'마커가 보이는 자세가 된 뒤'** 에 넣는다.
+        """
+        remain = wrap_pi(sample.face_yaw - turned)
+        self.get_logger().info(
+            f'{label} 방위정렬 — 정면 {math.degrees(sample.face_yaw):+.1f}° 중 '
+            f'{math.degrees(turned):+.1f}° 는 이미 돌았다. 남은 {math.degrees(remain):+.1f}°')
+        self.turn(remain, f'{label} 방위정렬 회전')
+
+    def advance_to_range(self, bay, r_target, label, before=None):
+        """③ 거리정렬 — 법선방향 거리를 목표에 맞춘다. 재측정 → 소각 보정 → 직진.
+
+        **반경거리가 아니라 법선거리(d_n)를 맞춘다.** 선반·벽까지의 여유를 정하는 것은
+        반경이 아니라 벽에 수직인 거리다 — 옆으로 치우쳐 있으면 반경이 같아도 벽에는 더
+        가깝다. 목표보다 이미 가까우면 **전진하지 않는다** (후진 금지, 계약 2절).
+
+        **재측정에 실패하면 이전 측정의 법선거리를 쓴다 — 이것은 근사가 아니다.**
+        앞의 두 단계는 d_n 을 바꾸지 않는다: 방위정렬은 제자리 회전이고, 횡정렬은 수선의
+        발로 가는 이동인데 그 방향은 t 라 법선 n 에 수직이다. 수직 방향으로 움직이면
+        평면까지의 거리가 변하지 않는다. 그래서 회전 뒤 한두 프레임을 놓쳤다고 접근을
+        통째로 버릴 이유가 없다 (9/8 T15·T16 · 9/9 R1a 가 이 자리에서 죽었다).
+        다만 잔여 방위 보정은 못 하므로 그때는 건너뛴다.
+        """
+        window = self.positive_parameter('bay_align_reacquire_s')
+        sample = self.marker_sample(bay['aruco_id'], window_s=window)
+        if sample is None:
+            if before is None:
+                self.get_logger().warn(
+                    f'{label} 거리정렬 — 회전 뒤 마커를 {window:.1f} s 안에 못 봤고 '
+                    '이전 측정도 없다. 그 자리에 선다')
+                return None
+            self.get_logger().warn(
+                f'{label} 거리정렬 — 회전 뒤 마커를 {window:.1f} s 안에 못 봤다. '
+                f'이전 측정의 법선거리 {before.normal_range:.3f} m 를 쓴다 '
+                '(앞 두 단계는 법선거리를 바꾸지 않는다 — 회전이거나 법선에 수직인 이동이다)')
+            sample = before
+        floor = self.positive_parameter('bay_align_min_dn_m')
+        if sample.normal_range < floor:
+            self.get_logger().warn(
+                f'{label} 거리정렬 생략 — 법선거리 {sample.normal_range:.3f} m 가 하한 '
+                f'{floor:.3f} m 아래다. 전진하지 않는다')
+            return sample
+        if sample is not before:
+            self.turn(sample.face_yaw, f'{label} 정면 잔여 회전')
+        want = sample.normal_range - r_target
+        if want <= 0.0:
+            self.get_logger().info(
+                f'{label} 거리정렬 불필요 — 법선거리 {sample.normal_range:.3f} m 가 이미 목표 '
+                f'{r_target:.3f} m 안이다. 후진하지 않는다 (계약 2절)')
+            return sample
+        self.drive(want, f'{label} 거리정렬 직진')
+        return sample
 
     def run_behavior(self, start, label):
         """상대 이동 1건. goto() 와 같은 폴링 규약을 쓰되 좌표 검증은 마커가 대신한다."""
@@ -1044,7 +1303,7 @@ class ShuttleMission(Node):
         allow = max(1, int(self.p('bay_align_timeout_s')))
         self.get_logger().info(
             f'칸 밖을 향해 제자리 {math.degrees(turn):.0f}° 회전')
-        self.run_behavior(lambda: self.navigator.spin(wrap_pi(turn), allow), '탈출 회전')
+        self.turn(wrap_pi(turn), '탈출 회전')
         # 돌기만 하고 Nav2 에 넘겼더니 좁은 칸 안에서 DWB 가 앞뒤로 헤매다 진행하지 못했다
         #   (9/8 T17: 35 초 넘게 제자리에서 흔들리고 P1 이 강제 회수됐다). 칸을 벗어나는
         #   구간까지 우리가 곧게 빼 준 뒤 넘긴다 — 열린 곳에서는 Nav2 가 잘 한다
@@ -1076,11 +1335,22 @@ class ShuttleMission(Node):
         return r_target
 
     def approach_and_align(self, bay):
-        """마커에서 bay_marker_range_m 인 자리로 가서 베이 방위로 선다.
+        """마커 법선선 위로 옮기고, 마커를 정면으로 보고, 법선거리를 목표에 맞춘다.
 
         **이 단계가 옛 '창고 안쪽 0.3 m 전진' 을 대신한다.** 전진은 출발점을 모르는 상대량이라
         AMCL 오차가 그대로 남았지만, 여기는 목적지가 마커 기준 절대 위치라 출발점이 어디든
         도착점이 같다.
+
+        **세 목적을 따로 세운다 (9/10).** 이전에는 마커를 향해 곧장 들어가는 반경방향 이동
+        하나로 처리했고, 좌우 치우침은 아예 보정하지 않았다 — 좁은 칸에서 옆걸음이 옆벽으로
+        민 적이 있어서다. 그런데 9/9 R1 에서 **보정하지 않은 그 횡오차가 실패의 공통 원인**
+        으로 나왔다 (도착 오차 0.188·0.198 인 두 회차가 Spin 취소로 죽고, 0.145 인 회차만
+        완주). 그래서 횡정렬을 독립 단계로 되살리되, **법선선이라는 명확한 기준**과 **실패를
+        흡수하는 구조**를 함께 둔다.
+
+            ① 횡정렬  회전 θ_F → 직진 |e_lat|      법선선 위로. 실패하면 생략(미션 유지)
+            ② 방위정렬 회전 θ_face − θ_F            마커를 정면으로
+            ③ 거리정렬 재측정 → 직진 d_n − r_target 법선방향 거리를 목표로
 
         Nav2 목표로는 못 한다: SimpleGoalChecker 가 xy 0.25 m · yaw 0.25 rad 라 이 크기의 이동을
         '이미 도착' 으로 처리해 로봇이 안 움직인다. 그래서 behavior_server 의 상대 이동을 쓴다.
@@ -1096,21 +1366,19 @@ class ShuttleMission(Node):
             return
         r_target = self.approach_target()
         yaw_ref = float(bay['waypoint'][2])
-        tol_xy = self.positive_parameter('bay_align_tol_xy_m')
-        tol_yaw = math.radians(self.positive_parameter('bay_align_tol_yaw_deg'))
-        max_step = self.positive_parameter('bay_align_max_step_m')
         iters = max(1, int(self.p('bay_align_max_iter')))
+        max_step = self.positive_parameter('bay_align_max_step_m')
         self.get_logger().info(
-            f'베이 접근 — 마커를 향해 곧장 {r_target:.2f} m 까지 들어간다 '
-            '(좌우 치우침은 보정하지 않는다 — 좁은 칸에서 옆걸음은 옆벽으로 민다)')
+            f'베이 접근 — 마커 법선선 위로 옮기고, 정면으로 보고, 법선거리 {r_target:.2f} m 에 선다')
         for i in range(1, iters + 1):
+            label = f'접근 {i}/{iters}'
             sample = self.marker_sample(bay['aruco_id'])
             if sample is None:
                 if i > 1:
                     # 이미 접근은 했다. 다듬지 못할 뿐이라 미션을 죽일 이유가 없다 (I-026)
                     self.get_logger().warn(
-                        f'접근 {i}/{iters} 에서 마커를 못 봤다 — {i - 1}회 접근한 자리에서 멈춘다')
-                    return
+                        f'{label} 에서 마커를 못 봤다 — {i - 1}회 접근한 자리에서 멈춘다')
+                    break
                 raise MissionAbort(
                     f'{ARUCO_POSE_TOPIC} 표본 없음 — 접근할 기준이 없다. aruco_detector 가 떠 '
                     '있는지, publish_pose 가 true 인지, 카메라 TF 가 있는지 확인할 것')
@@ -1118,34 +1386,65 @@ class ShuttleMission(Node):
                 raise MissionAbort(
                     'behavior_server 의 spin·drive_on_heading 이 없다 — Nav2(T3) 를 확인할 것')
             here = self.fresh_pose('접근 기준 자세', not_before=self.now())
-            phi, source = self.align_yaw(sample, yaw_ref, here.yaw)
-            tx, ty = self.approach_translation(sample, r_target)
-            step = math.hypot(tx, ty)
-            self.get_logger().info(
-                f'접근 {i}/{iters} — 마커 base_link ({sample.fwd:.3f}, {sample.lat:.3f}) m, '
-                f'방위 {math.degrees(sample.bearing):+.1f}°, '
-                f'마커 법선 오차 {math.degrees(sample.yaw_error):+.1f}° / '
-                f'이동 앞 {tx:+.3f} · 좌 {ty:+.3f} m (합 {step:.3f}, '
-                f'진행 방위 {math.degrees(sample.bearing):+.1f}°), '
-                f'끝나고 회전 {math.degrees(phi):+.1f}° [{source}]')
-            if step <= tol_xy and abs(phi) <= tol_yaw:
-                self.get_logger().info(f'접근 완료 ({i}회) — 더 움직이지 않는다')
+            surveyed = wrap_pi(yaw_ref - here.yaw)
+            self.log_geometry(label, sample, surveyed)
+
+            bad = self.normal_trustworthy(sample, surveyed)
+            if bad is not None:
+                # 법선을 못 믿으면 **움직이지 않는다.** 법선이 δ 만큼 틀리면 수선의 발이
+                #   거리×sin δ 만큼 밀리므로, 잘못된 법선으로 옆으로 가는 것이 가장 나쁘다
+                self.get_logger().warn(f'{label} 접근 보류 — {bad}')
+                break
+            if self.aligned(sample, r_target):
+                self.get_logger().info(f'{label} 접근 완료 — 세 항목이 모두 허용 안이다')
                 return
-            if step > max_step:
+            budget = abs(sample.lat_error) + max(0.0, sample.normal_range - r_target)
+            if budget > max_step:
                 raise MissionAbort(
-                    f'접근 이동량 {step:.3f} m 가 상한 {max_step:.3f} m 를 넘는다 — 마커 측정이나 '
+                    f'접근 이동량 {budget:.3f} m 가 상한 {max_step:.3f} m 를 넘는다 — 마커 측정이나 '
                     'bay_marker_range_m 를 의심할 것 (이대로 움직이면 선반에 부딪힐 수 있다)')
-            self.relative_move(tx, ty, phi, f'접근 {i}')
+
+            turned = self.lateral_align(sample, label)
+            self.face_marker(sample, turned, label)
+            self.advance_to_range(bay, r_target, label, before=sample)
+
         final = self.marker_sample(bay['aruco_id'])
         if final is None:
             self.get_logger().warn('접근 후 마커를 다시 못 봤다 — 잔차를 남기지 못한다')
-        else:
-            self.get_logger().info(
-                f'접근 종료 — 마커까지 {math.hypot(final.fwd, final.lat):.3f} m '
-                f'(목표 {r_target:.3f}, 잔차 {math.hypot(final.fwd, final.lat) - r_target:+.3f} m), '
-                f'base_link ({final.fwd:.3f}, {final.lat:.3f}), '
-                f'좌우 치우침 {final.lat:+.3f} m (보정하지 않은 값), '
-                f'법선 오차 {math.degrees(final.yaw_error):+.1f}°')
+            return
+        ok = self.aligned(final, r_target)
+        self.get_logger().info(
+            f'접근 종료 [{"충족" if ok else "미달"}] — '
+            f'법선거리 {final.normal_range:.3f} m (목표 {r_target:.3f}, '
+            f'잔차 {final.normal_range - r_target:+.3f}) · '
+            f'법선선 이탈 {final.lat_error:+.3f} m · '
+            f'방위 오차 {math.degrees(final.yaw_error):+.1f}° · '
+            f'α {math.degrees(final.alpha):+.1f}°')
+
+    def aligned(self, sample, r_target):
+        """세 항목이 모두 허용치 안인가 — 법선거리 · 법선선 이탈 · 방위.
+
+        **셋을 따로 본다.** 예전에는 반경거리 하나만 봐서, 옆으로 치우친 채 반경만 맞아도
+        '도착' 이 됐다. 그 상태로 체류를 마치고 180° 를 돌면 엉뚱한 방향을 보게 되고
+        `Spin` 이 충돌 예측으로 회전을 거부한다 — 9/9 R1a 가 거기서 죽었다.
+        """
+        return (abs(sample.normal_range - r_target)
+                <= self.positive_parameter('bay_align_tol_dn_m')
+                and abs(sample.lat_error) <= self.positive_parameter('bay_align_tol_lat_m')
+                and abs(sample.yaw_error)
+                <= math.radians(self.positive_parameter('bay_align_tol_yaw_deg')))
+
+    def log_geometry(self, label, sample, surveyed):
+        """측정 한 건의 기하를 한 줄로. 판정에 쓰는 값과 진단용 값을 함께 남긴다."""
+        fx, fy = sample.foot
+        self.get_logger().info(
+            f'{label} — 마커 base_link ({sample.fwd:.3f}, {sample.lat:.3f}) m, '
+            f'방위 {math.degrees(sample.bearing):+.1f}°, '
+            f'법선 {math.degrees(sample.yaw_error):+.1f}° '
+            f'(산포 {math.degrees(sample.normal_mad):.1f}°, 측량 '
+            f'{math.degrees(surveyed):+.1f}°, α {math.degrees(sample.alpha):+.1f}°) / '
+            f'법선거리 {sample.normal_range:.3f} · 이탈 {sample.lat_error:+.3f} · '
+            f'수선의 발 ({fx:+.3f}, {fy:+.3f})')
 
     def dwell(self):
         dwell_s = self.p('bay_dwell_s')
