@@ -33,7 +33,7 @@ def test_only_collision_monitor_output_changes(tmp_path, monkeypatch):
     monkeypatch.setattr(module.tempfile, 'NamedTemporaryFile', temporary)
     context = LaunchContext()
     context.launch_configurations.update(namespace='/robot3', params_file=str(source), use_sim_time='false',
-                                         local_inflation=str(module.INFLATION_RADIUS_M))
+                                         local_inflation=str(module.INFLATION_RADIUS_M), dwb_sim_time='')
     module._setup(context)
     output = yaml.safe_load(files[0].read_text())
     assert output['collision_monitor']['ros__parameters']['cmd_vel_out_topic'] == 'cmd_vel_navigation'
@@ -61,6 +61,7 @@ def test_local_inflation_argument_touches_only_the_local_costmap(tmp_path, monke
     spec.loader.exec_module(module)
     config = {'collision_monitor': {'ros__parameters': {'cmd_vel_out_topic': 'cmd_vel'}},
               'behavior_server': {'ros__parameters': {'max_rotational_vel': 1.0, 'min_rotational_vel': 0.4}},
+              'controller_server': {'ros__parameters': {'FollowPath': {'sim_time': 1.7, 'vx_samples': 20}}},
               'local_costmap': {'local_costmap': {'ros__parameters': {
                   'inflation_layer': {'inflation_radius': 0.15, 'cost_scaling_factor': 4.0}}}},
               'global_costmap': {'global_costmap': {'ros__parameters': {
@@ -79,10 +80,12 @@ def test_local_inflation_argument_touches_only_the_local_costmap(tmp_path, monke
     monkeypatch.setattr(module.tempfile, 'NamedTemporaryFile', temporary)
     context = LaunchContext()
     context.launch_configurations.update(namespace='/robot3', params_file=str(source), use_sim_time='false',
-                                         local_inflation='0.10')
+                                         local_inflation='0.10', dwb_sim_time='1.0')
     module._setup(context)
     output = yaml.safe_load(files[0].read_text())
     local = output['local_costmap']['local_costmap']['ros__parameters']['inflation_layer']
     glob = output['global_costmap']['global_costmap']['ros__parameters']['inflation_layer']
     assert local['inflation_radius'] == 0.10
     assert glob['inflation_radius'] == module.INFLATION_RADIUS_M
+    fp = output['controller_server']['ros__parameters']['FollowPath']
+    assert fp == {'sim_time': 1.0, 'vx_samples': 20}, 'dwb_sim_time 은 sim_time 하나만 바꾼다'

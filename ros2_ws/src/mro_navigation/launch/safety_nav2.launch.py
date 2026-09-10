@@ -52,6 +52,12 @@ def _setup(context):
         layer = config[costmap][costmap]['ros__parameters']['inflation_layer']
         layer['inflation_radius'] = radius
         layer['cost_scaling_factor'] = COST_SCALING
+    # **DWB 예측 구간만 줄여 시험** (`dwb_sim_time:=1.0`, 9/10 16:14 복귀 회차). 0.8 m 출입구 모서리에서
+    #   1.7 s 궤적(0.26 m/s × 1.7 = 0.44 m)이 전부 벽에 닿아 vx 0 만 남았다. 짧은 궤적이면 '조금
+    #   움직임 → 재계산' 으로 빠져나올 수 있는지 본다. 비우면 TB4 값(1.7) 그대로
+    sim_time = LaunchConfiguration('dwb_sim_time').perform(context).strip()
+    if sim_time:
+        config['controller_server']['ros__parameters']['FollowPath']['sim_time'] = float(sim_time)
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as stream:
         yaml.safe_dump(config, stream)
         target = stream.name
@@ -76,4 +82,6 @@ def generate_launch_description():
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('local_inflation', default_value=str(INFLATION_RADIUS_M),
                               description='local_costmap 만의 inflation_radius [m]. 글로벌은 INFLATION_RADIUS_M 고정'),
+        DeclareLaunchArgument('dwb_sim_time', default_value='',
+                              description='DWB FollowPath.sim_time [s]. 비우면 TB4 값(1.7) 유지'),
         OpaqueFunction(function=_setup)])
