@@ -69,7 +69,7 @@ class RobotStateManager:
             else:
                 age = max(0.0, current_time - received_time)
                 status['age_s'] = round(age, 3)
-                status['stale'] = age > robot.status_stale_s
+                status['stale'] = age > robot.status_overtime_sec
             all_status[namespace] = status
         return all_status
 

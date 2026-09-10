@@ -190,8 +190,8 @@ def test_pair_states_are_owned_by_separate_instances():
 def test_status_snapshot_contains_only_instance_robot():
     """웹에는 해당 RobotStatus가 소유한 로봇만 노출한다."""
     fake = make_robot_control_fake('/robot3')
-    fake.status_stale_s = 2.5
-    fake.status.update(state='SHUTTLE', _received_monotonic=98.0)
+    fake.status_overtime_sec = 5.0
+    fake.status.update(state='SHUTTLE', _received_monotonic=96.0)
 
     with patch(
         'mro_fleet.nodes.robot_state_manager.time.monotonic',
@@ -201,7 +201,7 @@ def test_status_snapshot_contains_only_instance_robot():
         snapshot = RobotStateManager.get_all_robot_status(manager)
 
     assert list(snapshot) == ['/robot3']
-    assert snapshot['/robot3']['age_s'] == 2.0
+    assert snapshot['/robot3']['age_s'] == 4.0
     assert snapshot['/robot3']['stale'] is False
     assert '_received_monotonic' not in snapshot['/robot3']
 
