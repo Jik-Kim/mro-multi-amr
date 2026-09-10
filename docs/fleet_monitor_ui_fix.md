@@ -150,8 +150,10 @@ ros2 launch mro_bringup fleet_pc.launch.py
 - 맵: 도킹 상태의 로봇 원과 주황 점선 도크 원이 동심원으로 겹치는지
 - 상세 보기 → `위치 정보` 탭을 누르고 3초 이상 두기
 
-이 리빌드 이후로는 `build/mro_fleet/templates/index.html` 이 소스로 심링크되어,
-HTML 만 고칠 때는 리빌드 없이 브라우저 새로고침으로 반영된다.
+`build/mro_fleet/templates/index.html` 은 소스로 심링크되어 있어 HTML 만 고칠 때 **리빌드는 필요 없다.**
+다만 **브라우저 새로고침만으로는 반영되지 않는다** — `MonitorWebApp.run()` 이 `debug=False` 로 돌아
+Jinja 가 템플릿을 메모리에 캐시한다. `fleet_manager` 를 재시작해야 한다. (9/10 실측: 새로고침으로는
+바뀌지 않았고 재시작하니 반영됐다.)
 
 ---
 
