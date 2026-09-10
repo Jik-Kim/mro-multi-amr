@@ -44,6 +44,21 @@ def test_dashboard_keeps_existing_control_endpoints():
     assert "command:'RETURN_ALL'" in html
 
 
+def test_status_poll_refreshes_detail_without_reopening_drawer():
+    """상태 갱신이 상세 창을 다시 열어 선택 탭을 초기화하지 않는지 확인한다."""
+    with open(TEMPLATE_PATH, encoding='utf-8') as template_file:
+        html = template_file.read()
+
+    assert (
+        'if(uiState.detailOpen&&uiState.selectedRobot)'
+        'refreshRobotDetail(uiState.selectedRobot)' in html
+    )
+    assert (
+        'if(uiState.detailOpen&&uiState.selectedRobot)'
+        'openRobotDetail(uiState.selectedRobot)' not in html
+    )
+
+
 def test_monitor_web_app_registers_dashboard_routes():
     """웹 파트가 기존 관제 URL을 기능별 메서드에 연결하는지 확인한다."""
     control = SimpleNamespace(
