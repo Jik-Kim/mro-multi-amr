@@ -290,6 +290,12 @@ class ShuttleMission(Node):
         # I-037 실험값 — common.yaml 이 단일 출처. 실물 검증 전 팀 확정값이 아니다.
         self.declare_parameter('tf_pose_timeout_s', 3.0)
         self.declare_parameter('tf_max_age_s', 0.3)
+        # TF 시각이 **우리 시계보다 앞설 때** 허용할 폭 [s]. 로봇과 PC 는 서로 다른 시계를 쓰므로
+        #   수 ms 어긋나는 것이 정상이다. 9/10 A1 은 지연이 **-0.003 s** 여서 미션이 통째로
+        #   날아갔다 — 검사가 `0.0 <= 지연` 이라 음수에 여유가 하나도 없었다. 미래 시각 TF 는
+        #   '오래된 값을 쓴다' 는 위험이 없으므로 막을 이유가 없다. Nav2 의 transform_tolerance
+        #   0.1 s 보다 넉넉히 잡되, 이보다 크게 앞서면 시계가 정말 틀어진 것이라 그때는 막는다
+        self.declare_parameter('tf_future_slack_s', 0.25)
         self.declare_parameter('arrival_xy_tolerance_m', 0.25)
         # 베이 정렬 보정 (9/8 추가) — 값의 단일 출처는 common.yaml. 여기 기본값은 대체값이다.
         self.declare_parameter('bay_align_enable', True)
@@ -553,6 +559,7 @@ class ShuttleMission(Node):
         """새 TF를 제한시간 안에 얻지 못하면 좌표를 추측하지 않고 포기한다."""
         timeout = self.positive_parameter('tf_pose_timeout_s')
         max_age = self.positive_parameter('tf_max_age_s')
+        slack = self.positive_parameter('tf_future_slack_s')
         sample = None
 
         def ready():
@@ -560,7 +567,7 @@ class ShuttleMission(Node):
             sample = self.tf_sample(warn=False)
             return (sample is not None
                     and all(math.isfinite(v) for v in (*sample.pose, sample.stamp_s))
-                    and 0.0 <= self.now() - sample.stamp_s <= max_age
+                    and -slack <= self.now() - sample.stamp_s <= max_age
                     and (not_before is None or sample.stamp_s >= not_before))
 
         if not self.wait(ready, timeout=timeout):
@@ -1085,13 +1092,39 @@ class ShuttleMission(Node):
         self.run_behavior(lambda: self.navigator.driveOnHeading(cmd, speed, allow), label)
 
     def turn(self, angle, label):
-        """분해능 위일 때만 제자리 회전한다. 실제로 돈 각을 돌려준다."""
+        """분해능 위일 때만 제자리 회전한다. **명령한 각을** 돌려준다.
+
+        전후로 TF 의 방위를 읽어 **명령 대 실제**를 로그로 남긴다. 이 알고리즘은 회전을
+        네 번 쓰므로 실행 오차가 그대로 쌓이는데, 지금까지는 그 오차를 직접 본 적이 없다.
+
+        의심하는 근거가 둘 있다. 9/9 R1b 에서 방위 β 와 법선 ε 가 **정확히 같은 양
+        (+19.8°·+19.9°)** 만큼 함께 움직였다 — 마커 측정은 자기일관적인데 로봇 방위가
+        어긋났다는 뜻이다. 9/10 A2 에서는 기하학적으로 정확한 +90.0° 를 돌린 직후 재측정이
+        **+8.1° 를 더 돌라**고 했다. 둘 다 회전이 명령대로 실행되지 않았을 때의 모양이다.
+
+        **아직 추론이므로 여기서는 재기만 한다.** 확정되면 회전을 TF 로 닫는다(목표 방위에
+        닿을 때까지 재보고 다시 돌린다). 재보기 전에 고치면 무엇을 고쳤는지 알 수 없다.
+        """
         if not self.turn_worth_doing(angle):
             self.get_logger().info(
                 f'{label} 생략 — {math.degrees(angle):+.1f}° 는 Spin 분해능 미만')
             return 0.0
         allow = max(1, int(self.p('bay_align_timeout_s')))
+        before = self.tf_sample(warn=False)
         self.run_behavior(lambda: self.navigator.spin(angle, allow), label)
+        after = self.tf_sample(warn=False)
+        if before is not None and after is not None:
+            actual = wrap_pi(after.yaw - before.yaw)
+            err = wrap_pi(actual - angle)
+            self.get_logger().info(
+                f'{label} 실행 — 명령 {math.degrees(angle):+.1f}° · '
+                f'실제 {math.degrees(actual):+.1f}° · 오차 {math.degrees(err):+.1f}°'
+                + ('   ← 분해능 2.3° 를 크게 넘는다'
+                   if abs(err) > math.radians(5.0) else ''))
+        else:
+            self.get_logger().warn(f'{label} 실행량을 못 쟀다 — TF 를 못 읽었다')
+        # **명령한 각을 돌려준다.** 다음 단계의 회전량은 '우리가 무엇을 명령했나' 위에서
+        #   계산되어야 앞뒤가 맞는다. 실제로 돈 각을 쓰면 측정 잡음이 계산에 섞인다
         return angle
 
     def lateral_align(self, sample, label):
@@ -1270,7 +1303,7 @@ class ShuttleMission(Node):
         allow = max(1, int(self.p('bay_align_timeout_s')))
         self.get_logger().info(
             f'칸 밖을 향해 제자리 {math.degrees(turn):.0f}° 회전')
-        self.run_behavior(lambda: self.navigator.spin(wrap_pi(turn), allow), '탈출 회전')
+        self.turn(wrap_pi(turn), '탈출 회전')
         # 돌기만 하고 Nav2 에 넘겼더니 좁은 칸 안에서 DWB 가 앞뒤로 헤매다 진행하지 못했다
         #   (9/8 T17: 35 초 넘게 제자리에서 흔들리고 P1 이 강제 회수됐다). 칸을 벗어나는
         #   구간까지 우리가 곧게 빼 준 뒤 넘긴다 — 열린 곳에서는 Nav2 가 잘 한다
