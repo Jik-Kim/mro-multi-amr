@@ -1237,8 +1237,11 @@ class ShuttleMission(Node):
     def acquire_p1(self):
         """베이를 떠나기 전에 획득한다 — 여기서부터 대기공간까지가 P1 을 지나는 구간이다.
 
-        거절은 정상이므로 실패로 세지 않는다 (계약 3절). 무한 대기는 T_lim 이 끊고,
-        세마포어에도 60 초 강제 회수가 있다.
+        거절은 정상이므로 실패로 세지 않는다 (계약 3절). 무한 대기는 T_lim 이 끊는다.
+
+        **세마포어의 60 초 강제 회수는 여기서 우리를 구해주지 않는다** — `watchdog()` 은 `holder` 만
+        훑고 대기열은 안 본다 (`zone_semaphore_node.py`). 못 받은 채 끝나면 우리가 직접 반납해야
+        대기열에서 빠진다. 그 오해가 I-033 을 오래 안 보이게 했다 — `release_token` 을 볼 것.
         """
         self.token_requested = True                  # 첫 요청부터 — 거절돼도 대기열에 올라간다
         while not self.token(True):
