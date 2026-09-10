@@ -108,7 +108,7 @@ while(i<md.length){
     buf.forEach(t=>children.push(new Paragraph({
       spacing:{before:0,after:0,line:230},
       shading:{type:ShadingType.CLEAR,fill:'F4F6F8'},
-      children:[new TextRun({text:t||' ',font:MONOBLK,size:15})]})));
+      children:[new TextRun({text:(t||' ').replace(/ /g,'\u00A0'),font:MONOBLK,size:15})]})));   // 공백 → NBSP: HTML 계열 뷰어가 연속 공백을 접어도 도식 정렬이 유지된다
     children.push(new Paragraph({spacing:{after:140},children:[]}));
     continue;
   }
