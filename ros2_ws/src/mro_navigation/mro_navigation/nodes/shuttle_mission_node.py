@@ -89,7 +89,7 @@ from statistics import median
 from threading import Thread
 
 from ament_index_python.packages import get_package_share_directory
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Pose, PoseStamped, TwistStamped
 from lifecycle_msgs.srv import GetState
 from mro_interfaces.msg import Mission
 from mro_interfaces.srv import ZoneToken
@@ -251,6 +251,11 @@ class ShuttleMission(Node):
         self.declare_parameter('bay_exit_turn_deg', 180.0)
         # 돌고 나서 칸 밖으로 스스로 빠져나올 거리 [m]. 0 이면 바로 Nav2 에 넘긴다
         self.declare_parameter('bay_exit_drive_m', 0.5)
+        # 탈출 회전은 Nav2 Spin 이 아니라 **워치독을 거치는 직접 회전**이다 (9/10 세 회차 Collision Ahead).
+        #   안전 판정은 워치독의 360° 여유(rotation_clearance_m 0.21)가 한다 — costmap inflation 과 무관
+        self.declare_parameter('motion_cmd_topic', 'cmd_vel_search')   # 워치독 입력. follow_target 과 같은 토픽
+        self.declare_parameter('bay_exit_rate_rps', 0.5)             # rad/s. odom 0.35 s 지연에 10° — 1.5 면 30° 지나친다 (I-051)
+        self.declare_parameter('bay_exit_lead_deg', 10.0)            # 지연·관성 몫을 미리 뺀다
         self.declare_parameter('bay_align_speed_mps', 0.10)   # DriveOnHeading 속도
         self.declare_parameter('bay_align_timeout_s', 20)     # Spin·DriveOnHeading time_allowance
         # 마커 자세(yaw)로 각도를 잡을지. **9/8 저녁에 켜 봤다가 되돌렸다.**
@@ -298,6 +303,7 @@ class ShuttleMission(Node):
         self.create_subscription(PoseStamped, ARUCO_POSE_TOPIC, self.aruco_pose_cb, 10)
         self.create_subscription(Bool, ESTOP_TOPIC, self.estop_cb, 1)
         self.pub_status = self.create_publisher(String, STATUS_TOPIC, 10)
+        self.pub_spin = self.create_publisher(TwistStamped, str(self.p('motion_cmd_topic')), 1)
         self.pub_arrived = self.create_publisher(Bool, ARRIVED_TOPIC, 1)
         self.cli_token = self.create_client(ZoneToken, TOKEN_SRV)
         # 클라이언트는 한 번만 만든다 — 폴링마다 만들면 5 초마다 하나씩 쌓인다
@@ -1046,12 +1052,15 @@ class ShuttleMission(Node):
         if abs(turn) < 1e-6:
             self.get_logger().info('탈출 회전 꺼짐 (bay_exit_turn_deg=0)')
             return
-        if not self.behavior_server_ready():
-            raise MissionAbort('behavior_server 의 spin 이 없다 — Nav2(T3) 를 확인할 것')
         allow = max(1, int(self.p('bay_align_timeout_s')))
         self.get_logger().info(
-            f'칸 밖을 향해 제자리 {math.degrees(turn):.0f}° 회전')
-        self.run_behavior(lambda: self.navigator.spin(wrap_pi(turn), allow), '탈출 회전')
+            f'칸 밖을 향해 제자리 {math.degrees(turn):.0f}° 회전 (직접 · 워치독 경유)')
+        # **Nav2 Spin 을 쓰지 않는다.** 9/10 세 회차(10:19·10:39·13:23) 모두 여기서
+        #   `Collision Ahead - Exiting Spin` 으로 죽었다 — 13:23 은 360° 여유가 0.35 m 로
+        #   로봇 반지름(0.189)보다 15 cm 남는데도 거부했다. Nav2 는 costmap 위에서 판정하므로
+        #   inflation(0.25, P1 통과에 필요)이 클수록 좁은 칸에서 더 거부한다. 우리 회전은
+        #   워치독이 360° 실측 거리로 지키므로(0.21) inflation 과 무관하다
+        self.rotate_direct(math.degrees(turn), '탈출 회전')
         # 돌기만 하고 Nav2 에 넘겼더니 좁은 칸 안에서 DWB 가 앞뒤로 헤매다 진행하지 못했다
         #   (9/8 T17: 35 초 넘게 제자리에서 흔들리고 P1 이 강제 회수됐다). 칸을 벗어나는
         #   구간까지 우리가 곧게 빼 준 뒤 넘긴다 — 열린 곳에서는 Nav2 가 잘 한다
@@ -1061,6 +1070,64 @@ class ShuttleMission(Node):
         speed = self.positive_parameter('bay_align_speed_mps')
         self.get_logger().info(f'칸 밖으로 {out:.2f} m 전진 — 여기까지만 우리가 뺀다')
         self.run_behavior(lambda: self.navigator.driveOnHeading(out, speed, allow), '탈출 전진')
+
+    def odom_yaw(self):
+        """odom→base_link yaw. AMCL 점프가 없어 회전량 적산에 map 보다 적합 (follow_target 과 같다)."""
+        try:
+            t = self.tf_buffer.lookup_transform('odom', BASE_FRAME, Time())
+        except Exception:
+            return None
+        q = t.transform.rotation
+        return math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+
+    def publish_wz(self, wz):
+        m = TwistStamped()
+        m.header.stamp = self.get_clock().now().to_msg()
+        m.header.frame_id = BASE_FRAME
+        m.twist.angular.z = float(wz)
+        self.pub_spin.publish(m)
+
+    def rotate_direct(self, deg, label):
+        """제자리 회전을 워치독 입력 토픽으로 직접 낸다. 병진 없음.
+
+        estop 이면 워치독이 어차피 0 으로 덮으므로 여기서는 발행을 멈추고 상대 이동 규약대로
+        포기한다 (run_behavior 와 같은 정책). T_lim 은 over_tlim 으로 본다.
+        odom 이 0.3~0.4 s 늦게 오므로(I-051) 느리게 돌고(bay_exit_rate_rps) 지연·관성 몫
+        (bay_exit_lead_deg)을 미리 빼서 멈춘다 — 180° 에서 몇 도 남거나 넘치는 건 상관없다.
+        칸 밖은 어차피 뒤쪽이고 그 뒤 Nav2 가 방위를 잡는다.
+        """
+        rate = self.positive_parameter('bay_exit_rate_rps')
+        lead = math.radians(max(0.0, float(self.p('bay_exit_lead_deg'))))
+        target = max(0.0, math.radians(abs(deg)) - lead)
+        sign = 1.0 if deg >= 0 else -1.0
+        turned, prev = 0.0, self.odom_yaw()
+        t0 = self.now()
+        deadline = t0 + 3.0 * target / max(rate, 0.1) + 3.0
+        self.motion_pause.ready = True                       # Nav2 액션이 없다 — estop 이면 바로 ACK 가능
+        try:
+            while self.now() < deadline:
+                rclpy.spin_once(self, timeout_sec=0.02)
+                if self.over_tlim():
+                    raise MissionAbort(f"T_lim {self.p('t_lim_s')} s 초과")
+                if self.estop:
+                    raise MissionAbort(f'{label} 안전 중단 — 상대 이동은 자동 반복하지 않는다')
+                if prev is None:                                  # TF 없음 → 시간으로 추정
+                    turned = (self.now() - t0) * rate
+                else:
+                    y = self.odom_yaw()
+                    if y is not None:
+                        turned += abs(math.atan2(math.sin(y - prev), math.cos(y - prev)))
+                        prev = y
+                if turned >= target:
+                    break
+                self.publish_wz(sign * rate)
+            else:
+                self.get_logger().warn(f'{label} 타임아웃 — 정지')
+        finally:
+            for _ in range(3):
+                self.publish_wz(0.0)
+                rclpy.spin_once(self, timeout_sec=0.02)
+        self.get_logger().info(f'{label} 완료 — 적산 {math.degrees(turned):.0f}° (목표 {math.degrees(target):.0f}° + 여유 {math.degrees(lead):.0f}°)')
 
     def approach_target(self):
         """접근을 끝낼 마커까지의 거리를 검증해 돌려준다.

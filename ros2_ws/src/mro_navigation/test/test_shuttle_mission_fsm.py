@@ -254,6 +254,18 @@ def make_node(simulate_pose=True, **params):
             return transform
 
         node.tf_buffer.lookup_transform = lookup
+    # 탈출 회전은 Nav2 Spin 이 아니라 cmd_vel_search 로 직접 낸다 — 발행 한 번을 TURN_SIM_DT 만큼
+    #   돈 것으로 쳐서 대역 자세를 옮긴다 (odom_yaw 가 이 자세를 읽는다). 발행한 wz 는 모두 남긴다
+    node.direct_wz = []
+    real_publish_wz = node.publish_wz
+
+    def publish_wz(wz):
+        x, y, yaw = node.navigator.sim
+        node.navigator.sim = (x, y, yaw + float(wz) * TURN_SIM_DT)
+        node.direct_wz.append(float(wz))
+        real_publish_wz(wz)
+
+    node.publish_wz = publish_wz
     return node
 
 
@@ -276,8 +288,14 @@ class ScriptedPoses(list):
         self.extend(self.script)
 
 
-# 체류 뒤 칸을 벗어나는 두 동작: 제자리 180° 회전 + 칸 밖으로 직진
-EXIT_MOVES = [('spin', round(math.pi, 3)), ('drive', 0.5)]
+# 체류 뒤 칸을 벗어나는 두 동작: 제자리 180° 회전(직접 발행, 대역 Spin 에 안 남는다) + 칸 밖으로 직진
+EXIT_MOVES = [('drive', 0.5)]
+TURN_SIM_DT = 0.35          # publish_wz 한 번이 돌린 것으로 치는 시간 [s]. 0.5 rad/s 면 회당 10°
+
+
+def direct_turn_deg(node):
+    """cmd_vel_search 로 직접 낸 회전의 적산 각 [deg] (대역 자세 기준)."""
+    return math.degrees(sum(node.direct_wz) * TURN_SIM_DT)
 
 
 def approach_moves(node):
@@ -288,7 +306,19 @@ def approach_moves(node):
     """
     moves = node.navigator.moves()
     assert moves[-len(EXIT_MOVES):] == EXIT_MOVES, f'탈출 동작이 뒤에 없다: {moves}'
+    assert_direct_exit_turn(node)
     return moves[:-len(EXIT_MOVES)]
+
+
+def assert_direct_exit_turn(node):
+    """탈출 회전이 **워치독 입력으로 직접** 나갔고, 각이 (180° − 여유) 에 닿았는지 본다."""
+    want = float(node.p('bay_exit_turn_deg')) - float(node.p('bay_exit_lead_deg'))
+    got = direct_turn_deg(node)
+    step = math.degrees(float(node.p('bay_exit_rate_rps')) * TURN_SIM_DT)
+    assert want <= got < want + step + 1e-6, f'직접 회전 {got:.1f}° (목표 {want:.0f}°)'
+    assert node.direct_wz[-1] == 0.0, '회전 뒤 0 을 내지 않았다'
+    assert not any(c[0] == 'spin' and abs(abs(c[1]) - math.pi) < 0.01
+                   for c in node.navigator.calls), '탈출에 Nav2 Spin 을 썼다'
 
 
 def marker_frames(node, fwd, lat, count=5, flip_normal=False, set_distance=True):
@@ -483,9 +513,59 @@ def test_exit_turn_happens_before_leaving_the_bay(ros):
     node.run_mission(assigned('A', 'M9'))
     moves = node.navigator.moves()
     assert moves[-len(EXIT_MOVES):] == EXIT_MOVES
+    assert_direct_exit_turn(node)
     # 시점: 베이 목표는 이미 보냈고 대기공간 목표는 아직 안 보낸 사이여야 한다
     assert node.token_marks == [('acquire', 1), ('release', 2)]
     assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_exit_turn_goes_through_the_watchdog_topic(ros):
+    """탈출 회전은 Nav2 Spin 이 아니라 **cmd_vel_search(TwistStamped, base_link)** 로 낸다.
+
+    9/10 세 회차(10:19·10:39·13:23) 가 모두 `Collision Ahead - Exiting Spin` 으로 죽었다.
+    13:23 은 360° 여유가 0.35 m — 로봇 반지름 0.189 보다 15 cm 남는데도 Nav2 가 거부했다.
+    Nav2 는 costmap(inflation 0.25) 위에서 보고 워치독은 실측 360° 거리(0.21)로 본다.
+    회전은 워치독 기준으로 돌린다. 병진은 절대 섞이지 않는다.
+    """
+    from geometry_msgs.msg import TwistStamped
+    node = make_node()
+    stub_token(node, [True])
+    fresh_marker(node)
+    got = []
+    probe = node.create_subscription(
+        TwistStamped, f'{TEST_NS}/cmd_vel_search', lambda m: got.append(m), 10)
+    node.run_mission(assigned('A', 'M9'))
+    for _ in range(20):
+        rclpy.spin_once(node, timeout_sec=0.05)
+    node.destroy_subscription(probe)
+    assert got, 'cmd_vel_search 에 아무것도 안 나왔다'
+    assert {m.header.frame_id for m in got} == {'base_link'}
+    assert all(m.twist.linear.x == 0.0 and m.twist.linear.y == 0.0 for m in got)
+    assert max(abs(m.twist.angular.z) for m in got) == pytest.approx(node.p('bay_exit_rate_rps'))
+    assert got[-1].twist.angular.z == 0.0
+    assert node.status_log == ['SHUTTLE', 'AT_BAY', 'SHUTTLE', 'WAITING', 'READY']
+    node.destroy_node()
+
+
+def test_exit_turn_aborts_on_estop_without_retry(ros):
+    """직접 회전 중 estop 이면 0 을 내고 미션을 포기한다 — 상대 이동은 자동 반복하지 않는다."""
+    node = make_node()
+    stub_token(node, [True])
+    fresh_marker(node)
+    real = node.publish_wz
+
+    def publish_wz(wz):
+        real(wz)
+        if len(node.direct_wz) == 3:
+            node.estop = True
+
+    node.publish_wz = publish_wz
+    node.run_mission(assigned('A', 'M9'))
+    assert node.status_log[-2:] == ['FAILED', 'READY']
+    assert node.direct_wz[-1] == 0.0
+    assert direct_turn_deg(node) < 60.0
+    assert ('drive', 0.5) not in node.navigator.moves()   # 돌다 말고 전진하면 안 된다
     node.destroy_node()
 
 
