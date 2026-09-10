@@ -5,7 +5,7 @@
 | 파일 | 문서 | 노션 |
 |---|---|---|
 | `MRO_Multi-AMR_BRD_v3.5.md` | 사업 요구사항 | 🤪 BRD 하위 페이지 |
-| `MRO_Multi-AMR_SDD_v0.14.md` | 시스템 설계 | 🫠 SDD 하위 페이지 |
+| `MRO_Multi-AMR_SDD_v1.0.md` | 시스템 설계 (**제출본 v1.0**, 9/10) | 🫠 SDD 하위 페이지 |
 
 ## 규칙
 

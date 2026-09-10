@@ -164,6 +164,12 @@ cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 run mro_navigation shu
 cd ~/mro-multi-amr && source tools/shuttle_env.sh && ros2 run tf2_ros tf2_echo map odom --ros-args -r __ns:=/ROBOT -r /tf:=tf -r /tf_static:=tf_static
 ```
 
+또는 점검 스크립트가 이 셋(셔틀 노드 존재 · `map→odom` · `amcl_pose`)을 한 번에 본다:
+
+```bash
+cd ~/mro-multi-amr && source tools/shuttle_env.sh && tools/shuttle_preflight.sh pose /ROBOT
+```
+
 변환이 찍히면 Ctrl-C 로 닫고 T7·T8 로 간다. 안 찍히면 **T8 을 띄우지 않는다** — 이 창을 다시 띄우고
 `ros2 topic echo /ROBOT/amcl_pose --once` 로 AMCL 이 받았는지 확인한다. 초기자세 없이 뜬 Nav2 는
 `global_costmap` 활성화에서 멈추고 **매니저가 재시도하지 않는다** (I-035 · 6-2절).

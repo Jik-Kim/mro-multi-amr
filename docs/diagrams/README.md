@@ -2,9 +2,22 @@
 
 | 파일 | 내용 |
 |---|---|
-| `system_flowchart.drawio` | **정본.** draw.io 로 연다 (새 창에서 단독으로) |
-| `system_flowchart_preview.svg` | 빠르게 훑어보는 용도. 브라우저로 연다 |
-| `../../tools/flowchart/` | 이 그림을 만드는 생성기. **손으로 고치지 않고 여기를 고친다** |
+| `project_interface_flowchart.svg` | **정본 (9/10).** SDD 3.3 · 5.2 가 이것을 가리킨다. 브라우저로 연다 |
+| `project_interface_flowchart.drawio` | 위 그림의 **편집용 원본.** draw.io 로 연다 (손으로 고친다) |
+| `system_flowchart.drawio` | 9/9 생성기판. **정본 자리에서 물러났다** — 아래 「두 그림의 관계」 참조 |
+| `system_flowchart_preview.svg` | 위 생성기판의 미리보기 |
+| `navigation_review_flow.drawio` | 주행 코드리뷰용 (PR #64). **손으로 만든 별개 그림이다** |
+| `../../tools/flowchart/` | `system_flowchart.drawio` 를 만드는 생성기. **그 파일은 손으로 고치지 않고 여기를 고친다** |
+
+## 두 그림의 관계
+
+- **`project_interface_flowchart`** — 인터페이스 도면이다. PC 를 테두리로 나누고 노드를 카드로 놓았으며,
+  **카드마다 「입력 → 처리 로직 → 출력」 세 칸**이고 화살표가 **포트 한 줄 → 포트 한 줄**로만 이어진다.
+  로봇 온보드는 두 대가 같은 구성이라 한 벌만 그리고 `/robotN` 으로 표기한다. **손으로 그린다.**
+- **`system_flowchart`** — 동작 순서도다. 노드마다 시작 → 판단 → 출력의 흐름을 상자로 펼치고
+  「바꿀 수 있는 값」과 그 값인 이유를 적었다. **생성기가 코드에서 만든다.**
+
+둘은 담는 것이 다르다. 제출본 SDD 가 가리키는 것은 **인터페이스 도면 한 장**이다.
 
 ```bash
 cd tools/flowchart

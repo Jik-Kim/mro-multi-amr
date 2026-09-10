@@ -7,7 +7,8 @@
 #
 # 쓰는 법 — `source tools/shuttle_env.sh` 를 마친 터미널에서 (가이드 B-2)
 #   tools/shuttle_preflight.sh pre       # T1 띄우기 전   : 환경·로봇·중복 노드
-#   tools/shuttle_preflight.sh nav       # T3 뜬 뒤       : + Nav2 active
+#   tools/shuttle_preflight.sh pose      # T6 뒤·T8 앞    : + 초기자세·map→odom  ← 하드 게이트
+#   tools/shuttle_preflight.sh nav       # Nav2 뜬 뒤     : + Nav2 active
 #   tools/shuttle_preflight.sh mission   # 미션 발행 직전 : + 토큰·마커·구독 (기본값)
 #
 # 이 스크립트는 환경을 검사만 하고 바꾸지 않는다. 자식 프로세스라 여기서 source 해도 부모
@@ -28,11 +29,13 @@ NS="${2:-/robot3}"
 #   서버가 죽었다고 오진했다. `--spin-time 10` 으로 주니 34 개가 나왔다. 상한을 넉넉히 준다.
 NODE_SPIN_S=8        # node list 가 디스커버리를 기다리는 시간
 DOCK_WAIT_S=20       # dock_status 첫 수신 상한 (실측 3 s, 로봇이 막 켜졌으면 더 걸린다)
+TF_WAIT_S=15         # map→odom 첫 확인 상한 (위 디스커버리 지연 3~10 s + 여유)
+POSE_WAIT_S=8        # amcl_pose 보조 확인 상한
 NSB="${NS#/}"                     # 앞 슬래시 없는 형태 (robot3)
 
 case "$STAGE" in
-  pre|nav|mission) ;;
-  *) echo "쓰는 법: $0 [pre|nav|mission] [네임스페이스]"; exit 2 ;;
+  pre|pose|nav|mission) ;;
+  *) echo "쓰는 법: $0 [pre|pose|nav|mission] [네임스페이스]"; exit 2 ;;
 esac
 
 if [ -t 1 ]; then R=$'\e[31m'; G=$'\e[32m'; Y=$'\e[33m'; B=$'\e[1m'; N=$'\e[0m'
@@ -182,9 +185,55 @@ else
   fi
 fi
 
-# ────────────────────────────────────────────────────────── 4. Nav2 (nav 단계부터)
+# ──────────────────────────────────────────── 4. 초기자세·TF (pose 단계부터)
+# **T8(Nav2) 을 띄우기 전에 막는 게이트다.** 9/10 21:08 로봇3 이 여기서 걸렸어야 했다 —
+#   셔틀 노드 로그 0건 · AMCL 890 초 내내 초기자세 미수신. 그 상태로 Nav2 를 띄우면
+#   global_costmap 이 map→base_link 를 못 받아 활성화가 planner_server 에서 멈추고,
+#   **lifecycle_manager 는 나중에 TF 가 생겨도 재시도하지 않는다** (I-035). 잠깐의 어긋남이
+#   영구 실패가 되므로 앞에서 막는다.
+#
+# 왜 로그로는 부족한가 — T6 의 `초기자세 … 전송` 은 **'보냈다' 만 말하지 '도착했다' 를 말하지
+#   않는다.** 도착의 증거는 map→odom TF 다. AMCL 은 초기자세를 받은 뒤에만 이것을 낸다.
+if [ "$STAGE" = "pose" ] || [ "$STAGE" = "nav" ] || [ "$STAGE" = "mission" ]; then
+  sect "4. 초기자세 · map→odom — Nav2 를 띄우기 전의 하드 게이트"
+
+  # (a) 초기자세를 보낼 주체가 있는가. 21:08 은 이것이 아예 없었다.
+  if printf '%s\n' "$NODES" | grep -q "^$NS/shuttle_mission$"; then
+    pass "$NS/shuttle_mission 있음 (초기자세를 보낼 주체)"
+  else
+    fail "$NS/shuttle_mission 노드가 없다" \
+         "T6 미기동이거나 즉사했다. 초기자세를 보낼 주체가 없으므로 Nav2 를 띄우면 안 된다 (I-035)"
+  fi
+
+  # (b) 판정은 이것이 한다. tf2_echo 는 프레임이 없으면 조용히 재시도만 하므로 timeout 으로
+  #     끊고 출력으로 가른다. 검사 자체가 실행되지 않는 경우(환경 문제)는 WARN 이다 —
+  #     검사기의 고장을 로봇의 고장으로 보고하면 안 된다.
+  TF_OUT="$(timeout "$TF_WAIT_S" ros2 run tf2_ros tf2_echo map odom \
+              --ros-args -r __ns:="$NS" -r /tf:=tf -r /tf_static:=tf_static 2>&1 || true)"
+  if printf '%s\n' "$TF_OUT" | grep -q 'Translation'; then
+    pass "map→odom TF 있음 — 초기자세가 AMCL 에 도착했다"
+  elif printf '%s\n' "$TF_OUT" | grep -qEi 'No executable found|PackageNotFound|command not found'; then
+    warn "tf2_echo 를 실행하지 못해 TF 검사를 건너뛴다" \
+         "검사기 쪽 문제다. 절차서 T6 의 tf2_echo 로 손으로 확인할 것"
+  else
+    fail "map→odom TF 가 $TF_WAIT_S 초 안에 안 생겼다 — 초기자세가 AMCL 에 도착하지 않았다" \
+         "Nav2 를 띄우지 말 것. 초기자세 없이 뜬 Nav2 는 planner_server 에서 멈추고 매니저가 재시도하지 않는다 (I-035 · 절차서 6-2 A)"
+  fi
+
+  # (c) 보조 증거. AMCL 은 update_min_d 만큼 움직여야 amcl_pose 를 다시 내므로 도크에 가만히
+  #     서 있으면 조용한 것이 정상일 수 있다. **침묵을 FAIL 로 보지 않는다** — 판정은 (b) 다.
+  AP="$(timeout "$POSE_WAIT_S" ros2 topic echo "$NS/amcl_pose" --once 2>/dev/null)"
+  if printf '%s\n' "$AP" | grep -q 'position:'; then
+    pass "$NS/amcl_pose 수신"
+  else
+    warn "$NS/amcl_pose 가 $POSE_WAIT_S 초 안에 안 왔다" \
+         "정지 중이면 정상이다 (AMCL 은 update_min_d 만큼 움직여야 다시 낸다). 판정은 위 map→odom 이 한다"
+  fi
+fi
+
+# ────────────────────────────────────────────────────────── 5. Nav2 (nav 단계부터)
 if [ "$STAGE" = "nav" ] || [ "$STAGE" = "mission" ]; then
-  sect "4. Nav2 — '떴다' 가 아니라 'active' 여야 한다"
+  sect "5. Nav2 — '떴다' 가 아니라 'active' 여야 한다"
 
   BT="$NS/bt_navigator"
   if ! printf '%s\n' "$NODES" | grep -q "^$BT$"; then
@@ -203,7 +252,7 @@ fi
 
 # ────────────────────────────────────────────────────────── 5. 미션 발행 직전 (mission 단계)
 if [ "$STAGE" = "mission" ]; then
-  sect "5. 세마포어 · 마커 · 구독"
+  sect "6. 세마포어 · 마커 · 구독"
 
   # 세마포어 — 없으면 셔틀이 '단독 모드' 로 통과시켜 판정 5 를 통째로 못 한다 (가이드 A 표)
   if r2 20 service list | grep -q '^/fleet/zone_token$'; then
