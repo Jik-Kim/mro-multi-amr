@@ -85,49 +85,6 @@ class RobotStatus(Node):
         # 소스 토픽별 발행자 수. 0 이면 소스가 죽은 것이다 (I-055).
         #   Flask 스레드에서 rmw 를 부르지 않도록 노드 타이머로만 갱신한다.
         self.source_publishers = {}
-        self._create_ros_interfaces()
-
-    @staticmethod
-    def _initial_status():
-        """아직 토픽을 받지 않은 AMR의 기본 상태를 만든다."""
-        return {
-            'state': 'IDLE',
-            'approach_state': 'IDLE',
-            'shuttle_state': 'READY',
-            'pair_state': 'NO_TARGET',
-            'battery': 0.0,
-            'x': 0.0,
-            'y': 0.0,
-            'yaw': 0.0,
-            'mission': '',
-            'mission_state': None,
-            'target_worker': '',
-            'worker': '',
-            'estop': False,
-            'status_received': False,
-        }
-
-    def _load_parameters(self):
-        """로봇 통신과 관제 화면에 필요한 실행 값을 읽는다."""
-        self.declare_parameter('status_stale_s', 5.0)
-        self.declare_parameter(
-            'map_yaml_path', _bringup_path('maps', 'auto_map.yaml')
-        )
-        self.declare_parameter(
-            'arena_yaml_path', _bringup_path('params', 'arena.yaml')
-        )
-        self.status_overtime_sec = float(
-            self.get_parameter('status_stale_s').value
-        )
-        self.map_yaml_path = str(self.get_parameter('map_yaml_path').value)
-        self.arena_yaml_path = str(
-            self.get_parameter('arena_yaml_path').value
-        )
-        if self.status_overtime_sec <= 0.0:
-            raise ValueError('status_stale_s must be positive')
-
-    def _create_ros_interfaces(self):
-        """담당 AMR 상태 토픽과 관제 요청 인터페이스를 만든다."""
         self.create_subscription(
             String,
             f'{self.namespace}/approach/status',
@@ -146,10 +103,6 @@ class RobotStatus(Node):
             self._receive_battery_status,
             10,
         )
-        # amcl 은 amcl_pose 를 TRANSIENT_LOCAL(depth 1) 로, 그것도 **필터가
-        #   갱신될 때만** 즉 로봇이 움직일 때만 내보낸다. 기본 QoS(VOLATILE)로
-        #   구독하면 매칭은 되지만 latch 된 마지막 값을 못 받아, 서 있는 로봇은
-        #   관제가 켜져 있는 내내 초기값 0,0 으로 남는다 (맵 원점에 그려진다).
         self.create_subscription(
             PoseWithCovarianceStamped,
             f'{self.namespace}/amcl_pose',
@@ -196,6 +149,45 @@ class RobotStatus(Node):
         )
         self.create_timer(1.0, self._publish_status)
         self.create_timer(2.0, self._count_source_publishers)
+
+    @staticmethod
+    def _initial_status():
+        """아직 토픽을 받지 않은 AMR의 기본 상태를 만든다."""
+        return {
+            'state': 'IDLE',
+            'approach_state': 'IDLE',
+            'shuttle_state': 'READY',
+            'pair_state': 'NO_TARGET',
+            'battery': 0.0,
+            'x': 0.0,
+            'y': 0.0,
+            'yaw': 0.0,
+            'mission': '',
+            'mission_state': None,
+            'target_worker': '',
+            'worker': '',
+            'estop': False,
+            'status_received': False,
+        }
+
+    def _load_parameters(self):
+        """로봇 통신과 관제 화면에 필요한 실행 값을 읽는다."""
+        self.declare_parameter('status_stale_s', 5.0)
+        self.declare_parameter(
+            'map_yaml_path', _bringup_path('maps', 'auto_map.yaml')
+        )
+        self.declare_parameter(
+            'arena_yaml_path', _bringup_path('params', 'arena.yaml')
+        )
+        self.status_overtime_sec = float(
+            self.get_parameter('status_stale_s').value
+        )
+        self.map_yaml_path = str(self.get_parameter('map_yaml_path').value)
+        self.arena_yaml_path = str(
+            self.get_parameter('arena_yaml_path').value
+        )
+        if self.status_overtime_sec <= 0.0:
+            raise ValueError('status_stale_s must be positive')
 
     def _record_status_received_time(self):
         """마지막 AMR 상태 수신 시각을 갱신한다."""

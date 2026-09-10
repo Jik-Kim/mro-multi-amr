@@ -18,12 +18,12 @@ except ModuleNotFoundError:
     flask_stub.send_file = lambda *_args, **_kwargs: None
     sys.modules['flask'] = flask_stub
 
-from mro_fleet.nodes import robot_control_node
-from mro_fleet.nodes.MonitorWebApp import (
+from mro_fleet.nodes import robot_status
+from mro_fleet.nodes.monitor_web_app import (
     MonitorWebApp, load_dock_landmarks, load_map_config,
 )
-from mro_fleet.nodes.fleet_client import FleetUICommands
-from mro_fleet.nodes.robot_control_node import RobotStatus
+from mro_fleet.nodes.fleet_ui_commands import FleetUICommands
+from mro_fleet.nodes.robot_status import RobotStatus
 from mro_fleet.nodes.robot_state_manager import RobotStateManager
 
 
@@ -42,6 +42,21 @@ def test_dashboard_keeps_existing_control_endpoints():
     assert "postForm('/manual_pair'" in html
     assert "command:'RETURN'" in html
     assert "command:'RETURN_ALL'" in html
+
+
+def test_status_poll_refreshes_detail_without_reopening_drawer():
+    """상태 갱신이 상세 창을 다시 열어 선택 탭을 초기화하지 않는지 확인한다."""
+    with open(TEMPLATE_PATH, encoding='utf-8') as template_file:
+        html = template_file.read()
+
+    assert (
+        'if(uiState.detailOpen&&uiState.selectedRobot)'
+        'refreshRobotDetail(uiState.selectedRobot)' in html
+    )
+    assert (
+        'if(uiState.detailOpen&&uiState.selectedRobot)'
+        'openRobotDetail(uiState.selectedRobot)' not in html
+    )
 
 
 def test_monitor_web_app_registers_dashboard_routes():
@@ -166,7 +181,7 @@ def test_battery_status_is_stored_by_instance_namespace():
     fake = make_robot_control_fake()
 
     with patch.object(
-        robot_control_node.time, 'monotonic', return_value=10.0
+        robot_status.time, 'monotonic', return_value=10.0
     ):
         RobotStatus._receive_battery_status(
             fake, SimpleNamespace(percentage=0.73)

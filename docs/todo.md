@@ -5,7 +5,7 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 124/197 완료** (█████████████░░░░░░░)  ·  기준 09/10
+**전체 127/200 완료** (█████████████░░░░░░░)  ·  기준 09/10
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
@@ -13,7 +13,7 @@
 | mro_perception [인지 — 정정인, 민범진] | 23/28 | `████████░░` | **4** |
 | mro_webcam [웹캠 — 한세교, 김학민] | 24/34 | `███████░░░` | **6** |
 | mro_navigation [주행 — 박병후, 이시율] | 46/92 | `█████░░░░░` | **25** |
-| mro_fleet [관제 — 김민준] | 14/21 | `███████░░░` | **4** |
+| mro_fleet [관제 — 김민준] | 17/24 | `███████░░░` | **4** |
 | mro_bringup [PM 김병직] | 10/13 | `████████░░` | **1** |
 
 **마감이 지난 항목 40건**
@@ -260,14 +260,30 @@
 - [x] 도킹 반복 시험 TS-U12 (9/6) — 로봇별 10회, 차폐판 없이 오도킹 0 확인 (I-006 종결) · 마감 9/8
 
 ## mro_fleet [관제 — 김민준]
+
+### 시연 전 상위 결함
+
 - [ ] **`RobotStatus` 초기값이 유효한 값으로 나간다 (I-053, 상)** — `battery` 0.0 이 `fleet_manager_node.py:381` 의 배정 게이트(`>= battery_min` 0.25)에 걸려 **토픽이 안 온 로봇이 방전으로 취급**된다. 표시가 아니라 동작 결함이다. pose 0,0 은 미측위 로봇을 맵 원점에 그리는데 **robot8 도크가 원점에서 4.1 cm** 라 자기 도크에 선 것처럼 보인다. **수신 여부 플래그로 「미수신」과 「부족」을 가르는 것만 먼저 해도 동작 결함은 사라진다** — UI 표시(`위치 미상`)는 `FleetStatus` 변경이라 계약이 같이 움직인다 · 마감 9/11 시연 전  **PR #81 이 소스별 수신 시각·발행자 수를 만들어 뒀으므로 이제 짧다 (9/10).** 같이 볼 것: `battery_state`·`target/pair_state` 는 **주기 발행**이라 발행자 수만으로는 「노드가 살아 있는데 멈춘 것」을 못 잡는다 — 그 둘에만 나이 검사를 덧댄다 (I-055 남는 구분)
+
+### 실환경·UI 확인
 - [ ] **관제 맵 도크 라벨 겹침 (PR #78 후속)** — 라벨이 원 바깥으로 나가면서 도크가 가까우면(robot3·robot8 약 8 cm) 글자가 겹친다. **좌표는 정확하다** — 보기 문제다 · 마감 —
 - [ ] **대시보드 JS 의 로봇 이름 하드코딩 (PR #51 후속)** — `uiState.robots` 가 `{robot3, robot8}` 고정 사전이라 `robot_namespaces` 를 바꾸면 화면만 조용히 어긋난다 (빠진 로봇은 「수신 대기」로 남고 새 로봇은 안 보인다). `/status` 응답의 키로 카드를 만들면 된다 — 백엔드는 이미 `fleet.yaml` 명단을 쓴다. 오늘 robot4 → robot8 을 한 번 겪었다 · 마감 9/10
 - [ ] **FR-13 대시보드 실제 조작 확인 (PR #47·#51)** — 브라우저에서 ① `GATE_FAIL` 발행 시 버튼이 뜨는가 ② 누르면 `인지 서비스 응답 없음` 이 뜨는가(인지 서버 미구현이라 이게 정답) ③ **그때 `MANUAL_PAIR` 개입 이벤트가 발행되지 않는가** — 실패한 시도를 개입으로 세면 AC-13 IPH 가 부풀어 실제보다 나빠 보인다 · 마감 9/9
+
+### 후순위·외부 입력 의존
+
 - [ ] **FR-35 는 `loc_check_marker.xy` 실측 뒤에 켠다** — `[0.0, 0.0]` 인 채로 읽으면 측위가 정상인데도 `localization_suspect` 로 기록된다. 그리고 **`aruco/distance`(카메라 기준)와 `|amcl_pose − xy|`(base_link 기준)의 6 cm 오프셋을 빼고 비교**한다 (TF 실측, `tolerance_m` 0.10 의 60 %) · 마감 9/9
+- [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
+- [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①). **기준점 주의:** `aruco/distance` 는 카메라→마커, `\|amcl_pose − xy\|` 는 base_link→마커 — `tf2_echo base_link oakd_rgb_camera_optical_frame` 으로 오프셋을 재서 뺀다 (I-031) · 마감 9/8
+
+### 완료
+
+- [x] **관제 DB 단독 CRUD 점검 도구** — `db_down.py`에서 `workers`·`missions`·`events`별 생성·조회·수정·삭제를 제공하고, 인자 없이 `~/mro_fleet.db` 전체 테이블을 터미널 표로 출력. 임시 DB CRUD 실행과 삭제 후 빈 테이블 확인 · 마감 9/10
+- [x] **관제 정상 시나리오 단일 로봇 실환경 연동** — 작업자 등록 토픽 발행 → UI 자재 요청 → `mission/assigned` 수신 → 대기 위치 도착 → UI 「작업 종료 → 복귀」 → 실제 도킹 완료까지 확인. DB·KPI 값 대조와 2대 동시 운용은 별도 검증으로 남김 · 마감 9/10
+- [x] **상세 화면 탭 선택 유지 (I-056)** — `/status` 1초 폴링은 `refreshRobotDetail()`로 내용만 갱신하고 `openRobotDetail()`의 기본 정보 탭 초기화 흐름을 다시 타지 않도록 분리. 회귀 테스트 포함 45건 통과 · 마감 9/10
 - [x] **`control_ui`: 명시 페어링 폴백 버튼 (FR-13, 계약 10절)** — `target/pair_state = GATE_FAIL` 이면 버튼 표시, 운영자가 로봇·작업자 선택 → `fleet_manager` 가 `/robotN/manual_pair` 호출, 응답의 `reason` 을 화면에 그대로 보여준다. 성공 시 `/fleet/intervention` 에 **`kind = MANUAL_PAIR`** 발행 — IPH 에 들어간다(10.7) · 마감 9/9  **→ 완료 9/8 (PR #47) — `/fleet/manual_pair` 중계까지**
-- [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8  **→ 9/9 로봇별 `RobotControlNode(namespace)`가 AMR 원본 상태를 전담하고 `/fleet/status`를 1 Hz 발행. `fleet_manager` 는 이 요약을 받아 미션 전이·DB만 담당한다(계약 v1.18, PM 승인). HTTP·맵은 `MonitorWebApp.py`가 담당**
-- [x] **작업자 등록과 AMR 배정 시점 분리** — 등록 시에는 `workers`에 작업자만 저장하고, `RequestMission` 시 가용 `RobotControlNode` 상태를 기준으로 AMR을 선택해 `missions.robot_ns`에 저장(계약 v1.19) · 마감 9/10
+- [x] `core/db.py`, `config/schema.sql`, `fleet_manager_node.py` 기본 흐름, `control_ui_node.py` + `templates/index.html` · 마감 9/8  **→ 9/9 로봇별 `RobotStatus(namespace)`가 AMR 원본 상태를 전담하고 `/fleet/status`를 1 Hz 발행. `fleet_manager` 는 이 요약을 받아 미션 전이·DB만 담당한다(계약 v1.18, PM 승인). HTTP·맵은 `monitor_web_app.py`가 담당**
+- [x] **작업자 등록과 AMR 배정 시점 분리** — 등록 시에는 `workers`에 작업자만 저장하고, `RequestMission` 시 가용 `RobotStatus` 상태를 기준으로 AMR을 선택해 `missions.robot_ns`에 저장(계약 v1.19) · 마감 9/10
 - [x] `control_ui`: 작업자별/전체 종료 버튼, `fleet_manager` RETURN_ALL · 마감 9/8
 - [x] `fleet_manager_node.py`: yaw 계산, 미션 상태 전이 구독 (`shuttle/status` → Mission state) (PR #7) · 마감 9/8
 - [x] `fleet_manager_node.py`: 배터리 25 % 미만 미션 거부·사유 기록 (FR-06) (PR #7) · 마감 9/8
@@ -276,8 +292,6 @@
 - [x] **일시적 `FAILED` 가 미션을 굳히지 않게 (I-026)** — approach FAILED 는 미션 전이에서 빼고, FAILED 를 터미널에서 뺀다 (DONE 만 터미널) (PR #18, 9/7) · 마감 9/8
 - [x] `fleet_manager_node.py`: `/fleet/intervention` 구독 → DB events 기록 (I-021, FR-28) (PR #23, PM 스텁 18/18) · 마감 9/8
 - [x] `fleet_manager_node.py`: `/fleet/zone_event` 구독 → DB `events` kind `ZONE` 기록 (I-030, 계약 v1.11 §7) · 마감 9/8  **→ 완료 (9/9 확인) — `_zone_event_cb`(:275)가 형식·구역·로봇을 검사하고 SQLite ZONE 이벤트로 기록**
-- [ ] `fleet_manager_node.py`: `WAITING` 수신 시 `amcl_pose` 가 `waiting_zone` 근처인지 확인, 벗어나면 `FAIL_WRONG_POSE` (계약 9.2 ②) · 마감 9/8
-- [ ] `fleet_manager_node.py`: `aruco/id`·`aruco/distance` 구독 → ID 4 수신 시 `|amcl_pose − loc_check_marker.xy|` 와 대조, ≤ 10 cm 면 `localization_verified` 이벤트, 아니면 `localization_suspect` (계약 9.2 ①). **기준점 주의:** `aruco/distance` 는 카메라→마커, `\|amcl_pose − xy\|` 는 base_link→마커 — `tf2_echo base_link oakd_rgb_camera_optical_frame` 으로 오프셋을 재서 뺀다 (I-031) · 마감 9/8
 - [x] `fleet_manager_node.py`: 작업자-로봇 배정을 worker_id 정렬 순서로 (FR-03 '동시 검출 시 순서 재현') — 1 s 배치 창 + `worker_id` 정렬, W1→robot3·W2→robot8 로 순서 무관 재현 (PR #28, PM 스텁 24/24) · 마감 9/8
 - [x] `control_ui`: 페어링 폴백(명시 페어링) 버튼 (FR-13) · 마감 9/8  **→ 완료 9/8 (PR #47)**
 - [x] `fleet_manager_node.py`: 주석의 옛 구역 토큰 이름 정리 (I-019) (PR #7) · 마감 9/9
