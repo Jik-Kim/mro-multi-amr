@@ -1191,9 +1191,15 @@ class ShuttleMission(Node):
         e_lat = sample.lat_error
         tol = self.positive_parameter('bay_align_tol_lat_m')
         cap = self.positive_parameter('bay_align_max_lat_m')
-        if abs(e_lat) <= tol:
+        # **회전하기 전에 실제로 갈 거리가 남는지 본다.** 허용치(0.05)와 오버슛 보정(0.068)
+        #   사이 구간에서는 90° 를 돌고 나서 직진이 생략되어 **돌고, 안 가고, 도로 도는**
+        #   일이 벌어진다 (9/10 R5-1 2회차: 이탈 0.067). 5 초를 버리고 회전 오차만 얹은 뒤
+        #   그 직후 마커를 놓쳤다. 갈 거리가 없으면 아예 이 단계에 들어가지 않는다
+        if abs(e_lat) <= tol or self.drive_command(abs(e_lat)) <= 0.0:
             self.get_logger().info(
-                f'{label} 횡정렬 불필요 — 이탈 {e_lat:+.3f} m 가 허용 {tol:.3f} m 안이다')
+                f'{label} 횡정렬 불필요 — 이탈 {e_lat:+.3f} m '
+                f'(허용 {tol:.3f} · 오버슛 보정을 빼면 실제 이동 '
+                f'{max(0.0, self.drive_command(abs(e_lat))):.3f} m)')
             return 0.0
         if abs(e_lat) > cap:
             self.get_logger().warn(
