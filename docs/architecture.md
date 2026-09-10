@@ -45,6 +45,6 @@ mission/assigned ─▶ shuttle_mission ─ shuttle/arrived ─▶ follow_target
 
 ## 그림
 
-시스템 플로우차트는 `docs/diagrams/system_flowchart.drawio` 한 장이다 — PC 5대와 로봇 2대, 그 안의 노드 12개와 노드마다의 순서도, PC 를 건너는 토픽까지 담았다.
+시스템 플로우차트는 `docs/diagrams/project_interface_flowchart.svg` 한 장이다 — PC 를 테두리로 나누고 노드를 카드로 놓았으며, 카드마다 「입력 → 처리 로직 → 출력」 세 칸에 토픽·타입·QoS 를 적었다. 노드별 동작 순서도는 `system_flowchart.drawio`(생성기판)에 따로 있다.
 손으로 그리지 않고 `tools/flowchart/` 가 만든다. 이 문서의 내용이 바뀌면 `cd tools/flowchart && python3 main.py && python3 check.py` 로 다시 만든다.
 그리는 규칙은 `docs/diagrams/README.md`.

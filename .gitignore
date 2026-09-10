@@ -30,3 +30,6 @@ yolo_output/
 tools/checker_shots/
 docs/feedback.local.md
 .vscode/
+
+# LibreOffice 편집 중 락 파일 — 문서를 열어 둔 채 커밋하면 딸려 들어간다 (9/10)
+.~lock.*#
