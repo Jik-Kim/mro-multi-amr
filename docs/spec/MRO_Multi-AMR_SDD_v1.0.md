@@ -57,7 +57,7 @@ PC 5대와 로봇 2대가 PC-F 의 단일 offboard Discovery Server(ID 1, `192.1
  │ Jazzy        │ Jazzy        │ ★ Discovery Server     │ localization  │ localization  │
  │ mro_webcam   │ mro_webcam   │   ID 1  :11811         │ nav2 · RViz   │ nav2 · RViz   │
  │ webcam_      │ webcam_hint  │ mro_fleet + SQLite     │ mro_perception│ mro_perception│
- │  register    │ (재탐지 힌트)│ Flask control_ui       │ mro_navigation│ mro_navigation│
+ │  register    │ (재탐지 힌트)  │ Flask control_ui       │ mro_navigation│ mro_navigation│
  │ SUPER_CLIENT │ SUPER_CLIENT │ kpi_logger             │ ns=/robot3    │ ns=/robot8    │
  │  = False     │  = False     │                        │               │               │
  └──────┬───────┴──────┬───────┴───────────┬────────────┴───────┬───────┴───────┬───────┘
@@ -652,7 +652,7 @@ gap 이 반씩 줄어 하한에서 저절로 끝나기 때문이다. 멀리서 �
 
 ```
 Nav2 최종 출력 ──▶ cmd_vel_navigation ─┐
-추종 탐색 회전 ──▶ cmd_vel_search ─────┴─▶ safety_watchdog ──▶ cmd_vel ──▶ 로봇
+추종 탐색 회전 ──▶ cmd_vel_search  ─────┴─▶ safety_watchdog ──▶ cmd_vel ──▶ 로봇
                                             ▲
                                     /scan · odom · dock_status
                                     safety/paused/<노드> (정지 확인)
