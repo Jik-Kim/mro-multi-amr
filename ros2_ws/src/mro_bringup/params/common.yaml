@@ -60,7 +60,10 @@
     motion_cmd_topic: cmd_vel_search
     nav2_poll_s: 5.0          # bt_navigator 가 active 가 될 때까지 폴링 간격
     nav2_poll_max: 3          # 이 횟수 안에 active 가 아니면 T_lim 을 태우지 않고 곧장 포기 (I-035, PR #44). 기본값에서 약 10 s
-    dock_status_wait_s: 5.0   # dock_status 를 기다리는 상한. 예전에는 무한 대기라 T_lim 조차 안 돌아 FAILED 도 안 나왔다 (가이드 D-2)
+    dock_status_wait_s: 15.0  # dock_status 를 기다리는 상한. 예전에는 무한 대기라 T_lim 조차 안 돌아 FAILED 도 안 나왔다 (가이드 D-2)
+                              #   5.0 → 15.0 (9/10): 스택 전체를 다시 띄운 직후 디스커버리 폭주로 dock_status 공백이
+                              #   3.6·4.7 s 였고(full_0910_0941) 5 s 를 놓쳐 초기자세를 건너뛰었다 → AMCL 자세 없음 →
+                              #   map 프레임 없음 → costmap 실패. 9/9 run_0909_1019 와 같은 연쇄다. 노드 기본값(I-035)도 15 다
     # I-037 실험 초깃값 (9/8 병후 승인). 실물 검증 전 팀 확정값이 아니다.
     tf_pose_timeout_s: 3.0   # Nav2 완료 이후 새 TF를 기다리는 상한
     tf_max_age_s: 0.3        # map→base_link 공통 시각의 최대 지연
