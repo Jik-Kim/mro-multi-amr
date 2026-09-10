@@ -42,8 +42,10 @@ def test_only_collision_monitor_output_changes(tmp_path, monkeypatch):
     assert module.SPIN_MAX_RAD_S <= 0.3, '1.0 rad/s 는 odom 지연 0.35 s 에 20° 를 지나친다'
     for cm in ('local_costmap', 'global_costmap'):
         assert output[cm][cm]['ros__parameters']['inflation_layer']['inflation_radius'] == module.INFLATION_RADIUS_M
-        assert module.INFLATION_RADIUS_M > 0, 'inflation 은 양수 (0.186 미만은 주행 결정 — 런치 주석 참조)'
+        assert module.INFLATION_RADIUS_M > 0.186, 'inflation 이 내접 반지름보다 작으면 벽에 붙어 달린다 (9/10 세 회차)'
+        assert output[cm][cm]['ros__parameters']['inflation_layer']['cost_scaling_factor'] == module.COST_SCALING
         output[cm][cm]['ros__parameters']['inflation_layer']['inflation_radius'] = 0.15
+        output[cm][cm]['ros__parameters']['inflation_layer']['cost_scaling_factor'] = 4.0
     bs['max_rotational_vel'], bs['min_rotational_vel'] = 1.0, 0.4
     output['collision_monitor']['ros__parameters']['cmd_vel_out_topic'] = 'cmd_vel'
     assert output == config
