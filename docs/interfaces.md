@@ -93,7 +93,7 @@
 
 | 토픽 | 송신 | 수신 | 타입 | 비고 |
 |---|---|---|---|---|
-| `/webcam1/worker_descriptor` | webcam_register | fleet_manager, amr_detection, webcam_hint | WorkerDescriptor | S1 등록 ≤ 10 s. `robot_ns` 는 현재 빈 값이며 AMR 배정은 `RequestMission` 수락 시 확정. **`color_hist` 는 등록이 확정된 순간의 10프레임 평균으로 고정된다** — 그 뒤 작업자가 시야에 남아 있어도 갱신하지 않는다 (I-058, 9/10). 갱신하면 로봇이 받는 지문이 「웹캠1 이 방금 1초 동안 본 것」이 되고, S1 동선상 그 마지막 1초는 작업자가 시야를 빠져나가는 구간이다 |
+| `/webcam1/worker_descriptor` | webcam_register | fleet_manager, amr_detection, webcam_hint | WorkerDescriptor | S1 등록 ≤ 10 s. `robot_ns` 는 현재 빈 값이며 AMR 배정은 `RequestMission` 수락 시 확정. **`color_hist` 는 웹캠1 이 그때 본 것이 아니라 미리 구운 인형별 기준 지문이다** (`mro_perception/models/worker_hist.json`, `tools/make_worker_hist.py` 가 데이터셋 1,350장에서 굽는다 — I-058, 9/10). 인형은 둘뿐이고 생김새가 고정이라 매번 새로 재는 것보다 안정적이다. **실측**: 기준 지문이면 같은 인형 0.527~0.626 · 다른 인형 0.423~0.498 로 안 겹치는데, 등록 순간에 만들면 0.348~0.470 대 0.248~0.361 로 겹친다. 임계 0.34 까지의 여유도 0.008 → 0.187 이 된다. 파일이 없으면 **등록 확정 순간의 10프레임 평균**으로 떨어진다 (이동평균은 쓰지 않는다) |
 | `/webcam2/target_hint` | webcam_hint | follow_target, kpi_logger | TargetHint | E-1. **10 Hz** 발행, 유효 2 s. **BEST_EFFORT** — 구독자도 sensor_data QoS 로 잡아야 받는다 |
 | `/webcam2/image_raw/compressed` | webcam_hint | (뷰어·영상 판독 기록) | CompressedImage | **jpeg 80, 10 Hz** (`image_publish_hz`). raw `Image` 는 발행하지 않는다 — 다른 PC 에서 구독하면 Wi-Fi 를 막는다 (NR-03). 안전 판단 금지, 세션 판정 후 폐기 (R-10). **항상 오버레이다** — YOLO bbox 가 그려진 프레임만 나가고, 첫 검출 주기 전에는 발행하지 않는다 (I-042, 9/10). 원본이 섞여 나가면 받는 쪽이 어느 쪽인지 알 수 없어 판독 기록이 못 된다. **다만 이 영상에는 검출기 자신의 판단이 그려져 있다 — 「웹캠2 가 작업자를 봤나」를 이 영상으로 따질 때 독립 증거가 아니다.** PR #14 |
 | `/fleet/mission` | fleet_manager | kpi_logger, UI | Mission | 상태 전이마다 |
