@@ -5,24 +5,23 @@
 
 <!-- STATS:BEGIN -->
 
-**전체 123/196 완료** (█████████████░░░░░░░)  ·  기준 09/10
+**전체 124/196 완료** (█████████████░░░░░░░)  ·  기준 09/10
 
 | 파트 | 완료 | 진행 | 지난 마감 |
 |---|---|---|---|
 | mro_interfaces [PM 김병직] | 7/9 | `████████░░` | — |
-| mro_perception [인지 — 정정인, 민범진] | 22/28 | `████████░░` | **5** |
+| mro_perception [인지 — 정정인, 민범진] | 23/28 | `████████░░` | **4** |
 | mro_webcam [웹캠 — 한세교, 김학민] | 24/34 | `███████░░░` | **6** |
 | mro_navigation [주행 — 박병후, 이시율] | 46/91 | `█████░░░░░` | **25** |
 | mro_fleet [관제 — 김민준] | 14/21 | `███████░░░` | **4** |
 | mro_bringup [PM 김병직] | 10/13 | `████████░░` | **1** |
 
-**마감이 지난 항목 41건**
+**마감이 지난 항목 40건**
 
 - `9/9` mro_perception — mro_perception flake8 정리 — main 55건 → PR #40 으로 80건 → 9/9 실측 156건(99자 기…
 - `9/8` mro_perception — TS-U04 측면·후면 — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·outfit_class…
 - `9/8` mro_perception — TS-U05 줄자 대조 — target/distance 의 정확도를 0.8~2 m 에서 사전 검증 (FR-34: 채점 수단의 오…
 - `9/9` mro_perception — 시험 절차 — 대기공간 로봇이 서향이므로 S5 페어링 때 RC카를 로봇 정면(서쪽)으로 돌아 들어오게 조종 (FR-14 정면 1…
-- `9/8` mro_perception — reid_threshold 확정 — 같은/다른 인형 유사도 분포를 그려 결정 (SOT Q-13). 추출 영역이 인형 전체라 다른…
 - `9/9` mro_webcam — /webcam2/image_raw/compressed 를 오버레이로 통일 (I-042) — 지금은 오버레이와 원본이 섞여 나가고…
 - `9/9` mro_webcam — test_subscription 을 tools/ 로 (PR #48 후속) — setup.py 콘솔 진입점으로 등록돼 ros2 r…
 - `9/8` mro_webcam — 웹캠2 캡처 fps 실측 — webcam.yaml 의 webcam_hint.fps: 30.0 은 장치 사양 가정이고 실측 기록이…
@@ -118,7 +117,7 @@
 - [x] 데이터 수집·라벨링 (9/6 완료) · 마감 9/6
 - [x] `models/worker.pt` 학습·검증, 색 편향 점검 (I-003) — PR #19, yolo26s@640 · val mAP50-95 0.816 · 밝기 차 0.6 % (PM 체크포인트 대조 일치) · 마감 9/7
 - [x] **배포 PC 에서 `tools/bench_yolo.py` 로 `worker.pt` 10 Hz 확인** (PR #22 최저 사양 RTX 3060 track max 42.7 ms · PR #26 PC-W1 max 40.5 ms — nano 불필요, 실부하는 통합 9/9) — max 가 100 ms 넘으면 nano(`yolo26n`@640) 로 교체. PM 노트북 CPU 는 track 9 ms (PR #19) · 마감 9/8
-- [ ] **TS-U04 측면·후면** — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·`outfit_class` 유지 확인 (AC-10 근거, SDD 부록 B). 판정 기준은 SDD v0.10 · 마감 9/8
+- [ ] **TS-U04 측면·후면** — 인형을 OAK-D 앞 1 m 에서 0°/90°/180°/270° 로 돌려 검출·`outfit_class` 유지 확인 (AC-10 근거, SDD 부록 B). **판정 기준 9/10 인지팀 확정** — 방향별 유사도 최솟값을 표로 남기고 정면에서 `paired`=True 를 확인한다 (SDD FR-18). **`reid_threshold` 0.34 의 검증을 겸한다** — 측면·후면에서 같은 인형 유사도가 0.348 아래로 떨어지면 0.34 도 놓치기 시작한다 (README 5절 한계). **녹화 시 `/webcam1/worker_descriptor` 를 같은 bag 에 담는다** — 같은 시각·같은 조명의 짝이 생겨 한계 2개(날짜·조명 차이)가 사라진다 (인지팀 제안 9/10) · 마감 9/8
 - [x] `amr_detection_node.py`: `MODEL_PATH` → `worker.pt`, `DETECT_CLASS` → worker_a/b (이름으로 거른다, 인덱스 아님), **`ONLY_OUR_CAR` 흰차 필터 해제**, `/webcam1/worker_descriptor` 구독, `core/reid.gate` 적용 → `target/paired`, `target/worker_id` 발행 · 마감 9/9  **→ 완료 9/8 (PR #45)**
 - [x] `amr_detection_node.py`: RGB·depth 구독 QoS → `qos_profile_sensor_data` (계약 8절 — 발행자가 BEST_EFFORT 면 영상이 한 장도 안 온다) · `camera_info` K 를 `core/camera.corrected_K` 로 보정 (`target/map_point` 좌우 1.76 배, I-031) — PR #30 후속, 교체 PR 에 같이 · 마감 9/9  **→ 완료 9/8 (PR #45) — 렉의 주원인이었다**
 - [x] `amr_detection_node.py`: **`target/distance` 발행 (FR-29)** — 추종거리 판정의 기준값. kpi_logger 는 이미 구독 중이라 이것만 붙으면 AC-05 가 측정된다 · 마감 9/8  **→ 완료 9/8 (PR #45)**
@@ -128,7 +127,7 @@
 - [x] `aruco_detector_node.py`: 검출·거리 초안 · 마감 9/7
 - [x] `aruco_detector_node.py`: solvePnP 자세, 마커 ID 필터 — PR #30: solvePnP(IPPE_SQUARE) · `marker_ids` 허용 목록 · 거리 게이트 1.5 m · `camera_info` fx 16/9 보정 (I-031, PM 합성 재현: 보정 후 오차 ≤ 1.9 cm, 보정 없이 1.35 → 0.77 m) · 마감 9/8
 - [x] `core/reid.py` 단위 테스트 (같은 인형 ≥ threshold, 다른 인형 < threshold) · 마감 9/8  **→ 완료 9/8 (PR #45) — 11건**
-- [ ] `reid_threshold` 확정 — 같은/다른 인형 유사도 분포를 그려 결정 (SOT Q-13). 추출 영역이 인형 전체라 다른 인형끼리도 0.5 안팎에서 시작한다 · 마감 9/8
+- [x] ~~`reid_threshold` 확정 — 같은/다른 인형 유사도 분포를 그려 결정 (SOT Q-13)~~ · 마감 9/8  **→ 확정 9/10: `0.6` → `0.34`.** 웹캠1 실기동 화면(9/10)에서 등록 서술자를, AMR 화면녹화(9/8)에서 로봇 관측을 뽑아 **게이트가 실제로 하는 시점 건너는 비교**로 쟀다 — 같은 인형 min 0.348 · max 0.470, 다른 인형 max 0.361. **옛 값 0.6 은 같은 인형 최댓값보다 높아 자동 페어링이 한 번도 안 걸렸다** (등록 36개 전부 통과율 0 %). 근거·한계는 `mro_perception/README.md` 5절
 
 ## mro_webcam [웹캠 — 한세교, 김학민]
 - [ ] **`/webcam2/image_raw/compressed` 를 오버레이로 통일 (I-042)** — 지금은 오버레이와 원본이 섞여 나가고 받는 쪽이 구분할 수 없다. 원본 대체를 빼고 첫 검출 주기 전에는 발행하지 않는다 (PM 결정 9/8) · 마감 9/9

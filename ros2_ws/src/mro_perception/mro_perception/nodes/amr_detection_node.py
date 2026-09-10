@@ -120,7 +120,7 @@ DETECT_CLASSES = ('worker_a', 'worker_b')   # 추종 후보 = 작업자 둘. amr
 DETECT_CONF = 0.5            # 이 확신도 아래는 버린다. 오탐 = 오추종(AC-04 0건)이라 F1 최적(0.4)보다 높게
 
 # ── 재식별 게이트 (파라미터 기본값 — robotN.yaml 이 덮어쓴다) ──────────────────────────────────────────
-REID_THRESHOLD = 0.6         # 색 지문 유사도 임계. Q-13 [팀 확정] — AMR 시점(TS-U04 프레임)으로 분포를 재서 정한다
+REID_THRESHOLD = 0.34        # 색 지문 유사도 임계. Q-13 확정 9/10 — 웹캠1 등록 ↔ 로봇 관측 실측 분포 (README 5절)
 DESCRIPTOR_FRAMES = 10       # 지문 평균 창. 웹캠1 의 DESCRIPTOR_FRAMES 와 같아야 같은 척도다
 PAIR_ON_S = 1.0              # 이 시간 연속 통과해야 paired=True (웹캠1 register_s 와 같은 발상)
 PAIR_OFF_S = 3.0             # 이 시간 연속 실패·미검출이면 paired=False. 짧은 가림에 짝이 풀리지 않게 [팀 확정]
