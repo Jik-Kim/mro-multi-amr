@@ -1,9 +1,15 @@
-const SC='/tmp/claude-1000/-home-byeongjik-Kn1-proj/b6d0f225-650b-4bbe-9ae9-e73c49d662df/scratchpad/node_modules/docx';
-const D=require(SC);
+// docx 를 찾는 순서 — ① DOCX_MODULE 환경변수 ② 이 저장소·상위의 node_modules ③ 전역
+// 세션 임시 경로를 박아두면 다음 사람이 못 돌린다. `npm install docx` 한 곳이면 어디든 된다.
+const D=(()=>{
+  const tries=[process.env.DOCX_MODULE,'docx'].filter(Boolean);
+  for(const t of tries){ try{ return require(t); }catch(e){} }
+  throw new Error('docx 모듈을 찾지 못했다. `npm install docx` 뒤 DOCX_MODULE 로 경로를 주거나 같은 디렉터리에서 실행한다.');
+})();
 const {Document,Packer,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,ShadingType,
        HeadingLevel,AlignmentType,BorderStyle,PageOrientation,LevelFormat,PageNumber,
-       Header,Footer,convertMillimetersToTwip}=D;
+       Header,Footer,ImageRun,convertMillimetersToTwip}=D;
 const fs=require('fs');
+const path=require('path');
 
 const SRC=process.argv[2], OUT=process.argv[3];
 const FONT='Noto Sans CJK KR';
@@ -149,9 +155,24 @@ while(i<md.length){
     i++; continue;
   }
 
+  // 그림 — `![대체문구](상대경로.png)` 한 줄. 폭은 본문 폭에 맞추고 비율은 유지한다
+  if(/^!\[[^\]]*\]\([^)]+\)\s*$/.test(line)){
+    const m=line.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+    const file=path.resolve(path.dirname(SRC), m[2]);
+    const data=fs.readFileSync(file);
+    if(data.slice(1,4).toString()!=='PNG') throw new Error('그림은 PNG 만 넣는다: '+file);
+    const iw=data.readUInt32BE(16), ih=data.readUInt32BE(20);   // PNG IHDR
+    const maxW=Math.floor(USABLE/1440*96);                      // DXA → 96 dpi 픽셀
+    const W=Math.min(maxW,iw), H=Math.round(W*ih/iw);
+    children.push(new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:140,after:60},
+      children:[new ImageRun({type:'png',data,transformation:{width:W,height:H}})]}));
+    i++; continue;
+  }
+
   // 이어지는 줄인가 — 표·제목·인용·구분선·목록·코드블록의 시작이 아니면 앞 문단에 붙는다
   const cont=t=>t!==undefined && t.trim()!=='' && !/^\|/.test(t) && !/^#{1,6} /.test(t)
-      && !/^>\s?/.test(t) && !/^---+\s*$/.test(t) && !/^\s*[-*] /.test(t) && !/^```/.test(t) && !/^\s*\d+[.)]\s/.test(t);
+      && !/^>\s?/.test(t) && !/^---+\s*$/.test(t) && !/^\s*[-*] /.test(t) && !/^```/.test(t) && !/^\s*\d+[.)]\s/.test(t)
+      && !/^!\[[^\]]*\]\([^)]+\)\s*$/.test(t);
 
   if(/^\s*\d+[.)]\s/.test(line)){
     const ind=line.match(/^\s*/)[0].length;

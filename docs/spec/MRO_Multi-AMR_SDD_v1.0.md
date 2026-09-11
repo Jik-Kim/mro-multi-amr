@@ -1144,7 +1144,34 @@ BRD 2.5 의 예외 흐름 E-1~E-7 에 설계 단계에서 드러난 E-8·E-9 를
 | FR-29 | 추종거리 p95 는 검출 노드의 `target/distance` 로 판정 | — | `amr_detection` → `kpi_logger` | AC-05 | AC-05 | TS-02, TS-U05 |
 | FR-34 | 계측 오차가 판정 기준의 1/3 미만인 수단으로만 채점 | 채점 수단의 오차 < 기준의 1/3 | 판정 규칙 + `tools/kpi_report.py` | AC-05 | AC-05 | TS-U05 |
 
-### B. rqt_graph
+### B. rqt_graph — 실행 중 노드·토픽 그래프
 
-`[첨부: 로봇 1대 + 웹캠 + 관제 전체 그래프 캡처]`
+9/11 **PC 5대·로봇 2대를 모두 올린 상태**에서 `rqt_graph` 로 뽑은 전체 그래프다. 3.2 의 노드 표와
+4장의 데이터 흐름이 **실제로 그렇게 떠 있는지 확인하는 증거**다.
+
+아래는 본문 폭에 맞춘 축소본이라 이름이 작다. **벡터 원본 `docs/diagrams/rqt_graph.svg` 를 열어 확대한다.**
+
+![rqt_graph — PC 5대·로봇 2대 전체 노드·토픽 그래프 (9/11 캡처)](../diagrams/rqt_graph.png)
+
+**어디를 보는가**
+
+| 그림에서 | 보이는 것 | 대응 |
+|---|---|---|
+| 왼쪽 위 묶음 | `/webcam_register` → `/webcam1/worker_descriptor` | 5.2.3 웹캠1 등록 |
+| 왼쪽 가운데 | `/webcam_hint` | 5.2.4 웹캠2 힌트 |
+| 가운데 | `/fleet_manager` · `/zone_semaphore` · `/kpi_logger` 와 `/fleet/status` · `/fleet/mission` · `/fleet/intervention` · `/fleet/zone_event` | 5.4 관제 |
+| 위·아래 큰 묶음 둘 | `/robot3` · `/robot8` 네임스페이스 — **구성이 같고 접두어만 다르다** | 3.1 · 3.3 |
+| 로봇 묶음 안 | `/robotN/target/` 6종(`map_point` · `visible` · `distance` · `paired` · `worker_id` · `pair_state`) | 5.1.3 · 5.1.4 |
+| 로봇 묶음 안 | `/robotN/amr_detection` · `follow_target` · `return_dock` · `mission/assigned` · `mission/finish` | 5.1 · 5.3 · 5.4 |
+| 로봇 묶음 안 | Nav2 액션 서버(`compute_path_to_pose` · `follow_path` · `backup` · `spin` …) · `/robotN/turtlebot4_node` | 5.3 · 2.2 |
+
+**읽을 때 주의**
+
+- rqt_graph 는 **그 순간 떠 있는 것만** 그린다. 이 그림에 없는 노드는 「없는 노드」가 아니라
+  「캡처 시점에 기동하지 않은 노드」다. 노드 목록의 원본은 3.2 이고 이 그림은 그 확인이다.
+- 이름이 같아 보여도 `/robot3` · `/robot8` 접두어가 다르면 **다른 토픽**이다.
+  두 묶음이 좌우 대칭으로 같은 모양인 것이 정상이고, 어긋나면 한쪽이 덜 떴다는 뜻이다.
+- 선의 굵기와 상자 모양은 rqt_graph 기본값이다. **4장의 토픽 갈래(식별 · 미션 · 상태 · 서비스 ·
+  안전)와는 무관하다** — 갈래는 2.3 플로우차트에서 본다.
+- `_action/status` · `_action/feedback` 은 Nav2 액션이 자동으로 만드는 것이라 계약에 없다.
 
